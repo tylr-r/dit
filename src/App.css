@@ -49,6 +49,39 @@
   z-index: 2;
 }
 
+.mode-select {
+  appearance: none;
+  padding: 8px 26px 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 16, 20, 0.5);
+  color: var(--text);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      rgba(255, 255, 255, 0.6) 50%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 50%
+    );
+  background-position:
+    calc(100% - 14px) 55%,
+    calc(100% - 9px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.mode-select:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
 .settings-button {
   width: 40px;
   height: 40px;

@@ -30,7 +30,7 @@ function App() {
   const [isPressing, setIsPressing] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [freestyle, setFreestyle] = useState(false)
+  const [mode, setMode] = useState<'learn' | 'freestyle'>('learn')
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
@@ -93,8 +93,10 @@ function App() {
     }
   }
 
+  const isFreestyle = mode === 'freestyle'
+
   useEffect(() => {
-    if (showHint || freestyle) {
+    if (showHint || isFreestyle) {
       return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -114,16 +116,15 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [freestyle, showHint, showHintOnce])
+  }, [isFreestyle, showHint, showHintOnce])
 
-  const handleFreestyleToggle = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const nextFreestyle = event.target.checked
-    setFreestyle(nextFreestyle)
+  const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextMode =
+      event.target.value === 'freestyle' ? 'freestyle' : 'learn'
+    setMode(nextMode)
     setFreestyleInput('')
     setFreestyleResult(null)
-    if (nextFreestyle) {
+    if (nextMode === 'freestyle') {
       setInput('')
       setStatus('idle')
       setShowHintOnce(false)
@@ -146,7 +147,7 @@ function App() {
     clearTimer(errorTimeoutRef)
     clearTimer(successTimeoutRef)
 
-    if (freestyle) {
+    if (isFreestyle) {
       setFreestyleInput((prev) => prev + symbol)
       setFreestyleResult(null)
       return
@@ -251,7 +252,7 @@ function App() {
     releasePress(true)
   }
 
-  const hintVisible = !freestyle && (showHint || showHintOnce)
+  const hintVisible = !isFreestyle && (showHint || showHintOnce)
   const target = MORSE_DATA[letter].code
   const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
@@ -294,6 +295,15 @@ function App() {
   return (
     <div className={`app status-${status}`}>
       <div className="settings">
+        <select
+          className="mode-select"
+          value={mode}
+          onChange={handleModeChange}
+          aria-label="Mode"
+        >
+          <option value="learn">Learn</option>
+          <option value="freestyle">Freestyle</option>
+        </select>
         <button
           type="button"
           className="settings-button"
@@ -317,23 +327,14 @@ function App() {
                 type="checkbox"
                 checked={showHint}
                 onChange={(event) => setShowHint(event.target.checked)}
-                disabled={freestyle}
-              />
-            </label>
-            <label className="toggle">
-              <span className="toggle-label">Freestyle</span>
-              <input
-                className="toggle-input"
-                type="checkbox"
-                checked={freestyle}
-                onChange={handleFreestyleToggle}
+                disabled={isFreestyle}
               />
             </label>
           </div>
         ) : null}
       </div>
       <main className="stage">
-        {freestyle ? (
+        {isFreestyle ? (
           <div
             className={`letter ${
               freestyleResult ? '' : 'letter-placeholder'
@@ -361,7 +362,7 @@ function App() {
         )}
       </main>
       <div className="controls">
-        {freestyle ? (
+        {isFreestyle ? (
           <>
             <div className="freestyle-status" aria-live="polite">
               {freestyleStatus}
@@ -375,7 +376,7 @@ function App() {
             </button>
           </>
         ) : null}
-        {!showHint && !freestyle ? (
+        {!showHint && !isFreestyle ? (
           <button
             type="button"
             className="hint-button"
