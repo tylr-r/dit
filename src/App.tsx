@@ -30,6 +30,7 @@ function App() {
   const [isPressing, setIsPressing] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [freestyle, setFreestyle] = useState(false)
   const [showHintOnce, setShowHintOnce] = useState(false)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
@@ -91,7 +92,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (showHint) {
+    if (showHint || freestyle) {
       return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -111,7 +112,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [showHint, showHintOnce])
+  }, [freestyle, showHint, showHintOnce])
 
   const registerSymbol = (symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
@@ -216,7 +217,7 @@ function App() {
     releasePress(true)
   }
 
-  const hintVisible = showHint || showHintOnce
+  const hintVisible = !freestyle && (showHint || showHintOnce)
   const target = MORSE_DATA[letter].code
   const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
@@ -267,28 +268,42 @@ function App() {
                 type="checkbox"
                 checked={showHint}
                 onChange={(event) => setShowHint(event.target.checked)}
+                disabled={freestyle}
+              />
+            </label>
+            <label className="toggle">
+              <span className="toggle-label">Freestyle</span>
+              <input
+                className="toggle-input"
+                type="checkbox"
+                checked={freestyle}
+                onChange={(event) => setFreestyle(event.target.checked)}
               />
             </label>
           </div>
         ) : null}
       </div>
       <main className="stage">
-        <div key={letter} className="letter">
-          {letter}
-        </div>
-        {hintVisible ? (
-          <div className="progress" aria-label={`Target ${target}`}>
-            {pips}
-          </div>
-        ) : (
-          <div className="progress progress-hidden" aria-hidden="true" />
+        {freestyle ? null : (
+          <>
+            <div key={letter} className="letter">
+              {letter}
+            </div>
+            {hintVisible ? (
+              <div className="progress" aria-label={`Target ${target}`}>
+                {pips}
+              </div>
+            ) : (
+              <div className="progress progress-hidden" aria-hidden="true" />
+            )}
+            <p className="status-text" aria-live="polite">
+              {statusText}
+            </p>
+          </>
         )}
-        <p className="status-text" aria-live="polite">
-          {statusText}
-        </p>
       </main>
       <div className="controls">
-        {!showHint ? (
+        {!showHint && !freestyle ? (
           <button
             type="button"
             className="hint-button"
