@@ -28,3 +28,14 @@ non-essential interaction.
 npm install
 npm run dev
 ```
+
+## Deployment (Firebase Hosting)
+
+Update `.firebaserc` if your Firebase project ID differs.
+
+```bash
+npm install -g firebase-tools
+firebase login
+npm run build
+firebase deploy
+```
