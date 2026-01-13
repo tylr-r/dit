@@ -34,9 +34,11 @@ function App() {
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
+  const freestyleInputRef = useRef('')
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
+  const letterTimeoutRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
@@ -45,6 +47,7 @@ function App() {
     return () => {
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
       if (oscillatorRef.current) {
         oscillatorRef.current.stop()
         oscillatorRef.current.disconnect()
@@ -57,6 +60,10 @@ function App() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    freestyleInputRef.current = freestyleInput
+  }, [freestyleInput])
 
   const startTone = async () => {
     if (!audioContextRef.current) {
@@ -124,6 +131,7 @@ function App() {
     setMode(nextMode)
     setFreestyleInput('')
     setFreestyleResult(null)
+    clearTimer(letterTimeoutRef)
     if (nextMode === 'freestyle') {
       setInput('')
       setStatus('idle')
@@ -131,24 +139,52 @@ function App() {
     }
   }
 
-  const handleFreestyleSubmit = () => {
-    if (!freestyleInput) {
+  const submitFreestyleInput = (value: string) => {
+    if (!value) {
       setFreestyleResult('No input')
       return
     }
     const match = Object.entries(MORSE_DATA).find(
-      ([, data]) => data.code === freestyleInput,
+      ([, data]) => data.code === value,
     )
     setFreestyleResult(match ? match[0] : 'No match')
+    setFreestyleInput('')
+  }
+
+  const scheduleLetterReset = (nextMode: 'learn' | 'freestyle') => {
+    clearTimer(letterTimeoutRef)
+    letterTimeoutRef.current = window.setTimeout(() => {
+      if (nextMode === 'freestyle') {
+        submitFreestyleInput(freestyleInputRef.current)
+        return
+      }
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      setStatus('error')
+      setInput('')
+      errorTimeoutRef.current = window.setTimeout(() => {
+        setStatus('idle')
+      }, 700)
+    }, DOT_THRESHOLD_MS * 2)
+  }
+
+  const handleFreestyleClear = () => {
+    clearTimer(letterTimeoutRef)
+    setFreestyleResult(null)
     setFreestyleInput('')
   }
 
   const registerSymbol = (symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
     clearTimer(successTimeoutRef)
+    clearTimer(letterTimeoutRef)
 
     if (isFreestyle) {
-      setFreestyleInput((prev) => prev + symbol)
+      setFreestyleInput((prev) => {
+        const next = prev + symbol
+        scheduleLetterReset('freestyle')
+        return next
+      })
       setFreestyleResult(null)
       return
     }
@@ -176,6 +212,7 @@ function App() {
       }
 
       setStatus('idle')
+      scheduleLetterReset('learn')
       return next
     })
   }
@@ -203,6 +240,7 @@ function App() {
       return
     }
     event.currentTarget.setPointerCapture(event.pointerId)
+    clearTimer(letterTimeoutRef)
     setIsPressing(true)
     pressStartRef.current = performance.now()
     void startTone()
@@ -223,6 +261,10 @@ function App() {
       return
     }
     releasePress(false)
+    const hasInput = isFreestyle ? freestyleInput : input
+    if (hasInput) {
+      scheduleLetterReset(isFreestyle ? 'freestyle' : 'learn')
+    }
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -236,6 +278,7 @@ function App() {
     if (pressStartRef.current !== null) {
       return
     }
+    clearTimer(letterTimeoutRef)
     setIsPressing(true)
     pressStartRef.current = performance.now()
     void startTone()
@@ -286,7 +329,7 @@ function App() {
       : freestyleResult
     : freestyleInput
       ? `Input ${freestyleInput}`
-      : 'Tap and submit'
+      : 'Tap and pause'
   const freestyleDisplay = freestyleResult
     ? isLetterResult
       ? freestyleResult
@@ -370,9 +413,9 @@ function App() {
             <button
               type="button"
               className="hint-button submit-button"
-              onClick={handleFreestyleSubmit}
+              onClick={handleFreestyleClear}
             >
-              Submit
+              Clear
             </button>
           </>
         ) : null}
