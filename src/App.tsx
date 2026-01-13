@@ -502,7 +502,7 @@ function App() {
     )
   })
   const isLetterResult = freestyleResult
-    ? /^[A-Z]$/.test(freestyleResult)
+    ? /^[A-Z0-9]$/.test(freestyleResult)
     : false
   const freestyleStatus = freestyleResult
     ? isLetterResult

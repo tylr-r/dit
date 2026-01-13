@@ -25,6 +25,16 @@ export const MORSE_DATA = {
   X: { code: '-..-', mnemonic: 'X-marks-the-SPOT' },
   Y: { code: '-.--', mnemonic: 'WHY did I DIE?' },
   Z: { code: '--..', mnemonic: 'ZSA ZSA did it' },
+  '1': { code: '.----', mnemonic: 'ONE-dot-then-DASHES' },
+  '2': { code: '..---', mnemonic: 'TWO-dots-then-DASHES' },
+  '3': { code: '...--', mnemonic: 'THREE-dots-then-DASHES' },
+  '4': { code: '....-', mnemonic: 'FOUR-dots-then-DASH' },
+  '5': { code: '.....', mnemonic: 'FIVE-dots' },
+  '6': { code: '-....', mnemonic: 'DASH-then-FOUR-dots' },
+  '7': { code: '--...', mnemonic: 'TWO-DASHES-then-THREE-dots' },
+  '8': { code: '---..', mnemonic: 'THREE-DASHES-then-TWO-dots' },
+  '9': { code: '----.', mnemonic: 'FOUR-DASHES-then-DOT' },
+  '0': { code: '-----', mnemonic: 'FIVE-DASHES' },
 } as const;
 
 export type Letter = keyof typeof MORSE_DATA;
