@@ -304,6 +304,7 @@ function App() {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           onPointerLeave={handlePointerCancel}
+          onContextMenu={(event) => event.preventDefault()}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onBlur={handlePointerCancel}

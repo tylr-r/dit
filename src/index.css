@@ -32,6 +32,10 @@ body {
     radial-gradient(1000px 760px at 0% 120%, rgba(255, 146, 112, 0.15), transparent 65%),
     linear-gradient(160deg, var(--bg-1), var(--bg-2));
   color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #root {
