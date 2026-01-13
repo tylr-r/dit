@@ -174,12 +174,21 @@ function App() {
         ? 'Missed. Start over.'
         : 'Tap for dot, hold for dash.'
 
-  const pips = input.split('').map((symbol, index) => (
-    <span
-      key={`${symbol}-${index}`}
-      className={`pip ${symbol === '.' ? 'dot' : 'dash'}`}
-    />
-  ))
+  const target = MORSE_MAP[letter]
+  const targetSymbols = target.split('')
+  const highlightCount =
+    status === 'success' ? targetSymbols.length : input.length
+  const pips = targetSymbols.map((symbol, index) => {
+    const isHit = index < highlightCount
+    return (
+      <span
+        key={`${symbol}-${index}`}
+        className={`pip ${symbol === '.' ? 'dot' : 'dash'} ${
+          isHit ? 'hit' : 'expected'
+        }`}
+      />
+    )
+  })
 
   return (
     <div className={`app status-${status}`}>
@@ -187,19 +196,8 @@ function App() {
         <div key={letter} className="letter">
           {letter}
         </div>
-        <div
-          className="progress"
-          aria-label={input ? `Input ${input}` : 'No input yet'}
-        >
-          {pips.length > 0 ? (
-            pips
-          ) : (
-            <>
-              <span className="pip dot ghost" />
-              <span className="pip dash ghost" />
-              <span className="pip dot ghost" />
-            </>
-          )}
+        <div className="progress" aria-label={`Target ${target}`}>
+          {pips}
         </div>
         <p className="status-text" aria-live="polite">
           {statusText}
@@ -220,7 +218,6 @@ function App() {
         <span className="button-content" aria-hidden="true">
           <span className="signal dot" />
           <span className="signal dash" />
-          <span className="signal dot" />
         </span>
       </button>
     </div>

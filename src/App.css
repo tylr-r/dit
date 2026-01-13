@@ -80,9 +80,14 @@
   height: 12px;
 }
 
-.pip.ghost {
-  opacity: 0.25;
+.pip.expected {
+  opacity: 0.3;
   filter: saturate(0.6);
+}
+
+.pip.hit {
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .status-text {
