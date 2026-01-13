@@ -1,38 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import { MORSE_DATA, type Letter } from './data/morse'
 
-const MORSE_MAP = {
-  A: '.-',
-  B: '-...',
-  C: '-.-.',
-  D: '-..',
-  E: '.',
-  F: '..-.',
-  G: '--.',
-  H: '....',
-  I: '..',
-  J: '.---',
-  K: '-.-',
-  L: '.-..',
-  M: '--',
-  N: '-.',
-  O: '---',
-  P: '.--.',
-  Q: '--.-',
-  R: '.-.',
-  S: '...',
-  T: '-',
-  U: '..-',
-  V: '...-',
-  W: '.--',
-  X: '-..-',
-  Y: '-.--',
-  Z: '--..',
-} as const
-
-type Letter = keyof typeof MORSE_MAP
-
-const LETTERS = Object.keys(MORSE_MAP) as Letter[]
+const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const DOT_THRESHOLD_MS = 240
 
 const pickNewLetter = (previous?: Letter): Letter => {
@@ -73,16 +43,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    setShowHintOnce(false)
-  }, [letter])
-
-  useEffect(() => {
-    if (showHint) {
-      setShowHintOnce(false)
-    }
-  }, [showHint])
-
-  useEffect(() => {
     if (showHint) {
       return
     }
@@ -111,7 +71,7 @@ function App() {
 
     setInput((prev) => {
       const next = prev + symbol
-      const target = MORSE_MAP[letter]
+      const target = MORSE_DATA[letter].code
 
       if (!target.startsWith(next)) {
         setStatus('error')
@@ -125,6 +85,7 @@ function App() {
         setStatus('success')
         successTimeoutRef.current = window.setTimeout(() => {
           setLetter((current) => pickNewLetter(current))
+          setShowHintOnce(false)
           setStatus('idle')
         }, 650)
         return ''
@@ -203,14 +164,14 @@ function App() {
     releasePress(true)
   }
 
+  const target = MORSE_DATA[letter].code
+  const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
     status === 'success'
       ? 'Correct. New letter.'
       : status === 'error'
         ? 'Missed. Start over.'
-        : 'Tap for dot, hold for dash.'
-
-  const target = MORSE_MAP[letter]
+        : mnemonic
   const targetSymbols = target.split('')
   const highlightCount =
     status === 'success' ? targetSymbols.length : input.length
