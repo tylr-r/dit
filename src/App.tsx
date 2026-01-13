@@ -32,6 +32,8 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [freestyle, setFreestyle] = useState(false)
   const [showHintOnce, setShowHintOnce] = useState(false)
+  const [freestyleInput, setFreestyleInput] = useState('')
+  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
@@ -114,9 +116,41 @@ function App() {
     }
   }, [freestyle, showHint, showHintOnce])
 
+  const handleFreestyleToggle = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextFreestyle = event.target.checked
+    setFreestyle(nextFreestyle)
+    setFreestyleInput('')
+    setFreestyleResult(null)
+    if (nextFreestyle) {
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
+    }
+  }
+
+  const handleFreestyleSubmit = () => {
+    if (!freestyleInput) {
+      setFreestyleResult('No input')
+      return
+    }
+    const match = Object.entries(MORSE_DATA).find(
+      ([, data]) => data.code === freestyleInput,
+    )
+    setFreestyleResult(match ? match[0] : 'No match')
+    setFreestyleInput('')
+  }
+
   const registerSymbol = (symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
     clearTimer(successTimeoutRef)
+
+    if (freestyle) {
+      setFreestyleInput((prev) => prev + symbol)
+      setFreestyleResult(null)
+      return
+    }
 
     setInput((prev) => {
       const next = prev + symbol
@@ -242,6 +276,21 @@ function App() {
       />
     )
   })
+  const isLetterResult = freestyleResult
+    ? /^[A-Z]$/.test(freestyleResult)
+    : false
+  const freestyleStatus = freestyleResult
+    ? isLetterResult
+      ? `Result ${freestyleResult}`
+      : freestyleResult
+    : freestyleInput
+      ? `Input ${freestyleInput}`
+      : 'Tap and submit'
+  const freestyleDisplay = freestyleResult
+    ? isLetterResult
+      ? freestyleResult
+      : '?'
+    : ''
   return (
     <div className={`app status-${status}`}>
       <div className="settings">
@@ -277,14 +326,23 @@ function App() {
                 className="toggle-input"
                 type="checkbox"
                 checked={freestyle}
-                onChange={(event) => setFreestyle(event.target.checked)}
+                onChange={handleFreestyleToggle}
               />
             </label>
           </div>
         ) : null}
       </div>
       <main className="stage">
-        {freestyle ? null : (
+        {freestyle ? (
+          <div
+            className={`letter ${
+              freestyleResult ? '' : 'letter-placeholder'
+            }`}
+            aria-live="polite"
+          >
+            {freestyleDisplay}
+          </div>
+        ) : (
           <>
             <div key={letter} className="letter">
               {letter}
@@ -303,6 +361,20 @@ function App() {
         )}
       </main>
       <div className="controls">
+        {freestyle ? (
+          <>
+            <div className="freestyle-status" aria-live="polite">
+              {freestyleStatus}
+            </div>
+            <button
+              type="button"
+              className="hint-button submit-button"
+              onClick={handleFreestyleSubmit}
+            >
+              Submit
+            </button>
+          </>
+        ) : null}
         {!showHint && !freestyle ? (
           <button
             type="button"

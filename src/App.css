@@ -161,6 +161,11 @@
   animation: letterRise 520ms ease;
 }
 
+.letter-placeholder {
+  min-height: 0.9em;
+  opacity: 0.2;
+}
+
 .progress {
   display: flex;
   align-items: center;
@@ -269,6 +274,13 @@
 .hint-button:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
+}
+
+.freestyle-status {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .morse-button {
