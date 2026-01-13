@@ -4,6 +4,10 @@ import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const DOT_THRESHOLD_MS = 200
+const UNIT_MS = DOT_THRESHOLD_MS
+const INTER_CHAR_GAP_MS = UNIT_MS * 3
+const WORD_GAP_MS = UNIT_MS * 7
+const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -63,10 +67,12 @@ function App() {
   )
   const [freestyleWord, setFreestyleWord] = useState('')
   const freestyleInputRef = useRef('')
+  const freestyleWordModeRef = useRef(freestyleWordMode)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
   const letterTimeoutRef = useRef<number | null>(null)
+  const wordSpaceTimeoutRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
@@ -76,6 +82,7 @@ function App() {
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
       clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
       if (oscillatorRef.current) {
         oscillatorRef.current.stop()
         oscillatorRef.current.disconnect()
@@ -92,6 +99,10 @@ function App() {
   useEffect(() => {
     freestyleInputRef.current = freestyleInput
   }, [freestyleInput])
+
+  useEffect(() => {
+    freestyleWordModeRef.current = freestyleWordMode
+  }, [freestyleWordMode])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -183,6 +194,7 @@ function App() {
     setFreestyleResult(null)
     setFreestyleWord('')
     clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
     if (nextMode === 'freestyle') {
       setInput('')
       setStatus('idle')
@@ -196,6 +208,24 @@ function App() {
     applyModeChange(nextMode)
   }
 
+  const scheduleWordSpace = useCallback(() => {
+    clearTimer(wordSpaceTimeoutRef)
+    wordSpaceTimeoutRef.current = window.setTimeout(() => {
+      if (!freestyleWordModeRef.current) {
+        return
+      }
+      if (freestyleInputRef.current) {
+        return
+      }
+      setFreestyleWord((prev) => {
+        if (!prev || prev.endsWith(' ')) {
+          return prev
+        }
+        return `${prev} `
+      })
+    }, WORD_GAP_EXTRA_MS)
+  }, [])
+
   const submitFreestyleInput = useCallback((value: string) => {
     if (!value) {
       setFreestyleResult('No input')
@@ -208,11 +238,12 @@ function App() {
     if (result !== 'No match') {
       if (freestyleWordMode) {
         setFreestyleWord((prev) => prev + result)
+        scheduleWordSpace()
       }
     }
     setFreestyleResult(result)
     setFreestyleInput('')
-  }, [freestyleWordMode])
+  }, [freestyleWordMode, scheduleWordSpace])
 
   const scheduleLetterReset = useCallback((nextMode: 'learn' | 'freestyle') => {
     clearTimer(letterTimeoutRef)
@@ -228,14 +259,39 @@ function App() {
       errorTimeoutRef.current = window.setTimeout(() => {
         setStatus('idle')
       }, 700)
-    }, DOT_THRESHOLD_MS * 2)
+    }, INTER_CHAR_GAP_MS)
   }, [submitFreestyleInput, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
     setFreestyleResult(null)
     setFreestyleInput('')
     setFreestyleWord('')
+  }, [])
+
+  const handleFreestyleBackspace = useCallback(() => {
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    setFreestyleResult(null)
+    if (freestyleInputRef.current) {
+      setFreestyleInput((prev) => {
+        const next = prev.slice(0, -1)
+        freestyleInputRef.current = next
+        return next
+      })
+      return
+    }
+    if (!freestyleWordModeRef.current) {
+      return
+    }
+    setFreestyleWord((prev) => {
+      const trimmed = prev.replace(/\s+$/, '')
+      if (!trimmed) {
+        return ''
+      }
+      return trimmed.slice(0, -1)
+    })
   }, [])
 
   const handleWordModeChange = useCallback(
@@ -307,13 +363,26 @@ function App() {
           event.preventDefault()
           handleWordModeChange(!freestyleWordMode)
         }
+        return
+      }
+      if (event.key === 'Backspace') {
+        if (mode === 'freestyle') {
+          event.preventDefault()
+          handleFreestyleBackspace()
+        }
       }
     }
     window.addEventListener('keydown', handleShortcut)
     return () => {
       window.removeEventListener('keydown', handleShortcut)
     }
-  }, [applyModeChange, freestyleWordMode, handleWordModeChange, mode])
+  }, [
+    applyModeChange,
+    freestyleWordMode,
+    handleFreestyleBackspace,
+    handleWordModeChange,
+    mode,
+  ])
 
   const registerSymbol = useCallback((symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
@@ -385,6 +454,7 @@ function App() {
     }
     event.currentTarget.setPointerCapture(event.pointerId)
     clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
     setIsPressing(true)
     pressStartRef.current = performance.now()
     void startTone()
@@ -424,6 +494,7 @@ function App() {
         return
       }
       clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
       setIsPressing(true)
       pressStartRef.current = performance.now()
       void startTone()
@@ -460,6 +531,7 @@ function App() {
       return
     }
     clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
     setIsPressing(true)
     pressStartRef.current = performance.now()
     void startTone()
