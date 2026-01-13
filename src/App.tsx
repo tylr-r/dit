@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { MORSE_DATA, type Letter } from './data/morse'
 
@@ -34,6 +34,8 @@ function App() {
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
+  const [freestyleWordMode, setFreestyleWordMode] = useState(false)
+  const [freestyleWord, setFreestyleWord] = useState('')
   const freestyleInputRef = useRef('')
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
@@ -131,6 +133,7 @@ function App() {
     setMode(nextMode)
     setFreestyleInput('')
     setFreestyleResult(null)
+    setFreestyleWord('')
     clearTimer(letterTimeoutRef)
     if (nextMode === 'freestyle') {
       setInput('')
@@ -147,7 +150,13 @@ function App() {
     const match = Object.entries(MORSE_DATA).find(
       ([, data]) => data.code === value,
     )
-    setFreestyleResult(match ? match[0] : 'No match')
+    const result = match ? match[0] : 'No match'
+    if (result !== 'No match') {
+      if (freestyleWordMode) {
+        setFreestyleWord((prev) => prev + result)
+      }
+    }
+    setFreestyleResult(result)
     setFreestyleInput('')
   }
 
@@ -168,11 +177,32 @@ function App() {
     }, DOT_THRESHOLD_MS * 2)
   }
 
-  const handleFreestyleClear = () => {
+  const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
     setFreestyleResult(null)
     setFreestyleInput('')
-  }
+    setFreestyleWord('')
+  }, [])
+
+  useEffect(() => {
+    if (!isFreestyle) {
+      return
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) {
+        return
+      }
+      if (event.key.toLowerCase() !== 'n') {
+        return
+      }
+      event.preventDefault()
+      handleFreestyleClear()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [handleFreestyleClear, isFreestyle])
 
   const registerSymbol = (symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
@@ -325,16 +355,25 @@ function App() {
     : false
   const freestyleStatus = freestyleResult
     ? isLetterResult
-      ? `Result ${freestyleResult}`
+      ? freestyleWordMode
+        ? `Added ${freestyleResult}`
+        : `Result ${freestyleResult}`
       : freestyleResult
     : freestyleInput
       ? `Input ${freestyleInput}`
+      : freestyleWordMode && freestyleWord
+        ? `Word ${freestyleWord}`
       : 'Tap and pause'
-  const freestyleDisplay = freestyleResult
-    ? isLetterResult
-      ? freestyleResult
-      : '?'
-    : ''
+  const freestyleDisplay = freestyleWordMode
+    ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
+    : freestyleResult
+      ? isLetterResult
+        ? freestyleResult
+        : '?'
+      : ''
+  const hasFreestyleDisplay = freestyleWordMode
+    ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
+    : Boolean(freestyleResult)
   return (
     <div className={`app status-${status}`}>
       <div className="settings">
@@ -373,6 +412,23 @@ function App() {
                 disabled={isFreestyle}
               />
             </label>
+            {isFreestyle ? (
+              <label className="toggle">
+                <span className="toggle-label">Word mode</span>
+                <input
+                  className="toggle-input"
+                  type="checkbox"
+                  checked={freestyleWordMode}
+                  onChange={(event) => {
+                    setFreestyleWordMode(event.target.checked)
+                    clearTimer(letterTimeoutRef)
+                    setFreestyleInput('')
+                    setFreestyleResult(null)
+                    setFreestyleWord('')
+                  }}
+                />
+              </label>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -380,7 +436,7 @@ function App() {
         {isFreestyle ? (
           <div
             className={`letter ${
-              freestyleResult ? '' : 'letter-placeholder'
+              hasFreestyleDisplay ? '' : 'letter-placeholder'
             }`}
             aria-live="polite"
           >
