@@ -4,6 +4,22 @@ import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const DOT_THRESHOLD_MS = 200
+const STORAGE_KEYS = {
+  mode: 'morse-mode',
+  showHint: 'morse-show-hint',
+  wordMode: 'morse-word-mode',
+}
+
+const readStoredBoolean = (key: string, fallback: boolean) => {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+  const stored = window.localStorage.getItem(key)
+  if (stored === null) {
+    return fallback
+  }
+  return stored === 'true'
+}
 
 const pickNewLetter = (previous?: Letter): Letter => {
   if (!previous) {
@@ -28,13 +44,23 @@ function App() {
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [isPressing, setIsPressing] = useState(false)
-  const [showHint, setShowHint] = useState(true)
+  const [showHint, setShowHint] = useState(() =>
+    readStoredBoolean(STORAGE_KEYS.showHint, true),
+  )
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [mode, setMode] = useState<'learn' | 'freestyle'>('learn')
+  const [mode, setMode] = useState<'learn' | 'freestyle'>(() => {
+    if (typeof window === 'undefined') {
+      return 'learn'
+    }
+    const stored = window.localStorage.getItem(STORAGE_KEYS.mode)
+    return stored === 'freestyle' ? 'freestyle' : 'learn'
+  })
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
-  const [freestyleWordMode, setFreestyleWordMode] = useState(false)
+  const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
+    readStoredBoolean(STORAGE_KEYS.wordMode, false),
+  )
   const [freestyleWord, setFreestyleWord] = useState('')
   const freestyleInputRef = useRef('')
   const pressStartRef = useRef<number | null>(null)
@@ -67,7 +93,31 @@ function App() {
     freestyleInputRef.current = freestyleInput
   }, [freestyleInput])
 
-  const startTone = async () => {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEYS.mode, mode)
+  }, [mode])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEYS.showHint, String(showHint))
+  }, [showHint])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(
+      STORAGE_KEYS.wordMode,
+      String(freestyleWordMode),
+    )
+  }, [freestyleWordMode])
+
+  const startTone = useCallback(async () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext()
     }
@@ -87,9 +137,9 @@ function App() {
     oscillator.start()
     oscillatorRef.current = oscillator
     gainRef.current = gain
-  }
+  }, [])
 
-  const stopTone = () => {
+  const stopTone = useCallback(() => {
     if (!oscillatorRef.current) {
       return
     }
@@ -100,7 +150,7 @@ function App() {
       gainRef.current.disconnect()
       gainRef.current = null
     }
-  }
+  }, [])
 
   const isFreestyle = mode === 'freestyle'
 
@@ -127,9 +177,7 @@ function App() {
     }
   }, [isFreestyle, showHint, showHintOnce])
 
-  const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextMode =
-      event.target.value === 'freestyle' ? 'freestyle' : 'learn'
+  const applyModeChange = useCallback((nextMode: 'learn' | 'freestyle') => {
     setMode(nextMode)
     setFreestyleInput('')
     setFreestyleResult(null)
@@ -140,9 +188,15 @@ function App() {
       setStatus('idle')
       setShowHintOnce(false)
     }
+  }, [])
+
+  const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextMode =
+      event.target.value === 'freestyle' ? 'freestyle' : 'learn'
+    applyModeChange(nextMode)
   }
 
-  const submitFreestyleInput = (value: string) => {
+  const submitFreestyleInput = useCallback((value: string) => {
     if (!value) {
       setFreestyleResult('No input')
       return
@@ -158,9 +212,9 @@ function App() {
     }
     setFreestyleResult(result)
     setFreestyleInput('')
-  }
+  }, [freestyleWordMode])
 
-  const scheduleLetterReset = (nextMode: 'learn' | 'freestyle') => {
+  const scheduleLetterReset = useCallback((nextMode: 'learn' | 'freestyle') => {
     clearTimer(letterTimeoutRef)
     letterTimeoutRef.current = window.setTimeout(() => {
       if (nextMode === 'freestyle') {
@@ -175,7 +229,7 @@ function App() {
         setStatus('idle')
       }, 700)
     }, DOT_THRESHOLD_MS * 2)
-  }
+  }, [submitFreestyleInput, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
@@ -183,6 +237,14 @@ function App() {
     setFreestyleInput('')
     setFreestyleWord('')
   }, [])
+
+  const handleWordModeChange = useCallback(
+    (nextValue: boolean) => {
+      setFreestyleWordMode(nextValue)
+      handleFreestyleClear()
+    },
+    [handleFreestyleClear],
+  )
 
   useEffect(() => {
     if (!isFreestyle) {
@@ -204,7 +266,56 @@ function App() {
     }
   }, [handleFreestyleClear, isFreestyle])
 
-  const registerSymbol = (symbol: '.' | '-') => {
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (event.repeat) {
+        return
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return
+      }
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'SELECT' ||
+          target.tagName === 'TEXTAREA')
+      ) {
+        return
+      }
+      const key = event.key.toLowerCase()
+      if (key === 'f') {
+        event.preventDefault()
+        applyModeChange('freestyle')
+        return
+      }
+      if (key === 'l') {
+        event.preventDefault()
+        applyModeChange('learn')
+        return
+      }
+      if (key === 'h') {
+        if (mode === 'learn') {
+          event.preventDefault()
+          setShowHint((prev) => !prev)
+        }
+        return
+      }
+      if (key === 'w') {
+        if (mode === 'freestyle') {
+          event.preventDefault()
+          handleWordModeChange(!freestyleWordMode)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleShortcut)
+    return () => {
+      window.removeEventListener('keydown', handleShortcut)
+    }
+  }, [applyModeChange, freestyleWordMode, handleWordModeChange, mode])
+
+  const registerSymbol = useCallback((symbol: '.' | '-') => {
     clearTimer(errorTimeoutRef)
     clearTimer(successTimeoutRef)
     clearTimer(letterTimeoutRef)
@@ -245,20 +356,23 @@ function App() {
       scheduleLetterReset('learn')
       return next
     })
-  }
+  }, [isFreestyle, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter])
 
-  const releasePress = (register: boolean) => {
-    setIsPressing(false)
-    const start = pressStartRef.current
-    pressStartRef.current = null
-    if (!register || start === null) {
-      stopTone()
+  const releasePress = useCallback(
+    (register: boolean) => {
+      setIsPressing(false)
+      const start = pressStartRef.current
+      pressStartRef.current = null
+      if (!register || start === null) {
+        stopTone()
       return
-    }
-    const duration = performance.now() - start
-    registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-')
-    stopTone()
-  }
+      }
+      const duration = performance.now() - start
+      registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-')
+      stopTone()
+    },
+    [registerSymbol, stopTone],
+  )
 
   const handlePointerDown = (
     event: React.PointerEvent<HTMLButtonElement>,
@@ -296,6 +410,43 @@ function App() {
       scheduleLetterReset(isFreestyle ? 'freestyle' : 'learn')
     }
   }
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) {
+        return
+      }
+      if (event.code !== 'Space' && event.key !== ' ') {
+        return
+      }
+      event.preventDefault()
+      if (pressStartRef.current !== null) {
+        return
+      }
+      clearTimer(letterTimeoutRef)
+      setIsPressing(true)
+      pressStartRef.current = performance.now()
+      void startTone()
+    }
+
+    const handleGlobalKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' && event.key !== ' ') {
+        return
+      }
+      event.preventDefault()
+      if (pressStartRef.current === null) {
+        return
+      }
+      releasePress(true)
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    window.addEventListener('keyup', handleGlobalKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      window.removeEventListener('keyup', handleGlobalKeyUp)
+    }
+  }, [releasePress, startTone])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
@@ -420,11 +571,7 @@ function App() {
                   type="checkbox"
                   checked={freestyleWordMode}
                   onChange={(event) => {
-                    setFreestyleWordMode(event.target.checked)
-                    clearTimer(letterTimeoutRef)
-                    setFreestyleInput('')
-                    setFreestyleResult(null)
-                    setFreestyleWord('')
+                    handleWordModeChange(event.target.checked)
                   }}
                 />
               </label>
