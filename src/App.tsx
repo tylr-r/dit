@@ -3,7 +3,7 @@ import './App.css'
 import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
-const DOT_THRESHOLD_MS = 240
+const DOT_THRESHOLD_MS = 200
 
 const pickNewLetter = (previous?: Letter): Letter => {
   if (!previous) {
