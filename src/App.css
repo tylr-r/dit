@@ -35,6 +35,109 @@
   z-index: 0;
 }
 
+.settings {
+  position: absolute;
+  top: clamp(16px, 4vw, 28px);
+  right: clamp(16px, 4vw, 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 2;
+}
+
+.settings-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 16, 20, 0.5);
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 140ms ease, border 200ms ease, filter 200ms ease;
+}
+
+.settings-button:hover {
+  filter: brightness(1.1);
+}
+
+.settings-button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.settings-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-panel {
+  min-width: 170px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 24, 0.9);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.toggle-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.toggle-input {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(9, 14, 18, 0.7);
+  position: relative;
+  cursor: pointer;
+  transition: background 160ms ease, border 160ms ease;
+}
+
+.toggle-input::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.toggle-input:checked {
+  background: rgba(56, 242, 162, 0.8);
+  border-color: rgba(56, 242, 162, 0.8);
+}
+
+.toggle-input:checked::after {
+  transform: translateX(20px);
+  background: #0c1418;
+}
+
+.toggle-input:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
 .stage {
   text-align: center;
   display: flex;
@@ -90,6 +193,10 @@
   transform: translateY(-1px);
 }
 
+.progress-hidden {
+  opacity: 0;
+}
+
 .status-text {
   margin: 0;
   font-size: 0.9rem;
@@ -123,6 +230,43 @@
 .status-error .pip {
   background: var(--error);
   box-shadow: 0 0 14px rgba(255, 90, 96, 0.35);
+}
+
+.controls {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.hint-button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(12, 18, 24, 0.7);
+  color: var(--muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.hint-button:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.hint-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hint-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
 }
 
 .morse-button {
@@ -229,6 +373,10 @@
   .status-text {
     font-size: 0.8rem;
     letter-spacing: 0.1em;
+  }
+  .settings-button {
+    width: 36px;
+    height: 36px;
   }
   .letter {
     letter-spacing: 0.08em;
