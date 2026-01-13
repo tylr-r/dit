@@ -216,6 +216,7 @@ function App() {
     releasePress(true)
   }
 
+  const hintVisible = showHint || showHintOnce
   const target = MORSE_DATA[letter].code
   const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
@@ -223,7 +224,9 @@ function App() {
       ? 'Correct. New letter.'
       : status === 'error'
         ? 'Missed. Start over.'
-        : mnemonic
+        : hintVisible
+          ? mnemonic
+          : ' '
   const targetSymbols = target.split('')
   const highlightCount =
     status === 'success' ? targetSymbols.length : input.length
@@ -238,8 +241,6 @@ function App() {
       />
     )
   })
-  const hintVisible = showHint || showHintOnce
-
   return (
     <div className={`app status-${status}`}>
       <div className="settings">
