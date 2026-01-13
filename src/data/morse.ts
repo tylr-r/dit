@@ -14,7 +14,7 @@ export const MORSE_DATA = {
   M: { code: '--', mnemonic: 'MA-MA' },
   N: { code: '-.', mnemonic: 'NA-vy' },
   O: { code: '---', mnemonic: 'OH-MY-GOD' },
-  P: { code: '.--.', mnemonic: 'a-POO-py-smell' },
+  P: { code: '.--.', mnemonic: 'a-POO-PY-smell' },
   Q: { code: '--.-', mnemonic: 'GOD-SAVE-the-QUEEN' },
   R: { code: '.-.', mnemonic: 'ro-TA-tion' },
   S: { code: '...', mnemonic: 'su-per-man' },

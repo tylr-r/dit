@@ -34,13 +34,61 @@ function App() {
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const oscillatorRef = useRef<OscillatorNode | null>(null)
+  const gainRef = useRef<GainNode | null>(null)
 
   useEffect(() => {
     return () => {
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop()
+        oscillatorRef.current.disconnect()
+      }
+      if (gainRef.current) {
+        gainRef.current.disconnect()
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
     }
   }, [])
+
+  const startTone = async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume()
+    }
+    if (oscillatorRef.current) {
+      return
+    }
+    const oscillator = audioContextRef.current.createOscillator()
+    const gain = audioContextRef.current.createGain()
+    oscillator.type = 'sine'
+    oscillator.frequency.value = 640
+    gain.gain.value = 0.06
+    oscillator.connect(gain)
+    gain.connect(audioContextRef.current.destination)
+    oscillator.start()
+    oscillatorRef.current = oscillator
+    gainRef.current = gain
+  }
+
+  const stopTone = () => {
+    if (!oscillatorRef.current) {
+      return
+    }
+    oscillatorRef.current.stop()
+    oscillatorRef.current.disconnect()
+    oscillatorRef.current = null
+    if (gainRef.current) {
+      gainRef.current.disconnect()
+      gainRef.current = null
+    }
+  }
 
   useEffect(() => {
     if (showHint) {
@@ -101,10 +149,12 @@ function App() {
     const start = pressStartRef.current
     pressStartRef.current = null
     if (!register || start === null) {
+      stopTone()
       return
     }
     const duration = performance.now() - start
     registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-')
+    stopTone()
   }
 
   const handlePointerDown = (
@@ -119,6 +169,7 @@ function App() {
     event.currentTarget.setPointerCapture(event.pointerId)
     setIsPressing(true)
     pressStartRef.current = performance.now()
+    void startTone()
   }
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -151,6 +202,7 @@ function App() {
     }
     setIsPressing(true)
     pressStartRef.current = performance.now()
+    void startTone()
   }
 
   const handleKeyUp = (event: React.KeyboardEvent<HTMLButtonElement>) => {
