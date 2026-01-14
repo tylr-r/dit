@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
+const LEVELS = [1, 2, 3, 4] as const
 const DOT_THRESHOLD_MS = 200
 const UNIT_MS = DOT_THRESHOLD_MS
 const INTER_CHAR_GAP_MS = UNIT_MS * 3
@@ -12,6 +13,7 @@ const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
   wordMode: 'morse-word-mode',
+  maxLevel: 'morse-max-level',
 }
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
@@ -25,13 +27,43 @@ const readStoredBoolean = (key: string, fallback: boolean) => {
   return stored === 'true'
 }
 
-const pickNewLetter = (previous?: Letter): Letter => {
-  if (!previous) {
-    return LETTERS[Math.floor(Math.random() * LETTERS.length)]
+const readStoredNumber = (
+  key: string,
+  fallback: number,
+  min: number,
+  max: number,
+) => {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+  const stored = window.localStorage.getItem(key)
+  if (stored === null) {
+    return fallback
+  }
+  const parsed = Number(stored)
+  if (!Number.isFinite(parsed)) {
+    return fallback
+  }
+  const clamped = Math.max(min, Math.min(max, Math.round(parsed)))
+  return clamped
+}
+
+const getLettersForLevel = (maxLevel: number) =>
+  LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel)
+
+const pickNewLetter = (letters: Letter[], previous?: Letter): Letter => {
+  if (letters.length === 0) {
+    return LETTERS[0]
+  }
+  if (letters.length === 1) {
+    return letters[0]
+  }
+  if (!previous || !letters.includes(previous)) {
+    return letters[Math.floor(Math.random() * letters.length)]
   }
   let next = previous
   while (next === previous) {
-    next = LETTERS[Math.floor(Math.random() * LETTERS.length)]
+    next = letters[Math.floor(Math.random() * letters.length)]
   }
   return next
 }
@@ -44,7 +76,12 @@ const clearTimer = (ref: { current: number | null }) => {
 }
 
 function App() {
-  const [letter, setLetter] = useState<Letter>(() => pickNewLetter())
+  const [maxLevel, setMaxLevel] = useState(() =>
+    readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4),
+  )
+  const [letter, setLetter] = useState<Letter>(() =>
+    pickNewLetter(getLettersForLevel(maxLevel)),
+  )
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [isPressing, setIsPressing] = useState(false)
@@ -75,6 +112,10 @@ function App() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
+  const availableLetters = useMemo(
+    () => getLettersForLevel(maxLevel),
+    [maxLevel],
+  )
 
   useEffect(() => {
     return () => {
@@ -126,6 +167,27 @@ function App() {
       String(freestyleWordMode),
     )
   }, [freestyleWordMode])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEYS.maxLevel, String(maxLevel))
+  }, [maxLevel])
+
+  useEffect(() => {
+    if (mode !== 'characters') {
+      return
+    }
+    setInput('')
+    setStatus('idle')
+    setShowHintOnce(false)
+    setLetter((current) =>
+      availableLetters.includes(current)
+        ? current
+        : pickNewLetter(availableLetters),
+    )
+  }, [availableLetters, mode])
 
   const startTone = useCallback(async () => {
     if (!audioContextRef.current) {
@@ -413,7 +475,7 @@ function App() {
       if (next === target) {
         setStatus('success')
         successTimeoutRef.current = window.setTimeout(() => {
-          setLetter((current) => pickNewLetter(current))
+          setLetter((current) => pickNewLetter(availableLetters, current))
           setShowHintOnce(false)
           setStatus('idle')
         }, 650)
@@ -424,7 +486,7 @@ function App() {
       scheduleLetterReset('characters')
       return next
     })
-  }, [isFreestyle, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter])
+  }, [isFreestyle, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters])
 
   const releasePress = useCallback(
     (register: boolean) => {
@@ -552,7 +614,7 @@ function App() {
   const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
     status === 'success'
-      ? 'Correct. New letter.'
+      ? 'Correct'
       : status === 'error'
         ? 'Missed. Start over.'
         : hintVisible
@@ -601,16 +663,16 @@ function App() {
       <div className="logo">
         <img src="/DitDot-logo.svg" alt="DitDot" />
       </div>
+      <select
+        className="mode-select"
+        value={mode}
+        onChange={handleModeChange}
+        aria-label="Mode"
+      >
+        <option value="characters">Characters</option>
+        <option value="freestyle">Freestyle</option>
+      </select>
       <div className="settings">
-        <select
-          className="mode-select"
-          value={mode}
-          onChange={handleModeChange}
-          aria-label="Mode"
-        >
-          <option value="characters">Characters</option>
-          <option value="freestyle">Freestyle</option>
-        </select>
         <div className="settings-panel" role="group" aria-label="Settings">
           <label className="toggle">
             <span className="toggle-label">Show hint</span>
@@ -622,6 +684,24 @@ function App() {
               disabled={isFreestyle}
             />
           </label>
+          {!isFreestyle ? (
+            <label className="toggle">
+              <span className="toggle-label">Max level</span>
+              <select
+                className="panel-select"
+                value={maxLevel}
+                onChange={(event) => {
+                  setMaxLevel(Number(event.target.value))
+                }}
+              >
+                {LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    Level {level}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {isFreestyle ? (
             <label className="toggle">
               <span className="toggle-label">Word mode</span>
@@ -706,6 +786,7 @@ function App() {
           <span className="button-content" aria-hidden="true">
             <span className="signal dot" />
             <span className="signal dash" />
+            <span className="signal dot" />
           </span>
         </button>
       </div>

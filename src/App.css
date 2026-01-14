@@ -72,6 +72,11 @@
 }
 
 .mode-select {
+  position: absolute;
+  top: clamp(16px, 4vw, 28px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
   appearance: none;
   padding: 8px 26px 8px 12px;
   border-radius: 999px;
@@ -99,8 +104,41 @@
   background-repeat: no-repeat;
 }
 
+.panel-select {
+  appearance: none;
+  padding: 6px 26px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 16, 20, 0.5);
+  color: var(--text);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      rgba(255, 255, 255, 0.6) 50%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 50%
+    );
+  background-position:
+    calc(100% - 14px) 55%,
+    calc(100% - 9px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
 .mode-select:focus-visible {
   outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
+.panel-select:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
 }
 
