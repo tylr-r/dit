@@ -218,20 +218,6 @@ function App() {
     }
   }, [showReference])
 
-  useEffect(() => {
-    if (mode !== 'characters') {
-      return
-    }
-    setInput('')
-    setStatus('idle')
-    setShowHintOnce(false)
-    setLetter((current) =>
-      availableLetters.includes(current)
-        ? current
-        : pickNewLetter(availableLetters),
-    )
-  }, [availableLetters, mode])
-
   const startTone = useCallback(async () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext()
@@ -292,25 +278,53 @@ function App() {
     }
   }, [isFreestyle, showHint, showHintOnce])
 
-  const applyModeChange = useCallback((nextMode: 'characters' | 'freestyle') => {
-    setMode(nextMode)
-    setFreestyleInput('')
-    setFreestyleResult(null)
-    setFreestyleWord('')
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    if (nextMode === 'freestyle') {
+  const applyModeChange = useCallback(
+    (nextMode: 'characters' | 'freestyle') => {
+      setMode(nextMode)
+      setFreestyleInput('')
+      setFreestyleResult(null)
+      setFreestyleWord('')
+      clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
+      if (nextMode === 'freestyle') {
+        setInput('')
+        setStatus('idle')
+        setShowHintOnce(false)
+        return
+      }
       setInput('')
       setStatus('idle')
       setShowHintOnce(false)
-    }
-  }, [])
+      setLetter((current) =>
+        availableLetters.includes(current)
+          ? current
+          : pickNewLetter(availableLetters),
+      )
+    },
+    [availableLetters],
+  )
 
   const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const nextMode =
       event.target.value === 'freestyle' ? 'freestyle' : 'characters'
     applyModeChange(nextMode)
   }
+
+  const handleMaxLevelChange = useCallback(
+    (nextLevel: number) => {
+      setMaxLevel(nextLevel)
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
+      const nextLetters = getLettersForLevel(nextLevel)
+      setLetter((current) =>
+        nextLetters.includes(current)
+          ? current
+          : pickNewLetter(nextLetters),
+      )
+    },
+    [setMaxLevel],
+  )
 
   const scheduleWordSpace = useCallback(() => {
     clearTimer(wordSpaceTimeoutRef)
@@ -745,7 +759,7 @@ function App() {
                   className="panel-select"
                   value={maxLevel}
                   onChange={(event) => {
-                    setMaxLevel(Number(event.target.value))
+                    handleMaxLevelChange(Number(event.target.value))
                   }}
                 >
                   {LEVELS.map((level) => (
