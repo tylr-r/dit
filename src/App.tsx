@@ -150,6 +150,7 @@ function App() {
   )
   const [freestyleWord, setFreestyleWord] = useState('')
   const [showReference, setShowReference] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [scores, setScores] = useState(() => readStoredScores())
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
@@ -811,45 +812,66 @@ function App() {
         <option value="freestyle">Freestyle</option>
       </select>
       <div className="settings">
-        <div className="settings-panel" role="group" aria-label="Settings">
-          <label className="toggle">
-            <span className="toggle-label">Show hint</span>
-            <input
-              className="toggle-input"
-              type="checkbox"
-              checked={showHint}
-              onChange={(event) => setShowHint(event.target.checked)}
-              disabled={isFreestyle}
+        <button
+          type="button"
+          className="settings-button"
+          onClick={() => setShowSettings((prev) => !prev)}
+          aria-expanded={showSettings}
+          aria-controls="settings-panel"
+          aria-label="Settings"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
+              fill="currentColor"
             />
-          </label>
-          {!isFreestyle ? (
-            <div className="panel-group">
-              <label className="toggle">
-                <span className="toggle-label">Max level</span>
-                <select
-                  className="panel-select"
-                  value={maxLevel}
-                  onChange={(event) => {
-                    handleMaxLevelChange(Number(event.target.value))
-                  }}
+          </svg>
+        </button>
+        {showSettings ? (
+          <div
+            className="settings-panel"
+            role="group"
+            aria-label="Settings"
+            id="settings-panel"
+          >
+            <label className="toggle">
+              <span className="toggle-label">Show hints</span>
+              <input
+                className="toggle-input"
+                type="checkbox"
+                checked={showHint}
+                onChange={(event) => setShowHint(event.target.checked)}
+                disabled={isFreestyle}
+              />
+            </label>
+            {!isFreestyle ? (
+              <div className="panel-group">
+                <label className="toggle">
+                  <span className="toggle-label">Max level</span>
+                  <select
+                    className="panel-select"
+                    value={maxLevel}
+                    onChange={(event) => {
+                      handleMaxLevelChange(Number(event.target.value))
+                    }}
+                  >
+                    {LEVELS.map((level) => (
+                      <option key={level} value={level}>
+                        Level {level}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="panel-button"
+                  onClick={() => setShowReference(true)}
                 >
-                  {LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      Level {level}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="panel-button"
-                onClick={() => setShowReference(true)}
-              >
-                Reference
-              </button>
-            </div>
-          ) : null}
-          {isFreestyle ? (
+                  Reference
+                </button>
+              </div>
+            ) : null}
+            {isFreestyle ? (
             <label className="toggle">
               <span className="toggle-label">Word mode</span>
               <input
@@ -861,8 +883,9 @@ function App() {
                 }}
               />
             </label>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <main className="stage">
         {isFreestyle ? (
