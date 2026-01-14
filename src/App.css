@@ -376,6 +376,41 @@
   z-index: 1;
 }
 
+.listen-controls {
+  width: min(560px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.listen-input {
+  width: clamp(120px, 28vw, 180px);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 16, 20, 0.55);
+  color: var(--text);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.listen-input::placeholder {
+  color: var(--muted);
+  letter-spacing: 0.22em;
+}
+
+.listen-input:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 3px;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

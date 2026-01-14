@@ -167,12 +167,18 @@ function App() {
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
   )
-  const [mode, setMode] = useState<'characters' | 'freestyle'>(() => {
+  const [mode, setMode] = useState<'characters' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
       return 'characters'
     }
     const stored = window.localStorage.getItem(STORAGE_KEYS.mode)
-    return stored === 'freestyle' ? 'freestyle' : 'characters'
+    if (stored === 'freestyle') {
+      return 'freestyle'
+    }
+    if (stored === 'listen') {
+      return 'listen'
+    }
+    return 'characters'
   })
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
@@ -181,18 +187,29 @@ function App() {
     readStoredBoolean(STORAGE_KEYS.wordMode, false),
   )
   const [freestyleWord, setFreestyleWord] = useState('')
+  const [listenInput, setListenInput] = useState('')
+  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
+    'idle',
+  )
+  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
   const [showReference, setShowReference] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [scores, setScores] = useState(() => readStoredScores())
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const showReferenceRef = useRef(showReference)
+  const listenInputRef = useRef<HTMLInputElement | null>(null)
   const errorLockoutUntilRef = useRef(0)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
   const letterTimeoutRef = useRef<number | null>(null)
   const wordSpaceTimeoutRef = useRef<number | null>(null)
+  const listenTimeoutRef = useRef<number | null>(null)
+  const listenPlaybackRef = useRef<{
+    oscillator: OscillatorNode
+    gain: GainNode
+  } | null>(null)
   const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
@@ -221,25 +238,6 @@ function App() {
     () => !(showHint || showHintOnce),
     [showHint, showHintOnce],
   )
-
-  useEffect(() => {
-    return () => {
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      if (oscillatorRef.current) {
-        oscillatorRef.current.stop()
-        oscillatorRef.current.disconnect()
-      }
-      if (gainRef.current) {
-        gainRef.current.disconnect()
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-      }
-    }
-  }, [])
 
   useEffect(() => {
     freestyleInputRef.current = freestyleInput
@@ -320,6 +318,9 @@ function App() {
     }
   }, [showReference])
 
+  const isFreestyle = mode === 'freestyle'
+  const isListen = mode === 'listen'
+
   useEffect(() => {
     const button = morseButtonRef.current
     if (!button) {
@@ -357,7 +358,7 @@ function App() {
       button.removeEventListener('dblclick', preventTouchDefault)
       button.removeEventListener('contextmenu', preventContextMenu)
     }
-  }, [])
+  }, [isListen])
 
   const startTone = useCallback(async () => {
     if (!audioContextRef.current) {
@@ -394,10 +395,106 @@ function App() {
     }
   }, [])
 
-  const isFreestyle = mode === 'freestyle'
+  const stopListenPlayback = useCallback(() => {
+    const current = listenPlaybackRef.current
+    if (!current) {
+      return
+    }
+    try {
+      current.oscillator.stop()
+    } catch {
+      // No-op: oscillator might already be stopped.
+    }
+    current.oscillator.disconnect()
+    current.gain.disconnect()
+    listenPlaybackRef.current = null
+  }, [])
+
+  const playListenSequence = useCallback(
+    async (code: string) => {
+      stopListenPlayback()
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext()
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume()
+      }
+      const context = audioContextRef.current
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'sine'
+      oscillator.frequency.value = 640
+      gain.gain.value = 0
+      oscillator.connect(gain)
+      gain.connect(context.destination)
+      listenPlaybackRef.current = { oscillator, gain }
+
+      const unitSeconds = UNIT_MS / 1000
+      const rampSeconds = 0.005
+      let currentTime = context.currentTime + 0.05
+
+      for (const symbol of code) {
+        const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
+        gain.gain.setValueAtTime(0, currentTime)
+        gain.gain.linearRampToValueAtTime(0.06, currentTime + rampSeconds)
+        gain.gain.setValueAtTime(
+          0.06,
+          currentTime + duration - rampSeconds,
+        )
+        gain.gain.linearRampToValueAtTime(0, currentTime + duration)
+        currentTime += duration + unitSeconds
+      }
+
+      oscillator.start(context.currentTime)
+      oscillator.stop(currentTime + 0.05)
+      oscillator.onended = () => {
+        if (listenPlaybackRef.current?.oscillator === oscillator) {
+          listenPlaybackRef.current = null
+        }
+        oscillator.disconnect()
+        gain.disconnect()
+      }
+    },
+    [stopListenPlayback],
+  )
 
   useEffect(() => {
-    if (showHint || isFreestyle) {
+    return () => {
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
+      clearTimer(listenTimeoutRef)
+      stopListenPlayback()
+      if (oscillatorRef.current) {
+        oscillatorRef.current.stop()
+        oscillatorRef.current.disconnect()
+      }
+      if (gainRef.current) {
+        gainRef.current.disconnect()
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
+    }
+  }, [stopListenPlayback])
+
+  useEffect(() => {
+    if (!isListen) {
+      return
+    }
+    listenInputRef.current?.focus()
+  }, [isListen])
+
+  const resetListenState = useCallback(() => {
+    clearTimer(listenTimeoutRef)
+    setListenInput('')
+    setListenStatus('idle')
+    setListenReveal(null)
+  }, [])
+
+  useEffect(() => {
+    if (showHint || isFreestyle || isListen) {
       return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -417,37 +514,56 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isFreestyle, showHint, showHintOnce])
+  }, [isFreestyle, isListen, showHint, showHintOnce])
 
   const applyModeChange = useCallback(
-    (nextMode: 'characters' | 'freestyle') => {
+    (nextMode: 'characters' | 'freestyle' | 'listen') => {
       setMode(nextMode)
+      stopListenPlayback()
       setFreestyleInput('')
       setFreestyleResult(null)
       setFreestyleWord('')
       clearTimer(letterTimeoutRef)
       clearTimer(wordSpaceTimeoutRef)
-      if (nextMode === 'freestyle') {
-        setInput('')
-        setStatus('idle')
-        setShowHintOnce(false)
-        return
-      }
       setInput('')
       setStatus('idle')
       setShowHintOnce(false)
+      resetListenState()
+      if (nextMode === 'freestyle') {
+        return
+      }
+      if (nextMode === 'listen') {
+        const nextLetter = availableLetters.includes(letter)
+          ? letter
+          : pickWeightedLetter(availableLetters, scores)
+        setLetter(nextLetter)
+        void playListenSequence(MORSE_DATA[nextLetter].code)
+        return
+      }
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
           : pickWeightedLetter(availableLetters, scores),
       )
     },
-    [availableLetters, scores],
+    [
+      availableLetters,
+      letter,
+      playListenSequence,
+      resetListenState,
+      scores,
+      stopListenPlayback,
+    ],
   )
 
   const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target
     const nextMode =
-      event.target.value === 'freestyle' ? 'freestyle' : 'characters'
+      value === 'freestyle'
+        ? 'freestyle'
+        : value === 'listen'
+          ? 'listen'
+          : 'characters'
     applyModeChange(nextMode)
   }
 
@@ -457,14 +573,17 @@ function App() {
       setInput('')
       setStatus('idle')
       setShowHintOnce(false)
+      resetListenState()
       const nextLetters = getLettersForLevel(nextLevel)
-      setLetter((current) =>
-        nextLetters.includes(current)
-          ? current
-          : pickWeightedLetter(nextLetters, scores),
-      )
+      const nextLetter = nextLetters.includes(letter)
+        ? letter
+        : pickWeightedLetter(nextLetters, scores)
+      setLetter(nextLetter)
+      if (isListen) {
+        void playListenSequence(MORSE_DATA[nextLetter].code)
+      }
     },
-    [scores, setMaxLevel],
+    [isListen, letter, playListenSequence, resetListenState, scores, setMaxLevel],
   )
 
   const scheduleWordSpace = useCallback(() => {
@@ -565,6 +684,68 @@ function App() {
     [handleFreestyleClear],
   )
 
+  const sanitizeListenInput = useCallback((value: string) => {
+    const trimmed = value.trim().toUpperCase()
+    if (!trimmed) {
+      return ''
+    }
+    const next = trimmed[0]
+    return /^[A-Z0-9]$/.test(next) ? next : ''
+  }, [])
+
+  const submitListenAnswer = useCallback(
+    (value: string) => {
+      if (listenStatus !== 'idle') {
+        return
+      }
+      if (!/^[A-Z0-9]$/.test(value)) {
+        return
+      }
+      clearTimer(listenTimeoutRef)
+      stopListenPlayback()
+      const isCorrect = value === letter
+      setListenStatus(isCorrect ? 'success' : 'error')
+      setListenReveal(letter)
+      setListenInput('')
+      bumpScore(letter, isCorrect ? 1 : -1)
+      listenTimeoutRef.current = window.setTimeout(() => {
+        const nextLetter = pickWeightedLetter(availableLetters, scores, letter)
+        setListenStatus('idle')
+        setListenReveal(null)
+        setLetter(nextLetter)
+        void playListenSequence(MORSE_DATA[nextLetter].code)
+      }, isCorrect ? 650 : ERROR_LOCKOUT_MS)
+    },
+    [
+      availableLetters,
+      bumpScore,
+      letter,
+      listenStatus,
+      playListenSequence,
+      scores,
+      stopListenPlayback,
+    ],
+  )
+
+  const handleListenInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const sanitized = sanitizeListenInput(event.target.value)
+      setListenInput(sanitized)
+      if (sanitized) {
+        submitListenAnswer(sanitized)
+      }
+    },
+    [sanitizeListenInput, submitListenAnswer],
+  )
+
+  const handleListenReplay = useCallback(() => {
+    if (listenStatus !== 'idle') {
+      return
+    }
+    setListenReveal(null)
+    void playListenSequence(MORSE_DATA[letter].code)
+  }, [letter, listenStatus, playListenSequence])
+
   useEffect(() => {
     if (!isFreestyle) {
       return
@@ -586,6 +767,9 @@ function App() {
   }, [handleFreestyleClear, isFreestyle])
 
   useEffect(() => {
+    if (isListen) {
+      return
+    }
     const handleShortcut = (event: KeyboardEvent) => {
       if (showReference) {
         return
@@ -610,6 +794,11 @@ function App() {
       if (key === 'f') {
         event.preventDefault()
         applyModeChange('freestyle')
+        return
+      }
+      if (key === 'i') {
+        event.preventDefault()
+        applyModeChange('listen')
         return
       }
       if (key === 'l') {
@@ -647,6 +836,7 @@ function App() {
     freestyleWordMode,
     handleFreestyleBackspace,
     handleWordModeChange,
+    isListen,
     mode,
     showReference,
   ])
@@ -774,7 +964,10 @@ function App() {
       if (showReferenceRef.current) {
         return
       }
-      if (!isFreestyle && isErrorLocked()) {
+      if (isFreestyle || isListen) {
+        return
+      }
+      if (isErrorLocked()) {
         return
       }
       if (event.repeat) {
@@ -798,6 +991,9 @@ function App() {
       if (showReferenceRef.current) {
         return
       }
+      if (isFreestyle || isListen) {
+        return
+      }
       if (event.code !== 'Space' && event.key !== ' ') {
         return
       }
@@ -814,7 +1010,30 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown)
       window.removeEventListener('keyup', handleGlobalKeyUp)
     }
-  }, [isErrorLocked, isFreestyle, releasePress, startTone])
+  }, [isErrorLocked, isFreestyle, isListen, releasePress, startTone])
+
+  useEffect(() => {
+    if (!isListen) {
+      return
+    }
+    const handleListenSpace = (event: KeyboardEvent) => {
+      if (showReferenceRef.current) {
+        return
+      }
+      if (event.repeat) {
+        return
+      }
+      if (event.code !== 'Space' && event.key !== ' ') {
+        return
+      }
+      event.preventDefault()
+      handleListenReplay()
+    }
+    window.addEventListener('keydown', handleListenSpace)
+    return () => {
+      window.removeEventListener('keydown', handleListenSpace)
+    }
+  }, [handleListenReplay, isListen])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
@@ -848,7 +1067,7 @@ function App() {
     releasePress(true)
   }
 
-  const hintVisible = !isFreestyle && (showHint || showHintOnce)
+  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
   const target = MORSE_DATA[letter].code
   const mnemonic = MORSE_DATA[letter].mnemonic
   const statusText =
@@ -897,6 +1116,16 @@ function App() {
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
     : Boolean(freestyleResult)
+  const listenStatusText =
+    listenStatus === 'success'
+      ? 'Correct'
+      : listenStatus === 'error'
+        ? 'Incorrect'
+        : 'Listen and type the character'
+  const listenDisplay = listenReveal ?? '?'
+  const listenDisplayClass = `letter ${
+    listenReveal ? '' : 'letter-placeholder'
+  }`
   const formatScore = (value: number) =>
     value > 0 ? `+${value}` : `${value}`
   const getScoreStyle = (
@@ -927,6 +1156,7 @@ function App() {
       >
         <option value="characters">Characters</option>
         <option value="freestyle">Freestyle</option>
+        <option value="listen">Listen</option>
       </select>
       <div className="settings">
         <button
@@ -958,7 +1188,7 @@ function App() {
                 type="checkbox"
                 checked={showHint}
                 onChange={(event) => setShowHint(event.target.checked)}
-                disabled={isFreestyle}
+                disabled={isFreestyle || isListen}
               />
             </label>
             {!isFreestyle ? (
@@ -1014,6 +1244,15 @@ function App() {
           >
             {freestyleDisplay}
           </div>
+        ) : isListen ? (
+          <>
+            <div key={letter} className={listenDisplayClass} aria-live="polite">
+              {listenDisplay}
+            </div>
+            <p className="status-text" aria-live="polite">
+              {listenStatusText}
+            </p>
+          </>
         ) : (
           <>
             <div key={letter} className="letter">
@@ -1047,7 +1286,7 @@ function App() {
             </button>
           </>
         ) : null}
-        {!showHint && !isFreestyle ? (
+        {!showHint && !isFreestyle && !isListen ? (
           <button
             type="button"
             className="hint-button"
@@ -1057,27 +1296,55 @@ function App() {
             Show this hint
           </button>
         ) : null}
-        <button
-          type="button"
-          className={`morse-button ${isPressing ? 'pressing' : ''}`}
-          ref={morseButtonRef}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-          onPointerLeave={handlePointerCancel}
-          onContextMenu={(event) => event.preventDefault()}
-          onDoubleClick={(event) => event.preventDefault()}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleKeyUp}
-          onBlur={handlePointerCancel}
-          aria-label="Tap for dot, hold for dash"
-        >
-          <span className="button-content" aria-hidden="true">
-            <span className="signal dot" />
-            <span className="signal dash" />
-            <span className="signal dot" />
-          </span>
-        </button>
+        {isListen ? (
+          <div className="listen-controls">
+            <button
+              type="button"
+              className="hint-button"
+              onClick={handleListenReplay}
+              disabled={listenStatus !== 'idle'}
+            >
+              Play
+            </button>
+            <input
+              ref={listenInputRef}
+              className="listen-input"
+              type="text"
+              inputMode="text"
+              autoCapitalize="characters"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Type"
+              value={listenInput}
+              onChange={handleListenInputChange}
+              maxLength={1}
+              aria-label="Type the character you hear"
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={`morse-button ${isPressing ? 'pressing' : ''}`}
+            ref={morseButtonRef}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
+            onContextMenu={(event) => event.preventDefault()}
+            onDoubleClick={(event) => event.preventDefault()}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
+            onBlur={handlePointerCancel}
+            aria-label="Tap for dot, hold for dash"
+          >
+            <span className="button-content" aria-hidden="true">
+              <span className="signal dot" />
+              <span className="signal dash" />
+              <span className="signal dot" />
+            </span>
+          </button>
+        )}
       </div>
       {showReference ? (
         <div
