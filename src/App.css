@@ -38,6 +38,28 @@
   z-index: 0;
 }
 
+.logo {
+  position: absolute;
+  top: clamp(16px, 4vw, 28px);
+  left: clamp(16px, 4vw, 32px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.logo img {
+  width: clamp(44px, 6vw, 72px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35));
+  opacity: 0.5;
+  transition: opacity 160ms ease;
+}
+
+.logo img:hover {
+  opacity: 1;
+}
+
 .settings {
   position: absolute;
   top: clamp(16px, 4vw, 28px);

@@ -598,6 +598,9 @@ function App() {
     : Boolean(freestyleResult)
   return (
     <div className={`app status-${status}`}>
+      <div className="logo">
+        <img src="/DitDot-logo.svg" alt="DitDot" />
+      </div>
       <div className="settings">
         <select
           className="mode-select"
