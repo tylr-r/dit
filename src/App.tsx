@@ -22,11 +22,13 @@ const UNIT_MS = DOT_THRESHOLD_MS
 const INTER_CHAR_GAP_MS = UNIT_MS * 3
 const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
+const SCORE_INTENSITY_MAX = 15
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
   wordMode: 'morse-word-mode',
   maxLevel: 'morse-max-level',
+  scores: 'morse-scores',
 }
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
@@ -88,6 +90,38 @@ const clearTimer = (ref: { current: number | null }) => {
   }
 }
 
+const buildScoreMap = () =>
+  LETTERS.reduce(
+    (acc, letter) => {
+      acc[letter] = 0
+      return acc
+    },
+    {} as Record<Letter, number>,
+  )
+
+const readStoredScores = () => {
+  if (typeof window === 'undefined') {
+    return buildScoreMap()
+  }
+  const stored = window.localStorage.getItem(STORAGE_KEYS.scores)
+  if (!stored) {
+    return buildScoreMap()
+  }
+  try {
+    const parsed = JSON.parse(stored) as Record<string, unknown>
+    const next = buildScoreMap()
+    LETTERS.forEach((letter) => {
+      const value = parsed[letter]
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        next[letter] = value
+      }
+    })
+    return next
+  } catch {
+    return buildScoreMap()
+  }
+}
+
 function App() {
   const [maxLevel, setMaxLevel] = useState(() =>
     readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4),
@@ -116,6 +150,7 @@ function App() {
   )
   const [freestyleWord, setFreestyleWord] = useState('')
   const [showReference, setShowReference] = useState(false)
+  const [scores, setScores] = useState(() => readStoredScores())
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const pressStartRef = useRef<number | null>(null)
@@ -130,6 +165,15 @@ function App() {
     () => getLettersForLevel(maxLevel),
     [maxLevel],
   )
+  const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
+    setScores((prev) => ({
+      ...prev,
+      [targetLetter]: prev[targetLetter] + delta,
+    }))
+  }, [])
+  const handleResetScores = useCallback(() => {
+    setScores(buildScoreMap())
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -188,6 +232,13 @@ function App() {
     }
     window.localStorage.setItem(STORAGE_KEYS.maxLevel, String(maxLevel))
   }, [maxLevel])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores))
+  }, [scores])
 
   useEffect(() => {
     if (!showReference) {
@@ -372,13 +423,14 @@ function App() {
       }
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
+      bumpScore(letter, -1)
       setStatus('error')
       setInput('')
       errorTimeoutRef.current = window.setTimeout(() => {
         setStatus('idle')
       }, 700)
     }, INTER_CHAR_GAP_MS)
-  }, [submitFreestyleInput, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
+  }, [bumpScore, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
@@ -526,6 +578,7 @@ function App() {
       const target = MORSE_DATA[letter].code
 
       if (!target.startsWith(next)) {
+        bumpScore(letter, -1)
         setStatus('error')
         errorTimeoutRef.current = window.setTimeout(() => {
           setStatus('idle')
@@ -534,6 +587,7 @@ function App() {
       }
 
       if (next === target) {
+        bumpScore(letter, 1)
         setStatus('success')
         successTimeoutRef.current = window.setTimeout(() => {
           setLetter((current) => pickNewLetter(availableLetters, current))
@@ -547,7 +601,7 @@ function App() {
       scheduleLetterReset('characters')
       return next
     })
-  }, [isFreestyle, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters])
+  }, [isFreestyle, bumpScore, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters])
 
   const releasePress = useCallback(
     (register: boolean) => {
@@ -725,6 +779,23 @@ function App() {
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
     : Boolean(freestyleResult)
+  const formatScore = (value: number) =>
+    value > 0 ? `+${value}` : `${value}`
+  const getScoreStyle = (
+    scoreValue: number,
+  ): React.CSSProperties | undefined => {
+    if (scoreValue === 0) {
+      return
+    }
+    const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
+    const intensity = Math.min(Math.max(normalized, 0.2), 1)
+    const alpha = 0.35 * intensity
+    const tint = scoreValue > 0 ? '56, 242, 162' : '255, 90, 96'
+    return {
+      '--score-tint': tint,
+      '--score-alpha': String(alpha),
+    } as React.CSSProperties
+  }
   return (
     <div className={`app status-${status}`}>
       <div className="logo">
@@ -880,37 +951,44 @@ function App() {
           >
             <div className="modal-header">
               <div className="modal-title">Reference</div>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setShowReference(false)}
-              >
-                Close
-              </button>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-close modal-reset"
+                  onClick={handleResetScores}
+                >
+                  Reset scores
+                </button>
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setShowReference(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
             <div className="reference-grid">
-              {REFERENCE_LETTERS.map((char) => (
-                <div key={char} className="reference-card">
-                  <div className="reference-letter">{char}</div>
+              {REFERENCE_LETTERS.map((char) => {
+                const scoreValue = scores[char]
+                const scoreClass =
+                  scoreValue > 0
+                    ? 'score-positive'
+                    : scoreValue < 0
+                      ? 'score-negative'
+                      : 'score-neutral'
+                return (
                   <div
-                    className="reference-code"
-                    aria-label={MORSE_DATA[char].code}
+                    key={char}
+                    className="reference-card"
+                    style={getScoreStyle(scoreValue)}
                   >
-                    {MORSE_DATA[char].code.split('').map((symbol, index) => (
-                      <span
-                        key={`${char}-${index}`}
-                        className="reference-symbol"
-                      >
-                        {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="reference-row">
-                {REFERENCE_NUMBERS.map((char) => (
-                  <div key={char} className="reference-card">
-                    <div className="reference-letter">{char}</div>
+                    <div className="reference-head">
+                      <div className="reference-letter">{char}</div>
+                      <div className={`reference-score ${scoreClass}`}>
+                        {formatScore(scoreValue)}
+                      </div>
+                    </div>
                     <div
                       className="reference-code"
                       aria-label={MORSE_DATA[char].code}
@@ -920,12 +998,60 @@ function App() {
                           key={`${char}-${index}`}
                           className="reference-symbol"
                         >
-                          {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+                          {symbol === '.'
+                            ? '•'
+                            : symbol === '-'
+                              ? '—'
+                              : symbol}
                         </span>
                       ))}
                     </div>
                   </div>
-                ))}
+                )
+              })}
+              <div className="reference-row">
+                {REFERENCE_NUMBERS.map((char) => {
+                  const scoreValue = scores[char]
+                  const scoreClass =
+                    scoreValue > 0
+                      ? 'score-positive'
+                      : scoreValue < 0
+                        ? 'score-negative'
+                        : 'score-neutral'
+                  return (
+                    <div
+                      key={char}
+                      className="reference-card"
+                      style={getScoreStyle(scoreValue)}
+                    >
+                      <div className="reference-head">
+                        <div className="reference-letter">{char}</div>
+                        <div className={`reference-score ${scoreClass}`}>
+                          {formatScore(scoreValue)}
+                        </div>
+                      </div>
+                      <div
+                        className="reference-code"
+                        aria-label={MORSE_DATA[char].code}
+                      >
+                        {MORSE_DATA[char].code.split('').map(
+                          (symbol, index) => (
+                            <span
+                              key={`${char}-${index}`}
+                              className="reference-symbol"
+                            >
+                              {symbol === '.'
+                                ? '•'
+                                : symbol === '-'
+                                  ? '—'
+                                  : symbol}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

@@ -406,6 +406,12 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .modal-title {
   font-size: 0.75rem;
   letter-spacing: 0.28em;
@@ -429,6 +435,16 @@
 .modal-close:hover {
   color: var(--text);
   border-color: rgba(255, 255, 255, 0.4);
+}
+
+.modal-close.modal-reset {
+  color: var(--error);
+  border-color: rgba(255, 90, 96, 0.35);
+}
+
+.modal-close.modal-reset:hover {
+  color: var(--error);
+  border-color: rgba(255, 90, 96, 0.6);
 }
 
 .modal-close:focus-visible {
@@ -455,12 +471,35 @@
 .reference-card {
   padding: 12px 10px;
   border-radius: 12px;
-  background: rgba(8, 12, 16, 0.55);
+  background:
+    linear-gradient(
+      0deg,
+      rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0)),
+      rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0))
+    ),
+    rgba(8, 12, 16, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+}
+
+.reference-head {
+  position: relative;
+  width: 100%;
+  min-height: 1.4rem;
+  display: grid;
+  place-items: center;
+}
+
+.reference-letter,
+.reference-score {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity 160ms ease;
 }
 
 .reference-letter {
@@ -469,6 +508,32 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text);
+  opacity: 1;
+}
+
+.reference-score {
+  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0;
+}
+
+.reference-score.score-positive {
+  color: var(--accent);
+}
+
+.reference-score.score-negative {
+  color: var(--error);
+}
+
+.reference-card:hover .reference-letter {
+  opacity: 0;
+}
+
+.reference-card:hover .reference-score {
+  opacity: 1;
 }
 
 .reference-code {
