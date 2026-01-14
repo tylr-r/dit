@@ -4,6 +4,19 @@ import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const LEVELS = [1, 2, 3, 4] as const
+const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter))
+const REFERENCE_NUMBERS: Letter[] = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '0',
+]
 const DOT_THRESHOLD_MS = 200
 const UNIT_MS = DOT_THRESHOLD_MS
 const INTER_CHAR_GAP_MS = UNIT_MS * 3
@@ -102,6 +115,7 @@ function App() {
     readStoredBoolean(STORAGE_KEYS.wordMode, false),
   )
   const [freestyleWord, setFreestyleWord] = useState('')
+  const [showReference, setShowReference] = useState(false)
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const pressStartRef = useRef<number | null>(null)
@@ -174,6 +188,35 @@ function App() {
     }
     window.localStorage.setItem(STORAGE_KEYS.maxLevel, String(maxLevel))
   }, [maxLevel])
+
+  useEffect(() => {
+    if (!showReference) {
+      return
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowReference(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showReference])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+    if (!showReference) {
+      return
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showReference])
 
   useEffect(() => {
     if (mode !== 'characters') {
@@ -385,6 +428,9 @@ function App() {
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
+      if (showReference) {
+        return
+      }
       if (event.repeat) {
         return
       }
@@ -443,6 +489,7 @@ function App() {
     handleFreestyleBackspace,
     handleWordModeChange,
     mode,
+    showReference,
   ])
 
   const registerSymbol = useCallback((symbol: '.' | '-') => {
@@ -544,6 +591,9 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (showReference) {
+        return
+      }
       if (event.repeat) {
         return
       }
@@ -562,6 +612,9 @@ function App() {
     }
 
     const handleGlobalKeyUp = (event: KeyboardEvent) => {
+      if (showReference) {
+        return
+      }
       if (event.code !== 'Space' && event.key !== ' ') {
         return
       }
@@ -578,7 +631,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown)
       window.removeEventListener('keyup', handleGlobalKeyUp)
     }
-  }, [releasePress, startTone])
+  }, [releasePress, showReference, startTone])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
@@ -685,22 +738,31 @@ function App() {
             />
           </label>
           {!isFreestyle ? (
-            <label className="toggle">
-              <span className="toggle-label">Max level</span>
-              <select
-                className="panel-select"
-                value={maxLevel}
-                onChange={(event) => {
-                  setMaxLevel(Number(event.target.value))
-                }}
+            <div className="panel-group">
+              <label className="toggle">
+                <span className="toggle-label">Max level</span>
+                <select
+                  className="panel-select"
+                  value={maxLevel}
+                  onChange={(event) => {
+                    setMaxLevel(Number(event.target.value))
+                  }}
+                >
+                  {LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      Level {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="panel-button"
+                onClick={() => setShowReference(true)}
               >
-                {LEVELS.map((level) => (
-                  <option key={level} value={level}>
-                    Level {level}
-                  </option>
-                ))}
-              </select>
-            </label>
+                Reference
+              </button>
+            </div>
           ) : null}
           {isFreestyle ? (
             <label className="toggle">
@@ -790,6 +852,71 @@ function App() {
           </span>
         </button>
       </div>
+      {showReference ? (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowReference(false)}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Morse reference"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div className="modal-title">Reference</div>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowReference(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="reference-grid">
+              {REFERENCE_LETTERS.map((char) => (
+                <div key={char} className="reference-card">
+                  <div className="reference-letter">{char}</div>
+                  <div
+                    className="reference-code"
+                    aria-label={MORSE_DATA[char].code}
+                  >
+                    {MORSE_DATA[char].code.split('').map((symbol, index) => (
+                      <span
+                        key={`${char}-${index}`}
+                        className="reference-symbol"
+                      >
+                        {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="reference-row">
+                {REFERENCE_NUMBERS.map((char) => (
+                  <div key={char} className="reference-card">
+                    <div className="reference-letter">{char}</div>
+                    <div
+                      className="reference-code"
+                      aria-label={MORSE_DATA[char].code}
+                    >
+                      {MORSE_DATA[char].code.split('').map((symbol, index) => (
+                        <span
+                          key={`${char}-${index}`}
+                          className="reference-symbol"
+                        >
+                          {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
