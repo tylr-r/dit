@@ -193,6 +193,7 @@ function App() {
   const successTimeoutRef = useRef<number | null>(null)
   const letterTimeoutRef = useRef<number | null>(null)
   const wordSpaceTimeoutRef = useRef<number | null>(null)
+  const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
@@ -318,6 +319,45 @@ function App() {
       document.body.style.overflow = previousOverflow
     }
   }, [showReference])
+
+  useEffect(() => {
+    const button = morseButtonRef.current
+    if (!button) {
+      return
+    }
+    const preventTouchDefault = (event: Event) => {
+      if (event.cancelable) {
+        event.preventDefault()
+      }
+    }
+    const preventContextMenu = (event: Event) => {
+      event.preventDefault()
+    }
+    button.addEventListener('touchstart', preventTouchDefault, {
+      passive: false,
+    })
+    button.addEventListener('touchmove', preventTouchDefault, {
+      passive: false,
+    })
+    button.addEventListener('touchend', preventTouchDefault, {
+      passive: false,
+    })
+    button.addEventListener('touchcancel', preventTouchDefault, {
+      passive: false,
+    })
+    button.addEventListener('dblclick', preventTouchDefault, {
+      passive: false,
+    })
+    button.addEventListener('contextmenu', preventContextMenu)
+    return () => {
+      button.removeEventListener('touchstart', preventTouchDefault)
+      button.removeEventListener('touchmove', preventTouchDefault)
+      button.removeEventListener('touchend', preventTouchDefault)
+      button.removeEventListener('touchcancel', preventTouchDefault)
+      button.removeEventListener('dblclick', preventTouchDefault)
+      button.removeEventListener('contextmenu', preventContextMenu)
+    }
+  }, [])
 
   const startTone = useCallback(async () => {
     if (!audioContextRef.current) {
@@ -688,6 +728,9 @@ function App() {
     if (event.button !== 0) {
       return
     }
+    if (event.pointerType === 'touch') {
+      event.preventDefault()
+    }
     if (!isFreestyle && isErrorLocked()) {
       return
     }
@@ -703,6 +746,9 @@ function App() {
   }
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'touch') {
+      event.preventDefault()
+    }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
@@ -1014,11 +1060,13 @@ function App() {
         <button
           type="button"
           className={`morse-button ${isPressing ? 'pressing' : ''}`}
+          ref={morseButtonRef}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
           onPointerLeave={handlePointerCancel}
           onContextMenu={(event) => event.preventDefault()}
+          onDoubleClick={(event) => event.preventDefault()}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onBlur={handlePointerCancel}

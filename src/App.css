@@ -599,10 +599,20 @@
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 160ms ease, filter 200ms ease;
   position: relative;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
+}
+
+.morse-button *,
+.morse-button *::before,
+.morse-button *::after {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .morse-button::after {
