@@ -51,7 +51,6 @@ function App() {
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
   )
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [mode, setMode] = useState<'characters' | 'freestyle'>(() => {
     if (typeof window === 'undefined') {
       return 'characters'
@@ -609,47 +608,31 @@ function App() {
           <option value="characters">Characters</option>
           <option value="freestyle">Freestyle</option>
         </select>
-        <button
-          type="button"
-          className="settings-button"
-          aria-label="Open settings"
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((prev) => !prev)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm9.2 3.4c0-.4 0-.8-.1-1.2l-2.1-.3c-.2-.6-.4-1.1-.7-1.6l1.3-1.7c-.6-.7-1.3-1.4-2-2l-1.7 1.3c-.5-.3-1-.5-1.6-.7l-.3-2.1c-.4-.1-.8-.1-1.2-.1s-.8 0-1.2.1l-.3 2.1c-.6.2-1.1.4-1.6.7L6.4 5.7c-.7.6-1.4 1.3-2 2l1.3 1.7c-.3.5-.5 1-.7 1.6l-2.1.3c-.1.4-.1.8-.1 1.2s0 .8.1 1.2l2.1.3c.2.6.4 1.1.7 1.6L4.4 18c.6.7 1.3 1.4 2 2l1.7-1.3c.5.3 1 .5 1.6.7l.3 2.1c.4.1.8.1 1.2.1s.8 0 1.2-.1l.3-2.1c.6-.2 1.1-.4 1.6-.7l1.7 1.3c.7-.6 1.4-1.3 2-2l-1.3-1.7c.3-.5.5-1 .7-1.6l2.1-.3c.1-.4.1-.8.1-1.2Z"
-              fill="currentColor"
+        <div className="settings-panel" role="group" aria-label="Settings">
+          <label className="toggle">
+            <span className="toggle-label">Show hint</span>
+            <input
+              className="toggle-input"
+              type="checkbox"
+              checked={showHint}
+              onChange={(event) => setShowHint(event.target.checked)}
+              disabled={isFreestyle}
             />
-          </svg>
-        </button>
-        {settingsOpen ? (
-          <div className="settings-panel" role="dialog" aria-label="Settings">
+          </label>
+          {isFreestyle ? (
             <label className="toggle">
-              <span className="toggle-label">Show hint</span>
+              <span className="toggle-label">Word mode</span>
               <input
                 className="toggle-input"
                 type="checkbox"
-                checked={showHint}
-                onChange={(event) => setShowHint(event.target.checked)}
-                disabled={isFreestyle}
+                checked={freestyleWordMode}
+                onChange={(event) => {
+                  handleWordModeChange(event.target.checked)
+                }}
               />
             </label>
-            {isFreestyle ? (
-              <label className="toggle">
-                <span className="toggle-label">Word mode</span>
-                <input
-                  className="toggle-input"
-                  type="checkbox"
-                  checked={freestyleWordMode}
-                  onChange={(event) => {
-                    handleWordModeChange(event.target.checked)
-                  }}
-                />
-              </label>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
       <main className="stage">
         {isFreestyle ? (
