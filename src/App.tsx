@@ -216,6 +216,10 @@ function App() {
   const startErrorLockout = useCallback(() => {
     errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS
   }, [])
+  const canScoreAttempt = useCallback(
+    () => !(showHint || showHintOnce),
+    [showHint, showHintOnce],
+  )
 
   useEffect(() => {
     return () => {
@@ -470,14 +474,16 @@ function App() {
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
       startErrorLockout()
-      bumpScore(letter, -1)
+      if (canScoreAttempt()) {
+        bumpScore(letter, -1)
+      }
       setStatus('error')
       setInput('')
       errorTimeoutRef.current = window.setTimeout(() => {
         setStatus('idle')
       }, ERROR_LOCKOUT_MS)
     }, INTER_CHAR_GAP_MS)
-  }, [bumpScore, startErrorLockout, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
+  }, [bumpScore, canScoreAttempt, startErrorLockout, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
@@ -629,7 +635,9 @@ function App() {
 
       if (!target.startsWith(next)) {
         startErrorLockout()
-        bumpScore(letter, -1)
+        if (canScoreAttempt()) {
+          bumpScore(letter, -1)
+        }
         setStatus('error')
         errorTimeoutRef.current = window.setTimeout(() => {
           setStatus('idle')
@@ -638,7 +646,9 @@ function App() {
       }
 
       if (next === target) {
-        bumpScore(letter, 1)
+        if (canScoreAttempt()) {
+          bumpScore(letter, 1)
+        }
         setStatus('success')
         successTimeoutRef.current = window.setTimeout(() => {
           setLetter((current) =>
@@ -654,7 +664,7 @@ function App() {
       scheduleLetterReset('characters')
       return next
     })
-  }, [isFreestyle, isErrorLocked, startErrorLockout, bumpScore, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters, scores])
+  }, [isFreestyle, isErrorLocked, startErrorLockout, bumpScore, canScoreAttempt, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters, scores])
 
   const releasePress = useCallback(
     (register: boolean) => {
