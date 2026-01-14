@@ -19,6 +19,8 @@ const REFERENCE_NUMBERS: Letter[] = [
 ]
 const DOT_THRESHOLD_MS = 200
 const UNIT_MS = DOT_THRESHOLD_MS
+const LISTEN_WPM_MIN = 10
+const LISTEN_WPM_MAX = 30
 const INTER_CHAR_GAP_MS = UNIT_MS * 3
 const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
@@ -30,6 +32,7 @@ const STORAGE_KEYS = {
   wordMode: 'morse-word-mode',
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
+  listenWpm: 'morse-listen-wpm',
 }
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
@@ -187,6 +190,9 @@ function App() {
     readStoredBoolean(STORAGE_KEYS.wordMode, false),
   )
   const [freestyleWord, setFreestyleWord] = useState('')
+  const [listenWpm, setListenWpm] = useState(() =>
+    readStoredNumber(STORAGE_KEYS.listenWpm, 20, LISTEN_WPM_MIN, LISTEN_WPM_MAX),
+  )
   const [listenInput, setListenInput] = useState('')
   const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
@@ -281,6 +287,13 @@ function App() {
     }
     window.localStorage.setItem(STORAGE_KEYS.maxLevel, String(maxLevel))
   }, [maxLevel])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEYS.listenWpm, String(listenWpm))
+  }, [listenWpm])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -429,7 +442,7 @@ function App() {
       gain.connect(context.destination)
       listenPlaybackRef.current = { oscillator, gain }
 
-      const unitSeconds = UNIT_MS / 1000
+      const unitSeconds = 1.2 / listenWpm
       const rampSeconds = 0.005
       let currentTime = context.currentTime + 0.05
 
@@ -455,7 +468,7 @@ function App() {
         gain.disconnect()
       }
     },
-    [stopListenPlayback],
+    [listenWpm, stopListenPlayback],
   )
 
   useEffect(() => {
@@ -1209,6 +1222,27 @@ function App() {
                     ))}
                   </select>
                 </label>
+                {isListen ? (
+                  <label className="toggle">
+                    <span className="toggle-label">Listen speed</span>
+                    <select
+                      className="panel-select"
+                      value={listenWpm}
+                      onChange={(event) => {
+                        setListenWpm(Number(event.target.value))
+                      }}
+                    >
+                      {Array.from(
+                        { length: LISTEN_WPM_MAX - LISTEN_WPM_MIN + 1 },
+                        (_, index) => LISTEN_WPM_MIN + index,
+                      ).map((wpm) => (
+                        <option key={wpm} value={wpm}>
+                          {wpm} WPM
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <button
                   type="button"
                   className="panel-button"
