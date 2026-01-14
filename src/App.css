@@ -1,22 +1,36 @@
-#root {
-  min-height: 100svh;
-}
-
 .app {
+  --app-pad-x: clamp(16px, 6vw, 80px);
+  --app-pad-y: clamp(18px, 4vw, 40px);
   min-height: 100svh;
+  min-height: var(--app-height, 100dvh);
+  height: var(--app-height, 100dvh);
   width: 100%;
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-items: center;
-  gap: clamp(20px, 4vw, 32px);
-  padding: clamp(24px, 5vw, 56px) clamp(20px, 6vw, 80px)
-    clamp(32px, 7vw, 80px);
+  gap: clamp(12px, 3vw, 24px);
+  padding: calc(var(--app-pad-y) + env(safe-area-inset-top, 0px))
+    var(--app-pad-x) calc(var(--app-pad-y) + env(safe-area-inset-bottom, 0px));
   position: relative;
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.app.mode-listen.listen-focused {
+  gap: clamp(8px, 2vw, 16px);
+  padding: calc(clamp(12px, 3vw, 28px) + env(safe-area-inset-top, 0px))
+    var(--app-pad-x)
+    calc(clamp(12px, 3vw, 28px) + env(safe-area-inset-bottom, 0px));
+}
+
+.app.mode-listen.listen-focused .stage {
+  gap: clamp(8px, 2vw, 14px);
+}
+
+.app.mode-listen.listen-focused .letter {
+  font-size: clamp(64px, 18vw, 160px);
 }
 
 .app::before {
@@ -38,13 +52,19 @@
   z-index: 0;
 }
 
-.logo {
-  position: absolute;
-  top: clamp(16px, 4vw, 28px);
-  left: clamp(16px, 4vw, 32px);
+.top-bar {
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(8px, 2vw, 16px);
   z-index: 2;
+}
+
+.logo {
   display: flex;
   align-items: center;
+  justify-self: start;
 }
 
 .logo img {
@@ -61,22 +81,17 @@
 }
 
 .settings {
-  position: absolute;
-  top: clamp(16px, 4vw, 28px);
-  right: clamp(16px, 4vw, 32px);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  z-index: 2;
+  justify-self: end;
+  z-index: 3;
 }
 
 .mode-select {
-  position: absolute;
-  top: clamp(16px, 4vw, 28px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
+  justify-self: center;
   appearance: none;
   padding: 8px 26px 8px 12px;
   border-radius: 999px;
@@ -170,6 +185,9 @@
 }
 
 .settings-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
   min-width: 170px;
   padding: 12px 14px;
   border-radius: 14px;
@@ -268,10 +286,13 @@
 }
 
 .stage {
+  flex: 1;
+  min-height: 0;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: clamp(12px, 2vw, 18px);
   z-index: 1;
 }
@@ -742,6 +763,9 @@
   }
   .letter {
     letter-spacing: 0.08em;
+  }
+  .listen-input {
+    font-size: 16px;
   }
   .button-content {
     gap: 12px;

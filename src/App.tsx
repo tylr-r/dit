@@ -194,6 +194,7 @@ function App() {
     readStoredNumber(STORAGE_KEYS.listenWpm, 20, LISTEN_WPM_MIN, LISTEN_WPM_MAX),
   )
   const [listenInput, setListenInput] = useState('')
+  const [isListenInputFocused, setIsListenInputFocused] = useState(false)
   const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
   )
@@ -220,6 +221,7 @@ function App() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
+  const listenFocusTimeoutRef = useRef<number | null>(null)
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
@@ -335,6 +337,37 @@ function App() {
   const isListen = mode === 'listen'
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    const updateAppHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight
+      const heightValue = `${height}px`
+      document.documentElement.style.setProperty('--app-height', heightValue)
+      document.documentElement.style.height = heightValue
+      if (document.body) {
+        document.body.style.height = heightValue
+      }
+      if (window.scrollY) {
+        window.scrollTo(0, 0)
+      }
+    }
+    updateAppHeight()
+    window.addEventListener('resize', updateAppHeight)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateAppHeight)
+      window.visualViewport.addEventListener('scroll', updateAppHeight)
+    }
+    return () => {
+      window.removeEventListener('resize', updateAppHeight)
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateAppHeight)
+        window.visualViewport.removeEventListener('scroll', updateAppHeight)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     const button = morseButtonRef.current
     if (!button) {
       return
@@ -423,6 +456,16 @@ function App() {
     listenPlaybackRef.current = null
   }, [])
 
+  const scheduleListenInputFocus = useCallback((delay = 0) => {
+    if (listenFocusTimeoutRef.current !== null) {
+      window.clearTimeout(listenFocusTimeoutRef.current)
+    }
+    listenFocusTimeoutRef.current = window.setTimeout(() => {
+      listenFocusTimeoutRef.current = null
+      listenInputRef.current?.focus({ preventScroll: true })
+    }, delay)
+  }, [])
+
   const playListenSequence = useCallback(
     async (code: string) => {
       stopListenPlayback()
@@ -478,6 +521,7 @@ function App() {
       clearTimer(letterTimeoutRef)
       clearTimer(wordSpaceTimeoutRef)
       clearTimer(listenTimeoutRef)
+      clearTimer(listenFocusTimeoutRef)
       stopListenPlayback()
       if (oscillatorRef.current) {
         oscillatorRef.current.stop()
@@ -492,19 +536,20 @@ function App() {
     }
   }, [stopListenPlayback])
 
-  useEffect(() => {
-    if (!isListen) {
-      return
-    }
-    listenInputRef.current?.focus()
-  }, [isListen])
-
   const resetListenState = useCallback(() => {
     clearTimer(listenTimeoutRef)
     setListenInput('')
     setListenStatus('idle')
     setListenReveal(null)
+    setIsListenInputFocused(false)
   }, [])
+
+  useEffect(() => {
+    if (!isListen) {
+      return
+    }
+    scheduleListenInputFocus(60)
+  }, [isListen, scheduleListenInputFocus])
 
   useEffect(() => {
     if (showHint || isFreestyle || isListen) {
@@ -1157,117 +1202,123 @@ function App() {
     } as React.CSSProperties
   }
   return (
-    <div className={`app status-${status}`}>
-      <div className="logo">
-        <img src="/DitDot-logo.svg" alt="DitDot" />
-      </div>
-      <select
-        className="mode-select"
-        value={mode}
-        onChange={handleModeChange}
-        aria-label="Mode"
-      >
-        <option value="characters">Characters</option>
-        <option value="freestyle">Freestyle</option>
-        <option value="listen">Listen</option>
-      </select>
-      <div className="settings">
-        <button
-          type="button"
-          className="settings-button"
-          onClick={() => setShowSettings((prev) => !prev)}
-          aria-expanded={showSettings}
-          aria-controls="settings-panel"
-          aria-label="Settings"
+    <div
+      className={`app status-${status} mode-${mode}${
+        isListenInputFocused ? ' listen-focused' : ''
+      }`}
+    >
+      <header className="top-bar">
+        <div className="logo">
+          <img src="/DitDot-logo.svg" alt="DitDot" />
+        </div>
+        <select
+          className="mode-select"
+          value={mode}
+          onChange={handleModeChange}
+          aria-label="Mode"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-        {showSettings ? (
-          <div
-            className="settings-panel"
-            role="group"
+          <option value="characters">Characters</option>
+          <option value="freestyle">Freestyle</option>
+          <option value="listen">Listen</option>
+        </select>
+        <div className="settings">
+          <button
+            type="button"
+            className="settings-button"
+            onClick={() => setShowSettings((prev) => !prev)}
+            aria-expanded={showSettings}
+            aria-controls="settings-panel"
             aria-label="Settings"
-            id="settings-panel"
           >
-            <label className="toggle">
-              <span className="toggle-label">Show hints</span>
-              <input
-                className="toggle-input"
-                type="checkbox"
-                checked={showHint}
-                onChange={(event) => setShowHint(event.target.checked)}
-                disabled={isFreestyle || isListen}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
+                fill="currentColor"
               />
-            </label>
-            {!isFreestyle ? (
-              <div className="panel-group">
-                <label className="toggle">
-                  <span className="toggle-label">Max level</span>
-                  <select
-                    className="panel-select"
-                    value={maxLevel}
-                    onChange={(event) => {
-                      handleMaxLevelChange(Number(event.target.value))
-                    }}
-                  >
-                    {LEVELS.map((level) => (
-                      <option key={level} value={level}>
-                        Level {level}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {isListen ? (
+            </svg>
+          </button>
+          {showSettings ? (
+            <div
+              className="settings-panel"
+              role="group"
+              aria-label="Settings"
+              id="settings-panel"
+            >
+              <label className="toggle">
+                <span className="toggle-label">Show hints</span>
+                <input
+                  className="toggle-input"
+                  type="checkbox"
+                  checked={showHint}
+                  onChange={(event) => setShowHint(event.target.checked)}
+                  disabled={isFreestyle || isListen}
+                />
+              </label>
+              {!isFreestyle ? (
+                <div className="panel-group">
                   <label className="toggle">
-                    <span className="toggle-label">Listen speed</span>
+                    <span className="toggle-label">Max level</span>
                     <select
                       className="panel-select"
-                      value={listenWpm}
+                      value={maxLevel}
                       onChange={(event) => {
-                        setListenWpm(Number(event.target.value))
+                        handleMaxLevelChange(Number(event.target.value))
                       }}
                     >
-                      {Array.from(
-                        { length: LISTEN_WPM_MAX - LISTEN_WPM_MIN + 1 },
-                        (_, index) => LISTEN_WPM_MIN + index,
-                      ).map((wpm) => (
-                        <option key={wpm} value={wpm}>
-                          {wpm} WPM
+                      {LEVELS.map((level) => (
+                        <option key={level} value={level}>
+                          Level {level}
                         </option>
                       ))}
                     </select>
                   </label>
-                ) : null}
-                <button
-                  type="button"
-                  className="panel-button"
-                  onClick={() => setShowReference(true)}
-                >
-                  Reference
-                </button>
-              </div>
-            ) : null}
-            {isFreestyle ? (
-            <label className="toggle">
-              <span className="toggle-label">Word mode</span>
-              <input
-                className="toggle-input"
-                type="checkbox"
-                checked={freestyleWordMode}
-                onChange={(event) => {
-                  handleWordModeChange(event.target.checked)
-                }}
-              />
-            </label>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+                  {isListen ? (
+                    <label className="toggle">
+                      <span className="toggle-label">Listen speed</span>
+                      <select
+                        className="panel-select"
+                        value={listenWpm}
+                        onChange={(event) => {
+                          setListenWpm(Number(event.target.value))
+                        }}
+                      >
+                        {Array.from(
+                          { length: LISTEN_WPM_MAX - LISTEN_WPM_MIN + 1 },
+                          (_, index) => LISTEN_WPM_MIN + index,
+                        ).map((wpm) => (
+                          <option key={wpm} value={wpm}>
+                            {wpm} WPM
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="panel-button"
+                    onClick={() => setShowReference(true)}
+                  >
+                    Reference
+                  </button>
+                </div>
+              ) : null}
+              {isFreestyle ? (
+                <label className="toggle">
+                  <span className="toggle-label">Word mode</span>
+                  <input
+                    className="toggle-input"
+                    type="checkbox"
+                    checked={freestyleWordMode}
+                    onChange={(event) => {
+                      handleWordModeChange(event.target.checked)
+                    }}
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </header>
       <main className="stage">
         {isFreestyle ? (
           <div
@@ -1352,6 +1403,13 @@ function App() {
               placeholder="Type"
               value={listenInput}
               onChange={handleListenInputChange}
+              onFocus={() => setIsListenInputFocused(true)}
+              onBlur={() => {
+                setIsListenInputFocused(false)
+                if (isListen) {
+                  scheduleListenInputFocus(80)
+                }
+              }}
               maxLength={1}
               aria-label="Type the character you hear"
             />
