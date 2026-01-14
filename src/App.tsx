@@ -23,6 +23,7 @@ const INTER_CHAR_GAP_MS = UNIT_MS * 3
 const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const SCORE_INTENSITY_MAX = 15
+const ERROR_LOCKOUT_MS = 1000
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -81,6 +82,37 @@ const pickNewLetter = (letters: Letter[], previous?: Letter): Letter => {
     next = letters[Math.floor(Math.random() * letters.length)]
   }
   return next
+}
+
+const pickWeightedLetter = (
+  letters: Letter[],
+  scores: Record<Letter, number>,
+  previous?: Letter,
+): Letter => {
+  if (letters.length === 0) {
+    return LETTERS[0]
+  }
+  if (letters.length === 1) {
+    return letters[0]
+  }
+  const maxScore = Math.max(...letters.map((item) => scores[item] ?? 0))
+  const baseline = 3
+  const weights = letters.map(
+    (item) => Math.max(maxScore - (scores[item] ?? 0), 0) + baseline,
+  )
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+  let roll = Math.random() * totalWeight
+  for (let index = 0; index < letters.length; index += 1) {
+    roll -= weights[index]
+    if (roll <= 0) {
+      const picked = letters[index]
+      if (picked === previous) {
+        return letters[(index + 1) % letters.length]
+      }
+      return picked
+    }
+  }
+  return letters[letters.length - 1]
 }
 
 const clearTimer = (ref: { current: number | null }) => {
@@ -154,6 +186,8 @@ function App() {
   const [scores, setScores] = useState(() => readStoredScores())
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
+  const showReferenceRef = useRef(showReference)
+  const errorLockoutUntilRef = useRef(0)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
   const successTimeoutRef = useRef<number | null>(null)
@@ -174,6 +208,13 @@ function App() {
   }, [])
   const handleResetScores = useCallback(() => {
     setScores(buildScoreMap())
+  }, [])
+  const isErrorLocked = useCallback(
+    () => performance.now() < errorLockoutUntilRef.current,
+    [],
+  )
+  const startErrorLockout = useCallback(() => {
+    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS
   }, [])
 
   useEffect(() => {
@@ -202,6 +243,10 @@ function App() {
   useEffect(() => {
     freestyleWordModeRef.current = freestyleWordMode
   }, [freestyleWordMode])
+
+  useEffect(() => {
+    showReferenceRef.current = showReference
+  }, [showReference])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -350,10 +395,10 @@ function App() {
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
-          : pickNewLetter(availableLetters),
+          : pickWeightedLetter(availableLetters, scores),
       )
     },
-    [availableLetters],
+    [availableLetters, scores],
   )
 
   const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -372,10 +417,10 @@ function App() {
       setLetter((current) =>
         nextLetters.includes(current)
           ? current
-          : pickNewLetter(nextLetters),
+          : pickWeightedLetter(nextLetters, scores),
       )
     },
-    [setMaxLevel],
+    [scores, setMaxLevel],
   )
 
   const scheduleWordSpace = useCallback(() => {
@@ -424,14 +469,15 @@ function App() {
       }
       clearTimer(errorTimeoutRef)
       clearTimer(successTimeoutRef)
+      startErrorLockout()
       bumpScore(letter, -1)
       setStatus('error')
       setInput('')
       errorTimeoutRef.current = window.setTimeout(() => {
         setStatus('idle')
-      }, 700)
+      }, ERROR_LOCKOUT_MS)
     }, INTER_CHAR_GAP_MS)
-  }, [bumpScore, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
+  }, [bumpScore, startErrorLockout, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
@@ -560,6 +606,9 @@ function App() {
   ])
 
   const registerSymbol = useCallback((symbol: '.' | '-') => {
+    if (!isFreestyle && isErrorLocked()) {
+      return
+    }
     clearTimer(errorTimeoutRef)
     clearTimer(successTimeoutRef)
     clearTimer(letterTimeoutRef)
@@ -579,11 +628,12 @@ function App() {
       const target = MORSE_DATA[letter].code
 
       if (!target.startsWith(next)) {
+        startErrorLockout()
         bumpScore(letter, -1)
         setStatus('error')
         errorTimeoutRef.current = window.setTimeout(() => {
           setStatus('idle')
-        }, 700)
+        }, ERROR_LOCKOUT_MS)
         return ''
       }
 
@@ -591,7 +641,9 @@ function App() {
         bumpScore(letter, 1)
         setStatus('success')
         successTimeoutRef.current = window.setTimeout(() => {
-          setLetter((current) => pickNewLetter(availableLetters, current))
+          setLetter((current) =>
+            pickWeightedLetter(availableLetters, scores, current),
+          )
           setShowHintOnce(false)
           setStatus('idle')
         }, 650)
@@ -602,7 +654,7 @@ function App() {
       scheduleLetterReset('characters')
       return next
     })
-  }, [isFreestyle, bumpScore, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters])
+  }, [isFreestyle, isErrorLocked, startErrorLockout, bumpScore, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters, scores])
 
   const releasePress = useCallback(
     (register: boolean) => {
@@ -624,6 +676,9 @@ function App() {
     event: React.PointerEvent<HTMLButtonElement>,
   ) => {
     if (event.button !== 0) {
+      return
+    }
+    if (!isFreestyle && isErrorLocked()) {
       return
     }
     if (pressStartRef.current !== null) {
@@ -660,7 +715,10 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      if (showReference) {
+      if (showReferenceRef.current) {
+        return
+      }
+      if (!isFreestyle && isErrorLocked()) {
         return
       }
       if (event.repeat) {
@@ -681,7 +739,7 @@ function App() {
     }
 
     const handleGlobalKeyUp = (event: KeyboardEvent) => {
-      if (showReference) {
+      if (showReferenceRef.current) {
         return
       }
       if (event.code !== 'Space' && event.key !== ' ') {
@@ -700,13 +758,16 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown)
       window.removeEventListener('keyup', handleGlobalKeyUp)
     }
-  }, [releasePress, showReference, startTone])
+  }, [isErrorLocked, isFreestyle, releasePress, startTone])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
       return
     }
     if (event.key !== ' ' && event.key !== 'Enter') {
+      return
+    }
+    if (!isFreestyle && isErrorLocked()) {
       return
     }
     event.preventDefault()

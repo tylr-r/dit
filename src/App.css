@@ -334,6 +334,8 @@
 .status-text {
   margin: 0;
   font-size: 0.9rem;
+  line-height: 1.2;
+  min-height: 1.2em;
   letter-spacing: 0.12em;
   color: var(--muted);
 }
