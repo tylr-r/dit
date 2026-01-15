@@ -187,6 +187,13 @@ const isEditableTarget = (target: EventTarget | null) => {
   )
 }
 
+const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
+  event.repeat ||
+  event.ctrlKey ||
+  event.metaKey ||
+  event.altKey ||
+  isEditableTarget(event.target)
+
 const createToneNodes = (context: AudioContext, initialGain: number) => {
   const oscillator = context.createOscillator()
   const gain = context.createGain()
@@ -196,6 +203,22 @@ const createToneNodes = (context: AudioContext, initialGain: number) => {
   oscillator.connect(gain)
   gain.connect(context.destination)
   return { oscillator, gain }
+}
+
+const scheduleToneEnvelope = (
+  gain: GainNode,
+  startTime: number,
+  duration: number,
+  rampSeconds: number,
+  sustain = true,
+) => {
+  const endTime = startTime + duration
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(TONE_GAIN, startTime + rampSeconds)
+  if (sustain) {
+    gain.gain.setValueAtTime(TONE_GAIN, endTime - rampSeconds)
+  }
+  gain.gain.linearRampToValueAtTime(0, endTime)
 }
 
 function App() {
@@ -516,13 +539,7 @@ function App() {
 
       for (const symbol of code) {
         const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
-        gain.gain.setValueAtTime(0, currentTime)
-        gain.gain.linearRampToValueAtTime(TONE_GAIN, currentTime + rampSeconds)
-        gain.gain.setValueAtTime(
-          TONE_GAIN,
-          currentTime + duration - rampSeconds,
-        )
-        gain.gain.linearRampToValueAtTime(0, currentTime + duration)
+        scheduleToneEnvelope(gain, currentTime, duration, rampSeconds)
         currentTime += duration + unitSeconds
       }
 
@@ -646,6 +663,13 @@ function App() {
     applyModeChange(nextMode)
   }
 
+  const handleShowHintToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setShowHint(event.target.checked)
+    },
+    [],
+  )
+
   const handleMaxLevelChange = useCallback(
     (nextLevel: number) => {
       setMaxLevel(nextLevel)
@@ -663,6 +687,20 @@ function App() {
       }
     },
     [isListen, letter, playListenSequence, resetListenState, scores, setMaxLevel],
+  )
+
+  const handleMaxLevelSelectChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      handleMaxLevelChange(Number(event.target.value))
+    },
+    [handleMaxLevelChange],
+  )
+
+  const handleListenWpmChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      setListenWpm(Number(event.target.value))
+    },
+    [],
   )
 
   const scheduleWordSpace = useCallback(() => {
@@ -766,6 +804,13 @@ function App() {
     [handleFreestyleClear],
   )
 
+  const handleWordModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleWordModeChange(event.target.checked)
+    },
+    [handleWordModeChange],
+  )
+
   const submitListenAnswer = useCallback(
     (value: string) => {
       if (listenStatus !== 'idle') {
@@ -823,12 +868,10 @@ function App() {
     const context = await ensureAudioContext()
     const { oscillator, gain } = createToneNodes(context, 0)
     const startTime = context.currentTime + 0.02
-    const endTime = startTime + 0.25
-    gain.gain.setValueAtTime(0, startTime)
-    gain.gain.linearRampToValueAtTime(TONE_GAIN, startTime + 0.02)
-    gain.gain.linearRampToValueAtTime(0, endTime)
+    const duration = 0.25
+    scheduleToneEnvelope(gain, startTime, duration, 0.02, false)
     oscillator.start(startTime)
-    oscillator.stop(endTime + 0.02)
+    oscillator.stop(startTime + duration + 0.02)
     oscillator.onended = () => {
       oscillator.disconnect()
       gain.disconnect()
@@ -867,13 +910,7 @@ function App() {
       if (showReference) {
         return
       }
-      if (event.repeat) {
-        return
-      }
-      if (event.ctrlKey || event.metaKey || event.altKey) {
-        return
-      }
-      if (isEditableTarget(event.target)) {
+      if (shouldIgnoreShortcutEvent(event)) {
         return
       }
       const key = event.key.toLowerCase()
@@ -1118,13 +1155,7 @@ function App() {
       if (showReferenceRef.current) {
         return
       }
-      if (event.repeat) {
-        return
-      }
-      if (event.ctrlKey || event.metaKey || event.altKey) {
-        return
-      }
-      if (isEditableTarget(event.target)) {
+      if (shouldIgnoreShortcutEvent(event)) {
         return
       }
       if (event.code === 'Space' || event.key === ' ') {
@@ -1249,6 +1280,41 @@ function App() {
       '--score-alpha': String(alpha),
     } as React.CSSProperties
   }
+  const renderReferenceCard = (char: Letter) => {
+    const scoreValue = scores[char]
+    const scoreClass =
+      scoreValue > 0
+        ? 'score-positive'
+        : scoreValue < 0
+          ? 'score-negative'
+          : 'score-neutral'
+    const code = MORSE_DATA[char].code
+    return (
+      <div
+        key={char}
+        className="reference-card"
+        style={getScoreStyle(scoreValue)}
+      >
+        <div className="reference-head">
+          <div className="reference-letter">{char}</div>
+          <div className={`reference-score ${scoreClass}`}>
+            {formatScore(scoreValue)}
+          </div>
+        </div>
+        <div className="reference-code" aria-label={code}>
+          {code.split('').map((symbol, index) => (
+            <span key={`${char}-${index}`} className="reference-symbol">
+              {symbol === '.'
+                ? '•'
+                : symbol === '-'
+                  ? '—'
+                  : symbol}
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
   const listenFocused = isListen && useCustomKeyboard
 
   return (
@@ -1300,7 +1366,7 @@ function App() {
                   className="toggle-input"
                   type="checkbox"
                   checked={showHint}
-                  onChange={(event) => setShowHint(event.target.checked)}
+                  onChange={handleShowHintToggle}
                   disabled={isFreestyle || isListen}
                 />
               </label>
@@ -1311,9 +1377,7 @@ function App() {
                     <select
                       className="panel-select"
                       value={maxLevel}
-                      onChange={(event) => {
-                        handleMaxLevelChange(Number(event.target.value))
-                      }}
+                      onChange={handleMaxLevelSelectChange}
                     >
                       {LEVELS.map((level) => (
                         <option key={level} value={level}>
@@ -1328,9 +1392,7 @@ function App() {
                       <select
                         className="panel-select"
                         value={listenWpm}
-                        onChange={(event) => {
-                          setListenWpm(Number(event.target.value))
-                        }}
+                        onChange={handleListenWpmChange}
                       >
                         {Array.from(
                           { length: LISTEN_WPM_MAX - LISTEN_WPM_MIN + 1 },
@@ -1355,16 +1417,14 @@ function App() {
               {isFreestyle ? (
                 <label className="toggle">
                   <span className="toggle-label">Word mode</span>
-                  <input
-                    className="toggle-input"
-                    type="checkbox"
-                    checked={freestyleWordMode}
-                    onChange={(event) => {
-                      handleWordModeChange(event.target.checked)
-                    }}
-                  />
-                </label>
-              ) : null}
+                <input
+                  className="toggle-input"
+                  type="checkbox"
+                  checked={freestyleWordMode}
+                  onChange={handleWordModeToggle}
+                />
+              </label>
+            ) : null}
               {isListen ? (
                 <div className="panel-group">
                   <button
@@ -1537,89 +1597,9 @@ function App() {
               </div>
             </div>
             <div className="reference-grid">
-              {REFERENCE_LETTERS.map((char) => {
-                const scoreValue = scores[char]
-                const scoreClass =
-                  scoreValue > 0
-                    ? 'score-positive'
-                    : scoreValue < 0
-                      ? 'score-negative'
-                      : 'score-neutral'
-                return (
-                  <div
-                    key={char}
-                    className="reference-card"
-                    style={getScoreStyle(scoreValue)}
-                  >
-                    <div className="reference-head">
-                      <div className="reference-letter">{char}</div>
-                      <div className={`reference-score ${scoreClass}`}>
-                        {formatScore(scoreValue)}
-                      </div>
-                    </div>
-                    <div
-                      className="reference-code"
-                      aria-label={MORSE_DATA[char].code}
-                    >
-                      {MORSE_DATA[char].code.split('').map((symbol, index) => (
-                        <span
-                          key={`${char}-${index}`}
-                          className="reference-symbol"
-                        >
-                          {symbol === '.'
-                            ? '•'
-                            : symbol === '-'
-                              ? '—'
-                              : symbol}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
+              {REFERENCE_LETTERS.map(renderReferenceCard)}
               <div className="reference-row">
-                {REFERENCE_NUMBERS.map((char) => {
-                  const scoreValue = scores[char]
-                  const scoreClass =
-                    scoreValue > 0
-                      ? 'score-positive'
-                      : scoreValue < 0
-                        ? 'score-negative'
-                        : 'score-neutral'
-                  return (
-                    <div
-                      key={char}
-                      className="reference-card"
-                      style={getScoreStyle(scoreValue)}
-                    >
-                      <div className="reference-head">
-                        <div className="reference-letter">{char}</div>
-                        <div className={`reference-score ${scoreClass}`}>
-                          {formatScore(scoreValue)}
-                        </div>
-                      </div>
-                      <div
-                        className="reference-code"
-                        aria-label={MORSE_DATA[char].code}
-                      >
-                        {MORSE_DATA[char].code.split('').map(
-                          (symbol, index) => (
-                            <span
-                              key={`${char}-${index}`}
-                              className="reference-symbol"
-                            >
-                              {symbol === '.'
-                                ? '•'
-                                : symbol === '-'
-                                  ? '—'
-                                  : symbol}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                {REFERENCE_NUMBERS.map(renderReferenceCard)}
               </div>
             </div>
           </div>
