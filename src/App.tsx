@@ -232,9 +232,9 @@ function App() {
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
   )
-  const [mode, setMode] = useState<'characters' | 'freestyle' | 'listen'>(() => {
+  const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
-      return 'characters'
+      return 'practice'
     }
     const stored = window.localStorage.getItem(STORAGE_KEYS.mode)
     if (stored === 'freestyle') {
@@ -243,7 +243,7 @@ function App() {
     if (stored === 'listen') {
       return 'listen'
     }
-    return 'characters'
+    return 'practice'
   })
   const [showHintOnce, setShowHintOnce] = useState(false)
   const [freestyleInput, setFreestyleInput] = useState('')
@@ -611,7 +611,7 @@ function App() {
   }, [isFreestyle, isListen, showHint, showHintOnce])
 
   const applyModeChange = useCallback(
-    (nextMode: 'characters' | 'freestyle' | 'listen') => {
+    (nextMode: 'practice' | 'freestyle' | 'listen') => {
       setMode(nextMode)
       stopListenPlayback()
       setFreestyleInput('')
@@ -657,7 +657,7 @@ function App() {
         ? 'freestyle'
         : value === 'listen'
           ? 'listen'
-          : 'characters'
+          : 'practice'
     applyModeChange(nextMode)
   }
 
@@ -739,7 +739,7 @@ function App() {
   }, [freestyleWordMode, scheduleWordSpace])
 
   const scheduleLetterReset = useCallback(
-    (nextMode: 'characters' | 'freestyle') => {
+    (nextMode: 'practice' | 'freestyle') => {
       clearTimer(letterTimeoutRef)
       letterTimeoutRef.current = window.setTimeout(() => {
         if (nextMode === 'freestyle') {
@@ -924,11 +924,11 @@ function App() {
       }
       if (key === 'l') {
         event.preventDefault()
-        applyModeChange('characters')
+        applyModeChange('practice')
         return
       }
       if (key === 'h') {
-        if (mode === 'characters') {
+        if (mode === 'practice') {
           event.preventDefault()
           setShowHint((prev) => !prev)
         }
@@ -1012,7 +1012,7 @@ function App() {
       }
 
       setStatus('idle')
-      scheduleLetterReset('characters')
+      scheduleLetterReset('practice')
       return next
     })
   }, [
@@ -1095,7 +1095,7 @@ function App() {
     releasePress(false)
     const hasInput = isFreestyle ? freestyleInput : input
     if (hasInput) {
-      scheduleLetterReset(isFreestyle ? 'freestyle' : 'characters')
+      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice')
     }
   }
 
@@ -1279,7 +1279,7 @@ function App() {
           onChange={handleModeChange}
           aria-label="Mode"
         >
-          <option value="characters">Characters</option>
+          <option value="practice">Practice</option>
           <option value="freestyle">Freestyle</option>
           <option value="listen">Listen</option>
         </select>

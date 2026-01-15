@@ -12,7 +12,7 @@ Morse code practice. Tap for dot, hold for dash.
 
 ## Modes
 
-**Characters** — Match the prompted letter. Get it right, move on. Get it wrong, start over.
+**Practice** — Match the prompted letter. Get it right, move on. Get it wrong, start over.
 
 **Freestyle** — Tap out whatever you want and see what letter it is. Word mode lets you spell things out.
 
