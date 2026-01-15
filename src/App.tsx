@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { ListenControls } from './components/ListenControls'
+import { MorseButton } from './components/MorseButton'
+import { ReferenceModal } from './components/ReferenceModal'
+import { SettingsPanel } from './components/SettingsPanel'
+import { StageDisplay } from './components/StageDisplay'
 import { MORSE_DATA, type Letter } from './data/morse'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
@@ -26,14 +31,7 @@ const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const TONE_FREQUENCY = 640
 const TONE_GAIN = 0.06
-const SCORE_INTENSITY_MAX = 15
 const ERROR_LOCKOUT_MS = 1000
-const LISTEN_KEYBOARD_ROWS = [
-  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-] as const
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -812,7 +810,7 @@ function App() {
   )
 
   const submitListenAnswer = useCallback(
-    (value: string) => {
+    (value: Letter) => {
       if (listenStatus !== 'idle') {
         return
       }
@@ -1171,7 +1169,7 @@ function App() {
         return
       }
       event.preventDefault()
-      submitListenAnswer(next)
+      submitListenAnswer(next as Letter)
     }
     window.addEventListener('keydown', handleListenKey)
     return () => {
@@ -1263,58 +1261,6 @@ function App() {
   const listenDisplayClass = `letter ${
     listenReveal ? '' : 'letter-placeholder'
   }`
-  const formatScore = (value: number) =>
-    value > 0 ? `+${value}` : `${value}`
-  const getScoreStyle = (
-    scoreValue: number,
-  ): React.CSSProperties | undefined => {
-    if (scoreValue === 0) {
-      return
-    }
-    const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
-    const intensity = Math.min(Math.max(normalized, 0.2), 1)
-    const alpha = 0.35 * intensity
-    const tint = scoreValue > 0 ? '56, 242, 162' : '255, 90, 96'
-    return {
-      '--score-tint': tint,
-      '--score-alpha': String(alpha),
-    } as React.CSSProperties
-  }
-  const renderReferenceCard = (char: Letter) => {
-    const scoreValue = scores[char]
-    const scoreClass =
-      scoreValue > 0
-        ? 'score-positive'
-        : scoreValue < 0
-          ? 'score-negative'
-          : 'score-neutral'
-    const code = MORSE_DATA[char].code
-    return (
-      <div
-        key={char}
-        className="reference-card"
-        style={getScoreStyle(scoreValue)}
-      >
-        <div className="reference-head">
-          <div className="reference-letter">{char}</div>
-          <div className={`reference-score ${scoreClass}`}>
-            {formatScore(scoreValue)}
-          </div>
-        </div>
-        <div className="reference-code" aria-label={code}>
-          {code.split('').map((symbol, index) => (
-            <span key={`${char}-${index}`} className="reference-symbol">
-              {symbol === '.'
-                ? '•'
-                : symbol === '-'
-                  ? '—'
-                  : symbol}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
   const listenFocused = isListen && useCustomKeyboard
 
   return (
@@ -1354,133 +1300,41 @@ function App() {
             </svg>
           </button>
           {showSettings ? (
-            <div
-              className="settings-panel"
-              role="group"
-              aria-label="Settings"
-              id="settings-panel"
-            >
-              <label className="toggle">
-                <span className="toggle-label">Show hints</span>
-                <input
-                  className="toggle-input"
-                  type="checkbox"
-                  checked={showHint}
-                  onChange={handleShowHintToggle}
-                  disabled={isFreestyle || isListen}
-                />
-              </label>
-              {!isFreestyle ? (
-                <div className="panel-group">
-                  <label className="toggle">
-                    <span className="toggle-label">Max level</span>
-                    <select
-                      className="panel-select"
-                      value={maxLevel}
-                      onChange={handleMaxLevelSelectChange}
-                    >
-                      {LEVELS.map((level) => (
-                        <option key={level} value={level}>
-                          Level {level}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {isListen ? (
-                    <label className="toggle">
-                      <span className="toggle-label">Listen speed</span>
-                      <select
-                        className="panel-select"
-                        value={listenWpm}
-                        onChange={handleListenWpmChange}
-                      >
-                        {Array.from(
-                          { length: LISTEN_WPM_MAX - LISTEN_WPM_MIN + 1 },
-                          (_, index) => LISTEN_WPM_MIN + index,
-                        ).map((wpm) => (
-                          <option key={wpm} value={wpm}>
-                            {wpm} WPM
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="panel-button"
-                    onClick={() => setShowReference(true)}
-                  >
-                    Reference
-                  </button>
-                </div>
-              ) : null}
-              {isFreestyle ? (
-                <label className="toggle">
-                  <span className="toggle-label">Word mode</span>
-                <input
-                  className="toggle-input"
-                  type="checkbox"
-                  checked={freestyleWordMode}
-                  onChange={handleWordModeToggle}
-                />
-              </label>
-            ) : null}
-              {isListen ? (
-                <div className="panel-group">
-                  <button
-                    type="button"
-                    className="panel-button"
-                    onClick={handleSoundCheck}
-                    disabled={soundCheckStatus !== 'idle'}
-                  >
-                    Sound check
-                  </button>
-                  <span className="panel-hint">
-                    No sound? Turn off Silent Mode.
-                  </span>
-                </div>
-              ) : null}
-            </div>
+            <SettingsPanel
+              showHint={showHint}
+              onShowHintChange={handleShowHintToggle}
+              isFreestyle={isFreestyle}
+              isListen={isListen}
+              levels={LEVELS}
+              maxLevel={maxLevel}
+              onMaxLevelChange={handleMaxLevelSelectChange}
+              listenWpm={listenWpm}
+              listenWpmMin={LISTEN_WPM_MIN}
+              listenWpmMax={LISTEN_WPM_MAX}
+              onListenWpmChange={handleListenWpmChange}
+              onShowReference={() => setShowReference(true)}
+              freestyleWordMode={freestyleWordMode}
+              onWordModeChange={handleWordModeToggle}
+              onSoundCheck={handleSoundCheck}
+              soundCheckStatus={soundCheckStatus}
+            />
           ) : null}
         </div>
       </header>
-      <main className="stage">
-        {isFreestyle ? (
-          <div
-            className={`letter ${
-              hasFreestyleDisplay ? '' : 'letter-placeholder'
-            }`}
-            aria-live="polite"
-          >
-            {freestyleDisplay}
-          </div>
-        ) : isListen ? (
-          <>
-            <div key={letter} className={listenDisplayClass} aria-live="polite">
-              {listenDisplay}
-            </div>
-            <p className="status-text" aria-live="polite">
-              {listenStatusText}
-            </p>
-          </>
-        ) : (
-          <>
-            <div key={letter} className="letter">
-              {letter}
-            </div>
-            {hintVisible ? (
-              <div className="progress" aria-label={`Target ${target}`}>
-                {pips}
-              </div>
-            ) : (
-              <div className="progress progress-hidden" aria-hidden="true" />
-            )}
-            <p className="status-text" aria-live="polite">
-              {statusText}
-            </p>
-          </>
-        )}
-      </main>
+      <StageDisplay
+        freestyleDisplay={freestyleDisplay}
+        hasFreestyleDisplay={hasFreestyleDisplay}
+        hintVisible={hintVisible}
+        isFreestyle={isFreestyle}
+        isListen={isListen}
+        letter={letter}
+        listenDisplay={listenDisplay}
+        listenDisplayClass={listenDisplayClass}
+        listenStatusText={listenStatusText}
+        pips={pips}
+        statusText={statusText}
+        target={target}
+      />
       <div className="controls">
         {isFreestyle ? (
           <>
@@ -1507,103 +1361,35 @@ function App() {
           </button>
         ) : null}
         {isListen ? (
-          <div
-            className={`listen-controls${
-              useCustomKeyboard ? ' listen-controls-custom' : ''
-            }`}
-          >
-            <button
-              type="button"
-              className="hint-button"
-              onClick={handleListenReplay}
-              disabled={listenStatus !== 'idle'}
-            >
-              Play
-            </button>
-            {useCustomKeyboard ? (
-              <div className="listen-keyboard" role="group" aria-label="Keyboard">
-                {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
-                  <div className="keyboard-row" key={`row-${rowIndex}`}>
-                    {row.map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        className="keyboard-key"
-                        onClick={() => submitListenAnswer(key)}
-                        disabled={listenStatus !== 'idle'}
-                        aria-label={`Type ${key}`}
-                      >
-                        {key}
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <ListenControls
+            listenStatus={listenStatus}
+            onReplay={handleListenReplay}
+            onSubmitAnswer={submitListenAnswer}
+            useCustomKeyboard={useCustomKeyboard}
+          />
         ) : (
-          <button
-            type="button"
-            className={`morse-button ${isPressing ? 'pressing' : ''}`}
-            ref={morseButtonRef}
+          <MorseButton
+            buttonRef={morseButtonRef}
+            isPressing={isPressing}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             onPointerLeave={handlePointerCancel}
-            onContextMenu={(event) => event.preventDefault()}
-            onDoubleClick={(event) => event.preventDefault()}
             onKeyDown={handleKeyDown}
             onKeyUp={handleKeyUp}
             onBlur={handlePointerCancel}
-            aria-label="Tap for dot, hold for dash"
-          >
-            <span className="button-content" aria-hidden="true">
-              <span className="signal dot" />
-              <span className="signal dash" />
-              <span className="signal dot" />
-            </span>
-          </button>
+          />
         )}
       </div>
       {showReference ? (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowReference(false)}
-        >
-          <div
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Morse reference"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="modal-title">Reference</div>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="modal-close modal-reset"
-                  onClick={handleResetScores}
-                >
-                  Reset scores
-                </button>
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => setShowReference(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-            <div className="reference-grid">
-              {REFERENCE_LETTERS.map(renderReferenceCard)}
-              <div className="reference-row">
-                {REFERENCE_NUMBERS.map(renderReferenceCard)}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ReferenceModal
+          letters={REFERENCE_LETTERS}
+          morseData={MORSE_DATA}
+          numbers={REFERENCE_NUMBERS}
+          onClose={() => setShowReference(false)}
+          onResetScores={handleResetScores}
+          scores={scores}
+        />
       ) : null}
     </div>
   )
