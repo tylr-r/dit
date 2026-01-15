@@ -90,15 +90,13 @@
   z-index: 3;
 }
 
-.mode-select {
-  justify-self: center;
+.mode-select,
+.panel-select {
   appearance: none;
-  padding: 8px 26px 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(10, 16, 20, 0.5);
   color: var(--text);
-  font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
@@ -117,43 +115,21 @@
     calc(100% - 9px) 55%;
   background-size: 5px 5px;
   background-repeat: no-repeat;
+}
+
+.mode-select {
+  justify-self: center;
+  padding: 8px 26px 8px 12px;
+  font-size: 0.72rem;
 }
 
 .panel-select {
-  appearance: none;
   padding: 6px 26px 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 16, 20, 0.5);
-  color: var(--text);
   font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  background-image: linear-gradient(
-      45deg,
-      transparent 50%,
-      rgba(255, 255, 255, 0.6) 50%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.6) 50%,
-      transparent 50%
-    );
-  background-position:
-    calc(100% - 14px) 55%,
-    calc(100% - 9px) 55%;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
 }
 
-.mode-select:focus-visible {
+:is(.mode-select, .settings-button, .listen-input):focus-visible {
   outline: 3px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 3px;
-}
-
-.panel-select:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
 }
 
@@ -172,11 +148,6 @@
 
 .settings-button:hover {
   filter: brightness(1.1);
-}
-
-.settings-button:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 3px;
 }
 
 .settings-button svg {
@@ -213,26 +184,37 @@
   color: var(--muted);
 }
 
-.panel-button {
-  align-self: flex-end;
-  padding: 6px 12px;
+:is(.panel-button, .modal-close, .hint-button) {
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(12, 18, 24, 0.7);
   color: var(--muted);
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
   transition: border 160ms ease, color 160ms ease, background 160ms ease;
 }
 
-.panel-button:hover {
+.panel-button,
+.modal-close {
+  padding: 6px 12px;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+}
+
+.panel-button,
+.hint-button {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(12, 18, 24, 0.7);
+}
+
+.panel-button {
+  align-self: flex-end;
+}
+
+:is(.panel-button, .modal-close, .hint-button):hover {
   color: var(--text);
   border-color: rgba(255, 255, 255, 0.4);
 }
 
-.panel-button:focus-visible {
+:is(.panel-select, .panel-button, .modal-close, .hint-button):focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
 }
@@ -420,6 +402,12 @@
   gap: 14px;
 }
 
+.listen-input,
+.keyboard-key {
+  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+}
+
 .listen-input {
   width: clamp(120px, 28vw, 180px);
   padding: 10px 14px;
@@ -428,9 +416,7 @@
   background: rgba(10, 16, 20, 0.55);
   color: var(--text);
   text-align: center;
-  text-transform: uppercase;
   letter-spacing: 0.3em;
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
   font-size: 0.85rem;
   -webkit-user-select: text;
   user-select: text;
@@ -439,11 +425,6 @@
 .listen-input::placeholder {
   color: var(--muted);
   letter-spacing: 0.22em;
-}
-
-.listen-input:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 3px;
 }
 
 .listen-keyboard {
@@ -467,10 +448,8 @@
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(12, 18, 24, 0.75);
   color: var(--text);
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
   font-size: clamp(0.75rem, 2.8vw, 0.95rem);
   letter-spacing: 0.12em;
-  text-transform: uppercase;
   cursor: pointer;
   transition: transform 120ms ease, border 160ms ease, background 160ms ease;
   touch-action: manipulation;
@@ -532,21 +511,8 @@
 }
 
 .modal-close {
-  padding: 6px 12px;
-  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(10, 16, 20, 0.6);
-  color: var(--muted);
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease;
-}
-
-.modal-close:hover {
-  color: var(--text);
-  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .modal-close.modal-reset {
@@ -559,24 +525,20 @@
   border-color: rgba(255, 90, 96, 0.6);
 }
 
-.modal-close:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 3px;
+.reference-grid,
+.reference-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+  gap: 12px;
 }
 
 .reference-grid {
   padding: 16px 20px 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
-  gap: 12px;
   overflow: auto;
 }
 
 .reference-row {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
-  gap: 12px;
   margin-top: 6px;
 }
 
@@ -612,23 +574,20 @@
   display: grid;
   place-items: center;
   transition: opacity 160ms ease;
+  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  color: var(--text);
 }
 
 .reference-letter {
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
   font-size: 1.2rem;
   letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text);
   opacity: 1;
 }
 
 .reference-score {
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
   font-size: 1rem;
   letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text);
   opacity: 0;
 }
 
@@ -662,30 +621,13 @@
 
 .hint-button {
   padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(12, 18, 24, 0.7);
-  color: var(--muted);
   font-size: 0.65rem;
   letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease;
-}
-
-.hint-button:hover {
-  color: var(--text);
-  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .hint-button:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-.hint-button:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.7);
-  outline-offset: 3px;
 }
 
 .freestyle-status {
