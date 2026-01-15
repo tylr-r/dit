@@ -202,6 +202,9 @@ function App() {
   const [listenInput, setListenInput] = useState('')
   const [isListenInputFocused, setIsListenInputFocused] = useState(false)
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
+  const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
+    'idle',
+  )
   const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
   )
@@ -233,6 +236,15 @@ function App() {
     () => getLettersForLevel(maxLevel),
     [maxLevel],
   )
+  const triggerHaptics = useCallback((pattern: number | number[]) => {
+    if (typeof navigator === 'undefined') {
+      return
+    }
+    if (!('vibrate' in navigator)) {
+      return
+    }
+    navigator.vibrate(pattern)
+  }, [])
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => ({
       ...prev,
@@ -518,6 +530,18 @@ function App() {
       const unitSeconds = 1.2 / listenWpm
       const rampSeconds = 0.005
       let currentTime = context.currentTime + 0.05
+      if (useCustomKeyboard) {
+        const unitMs = Math.max(Math.round(unitSeconds * 1000), 40)
+        const pattern: number[] = []
+        for (let index = 0; index < code.length; index += 1) {
+          const symbol = code[index]
+          pattern.push(symbol === '.' ? unitMs : unitMs * 3)
+          if (index < code.length - 1) {
+            pattern.push(unitMs)
+          }
+        }
+        triggerHaptics(pattern)
+      }
 
       for (const symbol of code) {
         const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
@@ -541,7 +565,7 @@ function App() {
         gain.disconnect()
       }
     },
-    [listenWpm, stopListenPlayback],
+    [listenWpm, stopListenPlayback, triggerHaptics, useCustomKeyboard],
   )
 
   useEffect(() => {
@@ -793,6 +817,9 @@ function App() {
       if (!/^[A-Z0-9]$/.test(value)) {
         return
       }
+      if (useCustomKeyboard) {
+        triggerHaptics(10)
+      }
       clearTimer(listenTimeoutRef)
       stopListenPlayback()
       const isCorrect = value === letter
@@ -816,6 +843,8 @@ function App() {
       playListenSequence,
       scores,
       stopListenPlayback,
+      triggerHaptics,
+      useCustomKeyboard,
     ],
   )
 
@@ -835,8 +864,47 @@ function App() {
       return
     }
     setListenReveal(null)
+    if (useCustomKeyboard) {
+      triggerHaptics(12)
+    }
     void playListenSequence(MORSE_DATA[letter].code)
-  }, [letter, listenStatus, playListenSequence])
+  }, [letter, listenStatus, playListenSequence, triggerHaptics, useCustomKeyboard])
+
+  const handleSoundCheck = useCallback(async () => {
+    if (soundCheckStatus !== 'idle') {
+      return
+    }
+    setSoundCheckStatus('playing')
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume()
+    }
+    const context = audioContextRef.current
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    oscillator.type = 'sine'
+    oscillator.frequency.value = 640
+    gain.gain.value = 0
+    oscillator.connect(gain)
+    gain.connect(context.destination)
+    const startTime = context.currentTime + 0.02
+    const endTime = startTime + 0.25
+    gain.gain.setValueAtTime(0, startTime)
+    gain.gain.linearRampToValueAtTime(0.06, startTime + 0.02)
+    gain.gain.linearRampToValueAtTime(0, endTime)
+    oscillator.start(startTime)
+    oscillator.stop(endTime + 0.02)
+    oscillator.onended = () => {
+      oscillator.disconnect()
+      gain.disconnect()
+      setSoundCheckStatus('idle')
+    }
+    if (useCustomKeyboard) {
+      triggerHaptics([40, 40, 40])
+    }
+  }, [soundCheckStatus, triggerHaptics, useCustomKeyboard])
 
   useEffect(() => {
     if (!isFreestyle) {
@@ -1348,6 +1416,21 @@ function App() {
                     }}
                   />
                 </label>
+              ) : null}
+              {isListen ? (
+                <div className="panel-group">
+                  <button
+                    type="button"
+                    className="panel-button"
+                    onClick={handleSoundCheck}
+                    disabled={soundCheckStatus !== 'idle'}
+                  >
+                    Sound check
+                  </button>
+                  <span className="panel-hint">
+                    No sound? Turn off Silent Mode.
+                  </span>
+                </div>
               ) : null}
             </div>
           ) : null}

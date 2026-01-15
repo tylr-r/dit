@@ -206,6 +206,13 @@
   gap: 8px;
 }
 
+.panel-hint {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .panel-button {
   align-self: flex-end;
   padding: 6px 12px;
