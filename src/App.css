@@ -128,7 +128,7 @@
   font-size: 0.68rem;
 }
 
-:is(.mode-select, .settings-button, .listen-input):focus-visible {
+:is(.mode-select, .settings-button):focus-visible {
   outline: 3px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
 }
@@ -402,29 +402,9 @@
   gap: 14px;
 }
 
-.listen-input,
 .keyboard-key {
   font-family: 'Unbounded', 'Space Grotesk', sans-serif;
   text-transform: uppercase;
-}
-
-.listen-input {
-  width: clamp(120px, 28vw, 180px);
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 16, 20, 0.55);
-  color: var(--text);
-  text-align: center;
-  letter-spacing: 0.3em;
-  font-size: 0.85rem;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.listen-input::placeholder {
-  color: var(--muted);
-  letter-spacing: 0.22em;
 }
 
 .listen-keyboard {
@@ -759,9 +739,6 @@
   }
   .letter {
     letter-spacing: 0.08em;
-  }
-  .listen-input {
-    font-size: 16px;
   }
   .button-content {
     gap: 12px;

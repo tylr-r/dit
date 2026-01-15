@@ -199,8 +199,6 @@ function App() {
   const [listenWpm, setListenWpm] = useState(() =>
     readStoredNumber(STORAGE_KEYS.listenWpm, 20, LISTEN_WPM_MIN, LISTEN_WPM_MAX),
   )
-  const [listenInput, setListenInput] = useState('')
-  const [isListenInputFocused, setIsListenInputFocused] = useState(false)
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
   const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
     'idle',
@@ -215,7 +213,6 @@ function App() {
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const showReferenceRef = useRef(showReference)
-  const listenInputRef = useRef<HTMLInputElement | null>(null)
   const errorLockoutUntilRef = useRef(0)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
@@ -231,7 +228,6 @@ function App() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainRef = useRef<GainNode | null>(null)
-  const listenFocusTimeoutRef = useRef<number | null>(null)
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
@@ -498,16 +494,6 @@ function App() {
     listenPlaybackRef.current = null
   }, [])
 
-  const scheduleListenInputFocus = useCallback((delay = 0) => {
-    if (listenFocusTimeoutRef.current !== null) {
-      window.clearTimeout(listenFocusTimeoutRef.current)
-    }
-    listenFocusTimeoutRef.current = window.setTimeout(() => {
-      listenFocusTimeoutRef.current = null
-      listenInputRef.current?.focus({ preventScroll: true })
-    }, delay)
-  }, [])
-
   const playListenSequence = useCallback(
     async (code: string) => {
       stopListenPlayback()
@@ -575,7 +561,6 @@ function App() {
       clearTimer(letterTimeoutRef)
       clearTimer(wordSpaceTimeoutRef)
       clearTimer(listenTimeoutRef)
-      clearTimer(listenFocusTimeoutRef)
       stopListenPlayback()
       if (oscillatorRef.current) {
         oscillatorRef.current.stop()
@@ -592,22 +577,9 @@ function App() {
 
   const resetListenState = useCallback(() => {
     clearTimer(listenTimeoutRef)
-    setListenInput('')
     setListenStatus('idle')
     setListenReveal(null)
-    setIsListenInputFocused(false)
   }, [])
-
-  useEffect(() => {
-    if (!isListen) {
-      return
-    }
-    if (useCustomKeyboard) {
-      setIsListenInputFocused(false)
-      return
-    }
-    scheduleListenInputFocus(60)
-  }, [isListen, scheduleListenInputFocus, useCustomKeyboard])
 
   useEffect(() => {
     if (showHint || isFreestyle || isListen) {
@@ -800,15 +772,6 @@ function App() {
     [handleFreestyleClear],
   )
 
-  const sanitizeListenInput = useCallback((value: string) => {
-    const trimmed = value.trim().toUpperCase()
-    if (!trimmed) {
-      return ''
-    }
-    const next = trimmed[0]
-    return /^[A-Z0-9]$/.test(next) ? next : ''
-  }, [])
-
   const submitListenAnswer = useCallback(
     (value: string) => {
       if (listenStatus !== 'idle') {
@@ -825,7 +788,6 @@ function App() {
       const isCorrect = value === letter
       setListenStatus(isCorrect ? 'success' : 'error')
       setListenReveal(letter)
-      setListenInput('')
       bumpScore(letter, isCorrect ? 1 : -1)
       listenTimeoutRef.current = window.setTimeout(() => {
         const nextLetter = pickWeightedLetter(availableLetters, scores, letter)
@@ -846,17 +808,6 @@ function App() {
       triggerHaptics,
       useCustomKeyboard,
     ],
-  )
-
-  const handleListenInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const sanitized = sanitizeListenInput(event.target.value)
-      setListenInput(sanitized)
-      if (sanitized) {
-        submitListenAnswer(sanitized)
-      }
-    },
-    [sanitizeListenInput, submitListenAnswer],
   )
 
   const handleListenReplay = useCallback(() => {
@@ -1176,24 +1127,46 @@ function App() {
     if (!isListen) {
       return
     }
-    const handleListenSpace = (event: KeyboardEvent) => {
+    const handleListenKey = (event: KeyboardEvent) => {
       if (showReferenceRef.current) {
         return
       }
       if (event.repeat) {
         return
       }
-      if (event.code !== 'Space' && event.key !== ' ') {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return
+      }
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.isContentEditable ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'SELECT' ||
+          target.tagName === 'TEXTAREA')
+      ) {
+        return
+      }
+      if (event.code === 'Space' || event.key === ' ') {
+        event.preventDefault()
+        handleListenReplay()
+        return
+      }
+      if (event.key.length !== 1) {
+        return
+      }
+      const next = event.key.toUpperCase()
+      if (!/^[A-Z0-9]$/.test(next)) {
         return
       }
       event.preventDefault()
-      handleListenReplay()
+      submitListenAnswer(next)
     }
-    window.addEventListener('keydown', handleListenSpace)
+    window.addEventListener('keydown', handleListenKey)
     return () => {
-      window.removeEventListener('keydown', handleListenSpace)
+      window.removeEventListener('keydown', handleListenKey)
     }
-  }, [handleListenReplay, isListen])
+  }, [handleListenReplay, isListen, submitListenAnswer])
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
@@ -1303,10 +1276,12 @@ function App() {
       '--score-alpha': String(alpha),
     } as React.CSSProperties
   }
+  const listenFocused = isListen && useCustomKeyboard
+
   return (
     <div
       className={`app status-${status} mode-${mode}${
-        isListenInputFocused ? ' listen-focused' : ''
+        listenFocused ? ' listen-focused' : ''
       }`}
     >
       <header className="top-bar">
@@ -1531,30 +1506,7 @@ function App() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <input
-                ref={listenInputRef}
-                className="listen-input"
-                type="text"
-                inputMode="text"
-                autoCapitalize="characters"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="Type"
-                value={listenInput}
-                onChange={handleListenInputChange}
-                onFocus={() => setIsListenInputFocused(true)}
-                onBlur={() => {
-                  setIsListenInputFocused(false)
-                  if (isListen && !useCustomKeyboard) {
-                    scheduleListenInputFocus(80)
-                  }
-                }}
-                maxLength={1}
-                aria-label="Type the character you hear"
-              />
-            )}
+            ) : null}
           </div>
         ) : (
           <button
