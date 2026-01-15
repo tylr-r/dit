@@ -1271,7 +1271,7 @@ function App() {
     >
       <header className="top-bar">
         <div className="logo">
-          <img src="/DitDot-logo.svg" alt="DitDot" />
+          <img src="/Dit-logo.svg" alt="Dit" />
         </div>
         <select
           className="mode-select"

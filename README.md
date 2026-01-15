@@ -1,4 +1,4 @@
-# More Simple Morse
+# Dit
 
 A minimal, single-letter Morse practice app. Tap for dot, hold for dash. When the
 sequence matches, you get a new letter.
