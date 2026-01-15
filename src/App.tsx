@@ -26,6 +26,12 @@ const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const SCORE_INTENSITY_MAX = 15
 const ERROR_LOCKOUT_MS = 1000
+const LISTEN_KEYBOARD_ROWS = [
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+] as const
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -195,6 +201,7 @@ function App() {
   )
   const [listenInput, setListenInput] = useState('')
   const [isListenInputFocused, setIsListenInputFocused] = useState(false)
+  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
   const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
   )
@@ -258,6 +265,29 @@ function App() {
   useEffect(() => {
     showReferenceRef.current = showReference
   }, [showReference])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return
+    }
+    const mediaQuery = window.matchMedia('(pointer: coarse)')
+    const updateKeyboardMode = () => {
+      setUseCustomKeyboard(mediaQuery.matches)
+    }
+    updateKeyboardMode()
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateKeyboardMode)
+    } else {
+      mediaQuery.addListener(updateKeyboardMode)
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', updateKeyboardMode)
+      } else {
+        mediaQuery.removeListener(updateKeyboardMode)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -548,8 +578,12 @@ function App() {
     if (!isListen) {
       return
     }
+    if (useCustomKeyboard) {
+      setIsListenInputFocused(false)
+      return
+    }
     scheduleListenInputFocus(60)
-  }, [isListen, scheduleListenInputFocus])
+  }, [isListen, scheduleListenInputFocus, useCustomKeyboard])
 
   useEffect(() => {
     if (showHint || isFreestyle || isListen) {
@@ -1382,7 +1416,11 @@ function App() {
           </button>
         ) : null}
         {isListen ? (
-          <div className="listen-controls">
+          <div
+            className={`listen-controls${
+              useCustomKeyboard ? ' listen-controls-custom' : ''
+            }`}
+          >
             <button
               type="button"
               className="hint-button"
@@ -1391,28 +1429,49 @@ function App() {
             >
               Play
             </button>
-            <input
-              ref={listenInputRef}
-              className="listen-input"
-              type="text"
-              inputMode="text"
-              autoCapitalize="characters"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="Type"
-              value={listenInput}
-              onChange={handleListenInputChange}
-              onFocus={() => setIsListenInputFocused(true)}
-              onBlur={() => {
-                setIsListenInputFocused(false)
-                if (isListen) {
-                  scheduleListenInputFocus(80)
-                }
-              }}
-              maxLength={1}
-              aria-label="Type the character you hear"
-            />
+            {useCustomKeyboard ? (
+              <div className="listen-keyboard" role="group" aria-label="Keyboard">
+                {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
+                  <div className="keyboard-row" key={`row-${rowIndex}`}>
+                    {row.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className="keyboard-key"
+                        onClick={() => submitListenAnswer(key)}
+                        disabled={listenStatus !== 'idle'}
+                        aria-label={`Type ${key}`}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <input
+                ref={listenInputRef}
+                className="listen-input"
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="Type"
+                value={listenInput}
+                onChange={handleListenInputChange}
+                onFocus={() => setIsListenInputFocused(true)}
+                onBlur={() => {
+                  setIsListenInputFocused(false)
+                  if (isListen && !useCustomKeyboard) {
+                    scheduleListenInputFocus(80)
+                  }
+                }}
+                maxLength={1}
+                aria-label="Type the character you hear"
+              />
+            )}
           </div>
         ) : (
           <button

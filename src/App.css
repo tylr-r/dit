@@ -406,6 +406,13 @@
   gap: 12px;
 }
 
+.listen-controls-custom {
+  width: min(640px, 100%);
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 14px;
+}
+
 .listen-input {
   width: clamp(120px, 28vw, 180px);
   padding: 10px 14px;
@@ -430,6 +437,46 @@
 .listen-input:focus-visible {
   outline: 3px solid rgba(255, 255, 255, 0.7);
   outline-offset: 3px;
+}
+
+.listen-keyboard {
+  width: min(640px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.6vw, 10px);
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 8px);
+}
+
+.keyboard-key {
+  flex: 1 1 0;
+  max-width: 56px;
+  height: clamp(36px, 9vw, 48px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(12, 18, 24, 0.75);
+  color: var(--text);
+  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  font-size: clamp(0.75rem, 2.8vw, 0.95rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 120ms ease, border 160ms ease, background 160ms ease;
+  touch-action: manipulation;
+}
+
+.keyboard-key:active {
+  transform: translateY(1px) scale(0.98);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.keyboard-key:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .modal-overlay {
