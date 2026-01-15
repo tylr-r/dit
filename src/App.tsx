@@ -24,6 +24,8 @@ const LISTEN_WPM_MAX = 30
 const INTER_CHAR_GAP_MS = UNIT_MS * 3
 const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
+const TONE_FREQUENCY = 640
+const TONE_GAIN = 0.06
 const SCORE_INTENSITY_MAX = 15
 const ERROR_LOCKOUT_MS = 1000
 const LISTEN_KEYBOARD_ROWS = [
@@ -163,6 +165,39 @@ const readStoredScores = () => {
   }
 }
 
+const useStoredValue = (key: string, value: string) => {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(key, value)
+  }, [key, value])
+}
+
+const isEditableTarget = (target: EventTarget | null) => {
+  const element = target as HTMLElement | null
+  if (!element) {
+    return false
+  }
+  return (
+    element.isContentEditable ||
+    element.tagName === 'INPUT' ||
+    element.tagName === 'SELECT' ||
+    element.tagName === 'TEXTAREA'
+  )
+}
+
+const createToneNodes = (context: AudioContext, initialGain: number) => {
+  const oscillator = context.createOscillator()
+  const gain = context.createGain()
+  oscillator.type = 'sine'
+  oscillator.frequency.value = TONE_FREQUENCY
+  gain.gain.value = initialGain
+  oscillator.connect(gain)
+  gain.connect(context.destination)
+  return { oscillator, gain }
+}
+
 function App() {
   const [maxLevel, setMaxLevel] = useState(() =>
     readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4),
@@ -209,7 +244,7 @@ function App() {
   const [listenReveal, setListenReveal] = useState<Letter | null>(null)
   const [showReference, setShowReference] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [scores, setScores] = useState(() => readStoredScores())
+  const [scores, setScores] = useState(readStoredScores)
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const showReferenceRef = useRef(showReference)
@@ -232,6 +267,17 @@ function App() {
     () => getLettersForLevel(maxLevel),
     [maxLevel],
   )
+  const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores])
+  const ensureAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+    const context = audioContextRef.current
+    if (context.state === 'suspended') {
+      await context.resume()
+    }
+    return context
+  }, [])
   const triggerHaptics = useCallback((pattern: number | number[]) => {
     if (typeof navigator === 'undefined') {
       return
@@ -261,6 +307,13 @@ function App() {
     () => !(showHint || showHintOnce),
     [showHint, showHintOnce],
   )
+
+  useStoredValue(STORAGE_KEYS.mode, mode)
+  useStoredValue(STORAGE_KEYS.showHint, String(showHint))
+  useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode))
+  useStoredValue(STORAGE_KEYS.maxLevel, String(maxLevel))
+  useStoredValue(STORAGE_KEYS.listenWpm, String(listenWpm))
+  useStoredValue(STORAGE_KEYS.scores, scoresStorageValue)
 
   useEffect(() => {
     freestyleInputRef.current = freestyleInput
@@ -296,51 +349,6 @@ function App() {
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(STORAGE_KEYS.mode, mode)
-  }, [mode])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(STORAGE_KEYS.showHint, String(showHint))
-  }, [showHint])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(
-      STORAGE_KEYS.wordMode,
-      String(freestyleWordMode),
-    )
-  }, [freestyleWordMode])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(STORAGE_KEYS.maxLevel, String(maxLevel))
-  }, [maxLevel])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(STORAGE_KEYS.listenWpm, String(listenWpm))
-  }, [listenWpm])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.localStorage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores))
-  }, [scores])
 
   useEffect(() => {
     if (!showReference) {
@@ -445,26 +453,15 @@ function App() {
   }, [isListen])
 
   const startTone = useCallback(async () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext()
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      await audioContextRef.current.resume()
-    }
+    const context = await ensureAudioContext()
     if (oscillatorRef.current) {
       return
     }
-    const oscillator = audioContextRef.current.createOscillator()
-    const gain = audioContextRef.current.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.value = 640
-    gain.gain.value = 0.06
-    oscillator.connect(gain)
-    gain.connect(audioContextRef.current.destination)
+    const { oscillator, gain } = createToneNodes(context, TONE_GAIN)
     oscillator.start()
     oscillatorRef.current = oscillator
     gainRef.current = gain
-  }, [])
+  }, [ensureAudioContext])
 
   const stopTone = useCallback(() => {
     if (!oscillatorRef.current) {
@@ -497,20 +494,8 @@ function App() {
   const playListenSequence = useCallback(
     async (code: string) => {
       stopListenPlayback()
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext()
-      }
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume()
-      }
-      const context = audioContextRef.current
-      const oscillator = context.createOscillator()
-      const gain = context.createGain()
-      oscillator.type = 'sine'
-      oscillator.frequency.value = 640
-      gain.gain.value = 0
-      oscillator.connect(gain)
-      gain.connect(context.destination)
+      const context = await ensureAudioContext()
+      const { oscillator, gain } = createToneNodes(context, 0)
       listenPlaybackRef.current = { oscillator, gain }
 
       const unitSeconds = 1.2 / listenWpm
@@ -532,9 +517,9 @@ function App() {
       for (const symbol of code) {
         const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
         gain.gain.setValueAtTime(0, currentTime)
-        gain.gain.linearRampToValueAtTime(0.06, currentTime + rampSeconds)
+        gain.gain.linearRampToValueAtTime(TONE_GAIN, currentTime + rampSeconds)
         gain.gain.setValueAtTime(
-          0.06,
+          TONE_GAIN,
           currentTime + duration - rampSeconds,
         )
         gain.gain.linearRampToValueAtTime(0, currentTime + duration)
@@ -551,7 +536,13 @@ function App() {
         gain.disconnect()
       }
     },
-    [listenWpm, stopListenPlayback, triggerHaptics, useCustomKeyboard],
+    [
+      ensureAudioContext,
+      listenWpm,
+      stopListenPlayback,
+      triggerHaptics,
+      useCustomKeyboard,
+    ],
   )
 
   useEffect(() => {
@@ -711,26 +702,29 @@ function App() {
     setFreestyleInput('')
   }, [freestyleWordMode, scheduleWordSpace])
 
-  const scheduleLetterReset = useCallback((nextMode: 'characters' | 'freestyle') => {
-    clearTimer(letterTimeoutRef)
-    letterTimeoutRef.current = window.setTimeout(() => {
-      if (nextMode === 'freestyle') {
-        submitFreestyleInput(freestyleInputRef.current)
-        return
-      }
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      startErrorLockout()
-      if (canScoreAttempt()) {
-        bumpScore(letter, -1)
-      }
-      setStatus('error')
-      setInput('')
-      errorTimeoutRef.current = window.setTimeout(() => {
-        setStatus('idle')
-      }, ERROR_LOCKOUT_MS)
-    }, INTER_CHAR_GAP_MS)
-  }, [bumpScore, canScoreAttempt, startErrorLockout, submitFreestyleInput, letter, letterTimeoutRef, errorTimeoutRef, successTimeoutRef, setStatus, setInput])
+  const scheduleLetterReset = useCallback(
+    (nextMode: 'characters' | 'freestyle') => {
+      clearTimer(letterTimeoutRef)
+      letterTimeoutRef.current = window.setTimeout(() => {
+        if (nextMode === 'freestyle') {
+          submitFreestyleInput(freestyleInputRef.current)
+          return
+        }
+        clearTimer(errorTimeoutRef)
+        clearTimer(successTimeoutRef)
+        startErrorLockout()
+        if (canScoreAttempt()) {
+          bumpScore(letter, -1)
+        }
+        setStatus('error')
+        setInput('')
+        errorTimeoutRef.current = window.setTimeout(() => {
+          setStatus('idle')
+        }, ERROR_LOCKOUT_MS)
+      }, INTER_CHAR_GAP_MS)
+    },
+    [bumpScore, canScoreAttempt, letter, startErrorLockout, submitFreestyleInput],
+  )
 
   const handleFreestyleClear = useCallback(() => {
     clearTimer(letterTimeoutRef)
@@ -826,24 +820,12 @@ function App() {
       return
     }
     setSoundCheckStatus('playing')
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext()
-    }
-    if (audioContextRef.current.state === 'suspended') {
-      await audioContextRef.current.resume()
-    }
-    const context = audioContextRef.current
-    const oscillator = context.createOscillator()
-    const gain = context.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.value = 640
-    gain.gain.value = 0
-    oscillator.connect(gain)
-    gain.connect(context.destination)
+    const context = await ensureAudioContext()
+    const { oscillator, gain } = createToneNodes(context, 0)
     const startTime = context.currentTime + 0.02
     const endTime = startTime + 0.25
     gain.gain.setValueAtTime(0, startTime)
-    gain.gain.linearRampToValueAtTime(0.06, startTime + 0.02)
+    gain.gain.linearRampToValueAtTime(TONE_GAIN, startTime + 0.02)
     gain.gain.linearRampToValueAtTime(0, endTime)
     oscillator.start(startTime)
     oscillator.stop(endTime + 0.02)
@@ -855,7 +837,7 @@ function App() {
     if (useCustomKeyboard) {
       triggerHaptics([40, 40, 40])
     }
-  }, [soundCheckStatus, triggerHaptics, useCustomKeyboard])
+  }, [ensureAudioContext, soundCheckStatus, triggerHaptics, useCustomKeyboard])
 
   useEffect(() => {
     if (!isFreestyle) {
@@ -891,14 +873,7 @@ function App() {
       if (event.ctrlKey || event.metaKey || event.altKey) {
         return
       }
-      const target = event.target as HTMLElement | null
-      if (
-        target &&
-        (target.isContentEditable ||
-          target.tagName === 'INPUT' ||
-          target.tagName === 'SELECT' ||
-          target.tagName === 'TEXTAREA')
-      ) {
+      if (isEditableTarget(event.target)) {
         return
       }
       const key = event.key.toLowerCase()
@@ -1005,7 +980,31 @@ function App() {
       scheduleLetterReset('characters')
       return next
     })
-  }, [isFreestyle, isErrorLocked, startErrorLockout, bumpScore, canScoreAttempt, setFreestyleInput, setFreestyleResult, setInput, setStatus, setLetter, setShowHintOnce, scheduleLetterReset, errorTimeoutRef, successTimeoutRef, letterTimeoutRef, letter, availableLetters, scores])
+  }, [
+    availableLetters,
+    bumpScore,
+    canScoreAttempt,
+    isErrorLocked,
+    isFreestyle,
+    letter,
+    scheduleLetterReset,
+    scores,
+    setLetter,
+    setShowHintOnce,
+    startErrorLockout,
+  ])
+
+  const beginPress = useCallback(() => {
+    if (pressStartRef.current !== null) {
+      return false
+    }
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    setIsPressing(true)
+    pressStartRef.current = performance.now()
+    void startTone()
+    return true
+  }, [startTone])
 
   const releasePress = useCallback(
     (register: boolean) => {
@@ -1014,7 +1013,7 @@ function App() {
       pressStartRef.current = null
       if (!register || start === null) {
         stopTone()
-      return
+        return
       }
       const duration = performance.now() - start
       registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-')
@@ -1035,15 +1034,10 @@ function App() {
     if (!isFreestyle && isErrorLocked()) {
       return
     }
-    if (pressStartRef.current !== null) {
+    if (!beginPress()) {
       return
     }
     event.currentTarget.setPointerCapture(event.pointerId)
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setIsPressing(true)
-    pressStartRef.current = performance.now()
-    void startTone()
   }
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -1088,14 +1082,7 @@ function App() {
         return
       }
       event.preventDefault()
-      if (pressStartRef.current !== null) {
-        return
-      }
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      setIsPressing(true)
-      pressStartRef.current = performance.now()
-      void startTone()
+      beginPress()
     }
 
     const handleGlobalKeyUp = (event: KeyboardEvent) => {
@@ -1121,7 +1108,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeyDown)
       window.removeEventListener('keyup', handleGlobalKeyUp)
     }
-  }, [isErrorLocked, isFreestyle, isListen, releasePress, startTone])
+  }, [beginPress, isErrorLocked, isFreestyle, isListen, releasePress])
 
   useEffect(() => {
     if (!isListen) {
@@ -1137,14 +1124,7 @@ function App() {
       if (event.ctrlKey || event.metaKey || event.altKey) {
         return
       }
-      const target = event.target as HTMLElement | null
-      if (
-        target &&
-        (target.isContentEditable ||
-          target.tagName === 'INPUT' ||
-          target.tagName === 'SELECT' ||
-          target.tagName === 'TEXTAREA')
-      ) {
+      if (isEditableTarget(event.target)) {
         return
       }
       if (event.code === 'Space' || event.key === ' ') {
@@ -1179,14 +1159,7 @@ function App() {
       return
     }
     event.preventDefault()
-    if (pressStartRef.current !== null) {
-      return
-    }
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setIsPressing(true)
-    pressStartRef.current = performance.now()
-    void startTone()
+    beginPress()
   }
 
   const handleKeyUp = (event: React.KeyboardEvent<HTMLButtonElement>) => {
