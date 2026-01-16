@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Unbounded:wght@400;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
 
 html {
   height: var(--app-height, 100dvh);
@@ -39,9 +39,9 @@ body {
   overflow: hidden;
   overscroll-behavior: none;
   background:
-    radial-gradient(1200px 820px at 80% -20%, rgba(76, 201, 255, 0.15), transparent 60%),
-    radial-gradient(1000px 760px at 0% 120%, rgba(255, 146, 112, 0.15), transparent 65%),
-    linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    radial-gradient(ellipse 1200px 900px at 20% 80%, rgba(18, 77, 135, 0.25), transparent 60%),
+    radial-gradient(ellipse 1000px 800px at 80% 20%, rgba(0, 63, 131, 0.18), transparent 65%),
+    #0e0e0f;
   color: var(--text);
   -webkit-user-select: none;
   user-select: none;

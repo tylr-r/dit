@@ -33,25 +33,6 @@
   font-size: clamp(64px, 18vw, 160px);
 }
 
-.app::before {
-  content: '';
-  position: absolute;
-  inset: -20%;
-  background:
-    radial-gradient(
-      520px 380px at 70% 12%,
-      rgba(76, 201, 255, 0.16),
-      transparent 60%
-    ),
-    radial-gradient(
-      560px 420px at 18% 80%,
-      rgba(255, 140, 98, 0.14),
-      transparent 65%
-    );
-  pointer-events: none;
-  z-index: 0;
-}
-
 .top-bar {
   width: min(960px, 100%);
   display: grid;
@@ -73,11 +54,14 @@
   display: block;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35));
   opacity: 0.5;
-  transition: opacity 160ms ease;
+  transition: 
+    opacity 160ms ease,
+    transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .logo img:hover {
   opacity: 1;
+  transform: rotate(15deg);
 }
 
 .settings {
@@ -133,18 +117,25 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(14, 22, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   width: 100%;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
+  transition: all 160ms ease;
 }
 
 .auth-button:hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(18, 28, 38, 0.9);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -162,8 +153,12 @@
 .panel-select {
   appearance: none;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 16, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--text);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -199,8 +194,8 @@
 }
 
 .panel-select:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(14, 22, 28, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 :is(.mode-select, .settings-button):focus-visible {
@@ -212,12 +207,15 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 16, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 16, 20, 0.4);
+  backdrop-filter: blur(10px) saturate(150%);
   display: grid;
   place-items: center;
   color: var(--text);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 
+    0 8px 18px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: transform 140ms ease, border 200ms ease, filter 200ms ease, box-shadow 200ms ease;
 }
 
@@ -252,10 +250,12 @@
   min-width: 240px;
   padding: 20px 18px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(16, 24, 32, 0.95);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(16, 24, 32, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -307,8 +307,12 @@
 
 .panel-button,
 .hint-button {
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(14, 22, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .panel-button {
@@ -318,8 +322,11 @@
 
 :is(.panel-button, .modal-close, .hint-button):hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(18, 28, 38, 0.9);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -403,10 +410,11 @@
 }
 
 .letter {
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
-  font-size: clamp(96px, 24vw, 220px);
+  font-family: 'Atkinson Hyperlegible', 'Space Grotesk', sans-serif;
+  font-size: clamp(96px, 24vw, 200px);
   line-height: 0.9;
   letter-spacing: 0.12em;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--text);
   text-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
@@ -498,7 +506,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
   z-index: 1;
 }
 
@@ -541,19 +549,24 @@
   max-width: 56px;
   height: clamp(36px, 9vw, 48px);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(12, 18, 24, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--text);
   font-size: clamp(0.75rem, 2.8vw, 0.95rem);
   letter-spacing: 0.12em;
   cursor: pointer;
-  transition: transform 120ms ease, border 160ms ease, background 160ms ease;
+  transition: all 120ms ease;
   touch-action: manipulation;
 }
 
 .keyboard-key:active {
   transform: translateY(1px) scale(0.98);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .keyboard-key:disabled {
@@ -575,10 +588,13 @@
 .modal {
   width: min(720px, 100%);
   max-height: min(82vh, 680px);
-  background: rgba(12, 18, 24, 0.96);
+  background: rgba(12, 18, 24, 0.85);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -608,7 +624,11 @@
 
 .modal-close {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(10, 16, 20, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .modal-close.modal-reset {
@@ -647,8 +667,10 @@
       rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0)),
       rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0))
     ),
-    rgba(8, 12, 16, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+    rgba(8, 12, 16, 0.4);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -734,18 +756,16 @@
 }
 
 .morse-button {
-  width: min(560px, 100%);
-  height: clamp(72px, 16vw, 112px);
+  width: min(480px, 100%);
+  height: clamp(64px, 14vw, 96px);
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: linear-gradient(135deg, #2ef2a0 0%, #1cc1a0 55%, #2ae8d4 100%);
-  box-shadow:
-    0 22px 40px rgba(8, 12, 14, 0.6),
-    inset 0 2px 12px rgba(255, 255, 255, 0.35);
+  border: none;
+  background: #ff7043;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 160ms ease, filter 200ms ease;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -753,6 +773,11 @@
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
+}
+
+.morse-button:hover {
+  background: #ff8a65;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .morse-button *,
@@ -763,30 +788,15 @@
   user-select: none;
 }
 
-.morse-button::after {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border-radius: inherit;
-  background: linear-gradient(
-    140deg,
-    rgba(255, 255, 255, 0.35),
-    rgba(255, 255, 255, 0)
-  );
-  opacity: 0.45;
-  pointer-events: none;
-}
-
 .morse-button:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.7);
+  outline: 2px solid rgba(255, 255, 255, 0.4);
   outline-offset: 4px;
 }
 
 .morse-button.pressing {
-  transform: translateY(2px) scale(0.985);
-  box-shadow:
-    0 12px 26px rgba(8, 12, 14, 0.55),
-    inset 0 1px 6px rgba(255, 255, 255, 0.25);
+  background: #f4511e;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transform: scale(0.98);
 }
 
 .button-content {
@@ -798,8 +808,9 @@
 
 .signal {
   display: inline-block;
-  background: rgba(6, 20, 18, 0.35);
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  box-shadow: none;
 }
 
 .signal.dot {
