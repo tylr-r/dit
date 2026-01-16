@@ -555,6 +555,46 @@
   animation: letterRise 520ms ease;
 }
 
+.word-display {
+  font-family: 'Atkinson Hyperlegible', 'Space Grotesk', sans-serif;
+  font-size: clamp(52px, 14vw, 160px);
+  line-height: 0.95;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 12px);
+  animation: letterRise 520ms ease;
+}
+
+.word-letter {
+  opacity: 0.28;
+  transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.word-letter.done {
+  opacity: 0.6;
+  color: var(--accent);
+}
+
+.word-letter.active {
+  opacity: 1;
+  color: var(--accent-cool);
+  transform: translateY(-4px);
+}
+
+.status-success .word-letter.active {
+  color: var(--accent);
+}
+
+.status-error .word-letter.active {
+  color: var(--error);
+}
+
 .letter-placeholder {
   min-height: 0.9em;
   opacity: 0.2;

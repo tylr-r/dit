@@ -10,8 +10,10 @@ type SettingsPanelProps = {
   listenWpmMax: number
   listenWpmMin: number
   maxLevel: number
+  practiceWordMode: boolean
   onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
+  onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowReference: () => void
   onSoundCheck: () => void
@@ -36,8 +38,10 @@ export function SettingsPanel({
   listenWpmMax,
   listenWpmMin,
   maxLevel,
+  practiceWordMode,
   onListenWpmChange,
   onMaxLevelChange,
+  onPracticeWordModeChange,
   onShowHintChange,
   onShowReference,
   onSoundCheck,
@@ -84,6 +88,17 @@ export function SettingsPanel({
               ))}
             </select>
           </label>
+          {!isListen ? (
+            <label className="toggle">
+              <span className="toggle-label">Words</span>
+              <input
+                className="toggle-input"
+                type="checkbox"
+                checked={practiceWordMode}
+                onChange={onPracticeWordModeChange}
+              />
+            </label>
+          ) : null}
           {isListen ? (
             <label className="toggle">
               <span className="toggle-label">Listen speed</span>

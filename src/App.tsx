@@ -14,6 +14,7 @@ import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
 import { MORSE_DATA, type Letter } from './data/morse'
+import { PRACTICE_WORDS } from './data/practiceWords'
 import { auth, database, googleProvider } from './firebase'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
@@ -46,6 +47,7 @@ const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
   wordMode: 'morse-word-mode',
+  practiceWordMode: 'morse-practice-word-mode',
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
@@ -105,6 +107,31 @@ const pickNewLetter = (letters: Letter[], previous?: Letter): Letter => {
   return next
 }
 
+const getPracticeWordsForLetters = (letters: Letter[]) => {
+  const allowed = new Set(letters)
+  const filtered = PRACTICE_WORDS.filter((word) =>
+    word.split('').every((char) => allowed.has(char as Letter)),
+  )
+  return filtered.length > 0 ? filtered : letters.map((letter) => letter)
+}
+
+const pickNewWord = (words: readonly string[], previous?: string) => {
+  if (words.length === 0) {
+    return LETTERS[0]
+  }
+  if (words.length === 1) {
+    return words[0]
+  }
+  if (!previous || !words.includes(previous)) {
+    return words[Math.floor(Math.random() * words.length)]
+  }
+  let next = previous
+  while (next === previous) {
+    next = words[Math.floor(Math.random() * words.length)]
+  }
+  return next
+}
+
 const pickWeightedLetter = (
   letters: Letter[],
   scores: Record<Letter, number>,
@@ -155,6 +182,7 @@ const buildScoreMap = () =>
 type RemoteProgress = {
   listenWpm?: number
   maxLevel?: number
+  practiceWordMode?: boolean
   scores?: Record<Letter, number>
   showHint?: boolean
   wordMode?: boolean
@@ -188,6 +216,9 @@ const parseRemoteProgress = (value: unknown) => {
   }
   if (typeof record.wordMode === 'boolean') {
     progress.wordMode = record.wordMode
+  }
+  if (typeof record.practiceWordMode === 'boolean') {
+    progress.practiceWordMode = record.practiceWordMode
   }
   if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
     progress.maxLevel = clampNumber(record.maxLevel, 1, 4)
@@ -289,15 +320,32 @@ const scheduleToneEnvelope = (
 }
 
 function App() {
+  const initialConfig = useMemo(() => {
+    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4)
+    const practiceWordMode = readStoredBoolean(
+      STORAGE_KEYS.practiceWordMode,
+      false,
+    )
+    const availableLetters = getLettersForLevel(maxLevel)
+    const practiceWord = pickNewWord(
+      getPracticeWordsForLetters(availableLetters),
+    )
+    const letter = practiceWordMode
+      ? (practiceWord[0] as Letter)
+      : pickNewLetter(availableLetters)
+    return {
+      letter,
+      maxLevel,
+      practiceWord,
+      practiceWordMode,
+    }
+  }, [])
+
   const [user, setUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [remoteLoaded, setRemoteLoaded] = useState(false)
-  const [maxLevel, setMaxLevel] = useState(() =>
-    readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4),
-  )
-  const [letter, setLetter] = useState<Letter>(() =>
-    pickNewLetter(getLettersForLevel(maxLevel)),
-  )
+  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel)
+  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [isPressing, setIsPressing] = useState(false)
@@ -318,6 +366,13 @@ function App() {
     return 'practice'
   })
   const [showHintOnce, setShowHintOnce] = useState(false)
+  const [practiceWordMode, setPracticeWordMode] = useState(
+    initialConfig.practiceWordMode,
+  )
+  const [practiceWord, setPracticeWord] = useState(
+    initialConfig.practiceWord,
+  )
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
   const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
@@ -339,9 +394,13 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [scores, setScores] = useState(readStoredScores)
+  const maxLevelRef = useRef(maxLevel)
   const inputRef = useRef(input)
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
+  const practiceWordModeRef = useRef(practiceWordMode)
+  const practiceWordRef = useRef(practiceWord)
+  const practiceWordIndexRef = useRef(practiceWordIndex)
   const showReferenceRef = useRef(showReference)
   const letterRef = useRef(letter)
   const scoresRef = useRef(scores)
@@ -365,16 +424,21 @@ function App() {
     () => getLettersForLevel(maxLevel),
     [maxLevel],
   )
+  const availablePracticeWords = useMemo(
+    () => getPracticeWordsForLetters(availableLetters),
+    [availableLetters],
+  )
   const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores])
   const progressSnapshot = useMemo(
     () => ({
       listenWpm,
       maxLevel,
+      practiceWordMode,
       scores,
       showHint,
       wordMode: freestyleWordMode,
     }),
-    [freestyleWordMode, listenWpm, maxLevel, scores, showHint],
+    [freestyleWordMode, listenWpm, maxLevel, practiceWordMode, scores, showHint],
   )
   const ensureAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
@@ -419,6 +483,7 @@ function App() {
   useStoredValue(STORAGE_KEYS.mode, mode)
   useStoredValue(STORAGE_KEYS.showHint, String(showHint))
   useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode))
+  useStoredValue(STORAGE_KEYS.practiceWordMode, String(practiceWordMode))
   useStoredValue(STORAGE_KEYS.maxLevel, String(maxLevel))
   useStoredValue(STORAGE_KEYS.listenWpm, String(listenWpm))
   useStoredValue(STORAGE_KEYS.scores, scoresStorageValue)
@@ -443,6 +508,22 @@ function App() {
   useEffect(() => {
     freestyleWordModeRef.current = freestyleWordMode
   }, [freestyleWordMode])
+
+  useEffect(() => {
+    maxLevelRef.current = maxLevel
+  }, [maxLevel])
+
+  useEffect(() => {
+    practiceWordModeRef.current = practiceWordMode
+  }, [practiceWordMode])
+
+  useEffect(() => {
+    practiceWordRef.current = practiceWord
+  }, [practiceWord])
+
+  useEffect(() => {
+    practiceWordIndexRef.current = practiceWordIndex
+  }, [practiceWordIndex])
 
   useEffect(() => {
     showReferenceRef.current = showReference
@@ -743,6 +824,16 @@ function App() {
         void playListenSequence(MORSE_DATA[nextLetter].code)
         return
       }
+      if (practiceWordModeRef.current) {
+        const nextWord = pickNewWord(
+          availablePracticeWords,
+          practiceWordRef.current,
+        )
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
+        return
+      }
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
@@ -751,6 +842,7 @@ function App() {
     },
     [
       availableLetters,
+      availablePracticeWords,
       letter,
       playListenSequence,
       resetListenState,
@@ -777,6 +869,43 @@ function App() {
     [],
   )
 
+  const handlePracticeWordModeChange = useCallback(
+    (nextValue: boolean) => {
+      setPracticeWordMode(nextValue)
+      clearTimer(letterTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
+      if (!nextValue) {
+        const nextLetter = pickWeightedLetter(
+          availableLetters,
+          scoresRef.current,
+          letterRef.current,
+        )
+        setPracticeWordIndex(0)
+        setLetter(nextLetter)
+        return
+      }
+      const nextWord = pickNewWord(
+        availablePracticeWords,
+        practiceWordRef.current,
+      )
+      setPracticeWord(nextWord)
+      setPracticeWordIndex(0)
+      setLetter(nextWord[0] as Letter)
+    },
+    [availableLetters, availablePracticeWords],
+  )
+
+  const handlePracticeWordModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlePracticeWordModeChange(event.target.checked)
+    },
+    [handlePracticeWordModeChange],
+  )
+
   const handleMaxLevelChange = useCallback(
     (nextLevel: number) => {
       setMaxLevel(nextLevel)
@@ -785,6 +914,16 @@ function App() {
       setShowHintOnce(false)
       resetListenState()
       const nextLetters = getLettersForLevel(nextLevel)
+      if (!isListen && practiceWordModeRef.current) {
+        const nextWord = pickNewWord(
+          getPracticeWordsForLetters(nextLetters),
+          practiceWordRef.current,
+        )
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
+        return
+      }
       const nextLetter = nextLetters.includes(letter)
         ? letter
         : pickWeightedLetter(nextLetters, scores)
@@ -842,6 +981,10 @@ function App() {
       return
     }
     const nextScores = progress.scores ?? scoresRef.current
+    const resolvedMaxLevel =
+      typeof progress.maxLevel === 'number'
+        ? progress.maxLevel
+        : maxLevelRef.current
     if (progress.scores) {
       setScores(progress.scores)
     }
@@ -862,6 +1005,16 @@ function App() {
         : pickWeightedLetter(nextLetters, nextScores, currentLetter)
       setMaxLevel(progress.maxLevel)
       setLetter(nextLetter)
+    }
+    if (typeof progress.practiceWordMode === 'boolean') {
+      setPracticeWordMode(progress.practiceWordMode)
+      if (progress.practiceWordMode) {
+        const nextLetters = getLettersForLevel(resolvedMaxLevel)
+        const nextWord = pickNewWord(getPracticeWordsForLetters(nextLetters))
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
+      }
     }
   }, [])
 
@@ -981,6 +1134,36 @@ function App() {
           setStatus('success')
           setInput('')
           successTimeoutRef.current = window.setTimeout(() => {
+            if (practiceWordModeRef.current) {
+              const currentWord = practiceWordRef.current
+              if (!currentWord) {
+                const nextWord = pickNewWord(availablePracticeWords)
+                setPracticeWord(nextWord)
+                setPracticeWordIndex(0)
+                setLetter(nextWord[0] as Letter)
+                setShowHintOnce(false)
+                setStatus('idle')
+                return
+              }
+              const nextIndex = practiceWordIndexRef.current + 1
+              if (nextIndex >= currentWord.length) {
+                const nextWord = pickNewWord(
+                  availablePracticeWords,
+                  currentWord,
+                )
+                setPracticeWord(nextWord)
+                setPracticeWordIndex(0)
+                setLetter(nextWord[0] as Letter)
+                setShowHintOnce(false)
+                setStatus('idle')
+                return
+              }
+              setPracticeWordIndex(nextIndex)
+              setLetter(currentWord[nextIndex] as Letter)
+              setShowHintOnce(false)
+              setStatus('idle')
+              return
+            }
             setLetter((current) =>
               pickWeightedLetter(availableLetters, scoresRef.current, current),
             )
@@ -1004,6 +1187,7 @@ function App() {
       availableLetters,
       bumpScore,
       canScoreAttempt,
+      availablePracticeWords,
       setLetter,
       setShowHintOnce,
       startErrorLockout,
@@ -1413,7 +1597,7 @@ function App() {
   const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
   const target = MORSE_DATA[letter].code
   const mnemonic = MORSE_DATA[letter].mnemonic
-  const statusText =
+  const baseStatusText =
     status === 'success'
       ? 'Correct'
       : status === 'error'
@@ -1421,6 +1605,16 @@ function App() {
         : hintVisible
           ? mnemonic
           : ' '
+  const practiceProgressText =
+    !isFreestyle &&
+    !isListen &&
+    practiceWordMode &&
+    status === 'idle' &&
+    !hintVisible &&
+    practiceWord
+      ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
+      : null
+  const statusText = practiceProgressText ?? baseStatusText
   const targetSymbols = target.split('')
   const isInputOnTrack =
     !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
@@ -1534,6 +1728,8 @@ function App() {
               levels={LEVELS}
               maxLevel={maxLevel}
               onMaxLevelChange={handleMaxLevelSelectChange}
+              practiceWordMode={practiceWordMode}
+              onPracticeWordModeChange={handlePracticeWordModeToggle}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
@@ -1564,6 +1760,9 @@ function App() {
         listenDisplayClass={listenDisplayClass}
         listenStatusText={listenStatusText}
         pips={pips}
+        practiceWord={practiceWord}
+        practiceWordIndex={practiceWordIndex}
+        practiceWordMode={practiceWordMode}
         statusText={statusText}
         target={target}
       />

@@ -12,6 +12,9 @@ type StageDisplayProps = {
   listenDisplayClass: string
   listenStatusText: string
   pips: ReactNode
+  practiceWord: string
+  practiceWordIndex: number
+  practiceWordMode: boolean
   statusText: string
   target: string
 }
@@ -28,9 +31,13 @@ export function StageDisplay({
   listenDisplayClass,
   listenStatusText,
   pips,
+  practiceWord,
+  practiceWordIndex,
+  practiceWordMode,
   statusText,
   target,
 }: StageDisplayProps) {
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
   return (
     <main className="stage">
       {isFreestyle ? (
@@ -53,9 +60,32 @@ export function StageDisplay({
         </>
       ) : (
         <>
-          <div key={letter} className="letter">
-            {letter}
-          </div>
+          {practiceWordMode ? (
+            <div
+              key={practiceWord}
+              className="word-display"
+              aria-live="polite"
+              aria-label={practiceWord ? `Word ${practiceWord}` : 'Word'}
+            >
+              {wordCharacters.map((char, index) => {
+                const state =
+                  index < practiceWordIndex
+                    ? 'word-letter done'
+                    : index === practiceWordIndex
+                      ? 'word-letter active'
+                      : 'word-letter'
+                return (
+                  <span key={`${char}-${index}`} className={state}>
+                    {char}
+                  </span>
+                )
+              })}
+            </div>
+          ) : (
+            <div key={letter} className="letter">
+              {letter}
+            </div>
+          )}
           {hintVisible ? (
             <div className="progress" aria-label={`Target ${target}`}>
               {pips}
