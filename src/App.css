@@ -93,10 +93,11 @@
 .auth {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 10px;
   flex-wrap: wrap;
-  max-width: 280px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .auth-avatar {
@@ -126,21 +127,25 @@
 }
 
 .auth-button {
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(12, 18, 24, 0.7);
-  color: var(--muted);
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 22, 30, 0.8);
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease;
+  width: 100%;
+  transition: border 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
 }
 
 .auth-button:hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(18, 28, 38, 0.9);
+  transform: translateY(-1px);
 }
 
 .auth-button:focus-visible {
@@ -187,8 +192,15 @@
 }
 
 .panel-select {
-  padding: 6px 26px 6px 10px;
-  font-size: 0.68rem;
+  padding: 8px 30px 8px 14px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  transition: border 160ms ease, background 160ms ease;
+}
+
+.panel-select:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(14, 22, 28, 0.7);
 }
 
 :is(.mode-select, .settings-button):focus-visible {
@@ -206,11 +218,26 @@
   place-items: center;
   color: var(--text);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-  transition: transform 140ms ease, border 200ms ease, filter 200ms ease;
+  transition: transform 140ms ease, border 200ms ease, filter 200ms ease, box-shadow 200ms ease;
 }
 
 .settings-button:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.2);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.settings-button:hover svg {
+  animation: settingsGearSpin 0.6s ease-in-out;
+}
+
+.settings-button[aria-expanded="true"] {
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 20px rgba(76, 201, 255, 0.2);
+}
+
+@keyframes settingsGearSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(90deg); }
 }
 
 .settings-button svg {
@@ -222,59 +249,78 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  min-width: 170px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(12, 18, 24, 0.9);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+  min-width: 240px;
+  padding: 20px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(16, 24, 32, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  animation: panelSlideIn 200ms ease;
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .panel-hint {
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
 }
 
 :is(.panel-button, .modal-close, .hint-button) {
-  border-radius: 999px;
+  border-radius: 12px;
   color: var(--muted);
   text-transform: uppercase;
   cursor: pointer;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease;
+  transition: border 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
 }
 
 .panel-button,
 .modal-close {
-  padding: 6px 12px;
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
+  padding: 10px 16px;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  font-weight: 500;
 }
 
 .panel-button,
 .hint-button {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(12, 18, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 22, 30, 0.8);
 }
 
 .panel-button {
-  align-self: flex-end;
+  width: 100%;
+  text-align: center;
 }
 
 :is(.panel-button, .modal-close, .hint-button):hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(18, 28, 38, 0.9);
+  transform: translateY(-1px);
 }
 
 :is(.panel-select, .panel-button, .modal-close, .hint-button):focus-visible {
@@ -286,50 +332,57 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   font-size: 0.85rem;
   color: var(--text);
 }
 
 .toggle-label {
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.72rem;
-  color: var(--muted);
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .toggle-input {
   appearance: none;
-  width: 44px;
-  height: 24px;
+  width: 48px;
+  height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(9, 14, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(9, 14, 18, 0.8);
   position: relative;
   cursor: pointer;
-  transition: background 160ms ease, border 160ms ease;
+  transition: background 200ms ease, border 200ms ease, box-shadow 200ms ease;
+}
+
+.toggle-input:hover {
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .toggle-input::after {
   content: '';
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform 160ms ease, background 160ms ease;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .toggle-input:checked {
-  background: rgba(56, 242, 162, 0.8);
-  border-color: rgba(56, 242, 162, 0.8);
+  background: rgba(56, 242, 162, 0.9);
+  border-color: rgba(56, 242, 162, 0.9);
+  box-shadow: 0 0 12px rgba(56, 242, 162, 0.3);
 }
 
 .toggle-input:checked::after {
-  transform: translateX(20px);
-  background: #0c1418;
+  transform: translateX(22px);
+  background: rgba(12, 20, 24, 0.95);
 }
 
 .toggle-input:focus-visible {
