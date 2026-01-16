@@ -337,6 +337,7 @@ function App() {
   const [listenReveal, setListenReveal] = useState<Letter | null>(null)
   const [showReference, setShowReference] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const [scores, setScores] = useState(readStoredScores)
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
@@ -1435,7 +1436,7 @@ function App() {
     return (
       <span
         key={`${symbol}-${index}`}
-        className={`pip ${symbol === '.' ? 'dot' : 'dash'} ${
+        className={`pip ${symbol === '.' ? 'dot' : 'dah'} ${
           isHit ? 'hit' : 'expected'
         }`}
       />
@@ -1478,6 +1479,7 @@ function App() {
   const listenFocused = isListen && useCustomKeyboard
   const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : ''
   const userInitial = user ? (userLabel ? userLabel[0].toUpperCase() : '?') : ''
+  const currentYear = new Date().getFullYear()
 
   return (
     <div
@@ -1487,7 +1489,16 @@ function App() {
     >
       <header className="top-bar">
         <div className="logo">
-          <img src="/Dit-logo.svg" alt="Dit" />
+          <button
+            type="button"
+            className="logo-button"
+            onClick={() => setShowAbout((prev) => !prev)}
+            aria-label="About Dit"
+            aria-haspopup="dialog"
+            aria-expanded={showAbout}
+          >
+            <img src="/Dit-logo.svg" alt="Dit" />
+          </button>
         </div>
         <select
           className="mode-select"
@@ -1612,6 +1623,44 @@ function App() {
           onResetScores={handleResetScores}
           scores={scores}
         />
+      ) : null}
+      {showAbout ? (
+        <div
+          className="about-overlay"
+          role="presentation"
+          onClick={() => setShowAbout(false)}
+        >
+          <div
+            className="about-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="About Dit"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="about-title">Dit</p>
+            <p className="about-instruction">
+              Tap that big button. Quick taps make dots, longer presses make dashes.
+            </p>
+            <p className="about-instruction about-instruction-secondary">
+              Use <strong>settings</strong> to adjust difficulty, check the reference chart, enable hints, and sign in to save your progress.
+            </p>
+            <p className="about-instruction about-instruction-secondary">
+              <strong>Modes:</strong> Practice for guided learning, Freestyle to translate on your own, or Listen to test your copy skills.
+            </p>
+            <div className="about-links">
+              <span>© {currentYear} Tylr</span>
+              <span>| </span>
+              <a href="/privacy">Privacy</a>
+            </div>
+            <button
+              type="button"
+              className="about-close"
+              onClick={() => setShowAbout(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   )

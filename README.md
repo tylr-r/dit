@@ -1,6 +1,6 @@
 # Dit
 
-Morse code practice. Tap for dot, hold for dash.
+Morse code practice. Tap for dot, hold for dah.
 
 ## Principles
 

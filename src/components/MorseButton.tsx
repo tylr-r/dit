@@ -17,7 +17,7 @@ type MorseButtonProps = {
   onPointerUp: (event: PointerEvent<HTMLButtonElement>) => void
 }
 
-/** Tap/press input button for dot/dash entry. */
+/** Tap/press input button for dot/dah entry. */
 export function MorseButton({
   buttonRef,
   isPressing,
@@ -47,11 +47,11 @@ export function MorseButton({
       onKeyDown={onKeyDown}
       onKeyUp={onKeyUp}
       onBlur={onBlur}
-      aria-label="Tap for dot, hold for dash"
+      aria-label="Tap for dot, hold for dah"
     >
       <span className="button-content" aria-hidden="true">
         <span className="signal dot" />
-        <span className="signal dash" />
+        <span className="signal dah" />
         <span className="signal dot" />
       </span>
     </button>
