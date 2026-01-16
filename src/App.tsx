@@ -1,3 +1,11 @@
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  type User,
+} from 'firebase/auth'
+import { get, ref, set } from 'firebase/database'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { ListenControls } from './components/ListenControls'
@@ -6,6 +14,7 @@ import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
 import { MORSE_DATA, type Letter } from './data/morse'
+import { auth, database, googleProvider } from './firebase'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const LEVELS = [1, 2, 3, 4] as const
@@ -32,6 +41,7 @@ const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const TONE_FREQUENCY = 640
 const TONE_GAIN = 0.06
 const ERROR_LOCKOUT_MS = 1000
+const PROGRESS_SAVE_DEBOUNCE_MS = 800
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -40,6 +50,9 @@ const STORAGE_KEYS = {
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
 }
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, Math.round(value)))
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
   if (typeof window === 'undefined') {
@@ -69,8 +82,7 @@ const readStoredNumber = (
   if (!Number.isFinite(parsed)) {
     return fallback
   }
-  const clamped = Math.max(min, Math.min(max, Math.round(parsed)))
-  return clamped
+  return clampNumber(parsed, min, max)
 }
 
 const getLettersForLevel = (maxLevel: number) =>
@@ -139,6 +151,63 @@ const buildScoreMap = () =>
     },
     {} as Record<Letter, number>,
   )
+
+type RemoteProgress = {
+  listenWpm?: number
+  maxLevel?: number
+  scores?: Record<Letter, number>
+  showHint?: boolean
+  wordMode?: boolean
+}
+
+const parseRemoteScores = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const next = buildScoreMap()
+  let hasScore = false
+  LETTERS.forEach((letter) => {
+    const entry = record[letter]
+    if (typeof entry === 'number' && Number.isFinite(entry)) {
+      next[letter] = entry
+      hasScore = true
+    }
+  })
+  return hasScore ? next : null
+}
+
+const parseRemoteProgress = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const progress: RemoteProgress = {}
+  if (typeof record.showHint === 'boolean') {
+    progress.showHint = record.showHint
+  }
+  if (typeof record.wordMode === 'boolean') {
+    progress.wordMode = record.wordMode
+  }
+  if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
+    progress.maxLevel = clampNumber(record.maxLevel, 1, 4)
+  }
+  if (
+    typeof record.listenWpm === 'number' &&
+    Number.isFinite(record.listenWpm)
+  ) {
+    progress.listenWpm = clampNumber(
+      record.listenWpm,
+      LISTEN_WPM_MIN,
+      LISTEN_WPM_MAX,
+    )
+  }
+  const scores = parseRemoteScores(record.scores)
+  if (scores) {
+    progress.scores = scores
+  }
+  return progress
+}
 
 const readStoredScores = () => {
   if (typeof window === 'undefined') {
@@ -220,6 +289,9 @@ const scheduleToneEnvelope = (
 }
 
 function App() {
+  const [user, setUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [remoteLoaded, setRemoteLoaded] = useState(false)
   const [maxLevel, setMaxLevel] = useState(() =>
     readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4),
   )
@@ -269,6 +341,8 @@ function App() {
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const showReferenceRef = useRef(showReference)
+  const letterRef = useRef(letter)
+  const scoresRef = useRef(scores)
   const errorLockoutUntilRef = useRef(0)
   const pressStartRef = useRef<number | null>(null)
   const errorTimeoutRef = useRef<number | null>(null)
@@ -276,6 +350,7 @@ function App() {
   const letterTimeoutRef = useRef<number | null>(null)
   const wordSpaceTimeoutRef = useRef<number | null>(null)
   const listenTimeoutRef = useRef<number | null>(null)
+  const saveProgressTimeoutRef = useRef<number | null>(null)
   const listenPlaybackRef = useRef<{
     oscillator: OscillatorNode
     gain: GainNode
@@ -289,6 +364,16 @@ function App() {
     [maxLevel],
   )
   const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores])
+  const progressSnapshot = useMemo(
+    () => ({
+      listenWpm,
+      maxLevel,
+      scores,
+      showHint,
+      wordMode: freestyleWordMode,
+    }),
+    [freestyleWordMode, listenWpm, maxLevel, scores, showHint],
+  )
   const ensureAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext()
@@ -337,6 +422,15 @@ function App() {
   useStoredValue(STORAGE_KEYS.scores, scoresStorageValue)
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser)
+      setRemoteLoaded(false)
+      setAuthReady(true)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  useEffect(() => {
     freestyleInputRef.current = freestyleInput
   }, [freestyleInput])
 
@@ -347,6 +441,14 @@ function App() {
   useEffect(() => {
     showReferenceRef.current = showReference
   }, [showReference])
+
+  useEffect(() => {
+    letterRef.current = letter
+  }, [letter])
+
+  useEffect(() => {
+    scoresRef.current = scores
+  }, [scores])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
@@ -567,6 +669,7 @@ function App() {
       clearTimer(letterTimeoutRef)
       clearTimer(wordSpaceTimeoutRef)
       clearTimer(listenTimeoutRef)
+      clearTimer(saveProgressTimeoutRef)
       stopListenPlayback()
       if (oscillatorRef.current) {
         oscillatorRef.current.stop()
@@ -700,6 +803,108 @@ function App() {
     },
     [],
   )
+
+  const handleSignIn = useCallback(async () => {
+    try {
+      await signInWithPopup(auth, googleProvider)
+    } catch (error) {
+      const fallbackToRedirect =
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error.code === 'auth/popup-blocked' ||
+          error.code === 'auth/operation-not-supported-in-this-environment')
+      if (fallbackToRedirect) {
+        await signInWithRedirect(auth, googleProvider)
+        return
+      }
+      console.error('Failed to sign in', error)
+    }
+  }, [])
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut(auth)
+    } catch (error) {
+      console.error('Failed to sign out', error)
+    }
+  }, [])
+
+  const applyRemoteProgress = useCallback((raw: unknown) => {
+    const progress = parseRemoteProgress(raw)
+    if (!progress) {
+      return
+    }
+    const nextScores = progress.scores ?? scoresRef.current
+    if (progress.scores) {
+      setScores(progress.scores)
+    }
+    if (typeof progress.showHint === 'boolean') {
+      setShowHint(progress.showHint)
+    }
+    if (typeof progress.wordMode === 'boolean') {
+      setFreestyleWordMode(progress.wordMode)
+    }
+    if (typeof progress.listenWpm === 'number') {
+      setListenWpm(progress.listenWpm)
+    }
+    if (typeof progress.maxLevel === 'number') {
+      const nextLetters = getLettersForLevel(progress.maxLevel)
+      const currentLetter = letterRef.current
+      const nextLetter = nextLetters.includes(currentLetter)
+        ? currentLetter
+        : pickWeightedLetter(nextLetters, nextScores, currentLetter)
+      setMaxLevel(progress.maxLevel)
+      setLetter(nextLetter)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+    const progressRef = ref(database, `users/${user.uid}/progress`)
+    let isActive = true
+    get(progressRef)
+      .then((snapshot) => {
+        if (!isActive) {
+          return
+        }
+        if (snapshot.exists()) {
+          applyRemoteProgress(snapshot.val())
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load progress', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setRemoteLoaded(true)
+        }
+      })
+    return () => {
+      isActive = false
+    }
+  }, [applyRemoteProgress, user])
+
+  useEffect(() => {
+    if (!user || !remoteLoaded) {
+      return
+    }
+    clearTimer(saveProgressTimeoutRef)
+    saveProgressTimeoutRef.current = window.setTimeout(() => {
+      const progressRef = ref(database, `users/${user.uid}/progress`)
+      void set(progressRef, {
+        ...progressSnapshot,
+        updatedAt: Date.now(),
+      }).catch((error) => {
+        console.error('Failed to save progress', error)
+      })
+    }, PROGRESS_SAVE_DEBOUNCE_MS)
+    return () => {
+      clearTimer(saveProgressTimeoutRef)
+    }
+  }, [progressSnapshot, remoteLoaded, user])
 
   const scheduleWordSpace = useCallback(() => {
     clearTimer(wordSpaceTimeoutRef)
@@ -1262,6 +1467,8 @@ function App() {
     listenReveal ? '' : 'letter-placeholder'
   }`
   const listenFocused = isListen && useCustomKeyboard
+  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : ''
+  const userInitial = user ? (userLabel ? userLabel[0].toUpperCase() : '?') : ''
 
   return (
     <div
@@ -1317,6 +1524,12 @@ function App() {
               onWordModeChange={handleWordModeToggle}
               onSoundCheck={handleSoundCheck}
               soundCheckStatus={soundCheckStatus}
+              user={user}
+              userLabel={userLabel}
+              userInitial={userInitial}
+              authReady={authReady}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
             />
           ) : null}
         </div>

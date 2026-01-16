@@ -1,3 +1,4 @@
+import type { User } from 'firebase/auth'
 import type { ChangeEvent } from 'react'
 
 type SettingsPanelProps = {
@@ -17,6 +18,12 @@ type SettingsPanelProps = {
   onWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   showHint: boolean
   soundCheckStatus: 'idle' | 'playing'
+  user: User | null
+  userLabel: string
+  userInitial: string
+  authReady: boolean
+  onSignIn: () => void
+  onSignOut: () => void
 }
 
 /** Settings dropdown content and mode-specific controls. */
@@ -37,6 +44,12 @@ export function SettingsPanel({
   onWordModeChange,
   showHint,
   soundCheckStatus,
+  user,
+  userLabel,
+  userInitial,
+  authReady,
+  onSignIn,
+  onSignOut,
 }: SettingsPanelProps) {
   return (
     <div
@@ -125,6 +138,42 @@ export function SettingsPanel({
           </span>
         </div>
       ) : null}
+      <div className="auth">
+        {user ? (
+          <>
+            {user.photoURL ? (
+              <img
+                className="auth-avatar"
+                src={user.photoURL}
+                alt={userLabel}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="auth-avatar auth-avatar-fallback">
+                {userInitial}
+              </div>
+            )}
+            <span className="auth-name">{userLabel}</span>
+            <button
+              type="button"
+              className="auth-button"
+              onClick={onSignOut}
+              disabled={!authReady}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="auth-button"
+            onClick={onSignIn}
+            disabled={!authReady}
+          >
+            Sign in with Google
+          </button>
+        )}
+      </div>
     </div>
   )
 }
