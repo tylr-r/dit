@@ -36,7 +36,7 @@ const DOT_THRESHOLD_MS = 200
 const UNIT_MS = DOT_THRESHOLD_MS
 const LISTEN_WPM_MIN = 10
 const LISTEN_WPM_MAX = 30
-const INTER_CHAR_GAP_MS = UNIT_MS * 3
+const INTER_CHAR_GAP_MS = UNIT_MS * 2
 const WORD_GAP_MS = UNIT_MS * 7
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const TONE_FREQUENCY = 640
@@ -1131,39 +1131,47 @@ function App() {
           if (canScoreAttempt()) {
             bumpScore(letterRef.current, 1)
           }
-          setStatus('success')
           setInput('')
-          successTimeoutRef.current = window.setTimeout(() => {
-            if (practiceWordModeRef.current) {
-              const currentWord = practiceWordRef.current
-              if (!currentWord) {
-                const nextWord = pickNewWord(availablePracticeWords)
-                setPracticeWord(nextWord)
-                setPracticeWordIndex(0)
-                setLetter(nextWord[0] as Letter)
-                setShowHintOnce(false)
-                setStatus('idle')
-                return
-              }
-              const nextIndex = practiceWordIndexRef.current + 1
-              if (nextIndex >= currentWord.length) {
-                const nextWord = pickNewWord(
-                  availablePracticeWords,
-                  currentWord,
-                )
-                setPracticeWord(nextWord)
-                setPracticeWordIndex(0)
-                setLetter(nextWord[0] as Letter)
-                setShowHintOnce(false)
-                setStatus('idle')
-                return
-              }
-              setPracticeWordIndex(nextIndex)
-              setLetter(currentWord[nextIndex] as Letter)
+          if (practiceWordModeRef.current) {
+            const currentWord = practiceWordRef.current
+            if (!currentWord) {
+              const nextWord = pickNewWord(availablePracticeWords)
+              const nextLetter = nextWord[0] as Letter
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
               setShowHintOnce(false)
               setStatus('idle')
               return
             }
+            const nextIndex = practiceWordIndexRef.current + 1
+            if (nextIndex >= currentWord.length) {
+              const nextWord = pickNewWord(availablePracticeWords, currentWord)
+              const nextLetter = nextWord[0] as Letter
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
+              setShowHintOnce(false)
+              setStatus('idle')
+              return
+            }
+            const nextLetter = currentWord[nextIndex] as Letter
+            practiceWordIndexRef.current = nextIndex
+            letterRef.current = nextLetter
+            setPracticeWordIndex(nextIndex)
+            setLetter(nextLetter)
+            setShowHintOnce(false)
+            setStatus('idle')
+            return
+          }
+          setStatus('success')
+          successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
               pickWeightedLetter(availableLetters, scoresRef.current, current),
             )
