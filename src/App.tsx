@@ -339,6 +339,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [scores, setScores] = useState(readStoredScores)
+  const inputRef = useRef(input)
   const freestyleInputRef = useRef('')
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const showReferenceRef = useRef(showReference)
@@ -434,6 +435,10 @@ function App() {
   useEffect(() => {
     freestyleInputRef.current = freestyleInput
   }, [freestyleInput])
+
+  useEffect(() => {
+    inputRef.current = input
+  }, [input])
 
   useEffect(() => {
     freestyleWordModeRef.current = freestyleWordMode
@@ -961,11 +966,32 @@ function App() {
           submitFreestyleInput(freestyleInputRef.current)
           return
         }
+        const attempt = inputRef.current
+        if (!attempt) {
+          return
+        }
         clearTimer(errorTimeoutRef)
         clearTimer(successTimeoutRef)
+        const target = MORSE_DATA[letterRef.current].code
+        const isCorrect = attempt === target
+        if (isCorrect) {
+          if (canScoreAttempt()) {
+            bumpScore(letterRef.current, 1)
+          }
+          setStatus('success')
+          setInput('')
+          successTimeoutRef.current = window.setTimeout(() => {
+            setLetter((current) =>
+              pickWeightedLetter(availableLetters, scoresRef.current, current),
+            )
+            setShowHintOnce(false)
+            setStatus('idle')
+          }, 650)
+          return
+        }
         startErrorLockout()
         if (canScoreAttempt()) {
-          bumpScore(letter, -1)
+          bumpScore(letterRef.current, -1)
         }
         setStatus('error')
         setInput('')
@@ -974,7 +1000,15 @@ function App() {
         }, ERROR_LOCKOUT_MS)
       }, INTER_CHAR_GAP_MS)
     },
-    [bumpScore, canScoreAttempt, letter, startErrorLockout, submitFreestyleInput],
+    [
+      availableLetters,
+      bumpScore,
+      canScoreAttempt,
+      setLetter,
+      setShowHintOnce,
+      startErrorLockout,
+      submitFreestyleInput,
+    ],
   )
 
   const handleFreestyleClear = useCallback(() => {
@@ -1177,72 +1211,31 @@ function App() {
     showReference,
   ])
 
-  const registerSymbol = useCallback((symbol: '.' | '-') => {
-    if (!isFreestyle && isErrorLocked()) {
-      return
-    }
-    clearTimer(errorTimeoutRef)
-    clearTimer(successTimeoutRef)
-    clearTimer(letterTimeoutRef)
-
-    if (isFreestyle) {
-      setFreestyleInput((prev) => {
-        const next = prev + symbol
-        scheduleLetterReset('freestyle')
-        return next
-      })
-      setFreestyleResult(null)
-      return
-    }
-
-    setInput((prev) => {
-      const next = prev + symbol
-      const target = MORSE_DATA[letter].code
-
-      if (!target.startsWith(next)) {
-        startErrorLockout()
-        if (canScoreAttempt()) {
-          bumpScore(letter, -1)
-        }
-        setStatus('error')
-        errorTimeoutRef.current = window.setTimeout(() => {
-          setStatus('idle')
-        }, ERROR_LOCKOUT_MS)
-        return ''
+  const registerSymbol = useCallback(
+    (symbol: '.' | '-') => {
+      if (!isFreestyle && isErrorLocked()) {
+        return
       }
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
 
-      if (next === target) {
-        if (canScoreAttempt()) {
-          bumpScore(letter, 1)
-        }
-        setStatus('success')
-        successTimeoutRef.current = window.setTimeout(() => {
-          setLetter((current) =>
-            pickWeightedLetter(availableLetters, scores, current),
-          )
-          setShowHintOnce(false)
-          setStatus('idle')
-        }, 650)
-        return ''
+      if (isFreestyle) {
+        setFreestyleInput((prev) => {
+          const next = prev + symbol
+          scheduleLetterReset('freestyle')
+          return next
+        })
+        setFreestyleResult(null)
+        return
       }
 
       setStatus('idle')
+      setInput((prev) => prev + symbol)
       scheduleLetterReset('practice')
-      return next
-    })
-  }, [
-    availableLetters,
-    bumpScore,
-    canScoreAttempt,
-    isErrorLocked,
-    isFreestyle,
-    letter,
-    scheduleLetterReset,
-    scores,
-    setLetter,
-    setShowHintOnce,
-    startErrorLockout,
-  ])
+    },
+    [isErrorLocked, isFreestyle, scheduleLetterReset],
+  )
 
   const beginPress = useCallback(() => {
     if (pressStartRef.current !== null) {
@@ -1429,8 +1422,14 @@ function App() {
           ? mnemonic
           : ' '
   const targetSymbols = target.split('')
+  const isInputOnTrack =
+    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
-    status === 'success' ? targetSymbols.length : input.length
+    status === 'success'
+      ? targetSymbols.length
+      : isInputOnTrack
+        ? input.length
+        : 0
   const pips = targetSymbols.map((symbol, index) => {
     const isHit = index < highlightCount
     return (
