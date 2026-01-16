@@ -39,9 +39,10 @@ body {
   overflow: hidden;
   overscroll-behavior: none;
   background:
-    radial-gradient(ellipse 1200px 900px at 20% 80%, rgba(18, 77, 135, 0.25), transparent 60%),
-    radial-gradient(ellipse 1000px 800px at 80% 20%, rgba(0, 63, 131, 0.18), transparent 65%),
-    #0e0e0f;
+    radial-gradient(ellipse 1400px 1000px at 25% 85%, rgba(168, 192, 255, 0.08), transparent 60%),
+    radial-gradient(ellipse 1200px 900px at 75% 15%, rgba(196, 181, 253, 0.06), transparent 65%),
+    radial-gradient(ellipse 1000px 800px at 50% 50%, rgba(245, 199, 247, 0.04), transparent 70%),
+    #0a0c12;
   color: var(--text);
   -webkit-user-select: none;
   user-select: none;

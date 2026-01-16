@@ -1,0 +1,200 @@
+/**
+ * MorseButton - Liquid/gel-style button with lava lamp effect
+ * Uses SVG displacement filters and conic-gradient rim frame
+ */
+
+.morse-button-wrap {
+  width: min(480px, 100%);
+  display: grid;
+  place-items: center;
+}
+
+/* Base Button */
+.morse-button {
+  position: relative;
+  width: 100%;
+  height: clamp(64px, 14vw, 96px);
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  isolation: isolate;
+  transform: translateZ(0);
+  overflow: visible;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms ease;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 1;
+  /* box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    0 8px 32px rgba(0, 0, 0, 0.15); */
+}
+
+/* Rim frame */
+.morse-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  padding: 2px;
+  opacity: 0.5;
+  mix-blend-mode: hard-light;
+  background: conic-gradient(
+    from 125deg,
+    rgba(0, 0, 0, 0.75) 0deg,
+    rgba(0, 0, 0, 0.5) 25deg,
+    rgba(0, 0, 0, 0.35) 45deg,
+    rgba(0, 0, 0, 0) 90deg,
+    rgba(255, 255, 255, 0.0) 135deg,
+    rgba(255, 255, 255, 0.95) 180deg,
+    rgba(255, 255, 255, 0.95) 200deg,
+    rgba(255, 255, 255, 0.0) 225deg,
+    rgba(0, 0, 0, 0) 270deg,
+    rgba(0, 0, 0, 0.45) 315deg,
+    rgba(0, 0, 0, 0.5) 350deg,
+    rgba(0, 0, 0, 0.75) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Fluid Container */
+.fluid-container {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  z-index: -2;
+}
+
+/* Fluid Paint - liquid gradient with SVG displacement */
+.fluid-paint {
+  position: absolute;
+  inset: -20px;
+  background:
+    linear-gradient(125deg, transparent 20%, rgba(200, 220, 255, 0.85) 25%, transparent 30%),
+    linear-gradient(65deg, transparent 35%, rgba(160, 200, 255, 0.9) 40%, transparent 50%),
+    linear-gradient(170deg, transparent 10%, rgba(255, 180, 200, 0.85) 20%, transparent 35%),
+    linear-gradient(95deg, transparent 50%, rgba(180, 170, 240, 0.85) 60%, transparent 70%),
+    linear-gradient(140deg, transparent 60%, rgba(150, 200, 255, 0.9) 70%, transparent 80%),
+    linear-gradient(45deg, transparent 15%, rgba(255, 190, 210, 0.8) 25%, transparent 40%),
+    linear-gradient(200deg, transparent 40%, rgba(190, 180, 240, 0.85) 55%, transparent 65%),
+    linear-gradient(135deg, #a8d0ff 0%, #d0c0f0 25%, #ffccd8 50%, #b8d8ff 75%, #f0d0e8 100%);
+  background-size: 200% 200%;
+  filter: url(#fluid) saturate(1.15) contrast(1.02);
+  transition: background-size 600ms cubic-bezier(0.34, 1.26, 0.64, 1), filter 300ms ease;
+  animation: liquidSwirl 16s ease-in-out infinite;
+}
+
+.morse-button.pressing .fluid-paint {
+  background-size: 120% 170%;
+  filter: url(#fluidActive) saturate(2) contrast(1.15) brightness(1.05);
+}
+
+@keyframes liquidSwirl {
+  0%, 100% { background-position: 80% 20%; transform: scale(1.03) rotate(2deg); }
+  14% { background-position: 30% 10%; transform: scale(1.02) rotate(-2deg); }
+  28% { background-position: 10% 50%; transform: scale(1.04) rotate(1deg); }
+  42% { background-position: 25% 85%; transform: scale(1.02) rotate(-1deg); }
+  57% { background-position: 70% 90%; transform: scale(1.03) rotate(2deg); }
+  71% { background-position: 95% 60%; transform: scale(1.02) rotate(-2deg); }
+  85% { background-position: 90% 30%; transform: scale(1.04) rotate(1deg); }
+}
+
+/* Fluid Glow - soft blur behind button */
+.fluid-glow {
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  z-index: -3;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 140% at 15% 70%, rgba(147, 197, 253, 0.5), transparent 60%),
+    radial-gradient(110% 120% at 85% 30%, rgba(252, 165, 202, 0.45), transparent 65%),
+    radial-gradient(140% 140% at 55% 55%, rgba(196, 181, 253, 0.4), transparent 60%);
+  filter: blur(8px);
+  opacity: 0.55;
+  transition: opacity 300ms ease;
+}
+
+/* Fluid Glass - reflective overlay */
+.fluid-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 20%, transparent 50%, rgba(0, 0, 0, 0.05) 80%, rgba(0, 0, 0, 0.1) 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.25),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.15),
+    inset 2px 0 3px rgba(255, 255, 255, 0.08),
+    inset -2px 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.fluid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.fluid-glass::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 10%;
+  right: 10%;
+  height: 30%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+/* Interactive States */
+.morse-button:hover .fluid-glow { opacity: .8; }
+
+.morse-button.pressing {
+  transform: scale(0.98);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.morse-button.pressing .fluid-glow { opacity: 1; }
+
+/* Utilities */
+.morse-button,
+.morse-button *,
+.morse-button *::before,
+.morse-button *::after {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.morse-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluid-paint {
+    filter: url(#fluid) saturate(1.15) contrast(1.02) !important;
+    animation: none !important;
+  }
+}

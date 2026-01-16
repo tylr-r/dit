@@ -889,51 +889,8 @@
   color: var(--muted);
 }
 
-.morse-button {
-  width: min(480px, 100%);
-  height: clamp(64px, 14vw, 96px);
-  border-radius: 999px;
-  border: none;
-  background: #ff7043;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-  z-index: 1;
-}
-
-.morse-button:hover {
-  background: #ff8a65;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-}
-
-.morse-button *,
-.morse-button *::before,
-.morse-button *::after {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.morse-button:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.4);
-  outline-offset: 4px;
-}
-
-.morse-button.pressing {
-  background: #f4511e;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transform: scale(0.98);
-}
-
 .button-content {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
