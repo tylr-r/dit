@@ -875,6 +875,10 @@ function App() {
         }
       })
       .catch((error) => {
+        // Fail silently if offline - we'll use local data
+        if (!navigator.onLine) {
+          return
+        }
         console.error('Failed to load progress', error)
       })
       .finally(() => {
@@ -893,6 +897,11 @@ function App() {
     }
     clearTimer(saveProgressTimeoutRef)
     saveProgressTimeoutRef.current = window.setTimeout(() => {
+      // Skip save if offline - Firebase will queue it automatically when back online
+      if (!navigator.onLine) {
+        return
+      }
+      
       const progressRef = ref(database, `users/${user.uid}/progress`)
       void set(progressRef, {
         ...progressSnapshot,
