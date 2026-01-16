@@ -109,6 +109,70 @@
   animation: aboutPop 240ms ease;
 }
 
+.about-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 40px);
+  background: rgba(6, 10, 14, 0.3);
+  backdrop-filter: blur(5px);
+  z-index: 4;
+  animation: aboutFade 200ms ease;
+}
+
+.about-card {
+  width: min(420px, 100%);
+  padding: clamp(18px, 4vw, 28px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(12, 18, 24, 0.62);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    inset 0 0 18px 6px rgba(255, 255, 255, 0.08);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: aboutPop 240ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+}
+
+.about-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3),
+    transparent,
+    rgba(255, 255, 255, 0.2)
+  );
+}
+
 .about-title {
   margin: 0;
   font-size: 0.9rem;

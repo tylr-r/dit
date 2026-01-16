@@ -198,3 +198,9 @@
     animation: none !important;
   }
 }
+
+@media (max-width: 600px) {
+  .morse-button-wrap {
+    margin-bottom: clamp(8px, 3vw, 14px);
+  }
+}
