@@ -479,6 +479,19 @@ function App() {
     () => !(showHint || showHintOnce),
     [showHint, showHintOnce],
   )
+  const trackEvent = useCallback(
+    (name: string, params?: Record<string, unknown>) => {
+      if (typeof window === 'undefined' || !window.gtag) {
+        return
+      }
+      window.gtag('event', name, params ?? {})
+    },
+    [],
+  )
+
+  useEffect(() => {
+    trackEvent('app_open')
+  }, [trackEvent])
 
   useStoredValue(STORAGE_KEYS.mode, mode)
   useStoredValue(STORAGE_KEYS.showHint, String(showHint))
@@ -802,6 +815,7 @@ function App() {
 
   const applyModeChange = useCallback(
     (nextMode: 'practice' | 'freestyle' | 'listen') => {
+      trackEvent('mode_change', { mode: nextMode })
       setMode(nextMode)
       stopListenPlayback()
       setFreestyleInput('')
@@ -848,6 +862,7 @@ function App() {
       resetListenState,
       scores,
       stopListenPlayback,
+      trackEvent,
     ],
   )
 
@@ -871,6 +886,7 @@ function App() {
 
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
+      trackEvent('practice_word_mode_toggle', { enabled: nextValue })
       setPracticeWordMode(nextValue)
       clearTimer(letterTimeoutRef)
       clearTimer(errorTimeoutRef)
@@ -896,7 +912,7 @@ function App() {
       setPracticeWordIndex(0)
       setLetter(nextWord[0] as Letter)
     },
-    [availableLetters, availablePracticeWords],
+    [availableLetters, availablePracticeWords, trackEvent],
   )
 
   const handlePracticeWordModeToggle = useCallback(
@@ -952,6 +968,7 @@ function App() {
   const handleSignIn = useCallback(async () => {
     try {
       await signInWithPopup(auth, googleProvider)
+      trackEvent('sign_in', { method: 'google_popup' })
     } catch (error) {
       const fallbackToRedirect =
         typeof error === 'object' &&
@@ -960,20 +977,22 @@ function App() {
         (error.code === 'auth/popup-blocked' ||
           error.code === 'auth/operation-not-supported-in-this-environment')
       if (fallbackToRedirect) {
+        trackEvent('sign_in', { method: 'google_redirect' })
         await signInWithRedirect(auth, googleProvider)
         return
       }
       console.error('Failed to sign in', error)
     }
-  }, [])
+  }, [trackEvent])
 
   const handleSignOut = useCallback(async () => {
     try {
       await signOut(auth)
+      trackEvent('sign_out')
     } catch (error) {
       console.error('Failed to sign out', error)
     }
-  }, [])
+  }, [trackEvent])
 
   const applyRemoteProgress = useCallback((raw: unknown) => {
     const progress = parseRemoteProgress(raw)
@@ -1303,6 +1322,7 @@ function App() {
     if (soundCheckStatus !== 'idle') {
       return
     }
+    trackEvent('sound_check')
     setSoundCheckStatus('playing')
     const context = await ensureAudioContext()
     const { oscillator, gain } = createToneNodes(context, 0)
@@ -1319,7 +1339,18 @@ function App() {
     if (useCustomKeyboard) {
       triggerHaptics([40, 40, 40])
     }
-  }, [ensureAudioContext, soundCheckStatus, triggerHaptics, useCustomKeyboard])
+  }, [
+    ensureAudioContext,
+    soundCheckStatus,
+    trackEvent,
+    triggerHaptics,
+    useCustomKeyboard,
+  ])
+
+  const handleShowReference = useCallback(() => {
+    setShowReference(true)
+    trackEvent('reference_open')
+  }, [trackEvent])
 
   useEffect(() => {
     if (!isFreestyle) {
@@ -1742,7 +1773,7 @@ function App() {
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
               onListenWpmChange={handleListenWpmChange}
-              onShowReference={() => setShowReference(true)}
+              onShowReference={handleShowReference}
               freestyleWordMode={freestyleWordMode}
               onWordModeChange={handleWordModeToggle}
               onSoundCheck={handleSoundCheck}
