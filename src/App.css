@@ -862,6 +862,16 @@
   color: var(--muted);
 }
 
+.wpm-text {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  min-height: 1.2em;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
 .status-success .status-text {
   color: var(--accent);
 }

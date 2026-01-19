@@ -15,6 +15,7 @@ type StageDisplayProps = {
   practiceWord: string
   practiceWordIndex: number
   practiceWordMode: boolean
+  practiceWpmText: string | null
   statusText: string
   target: string
 }
@@ -34,6 +35,7 @@ export function StageDisplay({
   practiceWord,
   practiceWordIndex,
   practiceWordMode,
+  practiceWpmText,
   statusText,
   target,
 }: StageDisplayProps) {
@@ -96,6 +98,11 @@ export function StageDisplay({
           <p className="status-text" aria-live="polite">
             {statusText}
           </p>
+          {practiceWpmText ? (
+            <p className="wpm-text" aria-live="polite">
+              {practiceWpmText}
+            </p>
+          ) : null}
         </>
       )}
     </main>

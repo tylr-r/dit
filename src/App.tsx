@@ -35,13 +35,14 @@ const REFERENCE_NUMBERS: Letter[] = [
   '9',
   '0',
 ];
-const DOT_THRESHOLD_MS = 100;
+const DOT_THRESHOLD_MS = 200;
 const UNIT_MS = DOT_THRESHOLD_MS;
 const LISTEN_WPM_MIN = 10;
 const LISTEN_WPM_MAX = 30;
-const INTER_CHAR_GAP_MS = UNIT_MS * 2;
+const INTER_CHAR_GAP_MS = UNIT_MS * 1;
 const WORD_GAP_MS = UNIT_MS * 7;
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
+const PRACTICE_WORD_UNITS = 5;
 const TONE_FREQUENCY = 640;
 const TONE_GAIN = 0.06;
 const ERROR_LOCKOUT_MS = 1000;
@@ -58,6 +59,11 @@ const STORAGE_KEYS = {
 
 const clampNumber = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, Math.round(value)));
+
+const formatWpm = (value: number) => {
+  const rounded = Math.round(value * 10) / 10;
+  return rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1);
+};
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
   if (typeof window === 'undefined') {
@@ -374,6 +380,7 @@ function MainApp() {
   );
   const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord);
   const [practiceWordIndex, setPracticeWordIndex] = useState(0);
+  const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
   const [freestyleInput, setFreestyleInput] = useState('');
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
   const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
@@ -407,6 +414,7 @@ function MainApp() {
   const practiceWordModeRef = useRef(practiceWordMode);
   const practiceWordRef = useRef(practiceWord);
   const practiceWordIndexRef = useRef(practiceWordIndex);
+  const practiceWordStartRef = useRef<number | null>(null);
   const showReferenceRef = useRef(showReference);
   const letterRef = useRef(letter);
   const scoresRef = useRef(scores);
@@ -825,6 +833,10 @@ function MainApp() {
   const applyModeChange = useCallback(
     (nextMode: 'practice' | 'freestyle' | 'listen') => {
       trackEvent('mode_change', { mode: nextMode });
+      if (nextMode !== 'practice') {
+        practiceWordStartRef.current = null;
+        setPracticeWpm(null);
+      }
       setMode(nextMode);
       stopListenPlayback();
       setFreestyleInput('');
@@ -852,6 +864,7 @@ function MainApp() {
           availablePracticeWords,
           practiceWordRef.current,
         );
+        practiceWordStartRef.current = null;
         setPracticeWord(nextWord);
         setPracticeWordIndex(0);
         setLetter(nextWord[0] as Letter);
@@ -897,6 +910,8 @@ function MainApp() {
     (nextValue: boolean) => {
       trackEvent('practice_word_mode_toggle', { enabled: nextValue });
       setPracticeWordMode(nextValue);
+      practiceWordStartRef.current = null;
+      setPracticeWpm(null);
       clearTimer(letterTimeoutRef);
       clearTimer(errorTimeoutRef);
       clearTimer(successTimeoutRef);
@@ -944,6 +959,7 @@ function MainApp() {
           getPracticeWordsForLetters(nextLetters),
           practiceWordRef.current,
         );
+        practiceWordStartRef.current = null;
         setPracticeWord(nextWord);
         setPracticeWordIndex(0);
         setLetter(nextWord[0] as Letter);
@@ -1043,6 +1059,10 @@ function MainApp() {
     }
     if (typeof progress.practiceWordMode === 'boolean') {
       setPracticeWordMode(progress.practiceWordMode);
+      practiceWordStartRef.current = null;
+      if (!progress.practiceWordMode) {
+        setPracticeWpm(null);
+      }
       if (progress.practiceWordMode) {
         const nextLetters = getLettersForLevel(resolvedMaxLevel);
         const nextWord = pickNewWord(getPracticeWordsForLetters(nextLetters));
@@ -1175,6 +1195,7 @@ function MainApp() {
             if (!currentWord) {
               const nextWord = pickNewWord(availablePracticeWords);
               const nextLetter = nextWord[0] as Letter;
+              practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
               practiceWordIndexRef.current = 0;
               letterRef.current = nextLetter;
@@ -1187,8 +1208,19 @@ function MainApp() {
             }
             const nextIndex = practiceWordIndexRef.current + 1;
             if (nextIndex >= currentWord.length) {
+              const startTime = practiceWordStartRef.current;
+              if (startTime && currentWord.length > 0) {
+                const elapsedMs = performance.now() - startTime;
+                if (elapsedMs > 0) {
+                  const nextWpm =
+                    (currentWord.length / PRACTICE_WORD_UNITS) *
+                    (60000 / elapsedMs);
+                  setPracticeWpm(Math.round(nextWpm * 10) / 10);
+                }
+              }
               const nextWord = pickNewWord(availablePracticeWords, currentWord);
               const nextLetter = nextWord[0] as Letter;
+              practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
               practiceWordIndexRef.current = 0;
               letterRef.current = nextLetter;
@@ -1485,6 +1517,15 @@ function MainApp() {
         return;
       }
 
+      if (
+        practiceWordModeRef.current &&
+        practiceWordIndexRef.current === 0 &&
+        practiceWordStartRef.current === null &&
+        practiceWordRef.current
+      ) {
+        practiceWordStartRef.current = performance.now();
+      }
+
       setStatus('idle');
       setInput((prev) => prev + symbol);
       scheduleLetterReset('practice');
@@ -1684,6 +1725,10 @@ function MainApp() {
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
       : null;
   const statusText = practiceProgressText ?? baseStatusText;
+  const practiceWpmText =
+    !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
+      ? `${formatWpm(practiceWpm)} WPM`
+      : null;
   const targetSymbols = target.split('');
   const isInputOnTrack =
     !isFreestyle && !isListen && Boolean(input) && target.startsWith(input);
@@ -1835,6 +1880,7 @@ function MainApp() {
         practiceWord={practiceWord}
         practiceWordIndex={practiceWordIndex}
         practiceWordMode={practiceWordMode}
+        practiceWpmText={practiceWpmText}
         statusText={statusText}
         target={target}
       />
