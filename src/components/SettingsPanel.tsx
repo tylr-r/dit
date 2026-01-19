@@ -15,10 +15,12 @@ type SettingsPanelProps = {
   onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onShowMnemonicChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowReference: () => void
   onSoundCheck: () => void
   onWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   showHint: boolean
+  showMnemonic: boolean
   soundCheckStatus: 'idle' | 'playing'
   user: User | null
   userLabel: string
@@ -43,10 +45,12 @@ export function SettingsPanel({
   onMaxLevelChange,
   onPracticeWordModeChange,
   onShowHintChange,
+  onShowMnemonicChange,
   onShowReference,
   onSoundCheck,
   onWordModeChange,
   showHint,
+  showMnemonic,
   soundCheckStatus,
   user,
   userLabel,
@@ -69,6 +73,16 @@ export function SettingsPanel({
           type="checkbox"
           checked={showHint}
           onChange={onShowHintChange}
+          disabled={isFreestyle || isListen}
+        />
+      </label>
+      <label className="toggle">
+        <span className="toggle-label">Show mnemonics</span>
+        <input
+          className="toggle-input"
+          type="checkbox"
+          checked={showMnemonic}
+          onChange={onShowMnemonicChange}
           disabled={isFreestyle || isListen}
         />
       </label>

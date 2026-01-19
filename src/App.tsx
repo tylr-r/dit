@@ -50,6 +50,7 @@ const PROGRESS_SAVE_DEBOUNCE_MS = 800;
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
+  showMnemonic: 'morse-show-mnemonic',
   wordMode: 'morse-word-mode',
   practiceWordMode: 'morse-practice-word-mode',
   maxLevel: 'morse-max-level',
@@ -191,6 +192,7 @@ const buildScoreMap = () =>
 type RemoteProgress = {
   listenWpm?: number;
   maxLevel?: number;
+  showMnemonic?: boolean;
   practiceWordMode?: boolean;
   scores?: Record<Letter, number>;
   showHint?: boolean;
@@ -222,6 +224,9 @@ const parseRemoteProgress = (value: unknown) => {
   const progress: RemoteProgress = {};
   if (typeof record.showHint === 'boolean') {
     progress.showHint = record.showHint;
+  }
+  if (typeof record.showMnemonic === 'boolean') {
+    progress.showMnemonic = record.showMnemonic;
   }
   if (typeof record.wordMode === 'boolean') {
     progress.wordMode = record.wordMode;
@@ -361,6 +366,9 @@ function MainApp() {
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
   );
+  const [showMnemonic, setShowMnemonic] = useState(() =>
+    readStoredBoolean(STORAGE_KEYS.showMnemonic, false),
+  );
   const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
       return 'practice';
@@ -450,6 +458,7 @@ function MainApp() {
       practiceWordMode,
       scores,
       showHint,
+      showMnemonic,
       wordMode: freestyleWordMode,
     }),
     [
@@ -459,6 +468,7 @@ function MainApp() {
       practiceWordMode,
       scores,
       showHint,
+      showMnemonic,
     ],
   );
   const ensureAudioContext = useCallback(async () => {
@@ -512,6 +522,7 @@ function MainApp() {
 
   useStoredValue(STORAGE_KEYS.mode, mode);
   useStoredValue(STORAGE_KEYS.showHint, String(showHint));
+  useStoredValue(STORAGE_KEYS.showMnemonic, String(showMnemonic));
   useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode));
   useStoredValue(STORAGE_KEYS.practiceWordMode, String(practiceWordMode));
   useStoredValue(STORAGE_KEYS.maxLevel, String(maxLevel));
@@ -906,6 +917,13 @@ function MainApp() {
     [],
   );
 
+  const handleShowMnemonicToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setShowMnemonic(event.target.checked);
+    },
+    [],
+  );
+
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
       trackEvent('practice_word_mode_toggle', { enabled: nextValue });
@@ -1041,6 +1059,9 @@ function MainApp() {
     }
     if (typeof progress.showHint === 'boolean') {
       setShowHint(progress.showHint);
+    }
+    if (typeof progress.showMnemonic === 'boolean') {
+      setShowMnemonic(progress.showMnemonic);
     }
     if (typeof progress.wordMode === 'boolean') {
       setFreestyleWordMode(progress.wordMode);
@@ -1705,6 +1726,7 @@ function MainApp() {
   };
 
   const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce);
+  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
   const target = MORSE_DATA[letter].code;
   const mnemonic = MORSE_DATA[letter].mnemonic;
   const baseStatusText =
@@ -1712,7 +1734,7 @@ function MainApp() {
       ? 'Correct'
       : status === 'error'
         ? 'Missed. Start over.'
-        : hintVisible
+        : mnemonicVisible
           ? mnemonic
           : ' ';
   const practiceProgressText =
@@ -1721,6 +1743,7 @@ function MainApp() {
     practiceWordMode &&
     status === 'idle' &&
     !hintVisible &&
+    !mnemonicVisible &&
     practiceWord
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
       : null;
@@ -1840,6 +1863,8 @@ function MainApp() {
             <SettingsPanel
               showHint={showHint}
               onShowHintChange={handleShowHintToggle}
+              showMnemonic={showMnemonic}
+              onShowMnemonicChange={handleShowMnemonicToggle}
               isFreestyle={isFreestyle}
               isListen={isListen}
               levels={LEVELS}
