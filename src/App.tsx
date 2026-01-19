@@ -489,10 +489,6 @@ function App() {
     [],
   )
 
-  useEffect(() => {
-    trackEvent('app_open')
-  }, [trackEvent])
-
   useStoredValue(STORAGE_KEYS.mode, mode)
   useStoredValue(STORAGE_KEYS.showHint, String(showHint))
   useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode))
