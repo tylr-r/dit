@@ -35,7 +35,7 @@ const REFERENCE_NUMBERS: Letter[] = [
   '9',
   '0',
 ];
-const DOT_THRESHOLD_MS = 200;
+const DOT_THRESHOLD_MS = 100;
 const UNIT_MS = DOT_THRESHOLD_MS;
 const LISTEN_WPM_MIN = 10;
 const LISTEN_WPM_MAX = 30;
