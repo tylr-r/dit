@@ -4,23 +4,25 @@ import {
   signInWithRedirect,
   signOut,
   type User,
-} from 'firebase/auth'
-import { get, ref, set } from 'firebase/database'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import './App.css'
-import { PrivacyPolicy, TermsOfService } from './components/LegalPage'
-import { ListenControls } from './components/ListenControls'
-import { MorseButton } from './components/MorseButton'
-import { ReferenceModal } from './components/ReferenceModal'
-import { SettingsPanel } from './components/SettingsPanel'
-import { StageDisplay } from './components/StageDisplay'
-import { MORSE_DATA, type Letter } from './data/morse'
-import { PRACTICE_WORDS } from './data/practiceWords'
-import { auth, database, googleProvider } from './firebase'
+} from 'firebase/auth';
+import { get, ref, set } from 'firebase/database';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import './App.css';
+import { Footer } from './components/Footer';
+import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
+import { ListenControls } from './components/ListenControls';
+import { MorseButton } from './components/MorseButton';
+import { Page404 } from './components/Page404';
+import { ReferenceModal } from './components/ReferenceModal';
+import { SettingsPanel } from './components/SettingsPanel';
+import { StageDisplay } from './components/StageDisplay';
+import { MORSE_DATA, type Letter } from './data/morse';
+import { PRACTICE_WORDS } from './data/practiceWords';
+import { auth, database, googleProvider } from './firebase';
 
-const LETTERS = Object.keys(MORSE_DATA) as Letter[]
-const LEVELS = [1, 2, 3, 4] as const
-const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter))
+const LETTERS = Object.keys(MORSE_DATA) as Letter[];
+const LEVELS = [1, 2, 3, 4] as const;
+const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter));
 const REFERENCE_NUMBERS: Letter[] = [
   '1',
   '2',
@@ -32,18 +34,18 @@ const REFERENCE_NUMBERS: Letter[] = [
   '8',
   '9',
   '0',
-]
-const DOT_THRESHOLD_MS = 200
-const UNIT_MS = DOT_THRESHOLD_MS
-const LISTEN_WPM_MIN = 10
-const LISTEN_WPM_MAX = 30
-const INTER_CHAR_GAP_MS = UNIT_MS * 2
-const WORD_GAP_MS = UNIT_MS * 7
-const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
-const TONE_FREQUENCY = 640
-const TONE_GAIN = 0.06
-const ERROR_LOCKOUT_MS = 1000
-const PROGRESS_SAVE_DEBOUNCE_MS = 800
+];
+const DOT_THRESHOLD_MS = 200;
+const UNIT_MS = DOT_THRESHOLD_MS;
+const LISTEN_WPM_MIN = 10;
+const LISTEN_WPM_MAX = 30;
+const INTER_CHAR_GAP_MS = UNIT_MS * 2;
+const WORD_GAP_MS = UNIT_MS * 7;
+const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
+const TONE_FREQUENCY = 640;
+const TONE_GAIN = 0.06;
+const ERROR_LOCKOUT_MS = 1000;
+const PROGRESS_SAVE_DEBOUNCE_MS = 800;
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -52,21 +54,21 @@ const STORAGE_KEYS = {
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
-}
+};
 
 const clampNumber = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, Math.round(value)))
+  Math.max(min, Math.min(max, Math.round(value)));
 
 const readStoredBoolean = (key: string, fallback: boolean) => {
   if (typeof window === 'undefined') {
-    return fallback
+    return fallback;
   }
-  const stored = window.localStorage.getItem(key)
+  const stored = window.localStorage.getItem(key);
   if (stored === null) {
-    return fallback
+    return fallback;
   }
-  return stored === 'true'
-}
+  return stored === 'true';
+};
 
 const readStoredNumber = (
   key: string,
@@ -75,63 +77,63 @@ const readStoredNumber = (
   max: number,
 ) => {
   if (typeof window === 'undefined') {
-    return fallback
+    return fallback;
   }
-  const stored = window.localStorage.getItem(key)
+  const stored = window.localStorage.getItem(key);
   if (stored === null) {
-    return fallback
+    return fallback;
   }
-  const parsed = Number(stored)
+  const parsed = Number(stored);
   if (!Number.isFinite(parsed)) {
-    return fallback
+    return fallback;
   }
-  return clampNumber(parsed, min, max)
-}
+  return clampNumber(parsed, min, max);
+};
 
 const getLettersForLevel = (maxLevel: number) =>
-  LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel)
+  LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel);
 
 const pickNewLetter = (letters: Letter[], previous?: Letter): Letter => {
   if (letters.length === 0) {
-    return LETTERS[0]
+    return LETTERS[0];
   }
   if (letters.length === 1) {
-    return letters[0]
+    return letters[0];
   }
   if (!previous || !letters.includes(previous)) {
-    return letters[Math.floor(Math.random() * letters.length)]
+    return letters[Math.floor(Math.random() * letters.length)];
   }
-  let next = previous
+  let next = previous;
   while (next === previous) {
-    next = letters[Math.floor(Math.random() * letters.length)]
+    next = letters[Math.floor(Math.random() * letters.length)];
   }
-  return next
-}
+  return next;
+};
 
 const getPracticeWordsForLetters = (letters: Letter[]) => {
-  const allowed = new Set(letters)
+  const allowed = new Set(letters);
   const filtered = PRACTICE_WORDS.filter((word) =>
     word.split('').every((char) => allowed.has(char as Letter)),
-  )
-  return filtered.length > 0 ? filtered : letters.map((letter) => letter)
-}
+  );
+  return filtered.length > 0 ? filtered : letters.map((letter) => letter);
+};
 
 const pickNewWord = (words: readonly string[], previous?: string) => {
   if (words.length === 0) {
-    return LETTERS[0]
+    return LETTERS[0];
   }
   if (words.length === 1) {
-    return words[0]
+    return words[0];
   }
   if (!previous || !words.includes(previous)) {
-    return words[Math.floor(Math.random() * words.length)]
+    return words[Math.floor(Math.random() * words.length)];
   }
-  let next = previous
+  let next = previous;
   while (next === previous) {
-    next = words[Math.floor(Math.random() * words.length)]
+    next = words[Math.floor(Math.random() * words.length)];
   }
-  return next
-}
+  return next;
+};
 
 const pickWeightedLetter = (
   letters: Letter[],
@@ -139,90 +141,90 @@ const pickWeightedLetter = (
   previous?: Letter,
 ): Letter => {
   if (letters.length === 0) {
-    return LETTERS[0]
+    return LETTERS[0];
   }
   if (letters.length === 1) {
-    return letters[0]
+    return letters[0];
   }
-  const maxScore = Math.max(...letters.map((item) => scores[item] ?? 0))
-  const baseline = 3
+  const maxScore = Math.max(...letters.map((item) => scores[item] ?? 0));
+  const baseline = 3;
   const weights = letters.map(
     (item) => Math.max(maxScore - (scores[item] ?? 0), 0) + baseline,
-  )
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
-  let roll = Math.random() * totalWeight
+  );
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  let roll = Math.random() * totalWeight;
   for (let index = 0; index < letters.length; index += 1) {
-    roll -= weights[index]
+    roll -= weights[index];
     if (roll <= 0) {
-      const picked = letters[index]
+      const picked = letters[index];
       if (picked === previous) {
-        return letters[(index + 1) % letters.length]
+        return letters[(index + 1) % letters.length];
       }
-      return picked
+      return picked;
     }
   }
-  return letters[letters.length - 1]
-}
+  return letters[letters.length - 1];
+};
 
 const clearTimer = (ref: { current: number | null }) => {
   if (ref.current !== null) {
-    window.clearTimeout(ref.current)
-    ref.current = null
+    window.clearTimeout(ref.current);
+    ref.current = null;
   }
-}
+};
 
 const buildScoreMap = () =>
   LETTERS.reduce(
     (acc, letter) => {
-      acc[letter] = 0
-      return acc
+      acc[letter] = 0;
+      return acc;
     },
     {} as Record<Letter, number>,
-  )
+  );
 
 type RemoteProgress = {
-  listenWpm?: number
-  maxLevel?: number
-  practiceWordMode?: boolean
-  scores?: Record<Letter, number>
-  showHint?: boolean
-  wordMode?: boolean
-}
+  listenWpm?: number;
+  maxLevel?: number;
+  practiceWordMode?: boolean;
+  scores?: Record<Letter, number>;
+  showHint?: boolean;
+  wordMode?: boolean;
+};
 
 const parseRemoteScores = (value: unknown) => {
   if (!value || typeof value !== 'object') {
-    return null
+    return null;
   }
-  const record = value as Record<string, unknown>
-  const next = buildScoreMap()
-  let hasScore = false
+  const record = value as Record<string, unknown>;
+  const next = buildScoreMap();
+  let hasScore = false;
   LETTERS.forEach((letter) => {
-    const entry = record[letter]
+    const entry = record[letter];
     if (typeof entry === 'number' && Number.isFinite(entry)) {
-      next[letter] = entry
-      hasScore = true
+      next[letter] = entry;
+      hasScore = true;
     }
-  })
-  return hasScore ? next : null
-}
+  });
+  return hasScore ? next : null;
+};
 
 const parseRemoteProgress = (value: unknown) => {
   if (!value || typeof value !== 'object') {
-    return null
+    return null;
   }
-  const record = value as Record<string, unknown>
-  const progress: RemoteProgress = {}
+  const record = value as Record<string, unknown>;
+  const progress: RemoteProgress = {};
   if (typeof record.showHint === 'boolean') {
-    progress.showHint = record.showHint
+    progress.showHint = record.showHint;
   }
   if (typeof record.wordMode === 'boolean') {
-    progress.wordMode = record.wordMode
+    progress.wordMode = record.wordMode;
   }
   if (typeof record.practiceWordMode === 'boolean') {
-    progress.practiceWordMode = record.practiceWordMode
+    progress.practiceWordMode = record.practiceWordMode;
   }
   if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
-    progress.maxLevel = clampNumber(record.maxLevel, 1, 4)
+    progress.maxLevel = clampNumber(record.maxLevel, 1, 4);
   }
   if (
     typeof record.listenWpm === 'number' &&
@@ -232,77 +234,77 @@ const parseRemoteProgress = (value: unknown) => {
       record.listenWpm,
       LISTEN_WPM_MIN,
       LISTEN_WPM_MAX,
-    )
+    );
   }
-  const scores = parseRemoteScores(record.scores)
+  const scores = parseRemoteScores(record.scores);
   if (scores) {
-    progress.scores = scores
+    progress.scores = scores;
   }
-  return progress
-}
+  return progress;
+};
 
 const readStoredScores = () => {
   if (typeof window === 'undefined') {
-    return buildScoreMap()
+    return buildScoreMap();
   }
-  const stored = window.localStorage.getItem(STORAGE_KEYS.scores)
+  const stored = window.localStorage.getItem(STORAGE_KEYS.scores);
   if (!stored) {
-    return buildScoreMap()
+    return buildScoreMap();
   }
   try {
-    const parsed = JSON.parse(stored) as Record<string, unknown>
-    const next = buildScoreMap()
+    const parsed = JSON.parse(stored) as Record<string, unknown>;
+    const next = buildScoreMap();
     LETTERS.forEach((letter) => {
-      const value = parsed[letter]
+      const value = parsed[letter];
       if (typeof value === 'number' && Number.isFinite(value)) {
-        next[letter] = value
+        next[letter] = value;
       }
-    })
-    return next
+    });
+    return next;
   } catch {
-    return buildScoreMap()
+    return buildScoreMap();
   }
-}
+};
 
 const useStoredValue = (key: string, value: string) => {
   useEffect(() => {
     if (typeof window === 'undefined') {
-      return
+      return;
     }
-    window.localStorage.setItem(key, value)
-  }, [key, value])
-}
+    window.localStorage.setItem(key, value);
+  }, [key, value]);
+};
 
 const isEditableTarget = (target: EventTarget | null) => {
-  const element = target as HTMLElement | null
+  const element = target as HTMLElement | null;
   if (!element) {
-    return false
+    return false;
   }
   return (
     element.isContentEditable ||
     element.tagName === 'INPUT' ||
     element.tagName === 'SELECT' ||
     element.tagName === 'TEXTAREA'
-  )
-}
+  );
+};
 
 const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
   event.repeat ||
   event.ctrlKey ||
   event.metaKey ||
   event.altKey ||
-  isEditableTarget(event.target)
+  isEditableTarget(event.target);
 
 const createToneNodes = (context: AudioContext, initialGain: number) => {
-  const oscillator = context.createOscillator()
-  const gain = context.createGain()
-  oscillator.type = 'sine'
-  oscillator.frequency.value = TONE_FREQUENCY
-  gain.gain.value = initialGain
-  oscillator.connect(gain)
-  gain.connect(context.destination)
-  return { oscillator, gain }
-}
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = TONE_FREQUENCY;
+  gain.gain.value = initialGain;
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  return { oscillator, gain };
+};
 
 const scheduleToneEnvelope = (
   gain: GainNode,
@@ -311,125 +313,128 @@ const scheduleToneEnvelope = (
   rampSeconds: number,
   sustain = true,
 ) => {
-  const endTime = startTime + duration
-  gain.gain.setValueAtTime(0, startTime)
-  gain.gain.linearRampToValueAtTime(TONE_GAIN, startTime + rampSeconds)
+  const endTime = startTime + duration;
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(TONE_GAIN, startTime + rampSeconds);
   if (sustain) {
-    gain.gain.setValueAtTime(TONE_GAIN, endTime - rampSeconds)
+    gain.gain.setValueAtTime(TONE_GAIN, endTime - rampSeconds);
   }
-  gain.gain.linearRampToValueAtTime(0, endTime)
-}
+  gain.gain.linearRampToValueAtTime(0, endTime);
+};
 
 function MainApp() {
   const initialConfig = useMemo(() => {
-    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4)
+    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4);
     const practiceWordMode = readStoredBoolean(
       STORAGE_KEYS.practiceWordMode,
       false,
-    )
-    const availableLetters = getLettersForLevel(maxLevel)
+    );
+    const availableLetters = getLettersForLevel(maxLevel);
     const practiceWord = pickNewWord(
       getPracticeWordsForLetters(availableLetters),
-    )
+    );
     const letter = practiceWordMode
       ? (practiceWord[0] as Letter)
-      : pickNewLetter(availableLetters)
+      : pickNewLetter(availableLetters);
     return {
       letter,
       maxLevel,
       practiceWord,
       practiceWordMode,
-    }
-  }, [])
+    };
+  }, []);
 
-  const [user, setUser] = useState<User | null>(null)
-  const [authReady, setAuthReady] = useState(false)
-  const [remoteLoaded, setRemoteLoaded] = useState(false)
-  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel)
-  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
-  const [input, setInput] = useState('')
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [isPressing, setIsPressing] = useState(false)
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel);
+  const [letter, setLetter] = useState<Letter>(initialConfig.letter);
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isPressing, setIsPressing] = useState(false);
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
-  )
+  );
   const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
-      return 'practice'
+      return 'practice';
     }
-    const stored = window.localStorage.getItem(STORAGE_KEYS.mode)
+    const stored = window.localStorage.getItem(STORAGE_KEYS.mode);
     if (stored === 'freestyle') {
-      return 'freestyle'
+      return 'freestyle';
     }
     if (stored === 'listen') {
-      return 'listen'
+      return 'listen';
     }
-    return 'practice'
-  })
-  const [showHintOnce, setShowHintOnce] = useState(false)
+    return 'practice';
+  });
+  const [showHintOnce, setShowHintOnce] = useState(false);
   const [practiceWordMode, setPracticeWordMode] = useState(
     initialConfig.practiceWordMode,
-  )
-  const [practiceWord, setPracticeWord] = useState(
-    initialConfig.practiceWord,
-  )
-  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
-  const [freestyleInput, setFreestyleInput] = useState('')
-  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
+  );
+  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord);
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0);
+  const [freestyleInput, setFreestyleInput] = useState('');
+  const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
   const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.wordMode, false),
-  )
-  const [freestyleWord, setFreestyleWord] = useState('')
+  );
+  const [freestyleWord, setFreestyleWord] = useState('');
   const [listenWpm, setListenWpm] = useState(() =>
-    readStoredNumber(STORAGE_KEYS.listenWpm, 20, LISTEN_WPM_MIN, LISTEN_WPM_MAX),
-  )
-  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
+    readStoredNumber(
+      STORAGE_KEYS.listenWpm,
+      20,
+      LISTEN_WPM_MIN,
+      LISTEN_WPM_MAX,
+    ),
+  );
+  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
   const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
     'idle',
-  )
-  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
-    'idle',
-  )
-  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
-  const [showReference, setShowReference] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
-  const [scores, setScores] = useState(readStoredScores)
-  const maxLevelRef = useRef(maxLevel)
-  const inputRef = useRef(input)
-  const freestyleInputRef = useRef('')
-  const freestyleWordModeRef = useRef(freestyleWordMode)
-  const practiceWordModeRef = useRef(practiceWordMode)
-  const practiceWordRef = useRef(practiceWord)
-  const practiceWordIndexRef = useRef(practiceWordIndex)
-  const showReferenceRef = useRef(showReference)
-  const letterRef = useRef(letter)
-  const scoresRef = useRef(scores)
-  const errorLockoutUntilRef = useRef(0)
-  const pressStartRef = useRef<number | null>(null)
-  const errorTimeoutRef = useRef<number | null>(null)
-  const successTimeoutRef = useRef<number | null>(null)
-  const letterTimeoutRef = useRef<number | null>(null)
-  const wordSpaceTimeoutRef = useRef<number | null>(null)
-  const listenTimeoutRef = useRef<number | null>(null)
-  const saveProgressTimeoutRef = useRef<number | null>(null)
+  );
+  const [listenStatus, setListenStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
+  const [listenReveal, setListenReveal] = useState<Letter | null>(null);
+  const [showReference, setShowReference] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [scores, setScores] = useState(readStoredScores);
+  const maxLevelRef = useRef(maxLevel);
+  const inputRef = useRef(input);
+  const freestyleInputRef = useRef('');
+  const freestyleWordModeRef = useRef(freestyleWordMode);
+  const practiceWordModeRef = useRef(practiceWordMode);
+  const practiceWordRef = useRef(practiceWord);
+  const practiceWordIndexRef = useRef(practiceWordIndex);
+  const showReferenceRef = useRef(showReference);
+  const letterRef = useRef(letter);
+  const scoresRef = useRef(scores);
+  const errorLockoutUntilRef = useRef(0);
+  const pressStartRef = useRef<number | null>(null);
+  const errorTimeoutRef = useRef<number | null>(null);
+  const successTimeoutRef = useRef<number | null>(null);
+  const letterTimeoutRef = useRef<number | null>(null);
+  const wordSpaceTimeoutRef = useRef<number | null>(null);
+  const listenTimeoutRef = useRef<number | null>(null);
+  const saveProgressTimeoutRef = useRef<number | null>(null);
   const listenPlaybackRef = useRef<{
-    oscillator: OscillatorNode
-    gain: GainNode
-  } | null>(null)
-  const morseButtonRef = useRef<HTMLButtonElement | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const oscillatorRef = useRef<OscillatorNode | null>(null)
-  const gainRef = useRef<GainNode | null>(null)
+    oscillator: OscillatorNode;
+    gain: GainNode;
+  } | null>(null);
+  const morseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const oscillatorRef = useRef<OscillatorNode | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
-  )
+  );
   const availablePracticeWords = useMemo(
     () => getPracticeWordsForLetters(availableLetters),
     [availableLetters],
-  )
-  const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores])
+  );
+  const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores]);
   const progressSnapshot = useMemo(
     () => ({
       listenWpm,
@@ -439,316 +444,323 @@ function MainApp() {
       showHint,
       wordMode: freestyleWordMode,
     }),
-    [freestyleWordMode, listenWpm, maxLevel, practiceWordMode, scores, showHint],
-  )
+    [
+      freestyleWordMode,
+      listenWpm,
+      maxLevel,
+      practiceWordMode,
+      scores,
+      showHint,
+    ],
+  );
   const ensureAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext()
+      audioContextRef.current = new AudioContext();
     }
-    const context = audioContextRef.current
+    const context = audioContextRef.current;
     if (context.state === 'suspended') {
-      await context.resume()
+      await context.resume();
     }
-    return context
-  }, [])
+    return context;
+  }, []);
   const triggerHaptics = useCallback((pattern: number | number[]) => {
     if (typeof navigator === 'undefined') {
-      return
+      return;
     }
     if (!('vibrate' in navigator)) {
-      return
+      return;
     }
-    navigator.vibrate(pattern)
-  }, [])
+    navigator.vibrate(pattern);
+  }, []);
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => ({
       ...prev,
       [targetLetter]: prev[targetLetter] + delta,
-    }))
-  }, [])
+    }));
+  }, []);
   const handleResetScores = useCallback(() => {
-    setScores(buildScoreMap())
-  }, [])
+    setScores(buildScoreMap());
+  }, []);
   const isErrorLocked = useCallback(
     () => performance.now() < errorLockoutUntilRef.current,
     [],
-  )
+  );
   const startErrorLockout = useCallback(() => {
-    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS
-  }, [])
+    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS;
+  }, []);
   const canScoreAttempt = useCallback(
     () => !(showHint || showHintOnce),
     [showHint, showHintOnce],
-  )
+  );
   const trackEvent = useCallback(
     (name: string, params?: Record<string, unknown>) => {
       if (typeof window === 'undefined' || !window.gtag) {
-        return
+        return;
       }
-      window.gtag('event', name, params ?? {})
+      window.gtag('event', name, params ?? {});
     },
     [],
-  )
+  );
 
-  useStoredValue(STORAGE_KEYS.mode, mode)
-  useStoredValue(STORAGE_KEYS.showHint, String(showHint))
-  useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode))
-  useStoredValue(STORAGE_KEYS.practiceWordMode, String(practiceWordMode))
-  useStoredValue(STORAGE_KEYS.maxLevel, String(maxLevel))
-  useStoredValue(STORAGE_KEYS.listenWpm, String(listenWpm))
-  useStoredValue(STORAGE_KEYS.scores, scoresStorageValue)
+  useStoredValue(STORAGE_KEYS.mode, mode);
+  useStoredValue(STORAGE_KEYS.showHint, String(showHint));
+  useStoredValue(STORAGE_KEYS.wordMode, String(freestyleWordMode));
+  useStoredValue(STORAGE_KEYS.practiceWordMode, String(practiceWordMode));
+  useStoredValue(STORAGE_KEYS.maxLevel, String(maxLevel));
+  useStoredValue(STORAGE_KEYS.listenWpm, String(listenWpm));
+  useStoredValue(STORAGE_KEYS.scores, scoresStorageValue);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser)
-      setRemoteLoaded(false)
-      setAuthReady(true)
-    })
-    return () => unsubscribe()
-  }, [])
+      setUser(nextUser);
+      setRemoteLoaded(false);
+      setAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
-    freestyleInputRef.current = freestyleInput
-  }, [freestyleInput])
+    freestyleInputRef.current = freestyleInput;
+  }, [freestyleInput]);
 
   useEffect(() => {
-    inputRef.current = input
-  }, [input])
+    inputRef.current = input;
+  }, [input]);
 
   useEffect(() => {
-    freestyleWordModeRef.current = freestyleWordMode
-  }, [freestyleWordMode])
+    freestyleWordModeRef.current = freestyleWordMode;
+  }, [freestyleWordMode]);
 
   useEffect(() => {
-    maxLevelRef.current = maxLevel
-  }, [maxLevel])
+    maxLevelRef.current = maxLevel;
+  }, [maxLevel]);
 
   useEffect(() => {
-    practiceWordModeRef.current = practiceWordMode
-  }, [practiceWordMode])
+    practiceWordModeRef.current = practiceWordMode;
+  }, [practiceWordMode]);
 
   useEffect(() => {
-    practiceWordRef.current = practiceWord
-  }, [practiceWord])
+    practiceWordRef.current = practiceWord;
+  }, [practiceWord]);
 
   useEffect(() => {
-    practiceWordIndexRef.current = practiceWordIndex
-  }, [practiceWordIndex])
+    practiceWordIndexRef.current = practiceWordIndex;
+  }, [practiceWordIndex]);
 
   useEffect(() => {
-    showReferenceRef.current = showReference
-  }, [showReference])
+    showReferenceRef.current = showReference;
+  }, [showReference]);
 
   useEffect(() => {
-    letterRef.current = letter
-  }, [letter])
+    letterRef.current = letter;
+  }, [letter]);
 
   useEffect(() => {
-    scoresRef.current = scores
-  }, [scores])
+    scoresRef.current = scores;
+  }, [scores]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
-      return
+      return;
     }
-    const mediaQuery = window.matchMedia('(pointer: coarse)')
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
     const updateKeyboardMode = () => {
-      setUseCustomKeyboard(mediaQuery.matches)
-    }
-    updateKeyboardMode()
+      setUseCustomKeyboard(mediaQuery.matches);
+    };
+    updateKeyboardMode();
     if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', updateKeyboardMode)
+      mediaQuery.addEventListener('change', updateKeyboardMode);
     } else {
-      mediaQuery.addListener(updateKeyboardMode)
+      mediaQuery.addListener(updateKeyboardMode);
     }
     return () => {
       if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', updateKeyboardMode)
+        mediaQuery.removeEventListener('change', updateKeyboardMode);
       } else {
-        mediaQuery.removeListener(updateKeyboardMode)
+        mediaQuery.removeListener(updateKeyboardMode);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
     if (!showReference) {
-      return
+      return;
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setShowReference(false)
+        setShowReference(false);
       }
-    }
-    window.addEventListener('keydown', handleKeyDown)
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [showReference])
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showReference]);
 
   useEffect(() => {
     if (typeof document === 'undefined') {
-      return
+      return;
     }
     if (!showReference) {
-      return
+      return;
     }
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [showReference])
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showReference]);
 
-  const isFreestyle = mode === 'freestyle'
-  const isListen = mode === 'listen'
+  const isFreestyle = mode === 'freestyle';
+  const isListen = mode === 'listen';
 
   useEffect(() => {
     if (typeof window === 'undefined') {
-      return
+      return;
     }
     const updateAppHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight
-      const heightValue = `${height}px`
-      document.documentElement.style.setProperty('--app-height', heightValue)
-      document.documentElement.style.height = heightValue
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      const heightValue = `${height}px`;
+      document.documentElement.style.setProperty('--app-height', heightValue);
+      document.documentElement.style.height = heightValue;
       if (document.body) {
-        document.body.style.height = heightValue
+        document.body.style.height = heightValue;
       }
       if (window.scrollY) {
-        window.scrollTo(0, 0)
+        window.scrollTo(0, 0);
       }
-    }
-    updateAppHeight()
-    window.addEventListener('resize', updateAppHeight)
+    };
+    updateAppHeight();
+    window.addEventListener('resize', updateAppHeight);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateAppHeight)
-      window.visualViewport.addEventListener('scroll', updateAppHeight)
+      window.visualViewport.addEventListener('resize', updateAppHeight);
+      window.visualViewport.addEventListener('scroll', updateAppHeight);
     }
     return () => {
-      window.removeEventListener('resize', updateAppHeight)
+      window.removeEventListener('resize', updateAppHeight);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateAppHeight)
-        window.visualViewport.removeEventListener('scroll', updateAppHeight)
+        window.visualViewport.removeEventListener('resize', updateAppHeight);
+        window.visualViewport.removeEventListener('scroll', updateAppHeight);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   useEffect(() => {
-    const button = morseButtonRef.current
+    const button = morseButtonRef.current;
     if (!button) {
-      return
+      return;
     }
     const preventTouchDefault = (event: Event) => {
       if (event.cancelable) {
-        event.preventDefault()
+        event.preventDefault();
       }
-    }
+    };
     const preventContextMenu = (event: Event) => {
-      event.preventDefault()
-    }
+      event.preventDefault();
+    };
     button.addEventListener('touchstart', preventTouchDefault, {
       passive: false,
-    })
+    });
     button.addEventListener('touchmove', preventTouchDefault, {
       passive: false,
-    })
+    });
     button.addEventListener('touchend', preventTouchDefault, {
       passive: false,
-    })
+    });
     button.addEventListener('touchcancel', preventTouchDefault, {
       passive: false,
-    })
+    });
     button.addEventListener('dblclick', preventTouchDefault, {
       passive: false,
-    })
-    button.addEventListener('contextmenu', preventContextMenu)
+    });
+    button.addEventListener('contextmenu', preventContextMenu);
     return () => {
-      button.removeEventListener('touchstart', preventTouchDefault)
-      button.removeEventListener('touchmove', preventTouchDefault)
-      button.removeEventListener('touchend', preventTouchDefault)
-      button.removeEventListener('touchcancel', preventTouchDefault)
-      button.removeEventListener('dblclick', preventTouchDefault)
-      button.removeEventListener('contextmenu', preventContextMenu)
-    }
-  }, [isListen])
+      button.removeEventListener('touchstart', preventTouchDefault);
+      button.removeEventListener('touchmove', preventTouchDefault);
+      button.removeEventListener('touchend', preventTouchDefault);
+      button.removeEventListener('touchcancel', preventTouchDefault);
+      button.removeEventListener('dblclick', preventTouchDefault);
+      button.removeEventListener('contextmenu', preventContextMenu);
+    };
+  }, [isListen]);
 
   const startTone = useCallback(async () => {
-    const context = await ensureAudioContext()
+    const context = await ensureAudioContext();
     if (oscillatorRef.current) {
-      return
+      return;
     }
-    const { oscillator, gain } = createToneNodes(context, TONE_GAIN)
-    oscillator.start()
-    oscillatorRef.current = oscillator
-    gainRef.current = gain
-  }, [ensureAudioContext])
+    const { oscillator, gain } = createToneNodes(context, TONE_GAIN);
+    oscillator.start();
+    oscillatorRef.current = oscillator;
+    gainRef.current = gain;
+  }, [ensureAudioContext]);
 
   const stopTone = useCallback(() => {
     if (!oscillatorRef.current) {
-      return
+      return;
     }
-    oscillatorRef.current.stop()
-    oscillatorRef.current.disconnect()
-    oscillatorRef.current = null
+    oscillatorRef.current.stop();
+    oscillatorRef.current.disconnect();
+    oscillatorRef.current = null;
     if (gainRef.current) {
-      gainRef.current.disconnect()
-      gainRef.current = null
+      gainRef.current.disconnect();
+      gainRef.current = null;
     }
-  }, [])
+  }, []);
 
   const stopListenPlayback = useCallback(() => {
-    const current = listenPlaybackRef.current
+    const current = listenPlaybackRef.current;
     if (!current) {
-      return
+      return;
     }
     try {
-      current.oscillator.stop()
+      current.oscillator.stop();
     } catch {
       // No-op: oscillator might already be stopped.
     }
-    current.oscillator.disconnect()
-    current.gain.disconnect()
-    listenPlaybackRef.current = null
-  }, [])
+    current.oscillator.disconnect();
+    current.gain.disconnect();
+    listenPlaybackRef.current = null;
+  }, []);
 
   const playListenSequence = useCallback(
     async (code: string) => {
-      stopListenPlayback()
-      const context = await ensureAudioContext()
-      const { oscillator, gain } = createToneNodes(context, 0)
-      listenPlaybackRef.current = { oscillator, gain }
+      stopListenPlayback();
+      const context = await ensureAudioContext();
+      const { oscillator, gain } = createToneNodes(context, 0);
+      listenPlaybackRef.current = { oscillator, gain };
 
-      const unitSeconds = 1.2 / listenWpm
-      const rampSeconds = 0.005
-      let currentTime = context.currentTime + 0.05
+      const unitSeconds = 1.2 / listenWpm;
+      const rampSeconds = 0.005;
+      let currentTime = context.currentTime + 0.05;
       if (useCustomKeyboard) {
-        const unitMs = Math.max(Math.round(unitSeconds * 1000), 40)
-        const pattern: number[] = []
+        const unitMs = Math.max(Math.round(unitSeconds * 1000), 40);
+        const pattern: number[] = [];
         for (let index = 0; index < code.length; index += 1) {
-          const symbol = code[index]
-          pattern.push(symbol === '.' ? unitMs : unitMs * 3)
+          const symbol = code[index];
+          pattern.push(symbol === '.' ? unitMs : unitMs * 3);
           if (index < code.length - 1) {
-            pattern.push(unitMs)
+            pattern.push(unitMs);
           }
         }
-        triggerHaptics(pattern)
+        triggerHaptics(pattern);
       }
 
       for (const symbol of code) {
-        const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
-        scheduleToneEnvelope(gain, currentTime, duration, rampSeconds)
-        currentTime += duration + unitSeconds
+        const duration = symbol === '.' ? unitSeconds : unitSeconds * 3;
+        scheduleToneEnvelope(gain, currentTime, duration, rampSeconds);
+        currentTime += duration + unitSeconds;
       }
 
-      oscillator.start(context.currentTime)
-      oscillator.stop(currentTime + 0.05)
+      oscillator.start(context.currentTime);
+      oscillator.stop(currentTime + 0.05);
       oscillator.onended = () => {
         if (listenPlaybackRef.current?.oscillator === oscillator) {
-          listenPlaybackRef.current = null
+          listenPlaybackRef.current = null;
         }
-        oscillator.disconnect()
-        gain.disconnect()
-      }
+        oscillator.disconnect();
+        gain.disconnect();
+      };
     },
     [
       ensureAudioContext,
@@ -757,99 +769,99 @@ function MainApp() {
       triggerHaptics,
       useCustomKeyboard,
     ],
-  )
+  );
 
   useEffect(() => {
     return () => {
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      clearTimer(listenTimeoutRef)
-      clearTimer(saveProgressTimeoutRef)
-      stopListenPlayback()
+      clearTimer(errorTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(letterTimeoutRef);
+      clearTimer(wordSpaceTimeoutRef);
+      clearTimer(listenTimeoutRef);
+      clearTimer(saveProgressTimeoutRef);
+      stopListenPlayback();
       if (oscillatorRef.current) {
-        oscillatorRef.current.stop()
-        oscillatorRef.current.disconnect()
+        oscillatorRef.current.stop();
+        oscillatorRef.current.disconnect();
       }
       if (gainRef.current) {
-        gainRef.current.disconnect()
+        gainRef.current.disconnect();
       }
       if (audioContextRef.current) {
-        audioContextRef.current.close()
+        audioContextRef.current.close();
       }
-    }
-  }, [stopListenPlayback])
+    };
+  }, [stopListenPlayback]);
 
   const resetListenState = useCallback(() => {
-    clearTimer(listenTimeoutRef)
-    setListenStatus('idle')
-    setListenReveal(null)
-  }, [])
+    clearTimer(listenTimeoutRef);
+    setListenStatus('idle');
+    setListenReveal(null);
+  }, []);
 
   useEffect(() => {
     if (showHint || isFreestyle || isListen) {
-      return
+      return;
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) {
-        return
+        return;
       }
       if (event.key.toLowerCase() !== 'n') {
-        return
+        return;
       }
       if (showHintOnce) {
-        return
+        return;
       }
-      event.preventDefault()
-      setShowHintOnce(true)
-    }
-    window.addEventListener('keydown', handleKeyDown)
+      event.preventDefault();
+      setShowHintOnce(true);
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isFreestyle, isListen, showHint, showHintOnce])
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFreestyle, isListen, showHint, showHintOnce]);
 
   const applyModeChange = useCallback(
     (nextMode: 'practice' | 'freestyle' | 'listen') => {
-      trackEvent('mode_change', { mode: nextMode })
-      setMode(nextMode)
-      stopListenPlayback()
-      setFreestyleInput('')
-      setFreestyleResult(null)
-      setFreestyleWord('')
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
-      resetListenState()
+      trackEvent('mode_change', { mode: nextMode });
+      setMode(nextMode);
+      stopListenPlayback();
+      setFreestyleInput('');
+      setFreestyleResult(null);
+      setFreestyleWord('');
+      clearTimer(letterTimeoutRef);
+      clearTimer(wordSpaceTimeoutRef);
+      setInput('');
+      setStatus('idle');
+      setShowHintOnce(false);
+      resetListenState();
       if (nextMode === 'freestyle') {
-        return
+        return;
       }
       if (nextMode === 'listen') {
         const nextLetter = availableLetters.includes(letter)
           ? letter
-          : pickWeightedLetter(availableLetters, scores)
-        setLetter(nextLetter)
-        void playListenSequence(MORSE_DATA[nextLetter].code)
-        return
+          : pickWeightedLetter(availableLetters, scores);
+        setLetter(nextLetter);
+        void playListenSequence(MORSE_DATA[nextLetter].code);
+        return;
       }
       if (practiceWordModeRef.current) {
         const nextWord = pickNewWord(
           availablePracticeWords,
           practiceWordRef.current,
-        )
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
-        return
+        );
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextWord[0] as Letter);
+        return;
       }
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
           : pickWeightedLetter(availableLetters, scores),
-      )
+      );
     },
     [
       availableLetters,
@@ -861,351 +873,361 @@ function MainApp() {
       stopListenPlayback,
       trackEvent,
     ],
-  )
+  );
 
   const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value } = event.target
+    const { value } = event.target;
     const nextMode =
       value === 'freestyle'
         ? 'freestyle'
         : value === 'listen'
           ? 'listen'
-          : 'practice'
-    applyModeChange(nextMode)
-  }
+          : 'practice';
+    applyModeChange(nextMode);
+  };
 
   const handleShowHintToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setShowHint(event.target.checked)
+      setShowHint(event.target.checked);
     },
     [],
-  )
+  );
 
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
-      trackEvent('practice_word_mode_toggle', { enabled: nextValue })
-      setPracticeWordMode(nextValue)
-      clearTimer(letterTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
+      trackEvent('practice_word_mode_toggle', { enabled: nextValue });
+      setPracticeWordMode(nextValue);
+      clearTimer(letterTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      clearTimer(successTimeoutRef);
+      setInput('');
+      setStatus('idle');
+      setShowHintOnce(false);
       if (!nextValue) {
         const nextLetter = pickWeightedLetter(
           availableLetters,
           scoresRef.current,
           letterRef.current,
-        )
-        setPracticeWordIndex(0)
-        setLetter(nextLetter)
-        return
+        );
+        setPracticeWordIndex(0);
+        setLetter(nextLetter);
+        return;
       }
       const nextWord = pickNewWord(
         availablePracticeWords,
         practiceWordRef.current,
-      )
-      setPracticeWord(nextWord)
-      setPracticeWordIndex(0)
-      setLetter(nextWord[0] as Letter)
+      );
+      setPracticeWord(nextWord);
+      setPracticeWordIndex(0);
+      setLetter(nextWord[0] as Letter);
     },
     [availableLetters, availablePracticeWords, trackEvent],
-  )
+  );
 
   const handlePracticeWordModeToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlePracticeWordModeChange(event.target.checked)
+      handlePracticeWordModeChange(event.target.checked);
     },
     [handlePracticeWordModeChange],
-  )
+  );
 
   const handleMaxLevelChange = useCallback(
     (nextLevel: number) => {
-      setMaxLevel(nextLevel)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
-      resetListenState()
-      const nextLetters = getLettersForLevel(nextLevel)
+      setMaxLevel(nextLevel);
+      setInput('');
+      setStatus('idle');
+      setShowHintOnce(false);
+      resetListenState();
+      const nextLetters = getLettersForLevel(nextLevel);
       if (!isListen && practiceWordModeRef.current) {
         const nextWord = pickNewWord(
           getPracticeWordsForLetters(nextLetters),
           practiceWordRef.current,
-        )
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
-        return
+        );
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextWord[0] as Letter);
+        return;
       }
       const nextLetter = nextLetters.includes(letter)
         ? letter
-        : pickWeightedLetter(nextLetters, scores)
-      setLetter(nextLetter)
+        : pickWeightedLetter(nextLetters, scores);
+      setLetter(nextLetter);
       if (isListen) {
-        void playListenSequence(MORSE_DATA[nextLetter].code)
+        void playListenSequence(MORSE_DATA[nextLetter].code);
       }
     },
-    [isListen, letter, playListenSequence, resetListenState, scores, setMaxLevel],
-  )
+    [
+      isListen,
+      letter,
+      playListenSequence,
+      resetListenState,
+      scores,
+      setMaxLevel,
+    ],
+  );
 
   const handleMaxLevelSelectChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handleMaxLevelChange(Number(event.target.value))
+      handleMaxLevelChange(Number(event.target.value));
     },
     [handleMaxLevelChange],
-  )
+  );
 
   const handleListenWpmChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
-      setListenWpm(Number(event.target.value))
+      setListenWpm(Number(event.target.value));
     },
     [],
-  )
+  );
 
   const handleSignIn = useCallback(async () => {
     try {
-      await signInWithPopup(auth, googleProvider)
-      trackEvent('sign_in', { method: 'google_popup' })
+      await signInWithPopup(auth, googleProvider);
+      trackEvent('sign_in', { method: 'google_popup' });
     } catch (error) {
       const fallbackToRedirect =
         typeof error === 'object' &&
         error !== null &&
         'code' in error &&
         (error.code === 'auth/popup-blocked' ||
-          error.code === 'auth/operation-not-supported-in-this-environment')
+          error.code === 'auth/operation-not-supported-in-this-environment');
       if (fallbackToRedirect) {
-        trackEvent('sign_in', { method: 'google_redirect' })
-        await signInWithRedirect(auth, googleProvider)
-        return
+        trackEvent('sign_in', { method: 'google_redirect' });
+        await signInWithRedirect(auth, googleProvider);
+        return;
       }
-      console.error('Failed to sign in', error)
+      console.error('Failed to sign in', error);
     }
-  }, [trackEvent])
+  }, [trackEvent]);
 
   const handleSignOut = useCallback(async () => {
     try {
-      await signOut(auth)
-      trackEvent('sign_out')
+      await signOut(auth);
+      trackEvent('sign_out');
     } catch (error) {
-      console.error('Failed to sign out', error)
+      console.error('Failed to sign out', error);
     }
-  }, [trackEvent])
+  }, [trackEvent]);
 
   const applyRemoteProgress = useCallback((raw: unknown) => {
-    const progress = parseRemoteProgress(raw)
+    const progress = parseRemoteProgress(raw);
     if (!progress) {
-      return
+      return;
     }
-    const nextScores = progress.scores ?? scoresRef.current
+    const nextScores = progress.scores ?? scoresRef.current;
     const resolvedMaxLevel =
       typeof progress.maxLevel === 'number'
         ? progress.maxLevel
-        : maxLevelRef.current
+        : maxLevelRef.current;
     if (progress.scores) {
-      setScores(progress.scores)
+      setScores(progress.scores);
     }
     if (typeof progress.showHint === 'boolean') {
-      setShowHint(progress.showHint)
+      setShowHint(progress.showHint);
     }
     if (typeof progress.wordMode === 'boolean') {
-      setFreestyleWordMode(progress.wordMode)
+      setFreestyleWordMode(progress.wordMode);
     }
     if (typeof progress.listenWpm === 'number') {
-      setListenWpm(progress.listenWpm)
+      setListenWpm(progress.listenWpm);
     }
     if (typeof progress.maxLevel === 'number') {
-      const nextLetters = getLettersForLevel(progress.maxLevel)
-      const currentLetter = letterRef.current
+      const nextLetters = getLettersForLevel(progress.maxLevel);
+      const currentLetter = letterRef.current;
       const nextLetter = nextLetters.includes(currentLetter)
         ? currentLetter
-        : pickWeightedLetter(nextLetters, nextScores, currentLetter)
-      setMaxLevel(progress.maxLevel)
-      setLetter(nextLetter)
+        : pickWeightedLetter(nextLetters, nextScores, currentLetter);
+      setMaxLevel(progress.maxLevel);
+      setLetter(nextLetter);
     }
     if (typeof progress.practiceWordMode === 'boolean') {
-      setPracticeWordMode(progress.practiceWordMode)
+      setPracticeWordMode(progress.practiceWordMode);
       if (progress.practiceWordMode) {
-        const nextLetters = getLettersForLevel(resolvedMaxLevel)
-        const nextWord = pickNewWord(getPracticeWordsForLetters(nextLetters))
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
+        const nextLetters = getLettersForLevel(resolvedMaxLevel);
+        const nextWord = pickNewWord(getPracticeWordsForLetters(nextLetters));
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextWord[0] as Letter);
       }
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (!user) {
-      return
+      return;
     }
-    const progressRef = ref(database, `users/${user.uid}/progress`)
-    let isActive = true
+    const progressRef = ref(database, `users/${user.uid}/progress`);
+    let isActive = true;
     get(progressRef)
       .then((snapshot) => {
         if (!isActive) {
-          return
+          return;
         }
         if (snapshot.exists()) {
-          applyRemoteProgress(snapshot.val())
+          applyRemoteProgress(snapshot.val());
         }
       })
       .catch((error) => {
         // Fail silently if offline - we'll use local data
         if (!navigator.onLine) {
-          return
+          return;
         }
-        console.error('Failed to load progress', error)
+        console.error('Failed to load progress', error);
       })
       .finally(() => {
         if (isActive) {
-          setRemoteLoaded(true)
+          setRemoteLoaded(true);
         }
-      })
+      });
     return () => {
-      isActive = false
-    }
-  }, [applyRemoteProgress, user])
+      isActive = false;
+    };
+  }, [applyRemoteProgress, user]);
 
   useEffect(() => {
     if (!user || !remoteLoaded) {
-      return
+      return;
     }
-    clearTimer(saveProgressTimeoutRef)
+    clearTimer(saveProgressTimeoutRef);
     saveProgressTimeoutRef.current = window.setTimeout(() => {
       // Skip save if offline - Firebase will queue it automatically when back online
       if (!navigator.onLine) {
-        return
+        return;
       }
-      
-      const progressRef = ref(database, `users/${user.uid}/progress`)
+
+      const progressRef = ref(database, `users/${user.uid}/progress`);
       void set(progressRef, {
         ...progressSnapshot,
         updatedAt: Date.now(),
       }).catch((error) => {
-        console.error('Failed to save progress', error)
-      })
-    }, PROGRESS_SAVE_DEBOUNCE_MS)
+        console.error('Failed to save progress', error);
+      });
+    }, PROGRESS_SAVE_DEBOUNCE_MS);
     return () => {
-      clearTimer(saveProgressTimeoutRef)
-    }
-  }, [progressSnapshot, remoteLoaded, user])
+      clearTimer(saveProgressTimeoutRef);
+    };
+  }, [progressSnapshot, remoteLoaded, user]);
 
   const scheduleWordSpace = useCallback(() => {
-    clearTimer(wordSpaceTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef);
     wordSpaceTimeoutRef.current = window.setTimeout(() => {
       if (!freestyleWordModeRef.current) {
-        return
+        return;
       }
       if (freestyleInputRef.current) {
-        return
+        return;
       }
       setFreestyleWord((prev) => {
         if (!prev || prev.endsWith(' ')) {
-          return prev
+          return prev;
         }
-        return `${prev} `
-      })
-    }, WORD_GAP_EXTRA_MS)
-  }, [])
+        return `${prev} `;
+      });
+    }, WORD_GAP_EXTRA_MS);
+  }, []);
 
-  const submitFreestyleInput = useCallback((value: string) => {
-    if (!value) {
-      setFreestyleResult('No input')
-      return
-    }
-    const match = Object.entries(MORSE_DATA).find(
-      ([, data]) => data.code === value,
-    )
-    const result = match ? match[0] : 'No match'
-    if (result !== 'No match') {
-      if (freestyleWordMode) {
-        setFreestyleWord((prev) => prev + result)
-        scheduleWordSpace()
+  const submitFreestyleInput = useCallback(
+    (value: string) => {
+      if (!value) {
+        setFreestyleResult('No input');
+        return;
       }
-    }
-    setFreestyleResult(result)
-    setFreestyleInput('')
-  }, [freestyleWordMode, scheduleWordSpace])
+      const match = Object.entries(MORSE_DATA).find(
+        ([, data]) => data.code === value,
+      );
+      const result = match ? match[0] : 'No match';
+      if (result !== 'No match') {
+        if (freestyleWordMode) {
+          setFreestyleWord((prev) => prev + result);
+          scheduleWordSpace();
+        }
+      }
+      setFreestyleResult(result);
+      setFreestyleInput('');
+    },
+    [freestyleWordMode, scheduleWordSpace],
+  );
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
-      clearTimer(letterTimeoutRef)
+      clearTimer(letterTimeoutRef);
       letterTimeoutRef.current = window.setTimeout(() => {
         if (nextMode === 'freestyle') {
-          submitFreestyleInput(freestyleInputRef.current)
-          return
+          submitFreestyleInput(freestyleInputRef.current);
+          return;
         }
-        const attempt = inputRef.current
+        const attempt = inputRef.current;
         if (!attempt) {
-          return
+          return;
         }
-        clearTimer(errorTimeoutRef)
-        clearTimer(successTimeoutRef)
-        const target = MORSE_DATA[letterRef.current].code
-        const isCorrect = attempt === target
+        clearTimer(errorTimeoutRef);
+        clearTimer(successTimeoutRef);
+        const target = MORSE_DATA[letterRef.current].code;
+        const isCorrect = attempt === target;
         if (isCorrect) {
           if (canScoreAttempt()) {
-            bumpScore(letterRef.current, 1)
+            bumpScore(letterRef.current, 1);
           }
-          setInput('')
+          setInput('');
           if (practiceWordModeRef.current) {
-            const currentWord = practiceWordRef.current
+            const currentWord = practiceWordRef.current;
             if (!currentWord) {
-              const nextWord = pickNewWord(availablePracticeWords)
-              const nextLetter = nextWord[0] as Letter
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setShowHintOnce(false)
-              setStatus('idle')
-              return
+              const nextWord = pickNewWord(availablePracticeWords);
+              const nextLetter = nextWord[0] as Letter;
+              practiceWordRef.current = nextWord;
+              practiceWordIndexRef.current = 0;
+              letterRef.current = nextLetter;
+              setPracticeWord(nextWord);
+              setPracticeWordIndex(0);
+              setLetter(nextLetter);
+              setShowHintOnce(false);
+              setStatus('idle');
+              return;
             }
-            const nextIndex = practiceWordIndexRef.current + 1
+            const nextIndex = practiceWordIndexRef.current + 1;
             if (nextIndex >= currentWord.length) {
-              const nextWord = pickNewWord(availablePracticeWords, currentWord)
-              const nextLetter = nextWord[0] as Letter
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setShowHintOnce(false)
-              setStatus('idle')
-              return
+              const nextWord = pickNewWord(availablePracticeWords, currentWord);
+              const nextLetter = nextWord[0] as Letter;
+              practiceWordRef.current = nextWord;
+              practiceWordIndexRef.current = 0;
+              letterRef.current = nextLetter;
+              setPracticeWord(nextWord);
+              setPracticeWordIndex(0);
+              setLetter(nextLetter);
+              setShowHintOnce(false);
+              setStatus('idle');
+              return;
             }
-            const nextLetter = currentWord[nextIndex] as Letter
-            practiceWordIndexRef.current = nextIndex
-            letterRef.current = nextLetter
-            setPracticeWordIndex(nextIndex)
-            setLetter(nextLetter)
-            setShowHintOnce(false)
-            setStatus('idle')
-            return
+            const nextLetter = currentWord[nextIndex] as Letter;
+            practiceWordIndexRef.current = nextIndex;
+            letterRef.current = nextLetter;
+            setPracticeWordIndex(nextIndex);
+            setLetter(nextLetter);
+            setShowHintOnce(false);
+            setStatus('idle');
+            return;
           }
-          setStatus('success')
+          setStatus('success');
           successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
               pickWeightedLetter(availableLetters, scoresRef.current, current),
-            )
-            setShowHintOnce(false)
-            setStatus('idle')
-          }, 650)
-          return
+            );
+            setShowHintOnce(false);
+            setStatus('idle');
+          }, 650);
+          return;
         }
-        startErrorLockout()
+        startErrorLockout();
         if (canScoreAttempt()) {
-          bumpScore(letterRef.current, -1)
+          bumpScore(letterRef.current, -1);
         }
-        setStatus('error')
-        setInput('')
+        setStatus('error');
+        setInput('');
         errorTimeoutRef.current = window.setTimeout(() => {
-          setStatus('idle')
-        }, ERROR_LOCKOUT_MS)
-      }, INTER_CHAR_GAP_MS)
+          setStatus('idle');
+        }, ERROR_LOCKOUT_MS);
+      }, INTER_CHAR_GAP_MS);
     },
     [
       availableLetters,
@@ -1217,79 +1239,86 @@ function MainApp() {
       startErrorLockout,
       submitFreestyleInput,
     ],
-  )
+  );
 
   const handleFreestyleClear = useCallback(() => {
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setFreestyleResult(null)
-    setFreestyleInput('')
-    setFreestyleWord('')
-  }, [])
+    clearTimer(letterTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef);
+    setFreestyleResult(null);
+    setFreestyleInput('');
+    setFreestyleWord('');
+  }, []);
 
   const handleFreestyleBackspace = useCallback(() => {
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setFreestyleResult(null)
+    clearTimer(letterTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef);
+    setFreestyleResult(null);
     if (freestyleInputRef.current) {
       setFreestyleInput((prev) => {
-        const next = prev.slice(0, -1)
-        freestyleInputRef.current = next
-        return next
-      })
-      return
+        const next = prev.slice(0, -1);
+        freestyleInputRef.current = next;
+        return next;
+      });
+      return;
     }
     if (!freestyleWordModeRef.current) {
-      return
+      return;
     }
     setFreestyleWord((prev) => {
-      const trimmed = prev.replace(/\s+$/, '')
+      const trimmed = prev.replace(/\s+$/, '');
       if (!trimmed) {
-        return ''
+        return '';
       }
-      return trimmed.slice(0, -1)
-    })
-  }, [])
+      return trimmed.slice(0, -1);
+    });
+  }, []);
 
   const handleWordModeChange = useCallback(
     (nextValue: boolean) => {
-      setFreestyleWordMode(nextValue)
-      handleFreestyleClear()
+      setFreestyleWordMode(nextValue);
+      handleFreestyleClear();
     },
     [handleFreestyleClear],
-  )
+  );
 
   const handleWordModeToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      handleWordModeChange(event.target.checked)
+      handleWordModeChange(event.target.checked);
     },
     [handleWordModeChange],
-  )
+  );
 
   const submitListenAnswer = useCallback(
     (value: Letter) => {
       if (listenStatus !== 'idle') {
-        return
+        return;
       }
       if (!/^[A-Z0-9]$/.test(value)) {
-        return
+        return;
       }
       if (useCustomKeyboard) {
-        triggerHaptics(10)
+        triggerHaptics(10);
       }
-      clearTimer(listenTimeoutRef)
-      stopListenPlayback()
-      const isCorrect = value === letter
-      setListenStatus(isCorrect ? 'success' : 'error')
-      setListenReveal(letter)
-      bumpScore(letter, isCorrect ? 1 : -1)
-      listenTimeoutRef.current = window.setTimeout(() => {
-        const nextLetter = pickWeightedLetter(availableLetters, scores, letter)
-        setListenStatus('idle')
-        setListenReveal(null)
-        setLetter(nextLetter)
-        void playListenSequence(MORSE_DATA[nextLetter].code)
-      }, isCorrect ? 650 : ERROR_LOCKOUT_MS)
+      clearTimer(listenTimeoutRef);
+      stopListenPlayback();
+      const isCorrect = value === letter;
+      setListenStatus(isCorrect ? 'success' : 'error');
+      setListenReveal(letter);
+      bumpScore(letter, isCorrect ? 1 : -1);
+      listenTimeoutRef.current = window.setTimeout(
+        () => {
+          const nextLetter = pickWeightedLetter(
+            availableLetters,
+            scores,
+            letter,
+          );
+          setListenStatus('idle');
+          setListenReveal(null);
+          setLetter(nextLetter);
+          void playListenSequence(MORSE_DATA[nextLetter].code);
+        },
+        isCorrect ? 650 : ERROR_LOCKOUT_MS,
+      );
     },
     [
       availableLetters,
@@ -1302,39 +1331,45 @@ function MainApp() {
       triggerHaptics,
       useCustomKeyboard,
     ],
-  )
+  );
 
   const handleListenReplay = useCallback(() => {
     if (listenStatus !== 'idle') {
-      return
+      return;
     }
-    setListenReveal(null)
+    setListenReveal(null);
     if (useCustomKeyboard) {
-      triggerHaptics(12)
+      triggerHaptics(12);
     }
-    void playListenSequence(MORSE_DATA[letter].code)
-  }, [letter, listenStatus, playListenSequence, triggerHaptics, useCustomKeyboard])
+    void playListenSequence(MORSE_DATA[letter].code);
+  }, [
+    letter,
+    listenStatus,
+    playListenSequence,
+    triggerHaptics,
+    useCustomKeyboard,
+  ]);
 
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
-      return
+      return;
     }
-    trackEvent('sound_check')
-    setSoundCheckStatus('playing')
-    const context = await ensureAudioContext()
-    const { oscillator, gain } = createToneNodes(context, 0)
-    const startTime = context.currentTime + 0.02
-    const duration = 0.25
-    scheduleToneEnvelope(gain, startTime, duration, 0.02, false)
-    oscillator.start(startTime)
-    oscillator.stop(startTime + duration + 0.02)
+    trackEvent('sound_check');
+    setSoundCheckStatus('playing');
+    const context = await ensureAudioContext();
+    const { oscillator, gain } = createToneNodes(context, 0);
+    const startTime = context.currentTime + 0.02;
+    const duration = 0.25;
+    scheduleToneEnvelope(gain, startTime, duration, 0.02, false);
+    oscillator.start(startTime);
+    oscillator.stop(startTime + duration + 0.02);
     oscillator.onended = () => {
-      oscillator.disconnect()
-      gain.disconnect()
-      setSoundCheckStatus('idle')
-    }
+      oscillator.disconnect();
+      gain.disconnect();
+      setSoundCheckStatus('idle');
+    };
     if (useCustomKeyboard) {
-      triggerHaptics([40, 40, 40])
+      triggerHaptics([40, 40, 40]);
     }
   }, [
     ensureAudioContext,
@@ -1342,85 +1377,85 @@ function MainApp() {
     trackEvent,
     triggerHaptics,
     useCustomKeyboard,
-  ])
+  ]);
 
   const handleShowReference = useCallback(() => {
-    setShowReference(true)
-    trackEvent('reference_open')
-  }, [trackEvent])
+    setShowReference(true);
+    trackEvent('reference_open');
+  }, [trackEvent]);
 
   useEffect(() => {
     if (!isFreestyle) {
-      return
+      return;
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) {
-        return
+        return;
       }
       if (event.key.toLowerCase() !== 'n') {
-        return
+        return;
       }
-      event.preventDefault()
-      handleFreestyleClear()
-    }
-    window.addEventListener('keydown', handleKeyDown)
+      event.preventDefault();
+      handleFreestyleClear();
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [handleFreestyleClear, isFreestyle])
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleFreestyleClear, isFreestyle]);
 
   useEffect(() => {
     if (isListen) {
-      return
+      return;
     }
     const handleShortcut = (event: KeyboardEvent) => {
       if (showReference) {
-        return
+        return;
       }
       if (shouldIgnoreShortcutEvent(event)) {
-        return
+        return;
       }
-      const key = event.key.toLowerCase()
+      const key = event.key.toLowerCase();
       if (key === 'f') {
-        event.preventDefault()
-        applyModeChange('freestyle')
-        return
+        event.preventDefault();
+        applyModeChange('freestyle');
+        return;
       }
       if (key === 'i') {
-        event.preventDefault()
-        applyModeChange('listen')
-        return
+        event.preventDefault();
+        applyModeChange('listen');
+        return;
       }
       if (key === 'l') {
-        event.preventDefault()
-        applyModeChange('practice')
-        return
+        event.preventDefault();
+        applyModeChange('practice');
+        return;
       }
       if (key === 'h') {
         if (mode === 'practice') {
-          event.preventDefault()
-          setShowHint((prev) => !prev)
+          event.preventDefault();
+          setShowHint((prev) => !prev);
         }
-        return
+        return;
       }
       if (key === 'w') {
         if (mode === 'freestyle') {
-          event.preventDefault()
-          handleWordModeChange(!freestyleWordMode)
+          event.preventDefault();
+          handleWordModeChange(!freestyleWordMode);
         }
-        return
+        return;
       }
       if (event.key === 'Backspace') {
         if (mode === 'freestyle') {
-          event.preventDefault()
-          handleFreestyleBackspace()
+          event.preventDefault();
+          handleFreestyleBackspace();
         }
       }
-    }
-    window.addEventListener('keydown', handleShortcut)
+    };
+    window.addEventListener('keydown', handleShortcut);
     return () => {
-      window.removeEventListener('keydown', handleShortcut)
-    }
+      window.removeEventListener('keydown', handleShortcut);
+    };
   }, [
     applyModeChange,
     freestyleWordMode,
@@ -1429,210 +1464,208 @@ function MainApp() {
     isListen,
     mode,
     showReference,
-  ])
+  ]);
 
   const registerSymbol = useCallback(
     (symbol: '.' | '-') => {
       if (!isFreestyle && isErrorLocked()) {
-        return
+        return;
       }
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
+      clearTimer(errorTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(letterTimeoutRef);
 
       if (isFreestyle) {
         setFreestyleInput((prev) => {
-          const next = prev + symbol
-          scheduleLetterReset('freestyle')
-          return next
-        })
-        setFreestyleResult(null)
-        return
+          const next = prev + symbol;
+          scheduleLetterReset('freestyle');
+          return next;
+        });
+        setFreestyleResult(null);
+        return;
       }
 
-      setStatus('idle')
-      setInput((prev) => prev + symbol)
-      scheduleLetterReset('practice')
+      setStatus('idle');
+      setInput((prev) => prev + symbol);
+      scheduleLetterReset('practice');
     },
     [isErrorLocked, isFreestyle, scheduleLetterReset],
-  )
+  );
 
   const beginPress = useCallback(() => {
     if (pressStartRef.current !== null) {
-      return false
+      return false;
     }
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setIsPressing(true)
-    pressStartRef.current = performance.now()
-    void startTone()
-    return true
-  }, [startTone])
+    clearTimer(letterTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef);
+    setIsPressing(true);
+    pressStartRef.current = performance.now();
+    void startTone();
+    return true;
+  }, [startTone]);
 
   const releasePress = useCallback(
     (register: boolean) => {
-      setIsPressing(false)
-      const start = pressStartRef.current
-      pressStartRef.current = null
+      setIsPressing(false);
+      const start = pressStartRef.current;
+      pressStartRef.current = null;
       if (!register || start === null) {
-        stopTone()
-        return
+        stopTone();
+        return;
       }
-      const duration = performance.now() - start
-      registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-')
-      stopTone()
+      const duration = performance.now() - start;
+      registerSymbol(duration < DOT_THRESHOLD_MS ? '.' : '-');
+      stopTone();
     },
     [registerSymbol, stopTone],
-  )
+  );
 
-  const handlePointerDown = (
-    event: React.PointerEvent<HTMLButtonElement>,
-  ) => {
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) {
-      return
+      return;
     }
     if (event.pointerType === 'touch') {
-      event.preventDefault()
+      event.preventDefault();
     }
     if (!isFreestyle && isErrorLocked()) {
-      return
+      return;
     }
     if (!beginPress()) {
-      return
+      return;
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === 'touch') {
-      event.preventDefault()
+      event.preventDefault();
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
     if (pressStartRef.current === null) {
-      return
+      return;
     }
-    releasePress(true)
-  }
+    releasePress(true);
+  };
 
   const handlePointerCancel = () => {
     if (pressStartRef.current === null) {
-      return
+      return;
     }
-    releasePress(false)
-    const hasInput = isFreestyle ? freestyleInput : input
+    releasePress(false);
+    const hasInput = isFreestyle ? freestyleInput : input;
     if (hasInput) {
-      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice')
+      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice');
     }
-  }
+  };
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (showReferenceRef.current) {
-        return
+        return;
       }
       if (isFreestyle || isListen) {
-        return
+        return;
       }
       if (isErrorLocked()) {
-        return
+        return;
       }
       if (event.repeat) {
-        return
+        return;
       }
       if (event.code !== 'Space' && event.key !== ' ') {
-        return
+        return;
       }
-      event.preventDefault()
-      beginPress()
-    }
+      event.preventDefault();
+      beginPress();
+    };
 
     const handleGlobalKeyUp = (event: KeyboardEvent) => {
       if (showReferenceRef.current) {
-        return
+        return;
       }
       if (isFreestyle || isListen) {
-        return
+        return;
       }
       if (event.code !== 'Space' && event.key !== ' ') {
-        return
+        return;
       }
-      event.preventDefault()
+      event.preventDefault();
       if (pressStartRef.current === null) {
-        return
+        return;
       }
-      releasePress(true)
-    }
+      releasePress(true);
+    };
 
-    window.addEventListener('keydown', handleGlobalKeyDown)
-    window.addEventListener('keyup', handleGlobalKeyUp)
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('keyup', handleGlobalKeyUp);
     return () => {
-      window.removeEventListener('keydown', handleGlobalKeyDown)
-      window.removeEventListener('keyup', handleGlobalKeyUp)
-    }
-  }, [beginPress, isErrorLocked, isFreestyle, isListen, releasePress])
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      window.removeEventListener('keyup', handleGlobalKeyUp);
+    };
+  }, [beginPress, isErrorLocked, isFreestyle, isListen, releasePress]);
 
   useEffect(() => {
     if (!isListen) {
-      return
+      return;
     }
     const handleListenKey = (event: KeyboardEvent) => {
       if (showReferenceRef.current) {
-        return
+        return;
       }
       if (shouldIgnoreShortcutEvent(event)) {
-        return
+        return;
       }
       if (event.code === 'Space' || event.key === ' ') {
-        event.preventDefault()
-        handleListenReplay()
-        return
+        event.preventDefault();
+        handleListenReplay();
+        return;
       }
       if (event.key.length !== 1) {
-        return
+        return;
       }
-      const next = event.key.toUpperCase()
+      const next = event.key.toUpperCase();
       if (!/^[A-Z0-9]$/.test(next)) {
-        return
+        return;
       }
-      event.preventDefault()
-      submitListenAnswer(next as Letter)
-    }
-    window.addEventListener('keydown', handleListenKey)
+      event.preventDefault();
+      submitListenAnswer(next as Letter);
+    };
+    window.addEventListener('keydown', handleListenKey);
     return () => {
-      window.removeEventListener('keydown', handleListenKey)
-    }
-  }, [handleListenReplay, isListen, submitListenAnswer])
+      window.removeEventListener('keydown', handleListenKey);
+    };
+  }, [handleListenReplay, isListen, submitListenAnswer]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.repeat) {
-      return
+      return;
     }
     if (event.key !== ' ' && event.key !== 'Enter') {
-      return
+      return;
     }
     if (!isFreestyle && isErrorLocked()) {
-      return
+      return;
     }
-    event.preventDefault()
-    beginPress()
-  }
+    event.preventDefault();
+    beginPress();
+  };
 
   const handleKeyUp = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== ' ' && event.key !== 'Enter') {
-      return
+      return;
     }
-    event.preventDefault()
+    event.preventDefault();
     if (pressStartRef.current === null) {
-      return
+      return;
     }
-    releasePress(true)
-  }
+    releasePress(true);
+  };
 
-  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
-  const target = MORSE_DATA[letter].code
-  const mnemonic = MORSE_DATA[letter].mnemonic
+  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce);
+  const target = MORSE_DATA[letter].code;
+  const mnemonic = MORSE_DATA[letter].mnemonic;
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -1640,7 +1673,7 @@ function MainApp() {
         ? 'Missed. Start over.'
         : hintVisible
           ? mnemonic
-          : ' '
+          : ' ';
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -1649,19 +1682,19 @@ function MainApp() {
     !hintVisible &&
     practiceWord
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
-      : null
-  const statusText = practiceProgressText ?? baseStatusText
-  const targetSymbols = target.split('')
+      : null;
+  const statusText = practiceProgressText ?? baseStatusText;
+  const targetSymbols = target.split('');
   const isInputOnTrack =
-    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
+    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input);
   const highlightCount =
     status === 'success'
       ? targetSymbols.length
       : isInputOnTrack
         ? input.length
-        : 0
+        : 0;
   const pips = targetSymbols.map((symbol, index) => {
-    const isHit = index < highlightCount
+    const isHit = index < highlightCount;
     return (
       <span
         key={`${symbol}-${index}`}
@@ -1669,11 +1702,11 @@ function MainApp() {
           isHit ? 'hit' : 'expected'
         }`}
       />
-    )
-  })
+    );
+  });
   const isLetterResult = freestyleResult
     ? /^[A-Z0-9]$/.test(freestyleResult)
-    : false
+    : false;
   const freestyleStatus = freestyleResult
     ? isLetterResult
       ? freestyleWordMode
@@ -1684,31 +1717,34 @@ function MainApp() {
       ? `Input ${freestyleInput}`
       : freestyleWordMode && freestyleWord
         ? `Word ${freestyleWord}`
-      : 'Tap and pause'
+        : 'Tap and pause';
   const freestyleDisplay = freestyleWordMode
     ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
     : freestyleResult
       ? isLetterResult
         ? freestyleResult
         : '?'
-      : ''
+      : '';
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
-    : Boolean(freestyleResult)
+    : Boolean(freestyleResult);
   const listenStatusText =
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
         ? 'Incorrect'
-        : 'Listen and type the character'
-  const listenDisplay = listenReveal ?? '?'
+        : 'Listen and type the character';
+  const listenDisplay = listenReveal ?? '?';
   const listenDisplayClass = `letter ${
     listenReveal ? '' : 'letter-placeholder'
-  }`
-  const listenFocused = isListen && useCustomKeyboard
-  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : ''
-  const userInitial = user ? (userLabel ? userLabel[0].toUpperCase() : '?') : ''
-  const currentYear = new Date().getFullYear()
+  }`;
+  const listenFocused = isListen && useCustomKeyboard;
+  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : '';
+  const userInitial = user
+    ? userLabel
+      ? userLabel[0].toUpperCase()
+      : '?'
+    : '';
 
   return (
     <div
@@ -1873,21 +1909,18 @@ function MainApp() {
           >
             <p className="about-title">Dit</p>
             <p className="about-instruction">
-              Tap that big button. Quick taps make dots, longer presses make dashes.
+              Tap that big button. Quick taps make dots, longer presses make
+              dashes.
             </p>
             <p className="about-instruction about-instruction-secondary">
-              Use <strong>settings</strong> to adjust difficulty, check the reference chart, enable hints, and sign in to save your progress.
+              Use <strong>settings</strong> to adjust difficulty, check the
+              reference chart, enable hints, and sign in to save your progress.
             </p>
             <p className="about-instruction about-instruction-secondary">
-              <strong>Modes:</strong> Practice for guided learning, Freestyle to translate on your own, or Listen to test your copy skills.
+              <strong>Modes:</strong> Practice for guided learning, Freestyle to
+              translate on your own, or Listen to test your copy skills.
             </p>
-            <div className="about-links">
-              <span>© {currentYear} Tylr</span>
-              <span>| </span>
-              <a href="/privacy">Privacy</a>
-              <span>| </span>
-              <a href="/terms">Terms</a>
-            </div>
+            <Footer />
             <button
               type="button"
               className="about-close"
@@ -1899,23 +1932,27 @@ function MainApp() {
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 /** Routes between the main app and legal pages. */
 function App() {
   if (typeof window === 'undefined') {
-    return <MainApp />
+    return <MainApp />;
   }
-  const trimmedPath = window.location.pathname.replace(/\/+$/, '')
-  const path = trimmedPath === '' ? '/' : trimmedPath
+  const trimmedPath = window.location.pathname.replace(/\/+$/, '');
+  const path = trimmedPath === '' ? '/' : trimmedPath;
   if (path === '/privacy') {
-    return <PrivacyPolicy />
+    return <PrivacyPolicy />;
   }
   if (path === '/terms') {
-    return <TermsOfService />
+    return <TermsOfService />;
   }
-  return <MainApp />
+  if (path === '/') {
+    return <MainApp />;
+  }
+  // Show 404 page for all other routes
+  return <Page404 />;
 }
 
-export default App
+export default App;

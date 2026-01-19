@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
+import { Footer } from './Footer';
 
 type LegalPageLayoutProps = {
-  title: string
-  intro: string
-  lastUpdated: string
-  current: 'privacy' | 'terms'
-  children: ReactNode
-}
+  title: string;
+  intro: string;
+  lastUpdated: string;
+  current: 'privacy' | 'terms';
+  children: ReactNode;
+};
 
 const LegalPageLayout = ({
   title,
@@ -15,7 +16,6 @@ const LegalPageLayout = ({
   current,
   children,
 }: LegalPageLayoutProps) => {
-  const currentYear = new Date().getFullYear()
   return (
     <div className="legal-page">
       <header className="legal-header">
@@ -46,24 +46,22 @@ const LegalPageLayout = ({
         </div>
       </header>
       <article className="legal-card">{children}</article>
-      <footer className="legal-footer">
-        <span>© {currentYear} Tylr</span>
-      </footer>
+      <Footer />
     </div>
-  )
-}
+  );
+};
 
 type LegalSectionProps = {
-  title: string
-  children: ReactNode
-}
+  title: string;
+  children: ReactNode;
+};
 
 const LegalSection = ({ title, children }: LegalSectionProps) => (
   <section className="legal-section">
     <h2>{title}</h2>
     {children}
   </section>
-)
+);
 
 /** Privacy policy content page for Dit. */
 export function PrivacyPolicy() {
@@ -77,12 +75,12 @@ export function PrivacyPolicy() {
       <LegalSection title="Information we collect">
         <ul>
           <li>
-            On-device settings and progress stored in your browser, such as mode,
-            hint preferences, scores, and speed.
+            On-device settings and progress stored in your browser, such as
+            mode, hint preferences, scores, and speed.
           </li>
           <li>
-            Account information if you sign in with Google, including your name and
-            email address.
+            Account information if you sign in with Google, including your name
+            and email address.
           </li>
           <li>
             Progress and preferences synced to{' '}
@@ -170,7 +168,7 @@ export function PrivacyPolicy() {
         </p>
       </LegalSection>
     </LegalPageLayout>
-  )
+  );
 }
 
 /** Terms of service content page for Dit. */
@@ -198,7 +196,10 @@ export function TermsOfService() {
       <LegalSection title="Acceptable use">
         <ul>
           <li>Do not interfere with the app or attempt to disrupt it.</li>
-          <li>Do not attempt to access data or systems you are not authorized to use.</li>
+          <li>
+            Do not attempt to access data or systems you are not authorized to
+            use.
+          </li>
           <li>Do not reverse engineer or misuse the app.</li>
         </ul>
       </LegalSection>
@@ -246,9 +247,8 @@ export function TermsOfService() {
       </LegalSection>
       <LegalSection title="Privacy policy">
         <p>
-          Please review the{' '}
-          <a href="/privacy">Dit Privacy Policy</a> to understand how we collect
-          and use information.
+          Please review the <a href="/privacy">Dit Privacy Policy</a> to
+          understand how we collect and use information.
         </p>
       </LegalSection>
       <LegalSection title="Contact">
@@ -266,8 +266,8 @@ export function TermsOfService() {
       <LegalSection title="Limitation of liability">
         <p>
           To the fullest extent permitted by law, we will not be liable for any
-          indirect, incidental, or consequential damages arising from your use of
-          the app.
+          indirect, incidental, or consequential damages arising from your use
+          of the app.
         </p>
       </LegalSection>
       <LegalSection title="Changes to these terms">
@@ -277,5 +277,5 @@ export function TermsOfService() {
         </p>
       </LegalSection>
     </LegalPageLayout>
-  )
+  );
 }

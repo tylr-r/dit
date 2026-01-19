@@ -1,0 +1,230 @@
+.page-404-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(
+      ellipse 1400px 1000px at 25% 85%,
+      rgba(168, 192, 255, 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 1200px 900px at 75% 15%,
+      rgba(196, 181, 253, 0.06),
+      transparent 65%
+    ),
+    radial-gradient(
+      ellipse 1000px 800px at 50% 50%,
+      rgba(245, 199, 247, 0.04),
+      transparent 70%
+    ),
+    #0a0c12;
+  color: var(--text, #f4f7f9);
+  font-family: 'Space Grotesk', sans-serif;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(20px, 5vw, 48px);
+}
+
+.page-404-content {
+  max-width: 600px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.page-404-title {
+  margin-bottom: 2rem;
+  opacity: 0;
+}
+
+.morse-404 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-family: 'Atkinson Hyperlegible', monospace;
+  letter-spacing: 0.3em;
+  color: var(--accent, #38f2a2);
+  text-shadow: 0 0 20px rgba(56, 242, 162, 0.3);
+  display: block;
+  margin-bottom: 0.5rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.morse-404 .space {
+  margin: 0 0.5em;
+}
+
+.error-code {
+  font-size: clamp(5rem, 15vw, 8rem);
+  font-weight: 700;
+  font-family: 'Atkinson Hyperlegible', monospace;
+  margin: 0;
+  text-shadow: 0 0 40px rgba(56, 242, 162, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--accent, #38f2a2),
+    var(--accent-cool, #4cc9ff)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: glitch 3s ease-in-out infinite;
+}
+
+.page-404-message {
+  margin-bottom: 3rem;
+  opacity: 0;
+}
+
+.page-404-message h2 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin-bottom: 1rem;
+  font-family: 'Atkinson Hyperlegible', monospace;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.page-404-message p {
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.88);
+  min-height: 1.5em;
+  line-height: 1.5;
+}
+
+.page-404-message .subtitle {
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  color: var(--muted, #8d98a5);
+}
+
+.home-button {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.75);
+  padding: clamp(12px, 2.5vw, 16px) clamp(24px, 5vw, 32px);
+  font-size: 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 160ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(0.8rem, 2vw, 1rem);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.home-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--text, #f4f7f9);
+  transform: translateY(-2px);
+}
+
+.home-button:active {
+  transform: translateY(0);
+}
+
+.home-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 4px;
+}
+
+.button-text {
+  font-weight: 600;
+  letter-spacing: 0.15em;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.6s ease forwards;
+}
+
+.fade-in-delayed {
+  animation: fade-in 0.6s ease 0.3s forwards;
+}
+
+.fade-in-more-delayed {
+  animation: fade-in 0.6s ease 0.6s forwards;
+}
+
+.fade-in-last {
+  animation: fade-in 0.6s ease 0.9s forwards;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes glitch {
+  0%,
+  90%,
+  100% {
+    transform: translate(0);
+  }
+  92% {
+    transform: translate(-2px, 2px);
+  }
+  94% {
+    transform: translate(2px, -2px);
+  }
+  96% {
+    transform: translate(-2px, -2px);
+  }
+  98% {
+    transform: translate(2px, 2px);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-404-content {
+    padding: clamp(20px, 5vw, 32px);
+  }
+
+  .error-code {
+    font-size: clamp(4rem, 12vw, 5rem);
+  }
+
+  .morse-404 {
+    font-size: clamp(1.2rem, 3.5vw, 1.5rem);
+  }
+
+  .page-404-message h2 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+  }
+
+  .page-404-message p {
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
+  }
+
+  .home-button {
+    padding: 10px 20px;
+    font-size: 0.7rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
