@@ -8,6 +8,7 @@ import {
 import { get, ref, set } from 'firebase/database'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { PrivacyPolicy, TermsOfService } from './components/LegalPage'
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
 import { ReferenceModal } from './components/ReferenceModal'
@@ -319,7 +320,7 @@ const scheduleToneEnvelope = (
   gain.gain.linearRampToValueAtTime(0, endTime)
 }
 
-function App() {
+function MainApp() {
   const initialConfig = useMemo(() => {
     const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4)
     const practiceWordMode = readStoredBoolean(
@@ -1884,6 +1885,8 @@ function App() {
               <span>© {currentYear} Tylr</span>
               <span>| </span>
               <a href="/privacy">Privacy</a>
+              <span>| </span>
+              <a href="/terms">Terms</a>
             </div>
             <button
               type="button"
@@ -1897,6 +1900,22 @@ function App() {
       ) : null}
     </div>
   )
+}
+
+/** Routes between the main app and legal pages. */
+function App() {
+  if (typeof window === 'undefined') {
+    return <MainApp />
+  }
+  const trimmedPath = window.location.pathname.replace(/\/+$/, '')
+  const path = trimmedPath === '' ? '/' : trimmedPath
+  if (path === '/privacy') {
+    return <PrivacyPolicy />
+  }
+  if (path === '/terms') {
+    return <TermsOfService />
+  }
+  return <MainApp />
 }
 
 export default App
