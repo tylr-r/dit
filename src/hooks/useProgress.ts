@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import type { Letter } from '../data/morse';
+import { readStorageItem, writeStorageItem } from '../platform/storage';
 import {
   clamp,
   initializeScores,
@@ -30,10 +31,7 @@ type UseProgressOptions = {
 };
 
 export const readStoredBoolean = (key: string, fallback: boolean) => {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-  const stored = window.localStorage.getItem(key);
+  const stored = readStorageItem(key);
   if (stored === null) {
     return fallback;
   }
@@ -46,10 +44,7 @@ export const readStoredNumber = (
   min: number,
   max: number,
 ) => {
-  if (typeof window === 'undefined') {
-    return fallback;
-  }
-  const stored = window.localStorage.getItem(key);
+  const stored = readStorageItem(key);
   if (stored === null) {
     return fallback;
   }
@@ -61,18 +56,16 @@ export const readStoredNumber = (
 };
 
 export const readStoredScores = (key: string) => {
-  if (typeof window === 'undefined') {
+  const stored = readStorageItem(key);
+  if (stored === null) {
     return initializeScores();
   }
-  return parseLocalStorageScores(window.localStorage.getItem(key));
+  return parseLocalStorageScores(stored);
 };
 
 const useStoredValue = (key: string, value: string) => {
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.localStorage.setItem(key, value);
+    writeStorageItem(key, value);
   }, [key, value]);
 };
 

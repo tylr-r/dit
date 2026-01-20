@@ -19,6 +19,8 @@ import {
   readStoredScores,
   useProgress,
 } from './hooks/useProgress';
+import { vibrate } from './platform/haptics';
+import { readStorageItem } from './platform/storage';
 import {
   applyScoreDelta,
   formatWpm,
@@ -132,7 +134,7 @@ function MainApp() {
     if (typeof window === 'undefined') {
       return 'practice';
     }
-    const stored = window.localStorage.getItem(STORAGE_KEYS.mode);
+    const stored = readStorageItem(STORAGE_KEYS.mode);
     if (stored === 'freestyle') {
       return 'freestyle';
     }
@@ -220,13 +222,7 @@ function MainApp() {
     ],
   );
   const triggerHaptics = useCallback((pattern: number | number[]) => {
-    if (typeof navigator === 'undefined') {
-      return;
-    }
-    if (!('vibrate' in navigator)) {
-      return;
-    }
-    navigator.vibrate(pattern);
+    vibrate(pattern);
   }, []);
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => applyScoreDelta(prev, targetLetter, delta));

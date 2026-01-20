@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createAudioContext } from '../platform/audio';
 
 type UseAudioOptions = {
   toneFrequency: number;
@@ -62,9 +63,12 @@ export const useAudio = ({
 
   const ensureAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
+      audioContextRef.current = createAudioContext();
     }
     const context = audioContextRef.current;
+    if (!context) {
+      return null;
+    }
     if (context.state === 'suspended') {
       await context.resume();
     }
@@ -73,7 +77,7 @@ export const useAudio = ({
 
   const startTone = useCallback(async () => {
     const context = await ensureAudioContext();
-    if (oscillatorRef.current) {
+    if (!context || oscillatorRef.current) {
       return;
     }
     const { oscillator, gain } = createToneNodes(
@@ -118,6 +122,9 @@ export const useAudio = ({
     async (code: string) => {
       stopListenPlayback();
       const context = await ensureAudioContext();
+      if (!context) {
+        return;
+      }
       const { oscillator, gain } = createToneNodes(context, toneFrequency, 0);
       listenPlaybackRef.current = { oscillator, gain };
 
@@ -174,9 +181,12 @@ export const useAudio = ({
     if (soundCheckStatus !== 'idle') {
       return;
     }
+    const context = await ensureAudioContext();
+    if (!context) {
+      return;
+    }
     onTrackEvent?.('sound_check');
     setSoundCheckStatus('playing');
-    const context = await ensureAudioContext();
     const { oscillator, gain } = createToneNodes(context, toneFrequency, 0);
     const startTime = context.currentTime + 0.02;
     const duration = 0.25;
