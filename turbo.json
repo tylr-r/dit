@@ -1,0 +1,33 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["package-lock.json"],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "test:unit": {
+      "dependsOn": ["^test:unit"],
+      "outputs": []
+    },
+    "test:unit:run": {
+      "dependsOn": ["^test:unit:run"],
+      "outputs": []
+    },
+    "test:e2e": {
+      "dependsOn": ["^test:e2e"],
+      "outputs": []
+    },
+    "test:types": {
+      "dependsOn": ["^test:types"],
+      "outputs": []
+    }
+  }
+}

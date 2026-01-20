@@ -1,0 +1,13 @@
+{
+  "name": "@dit/core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "test:types": "tsc -b --pretty false"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

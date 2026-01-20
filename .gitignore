@@ -28,3 +28,4 @@ plans
 
 *.env
 *.env.*
+*.tsbuildinfo
