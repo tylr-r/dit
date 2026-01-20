@@ -1,9 +1,3 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path, SvgXml } from 'react-native-svg';
 import {
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
@@ -15,8 +9,8 @@ import {
   applyScoreDelta,
   formatWpm,
   getLettersForLevel,
-  getRandomWord,
   getRandomWeightedLetter,
+  getRandomWord,
   getWordsForLetters,
   initializeScores,
   parseProgress,
@@ -24,6 +18,12 @@ import {
   type ProgressSnapshot,
   type ScoreRecord,
 } from '@dit/core';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, SvgXml } from 'react-native-svg';
 import { GlassButton } from './components/GlassButton';
 import { GlassSurface } from './components/GlassSurface';
 import { useFirebaseService } from './firebase';
@@ -56,13 +56,12 @@ const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
-const CODE_TO_LETTER = Object.entries(MORSE_CODE).reduce<Record<string, Letter>>(
-  (acc, [letter, data]) => {
-    acc[data.code] = letter as Letter;
-    return acc;
-  },
-  {},
-);
+const CODE_TO_LETTER = Object.entries(MORSE_CODE).reduce<
+  Record<string, Letter>
+>((acc, [letter, data]) => {
+  acc[data.code] = letter as Letter;
+  return acc;
+}, {});
 
 const SCORE_INTENSITY_MAX = 15;
 const INITIAL_MAX_LEVEL = 2;
@@ -195,16 +194,10 @@ export default function App() {
   const [practiceWordIndex, setPracticeWordIndex] = useState(0);
   const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
   const [targetLetter, setTargetLetter] = useState<Letter>(() =>
-    pickNextLetter(
-      getLettersForLevel(INITIAL_MAX_LEVEL),
-      initialScores,
-    ),
+    pickNextLetter(getLettersForLevel(INITIAL_MAX_LEVEL), initialScores),
   );
   const [listenTarget, setListenTarget] = useState<Letter>(() =>
-    pickNextLetter(
-      getLettersForLevel(INITIAL_MAX_LEVEL),
-      initialScores,
-    ),
+    pickNextLetter(getLettersForLevel(INITIAL_MAX_LEVEL), initialScores),
   );
   const [mode, setMode] = useState<Mode>('practice');
   const [input, setInput] = useState('');
@@ -212,9 +205,9 @@ export default function App() {
   const [freestyleInput, setFreestyleInput] = useState('');
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
   const [freestyleWord, setFreestyleWord] = useState('');
-  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
-    'idle',
-  );
+  const [listenStatus, setListenStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
   const [listenReveal, setListenReveal] = useState<Letter | null>(null);
   const [listenPlaying, setListenPlaying] = useState(false);
   const [showHintOnce, setShowHintOnce] = useState(false);
@@ -230,9 +223,13 @@ export default function App() {
   const practiceWordStartRef = useRef<number | null>(null);
   const freestyleInputRef = useRef(freestyleInput);
   const freestyleWordModeRef = useRef(progress.wordMode);
-  const freestyleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const freestyleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const listenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wordSpaceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wordSpaceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const isPractice = mode === 'practice';
   const isFreestyle = mode === 'freestyle';
@@ -280,39 +277,42 @@ export default function App() {
     [availableLetters, availablePracticeWords],
   );
 
-  const handleRemoteProgress = useCallback((raw: unknown) => {
-    const parsed = parseProgress(raw, {
-      listenWpmMin: WPM_RANGE[0],
-      listenWpmMax: WPM_RANGE[1],
-      levelMin: 1,
-      levelMax: 4,
-    });
-    if (!parsed) {
-      return;
-    }
-    setProgress((prev) => ({
-      ...prev,
-      ...parsed,
-      scores: parsed.scores ?? prev.scores,
-    }));
-    if (
-      typeof parsed.practiceWordMode === 'boolean' &&
-      parsed.practiceWordMode !== practiceWordMode
-    ) {
-      applyPracticeWordModeState(parsed.practiceWordMode);
-    }
-    if (
-      typeof parsed.wordMode === 'boolean' &&
-      parsed.wordMode !== freestyleWordMode
-    ) {
-      handleFreestyleClear();
-    }
-  }, [
-    applyPracticeWordModeState,
-    freestyleWordMode,
-    handleFreestyleClear,
-    practiceWordMode,
-  ]);
+  const handleRemoteProgress = useCallback(
+    (raw: unknown) => {
+      const parsed = parseProgress(raw, {
+        listenWpmMin: WPM_RANGE[0],
+        listenWpmMax: WPM_RANGE[1],
+        levelMin: 1,
+        levelMax: 4,
+      });
+      if (!parsed) {
+        return;
+      }
+      setProgress((prev) => ({
+        ...prev,
+        ...parsed,
+        scores: parsed.scores ?? prev.scores,
+      }));
+      if (
+        typeof parsed.practiceWordMode === 'boolean' &&
+        parsed.practiceWordMode !== practiceWordMode
+      ) {
+        applyPracticeWordModeState(parsed.practiceWordMode);
+      }
+      if (
+        typeof parsed.wordMode === 'boolean' &&
+        parsed.wordMode !== freestyleWordMode
+      ) {
+        handleFreestyleClear();
+      }
+    },
+    [
+      applyPracticeWordModeState,
+      freestyleWordMode,
+      handleFreestyleClear,
+      practiceWordMode,
+    ],
+  );
 
   const { authReady, handleSignIn, handleSignOut, remoteLoaded, user } =
     useFirebaseSync({
@@ -405,51 +405,54 @@ export default function App() {
     if (isMatch) {
       void triggerSuccessHaptic();
     }
-    const timeout = setTimeout(() => {
-      setInput('');
-      setResult(null);
-      setShowHintOnce(false);
-      if (!practiceWordMode) {
-        setTargetLetter(
-          pickNextLetter(availableLetters, nextScores, targetLetter),
-        );
-        return;
-      }
-      if (!isMatch) {
-        return;
-      }
-      const currentWord = practiceWordRef.current;
-      if (!currentWord) {
-        const nextWord = getRandomWord(availablePracticeWords);
-        practiceWordStartRef.current = null;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setTargetLetter(nextWord[0] as Letter);
-        return;
-      }
-      const nextIndex = practiceWordIndexRef.current + 1;
-      if (nextIndex >= currentWord.length) {
-        const startTime = practiceWordStartRef.current;
-        if (startTime && currentWord.length > 0) {
-          const elapsedMs = Date.now() - startTime;
-          if (elapsedMs > 0) {
-            const nextWpm =
-              (currentWord.length / PRACTICE_WORD_UNITS) *
-              (60000 / elapsedMs);
-            setPracticeWpm(Math.round(nextWpm * 10) / 10);
-          }
+    const timeout = setTimeout(
+      () => {
+        setInput('');
+        setResult(null);
+        setShowHintOnce(false);
+        if (!practiceWordMode) {
+          setTargetLetter(
+            pickNextLetter(availableLetters, nextScores, targetLetter),
+          );
+          return;
         }
-        const nextWord = getRandomWord(availablePracticeWords, currentWord);
-        practiceWordStartRef.current = null;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setTargetLetter(nextWord[0] as Letter);
-        return;
-      }
-      const nextLetter = currentWord[nextIndex] as Letter;
-      setPracticeWordIndex(nextIndex);
-      setTargetLetter(nextLetter);
-    }, isMatch ? 700 : 900);
+        if (!isMatch) {
+          return;
+        }
+        const currentWord = practiceWordRef.current;
+        if (!currentWord) {
+          const nextWord = getRandomWord(availablePracticeWords);
+          practiceWordStartRef.current = null;
+          setPracticeWord(nextWord);
+          setPracticeWordIndex(0);
+          setTargetLetter(nextWord[0] as Letter);
+          return;
+        }
+        const nextIndex = practiceWordIndexRef.current + 1;
+        if (nextIndex >= currentWord.length) {
+          const startTime = practiceWordStartRef.current;
+          if (startTime && currentWord.length > 0) {
+            const elapsedMs = Date.now() - startTime;
+            if (elapsedMs > 0) {
+              const nextWpm =
+                (currentWord.length / PRACTICE_WORD_UNITS) *
+                (60000 / elapsedMs);
+              setPracticeWpm(Math.round(nextWpm * 10) / 10);
+            }
+          }
+          const nextWord = getRandomWord(availablePracticeWords, currentWord);
+          practiceWordStartRef.current = null;
+          setPracticeWord(nextWord);
+          setPracticeWordIndex(0);
+          setTargetLetter(nextWord[0] as Letter);
+          return;
+        }
+        const nextLetter = currentWord[nextIndex] as Letter;
+        setPracticeWordIndex(nextIndex);
+        setTargetLetter(nextLetter);
+      },
+      isMatch ? 700 : 900,
+    );
     return () => clearTimeout(timeout);
   }, [
     availableLetters,
@@ -598,9 +601,7 @@ export default function App() {
     setProgress((prev) => ({
       ...prev,
       listenWpm:
-        prev.listenWpm >= LISTEN_WPM_MAX
-          ? LISTEN_WPM_MIN
-          : prev.listenWpm + 1,
+        prev.listenWpm >= LISTEN_WPM_MAX ? LISTEN_WPM_MIN : prev.listenWpm + 1,
     }));
   }, []);
 
@@ -621,18 +622,21 @@ export default function App() {
     [progress.listenWpm],
   );
 
-  const playMorseSequence = useCallback(async (code: string) => {
-    const unitMs = listenUnitMs;
-    for (let index = 0; index < code.length; index += 1) {
-      const symbol = code[index];
-      const duration = symbol === '-' ? unitMs * 3 : unitMs;
-      await playTone(duration);
-      await sleep(duration);
-      if (index < code.length - 1) {
-        await sleep(unitMs * INTER_LETTER_UNITS);
+  const playMorseSequence = useCallback(
+    async (code: string) => {
+      const unitMs = listenUnitMs;
+      for (let index = 0; index < code.length; index += 1) {
+        const symbol = code[index];
+        const duration = symbol === '-' ? unitMs * 3 : unitMs;
+        await playTone(duration);
+        await sleep(duration);
+        if (index < code.length - 1) {
+          await sleep(unitMs * INTER_LETTER_UNITS);
+        }
       }
-    }
-  }, [listenUnitMs]);
+    },
+    [listenUnitMs],
+  );
 
   const handleListenReplay = useCallback(async () => {
     if (!isListenIdle) {
@@ -665,13 +669,16 @@ export default function App() {
         scores: nextScores,
       }));
       clearTimeoutRef(listenTimeoutRef);
-      listenTimeoutRef.current = setTimeout(() => {
-        setListenReveal(null);
-        setListenStatus('idle');
-        setListenTarget(
-          pickNextLetter(availableLetters, nextScores, listenTarget),
-        );
-      }, isMatch ? 700 : 900);
+      listenTimeoutRef.current = setTimeout(
+        () => {
+          setListenReveal(null);
+          setListenStatus('idle');
+          setListenTarget(
+            pickNextLetter(availableLetters, nextScores, listenTarget),
+          );
+        },
+        isMatch ? 700 : 900,
+      );
     },
     [availableLetters, isListenIdle, listenTarget],
   );
@@ -742,7 +749,7 @@ export default function App() {
         ? 'Ready'
         : 'Preparing auth'
       : 'Add Google client IDs';
-  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : '';
+  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : '';
   const userInitial = user
     ? userLabel
       ? userLabel[0].toUpperCase()
@@ -781,7 +788,8 @@ export default function App() {
       ? `${formatWpm(practiceWpm)} WPM`
       : null;
   const targetSymbols = practiceCode.split('');
-  const isInputOnTrack = isPractice && Boolean(input) && practiceCode.startsWith(input);
+  const isInputOnTrack =
+    isPractice && Boolean(input) && practiceCode.startsWith(input);
   const highlightCount =
     practiceStatus === 'success'
       ? targetSymbols.length
@@ -891,7 +899,12 @@ export default function App() {
               style={styles.logoButton}
               onPress={() => setShowSettings(false)}
             >
-              <SvgXml xml={LOGO_SVG} width={36} height={36} style={styles.logoImage} />
+              <SvgXml
+                xml={LOGO_SVG}
+                width={36}
+                height={36}
+                style={styles.logoImage}
+              />
             </Pressable>
             <GlassSurface
               style={styles.modeSelect}
@@ -1276,7 +1289,9 @@ export default function App() {
                           style={({ pressed }) => [
                             styles.keyboardKey,
                             !isListenIdle && styles.keyboardKeyDisabled,
-                            pressed && isListenIdle && styles.keyboardKeyPressed,
+                            pressed &&
+                              isListenIdle &&
+                              styles.keyboardKeyPressed,
                           ]}
                           disabled={!isListenIdle}
                         >
@@ -1615,12 +1630,13 @@ const styles = StyleSheet.create({
   },
   letter: {
     fontSize: 96,
-    lineHeight: 90,
+    lineHeight: 112,
     letterSpacing: 6,
     fontWeight: '500',
     textTransform: 'uppercase',
     color: COLORS.text,
     textAlign: 'center',
+    paddingVertical: 4,
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 20 },
     textShadowRadius: 60,
@@ -1810,8 +1826,6 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 999,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
     shadowColor: '#000000',
     shadowOpacity: 0.25,
     shadowRadius: 18,
