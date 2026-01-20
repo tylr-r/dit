@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -13,12 +13,19 @@ import {
   DASH_THRESHOLD,
   MORSE_CODE,
   WPM_RANGE,
+  applyScoreDelta,
   formatWpm,
-  getRandomLetter,
+  getRandomWeightedLetter,
+  initializeScores,
+  parseProgress,
   type Letter,
+  type ProgressSnapshot,
+  type ScoreRecord,
 } from '@dit/core';
 import { GlassButton } from './components/GlassButton';
 import { GlassSurface } from './components/GlassSurface';
+import { useFirebaseService } from './firebase';
+import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { startTone, stopTone, unloadTone } from './native/audio';
 import {
   triggerDashHaptic,
@@ -27,17 +34,63 @@ import {
 } from './native/haptics';
 
 const LETTERS = Object.keys(MORSE_CODE) as Letter[];
+const INITIAL_WPM = Math.round((WPM_RANGE[0] + WPM_RANGE[1]) / 2);
 
-const pickNextLetter = (previous?: Letter) =>
-  getRandomLetter(LETTERS, previous);
+const pickNextLetter = (scores: ScoreRecord, previous?: Letter) =>
+  getRandomWeightedLetter(LETTERS, scores, previous);
 
 export default function App() {
-  const [targetLetter, setTargetLetter] = useState<Letter>(() => pickNextLetter());
+  const initialScores = useMemo(() => initializeScores(), []);
+  const [progress, setProgress] = useState<ProgressSnapshot>(() => ({
+    listenWpm: INITIAL_WPM,
+    maxLevel: 2,
+    practiceWordMode: false,
+    scores: initialScores,
+    showHint: true,
+    showMnemonic: true,
+    wordMode: false,
+  }));
+  const [targetLetter, setTargetLetter] = useState<Letter>(() =>
+    pickNextLetter(initialScores),
+  );
   const [input, setInput] = useState('');
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
   const pressStartRef = useRef<number | null>(null);
+  const scoresRef = useRef(progress.scores);
   const drift = useRef(new Animated.Value(0)).current;
   const targetCode = MORSE_CODE[targetLetter].code;
+
+  const { firebaseService, isAuthRequestReady } = useFirebaseService();
+
+  const handleRemoteProgress = useCallback((raw: unknown) => {
+    const parsed = parseProgress(raw, {
+      listenWpmMin: WPM_RANGE[0],
+      listenWpmMax: WPM_RANGE[1],
+      levelMin: 1,
+      levelMax: 4,
+    });
+    if (!parsed) {
+      return;
+    }
+    setProgress((prev) => ({
+      ...prev,
+      ...parsed,
+      scores: parsed.scores ?? prev.scores,
+    }));
+  }, []);
+
+  const { authReady, handleSignIn, handleSignOut, remoteLoaded, user } =
+    useFirebaseSync({
+      firebaseService,
+      progressSnapshot: progress,
+      progressSaveDebounceMs: 900,
+      onRemoteProgress: handleRemoteProgress,
+      trackEvent: () => {},
+    });
+
+  useEffect(() => {
+    scoresRef.current = progress.scores;
+  }, [progress.scores]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -68,6 +121,16 @@ export default function App() {
       return;
     }
     const isMatch = input === targetCode;
+    const delta = isMatch ? 1 : -1;
+    const nextScores = applyScoreDelta(
+      scoresRef.current,
+      targetLetter,
+      delta,
+    );
+    setProgress((prev) => ({
+      ...prev,
+      scores: nextScores,
+    }));
     setResult(isMatch ? 'correct' : 'wrong');
     if (isMatch) {
       void triggerSuccessHaptic();
@@ -75,10 +138,10 @@ export default function App() {
     const timeout = setTimeout(() => {
       setInput('');
       setResult(null);
-      setTargetLetter((previous) => pickNextLetter(previous));
+      setTargetLetter(pickNextLetter(nextScores, targetLetter));
     }, isMatch ? 700 : 900);
     return () => clearTimeout(timeout);
-  }, [input, targetCode]);
+  }, [input, targetCode, targetLetter]);
 
   const handlePressIn = async () => {
     pressStartRef.current = Date.now();
@@ -102,10 +165,38 @@ export default function App() {
     setInput((previous) => previous + signal);
   };
 
+  const handleSkip = useCallback(() => {
+    setInput('');
+    setResult(null);
+    setTargetLetter((previous) =>
+      pickNextLetter(scoresRef.current, previous),
+    );
+  }, []);
+
   const headerWpm = useMemo(
-    () => formatWpm((WPM_RANGE[0] + WPM_RANGE[1]) / 2),
-    [],
+    () => formatWpm(progress.listenWpm),
+    [progress.listenWpm],
   );
+
+  const hasGoogleClient =
+    Boolean(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID) ||
+    Boolean(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID) ||
+    Boolean(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+  const canSignIn = isAuthRequestReady && hasGoogleClient;
+  const authLabel = authReady
+    ? user
+      ? `Signed in as ${user.displayName ?? user.email ?? 'Dit user'}`
+      : 'Sign in to sync progress'
+    : 'Checking account...';
+  const authMeta = user
+    ? remoteLoaded
+      ? 'Synced'
+      : 'Syncing...'
+    : hasGoogleClient
+      ? isAuthRequestReady
+        ? 'Ready'
+        : 'Preparing auth'
+      : 'Add Google client IDs';
 
   const driftX = drift.interpolate({
     inputRange: [0, 1],
@@ -155,6 +246,23 @@ export default function App() {
           </GlassSurface>
         </View>
 
+        <GlassSurface style={styles.authCard} intensity={32}>
+          <View style={styles.authRow}>
+            <View style={styles.authText}>
+              <Text style={styles.authLabel}>Cloud Sync</Text>
+              <Text style={styles.authStatus}>{authLabel}</Text>
+              <Text style={styles.authMeta}>{authMeta}</Text>
+            </View>
+            <GlassButton
+              label={user ? 'Sign out' : 'Sign in'}
+              onPress={user ? handleSignOut : handleSignIn}
+              style={styles.authButton}
+              labelStyle={styles.authButtonLabel}
+              disabled={!user && !canSignIn}
+            />
+          </View>
+        </GlassSurface>
+
         <GlassSurface style={styles.card} intensity={40}>
           <Text style={styles.cardLabel}>Target</Text>
           <Text style={styles.targetLetter}>{targetLetter}</Text>
@@ -190,14 +298,7 @@ export default function App() {
 
         <View style={styles.actions}>
           <GlassButton label="Clear" onPress={() => setInput('')} />
-          <GlassButton
-            label="Skip"
-            onPress={() => {
-              setInput('');
-              setResult(null);
-              setTargetLetter((previous) => pickNextLetter(previous));
-            }}
-          />
+          <GlassButton label="Skip" onPress={handleSkip} />
         </View>
       </SafeAreaView>
     </View>
@@ -213,7 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 12,
-    gap: 18,
+    gap: 16,
   },
   header: {
     flexDirection: 'row',
@@ -239,6 +340,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#0f172a',
+  },
+  authCard: {
+    paddingVertical: 12,
+  },
+  authRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  authText: {
+    flex: 1,
+  },
+  authLabel: {
+    fontSize: 11,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+    color: '#64748b',
+  },
+  authStatus: {
+    marginTop: 6,
+    fontSize: 14,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  authMeta: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  authButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  authButtonLabel: {
+    fontSize: 13,
   },
   card: {
     paddingVertical: 22,

@@ -83,13 +83,13 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 ### Phase 4: iOS App Development
 
-- [ ] Initialize Expo app in `apps/ios/`
+- [x] Initialize Expo app in `apps/ios/`
 - [ ] Configure Expo Modules for native bridging
 - [ ] Create SwiftUI components for "Liquid Glass" UI
-- [ ] Implement native haptics module (replace `navigator.vibrate`)
-- [ ] Implement native audio synthesis module (replace Web Audio API)
-- [ ] Connect to `@dit/core` for Morse logic
-- [ ] Implement Firebase Auth (Google Sign-In) for iOS
-- [ ] Implement Firebase Realtime Database sync
+- [x] Implement native haptics module (replace `navigator.vibrate`)
+- [x] Implement native audio synthesis module (replace Web Audio API)
+- [x] Connect to `@dit/core` for Morse logic
+- [x] Implement Firebase Auth (Google Sign-In) for iOS
+- [x] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission
