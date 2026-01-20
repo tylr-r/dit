@@ -88,7 +88,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
   - [x] Create local `modules/dit-native` Expo module with Swift stubs
   - [x] Wire JS fallbacks for audio/haptics/glass view
   - [x] Patch Expo constants/Xcode scripts to handle spaces in repo path
-- [ ] Bring up iOS build + Metro in pnpm workspace
+- [x] Bring up iOS build + Metro in pnpm workspace
   - [x] Switch pnpm to hoisted node linker for Metro resolution
   - [x] Add Expo runtime deps (`expo-asset`, `expo-file-system`, `expo-font`, `expo-keep-awake`, `expo-constants`, `expo-modules-core`, `expo-modules-autolinking`, `@babel/runtime`)
   - [x] Confirm `expo run:ios` succeeds end-to-end without Metro errors
@@ -96,11 +96,20 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [x] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
-- [ ] Implement Firebase Auth (Google Sign-In) for iOS
+- [x] Implement Firebase Auth (Google Sign-In) for iOS
   - [x] Base Auth + Google OAuth flow wired (expo-auth-session + Firebase JS SDK)
   - [x] Add AsyncStorage dependency
-  - [ ] Fix RN Auth init (Firebase JS SDK lacks `firebase/auth/react-native`; pick compat vs web persistence)
-  - [ ] Use Firebase compat auth for iOS (decision made; implement + adjust init)
+  - [x] Fix RN Auth init (Firebase JS SDK lacks `firebase/auth/react-native`; pick compat vs web persistence)
+  - [x] Use Firebase compat auth for iOS (decision made; implement + adjust init)
+- [x] Align iOS UI with mobile web baseline
+  - [x] Match top bar controls (logo, mode selector, settings)
+  - [x] Add settings panel controls (levels, words, listen speed, sound check)
+  - [x] Add reference modal grid
+  - [x] Implement basic mode switching (practice, freestyle, listen)
+  - [x] Add listen mode keyboard + playback controls
+  - [x] Replace `expo-av` with `expo-audio` fallback
+  - [x] Swap to `react-native-safe-area-context`
+  - [x] Wire iOS `GoogleService-Info.plist` in Expo config
 - [x] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission
