@@ -411,9 +411,11 @@ export default function App() {
         setResult(null);
         setShowHintOnce(false);
         if (!practiceWordMode) {
-          setTargetLetter(
-            pickNextLetter(availableLetters, nextScores, targetLetter),
-          );
+          if (isMatch) {
+            setTargetLetter(
+              pickNextLetter(availableLetters, nextScores, targetLetter),
+            );
+          }
           return;
         }
         if (!isMatch) {
