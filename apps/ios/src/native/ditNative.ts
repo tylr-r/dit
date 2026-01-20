@@ -1,4 +1,4 @@
-import { requireOptionalNativeModule, requireOptionalNativeViewManager } from 'expo-modules-core';
+import { requireNativeViewManager, requireOptionalNativeModule } from 'expo-modules-core';
 import type { ComponentType } from 'react';
 import type { ViewProps } from 'react-native';
 
@@ -14,6 +14,10 @@ type NativeGlassViewProps = ViewProps & {
 };
 
 export const DitNative = requireOptionalNativeModule<DitNativeModule>('DitNative');
-export const NativeGlassView = (requireOptionalNativeViewManager(
-  'DitGlassView',
-) as ComponentType<NativeGlassViewProps> | null);
+export const NativeGlassView = (() => {
+  try {
+    return requireNativeViewManager<NativeGlassViewProps>('DitGlassView');
+  } catch {
+    return null;
+  }
+})();

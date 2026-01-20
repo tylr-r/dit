@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "modules/*"
 onlyBuiltDependencies:
   - esbuild
   - protobufjs

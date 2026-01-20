@@ -2,31 +2,47 @@ import AVFoundation
 import ExpoModulesCore
 import UIKit
 
-public class DitNativeModule: Module {
+public final class DitNativeModule: Module {
   private let engine = AVAudioEngine()
   private var sourceNode: AVAudioSourceNode?
   private var phase: Float = 0
   private var isToneActive = false
+  private var sampleRate: Float = 44_100
   private let frequency: Float = 640
-  private let sampleRate: Float = Float(AVAudioSession.sharedInstance().sampleRate)
+  private let amplitude: Float = 0.1
 
   public func definition() -> ModuleDefinition {
     Name("DitNative")
-    AsyncFunction("startTone") { [weak self] (resolve, reject) in
+
+    AsyncFunction("startTone") { [weak self] in
       self?.startTone()
-      resolve(())
     }
-    AsyncFunction("stopTone") { [weak self] (resolve, reject) in
+    .runOnQueue(.main)
+
+    AsyncFunction("stopTone") { [weak self] in
       self?.stopTone()
-      resolve(())
     }
-    AsyncFunction("playTone") { [weak self] (durationMs: Double, resolve, reject) in
+    .runOnQueue(.main)
+
+    AsyncFunction("playTone") { [weak self] (durationMs: Double) in
       self?.playTone(durationMs: durationMs)
-      resolve(())
     }
-    AsyncFunction("triggerHaptic") { [weak self] (kind: String, resolve, reject) in
+    .runOnQueue(.main)
+
+    AsyncFunction("triggerHaptic") { [weak self] (kind: String) in
       self?.triggerHaptic(kind: kind)
-      resolve(())
+    }
+    .runOnQueue(.main)
+  }
+
+  private func configureAudioSession() {
+    let session = AVAudioSession.sharedInstance()
+    do {
+      try session.setCategory(.playback, options: [.mixWithOthers])
+      try session.setActive(true)
+      sampleRate = Float(session.sampleRate)
+    } catch {
+      sampleRate = 44_100
     }
   }
 
@@ -34,11 +50,13 @@ public class DitNativeModule: Module {
     guard sourceNode == nil else {
       return
     }
+    configureAudioSession()
     let format = AVAudioFormat(standardFormatWithSampleRate: Double(sampleRate), channels: 1)!
     sourceNode = AVAudioSourceNode { [weak self] _, _, frameCount, audioBufferList in
       guard let self = self else {
         return noErr
       }
+      let isActive = self.isToneActive
       let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
       for frame in 0 ..< Int(frameCount) {
         let sample = sinf(self.phase * 2 * .pi * self.frequency / self.sampleRate)
@@ -46,7 +64,7 @@ public class DitNativeModule: Module {
         if self.phase >= self.sampleRate {
           self.phase -= self.sampleRate
         }
-        let value = sample * 0.1
+        let value: Float = isActive ? sample * self.amplitude : 0
         for buffer in ablPointer {
           let pointer = buffer.mData!.assumingMemoryBound(to: Float.self)
           pointer[frame] = value
@@ -56,22 +74,18 @@ public class DitNativeModule: Module {
     }
     engine.attach(sourceNode!)
     engine.connect(sourceNode!, to: engine.mainMixerNode, format: format)
+    engine.mainMixerNode.outputVolume = 1.0
+    engine.prepare()
     try? engine.start()
   }
 
   private func startTone() {
-    guard !isToneActive else {
-      return
-    }
     ensureNode()
-    engine.mainMixerNode.outputVolume = 0.08
+    phase = 0
     isToneActive = true
   }
 
   private func stopTone() {
-    guard isToneActive else {
-      return
-    }
     isToneActive = false
   }
 
@@ -83,22 +97,19 @@ public class DitNativeModule: Module {
   }
 
   private func triggerHaptic(kind: String) {
-    let generator: UIFeedbackGenerator
     switch kind {
     case "dash":
-      generator = UIImpactFeedbackGenerator(style: .medium)
+      let generator = UIImpactFeedbackGenerator(style: .medium)
+      generator.prepare()
+      generator.impactOccurred()
     case "success":
-      generator = UINotificationFeedbackGenerator()
+      let generator = UINotificationFeedbackGenerator()
+      generator.prepare()
+      generator.notificationOccurred(.success)
     default:
-      generator = UIImpactFeedbackGenerator(style: .light)
-    }
-    generator.prepare()
-    if let notification = generator as? UINotificationFeedbackGenerator {
-      notification.notificationOccurred(.success)
-      return
-    }
-    if let impact = generator as? UIImpactFeedbackGenerator {
-      impact.impactOccurred()
+      let generator = UIImpactFeedbackGenerator(style: .light)
+      generator.prepare()
+      generator.impactOccurred()
     }
   }
 }

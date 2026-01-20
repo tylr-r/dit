@@ -7,8 +7,10 @@ import {
   signInWithCredential,
   signOut,
 } from 'firebase/auth';
+import { getReactNativePersistence, initializeAuth } from 'firebase/auth/react-native';
 import { get, getDatabase, ref, set } from 'firebase/database';
 import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 
@@ -35,7 +37,15 @@ if (__DEV__ && missingFirebaseKeys.length > 0) {
 }
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    return getAuth(app);
+  }
+})();
 const database = getDatabase(app);
 const googleProvider = new GoogleAuthProvider();
 

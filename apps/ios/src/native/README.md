@@ -9,7 +9,7 @@ This folder tracks the optional native implementation that Expo modules can surf
 
 ## Expo module setup
 
-1. Run `npx expo-module-scripts init` inside `apps/ios` to scaffold an iOS native module (or use `npx expo prebuild --platform ios` if you need native project files).
+1. Run `pnpm --filter @dit/ios exec expo prebuild --platform ios` to generate the native project files (already done in this repo).
 2. Implement a Swift class that exposes the following methods via `@objc`:
    ```swift
    @objc func startTone(_ resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
@@ -17,8 +17,8 @@ This folder tracks the optional native implementation that Expo modules can surf
    @objc func playTone(_ durationMs: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
    @objc func triggerHaptic(_ kind: NSString, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
    ```
-3. Register the module under the name `DitNative` so `requireOptionalNativeModule('DitNative')` resolves. The Swift source is staged under `apps/ios/native/ios/DitNativeModule.swift`.
-4. The view manager stub lives in `apps/ios/native/ios/DitGlassView.swift`; it exports `DitGlassView` with an `intensity` prop and renders a native blur/gradient surface before optionally injecting SwiftUI content.
+3. The local module lives in `modules/dit-native` and is included via workspace dependencies (`dit-native` in `apps/ios/package.json`).
+4. The Swift source lives in `modules/dit-native/ios` and exposes `DitNativeModule` and `DitGlassViewModule`, which register the `DitNative` module and `DitGlassView` view manager.
 
 ## Runtime behavior
 

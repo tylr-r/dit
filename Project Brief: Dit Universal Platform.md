@@ -85,11 +85,22 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 - [x] Initialize Expo app in `apps/ios/`
 - [x] Configure Expo Modules for native bridging
+  - [x] Create local `modules/dit-native` Expo module with Swift stubs
+  - [x] Wire JS fallbacks for audio/haptics/glass view
+  - [x] Patch Expo constants/Xcode scripts to handle spaces in repo path
+- [ ] Bring up iOS build + Metro in pnpm workspace
+  - [x] Switch pnpm to hoisted node linker for Metro resolution
+  - [x] Add Expo runtime deps (`expo-asset`, `expo-file-system`, `expo-font`, `expo-keep-awake`, `expo-constants`, `expo-modules-core`, `expo-modules-autolinking`, `@babel/runtime`)
+  - [ ] Confirm `expo run:ios` succeeds end-to-end without Metro errors
 - [ ] Create SwiftUI components for "Liquid Glass" UI
 - [x] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
-- [x] Implement Firebase Auth (Google Sign-In) for iOS
+- [ ] Implement Firebase Auth (Google Sign-In) for iOS
+  - [x] Base Auth + Google OAuth flow wired (expo-auth-session + Firebase JS SDK)
+  - [x] Add AsyncStorage dependency
+  - [ ] Fix RN Auth init (Firebase JS SDK lacks `firebase/auth/react-native`; pick compat vs web persistence)
+  - [ ] Use Firebase compat auth for iOS (decision made; implement + adjust init)
 - [x] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission

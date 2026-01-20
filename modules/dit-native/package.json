@@ -1,0 +1,22 @@
+{
+  "name": "dit-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dit native module bridge",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "keywords": ["expo-module", "react-native", "dit"],
+  "peerDependencies": {
+    "expo": "*",
+    "expo-modules-core": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}
