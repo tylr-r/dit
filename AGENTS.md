@@ -23,6 +23,7 @@
 - TypeScript + React codebase; prefer 2-space indentation, single quotes, and no semicolons.
 - Exported components should include concise JSDoc (see `STYLE_GUIDE.md`).
 - Component files use `PascalCase.tsx`; hooks follow the `useThing` naming convention.
+- Reference `APP_BEHAVIOR.md` when changing app logic or flows to keep behavior consistent across platforms.
 
 ## Testing Guidelines
 
