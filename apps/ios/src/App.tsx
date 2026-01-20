@@ -8,13 +8,16 @@ import {
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   INTER_LETTER_UNITS,
+  INTER_WORD_UNITS,
   MORSE_CODE,
   UNIT_TIME_MS,
   WPM_RANGE,
   applyScoreDelta,
   formatWpm,
   getLettersForLevel,
+  getRandomWord,
   getRandomWeightedLetter,
+  getWordsForLetters,
   initializeScores,
   parseProgress,
   type Letter,
@@ -65,6 +68,9 @@ const SCORE_INTENSITY_MAX = 15;
 const INITIAL_MAX_LEVEL = 2;
 const [LISTEN_WPM_MIN, LISTEN_WPM_MAX] = WPM_RANGE;
 const INITIAL_WPM = Math.round((WPM_RANGE[0] + WPM_RANGE[1]) / 2);
+const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS;
+const WORD_GAP_EXTRA_MS = Math.max(WORD_GAP_MS - DEBOUNCE_DELAY, 0);
+const PRACTICE_WORD_UNITS = 5;
 const LOGO_SVG = `<svg width="806" height="806" viewBox="0 0 806 806" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M92.1113 255.555C74.9852 291.601 63.9443 331.099 60.3145 372.72L4.51855 367.913C8.72293 319.533 21.5381 273.619 41.4258 231.712L92.1113 255.555Z" fill="white"/>
 <path d="M260.393 89.8623C224.063 106.377 190.159 129.454 160.553 158.931L120.998 119.287C155.401 85.0127 194.798 58.1747 237.017 38.9598L260.393 89.8623Z" fill="white"/>
@@ -179,6 +185,15 @@ export default function App() {
     () => getLettersForLevel(progress.maxLevel),
     [progress.maxLevel],
   );
+  const availablePracticeWords = useMemo(
+    () => getWordsForLetters(availableLetters),
+    [availableLetters],
+  );
+  const [practiceWord, setPracticeWord] = useState(() =>
+    getRandomWord(getWordsForLetters(getLettersForLevel(INITIAL_MAX_LEVEL))),
+  );
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0);
+  const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
   const [targetLetter, setTargetLetter] = useState<Letter>(() =>
     pickNextLetter(
       getLettersForLevel(INITIAL_MAX_LEVEL),
@@ -196,6 +211,7 @@ export default function App() {
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
   const [freestyleInput, setFreestyleInput] = useState('');
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
+  const [freestyleWord, setFreestyleWord] = useState('');
   const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
   );
@@ -209,18 +225,60 @@ export default function App() {
   );
   const pressStartRef = useRef<number | null>(null);
   const scoresRef = useRef(progress.scores);
+  const practiceWordRef = useRef(practiceWord);
+  const practiceWordIndexRef = useRef(practiceWordIndex);
+  const practiceWordStartRef = useRef<number | null>(null);
+  const freestyleInputRef = useRef(freestyleInput);
+  const freestyleWordModeRef = useRef(progress.wordMode);
   const freestyleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listenTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wordSpaceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isPractice = mode === 'practice';
   const isFreestyle = mode === 'freestyle';
   const isListen = mode === 'listen';
   const isListenIdle = isListen && listenStatus === 'idle' && !listenPlaying;
+  const practiceWordMode = progress.practiceWordMode;
+  const freestyleWordMode = progress.wordMode;
 
   const practiceCode = MORSE_CODE[targetLetter].code;
   const listenCode = MORSE_CODE[listenTarget].code;
 
   const { firebaseService, isAuthRequestReady } = useFirebaseService();
+
+  const handleFreestyleClear = useCallback(() => {
+    clearTimeoutRef(freestyleTimeoutRef);
+    clearTimeoutRef(wordSpaceTimeoutRef);
+    freestyleInputRef.current = '';
+    setFreestyleInput('');
+    setFreestyleResult(null);
+    setFreestyleWord('');
+  }, []);
+
+  const applyPracticeWordModeState = useCallback(
+    (nextValue: boolean) => {
+      practiceWordStartRef.current = null;
+      setPracticeWpm(null);
+      setInput('');
+      setResult(null);
+      setShowHintOnce(false);
+      if (!nextValue) {
+        setPracticeWordIndex(0);
+        setTargetLetter((previous) =>
+          pickNextLetter(availableLetters, scoresRef.current, previous),
+        );
+        return;
+      }
+      const nextWord = getRandomWord(
+        availablePracticeWords,
+        practiceWordRef.current,
+      );
+      setPracticeWord(nextWord);
+      setPracticeWordIndex(0);
+      setTargetLetter(nextWord[0] as Letter);
+    },
+    [availableLetters, availablePracticeWords],
+  );
 
   const handleRemoteProgress = useCallback((raw: unknown) => {
     const parsed = parseProgress(raw, {
@@ -237,7 +295,24 @@ export default function App() {
       ...parsed,
       scores: parsed.scores ?? prev.scores,
     }));
-  }, []);
+    if (
+      typeof parsed.practiceWordMode === 'boolean' &&
+      parsed.practiceWordMode !== practiceWordMode
+    ) {
+      applyPracticeWordModeState(parsed.practiceWordMode);
+    }
+    if (
+      typeof parsed.wordMode === 'boolean' &&
+      parsed.wordMode !== freestyleWordMode
+    ) {
+      handleFreestyleClear();
+    }
+  }, [
+    applyPracticeWordModeState,
+    freestyleWordMode,
+    handleFreestyleClear,
+    practiceWordMode,
+  ]);
 
   const { authReady, handleSignIn, handleSignOut, remoteLoaded, user } =
     useFirebaseSync({
@@ -252,16 +327,62 @@ export default function App() {
     scoresRef.current = progress.scores;
   }, [progress.scores]);
 
+  useEffect(() => {
+    practiceWordRef.current = practiceWord;
+  }, [practiceWord]);
+
+  useEffect(() => {
+    practiceWordIndexRef.current = practiceWordIndex;
+  }, [practiceWordIndex]);
+
+  useEffect(() => {
+    freestyleInputRef.current = freestyleInput;
+  }, [freestyleInput]);
+
+  useEffect(() => {
+    freestyleWordModeRef.current = freestyleWordMode;
+  }, [freestyleWordMode]);
+
   useEffect(() => () => void unloadTone(), []);
 
   useEffect(() => {
-    if (!availableLetters.includes(targetLetter)) {
+    if (practiceWordMode) {
+      const currentWord = practiceWordRef.current;
+      const isWordValid =
+        currentWord &&
+        currentWord
+          .split('')
+          .every((letter) => availableLetters.includes(letter as Letter));
+      if (!isWordValid) {
+        const nextWord = getRandomWord(availablePracticeWords);
+        practiceWordStartRef.current = null;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setTargetLetter(nextWord[0] as Letter);
+      } else {
+        const nextIndex = Math.min(
+          practiceWordIndexRef.current,
+          currentWord.length - 1,
+        );
+        const nextLetter = currentWord[nextIndex] as Letter;
+        if (nextLetter !== targetLetter) {
+          setPracticeWordIndex(nextIndex);
+          setTargetLetter(nextLetter);
+        }
+      }
+    } else if (!availableLetters.includes(targetLetter)) {
       setTargetLetter(pickNextLetter(availableLetters, scoresRef.current));
     }
     if (!availableLetters.includes(listenTarget)) {
       setListenTarget(pickNextLetter(availableLetters, scoresRef.current));
     }
-  }, [availableLetters, listenTarget, targetLetter]);
+  }, [
+    availableLetters,
+    availablePracticeWords,
+    listenTarget,
+    practiceWordMode,
+    targetLetter,
+  ]);
 
   useEffect(() => {
     if (!isPractice) {
@@ -288,37 +409,105 @@ export default function App() {
       setInput('');
       setResult(null);
       setShowHintOnce(false);
-      setTargetLetter(
-        pickNextLetter(availableLetters, nextScores, targetLetter),
-      );
+      if (!practiceWordMode) {
+        setTargetLetter(
+          pickNextLetter(availableLetters, nextScores, targetLetter),
+        );
+        return;
+      }
+      if (!isMatch) {
+        return;
+      }
+      const currentWord = practiceWordRef.current;
+      if (!currentWord) {
+        const nextWord = getRandomWord(availablePracticeWords);
+        practiceWordStartRef.current = null;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setTargetLetter(nextWord[0] as Letter);
+        return;
+      }
+      const nextIndex = practiceWordIndexRef.current + 1;
+      if (nextIndex >= currentWord.length) {
+        const startTime = practiceWordStartRef.current;
+        if (startTime && currentWord.length > 0) {
+          const elapsedMs = Date.now() - startTime;
+          if (elapsedMs > 0) {
+            const nextWpm =
+              (currentWord.length / PRACTICE_WORD_UNITS) *
+              (60000 / elapsedMs);
+            setPracticeWpm(Math.round(nextWpm * 10) / 10);
+          }
+        }
+        const nextWord = getRandomWord(availablePracticeWords, currentWord);
+        practiceWordStartRef.current = null;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setTargetLetter(nextWord[0] as Letter);
+        return;
+      }
+      const nextLetter = currentWord[nextIndex] as Letter;
+      setPracticeWordIndex(nextIndex);
+      setTargetLetter(nextLetter);
     }, isMatch ? 700 : 900);
     return () => clearTimeout(timeout);
-  }, [availableLetters, input, isPractice, practiceCode, targetLetter]);
+  }, [
+    availableLetters,
+    availablePracticeWords,
+    input,
+    isPractice,
+    practiceCode,
+    practiceWordMode,
+    targetLetter,
+  ]);
 
   useEffect(() => {
     if (!isFreestyle) {
       clearTimeoutRef(freestyleTimeoutRef);
+      clearTimeoutRef(wordSpaceTimeoutRef);
       return;
     }
     if (!freestyleInput) {
-      setFreestyleResult(null);
       return;
     }
     clearTimeoutRef(freestyleTimeoutRef);
     freestyleTimeoutRef.current = setTimeout(() => {
       const letter = CODE_TO_LETTER[freestyleInput];
       setFreestyleResult(letter ?? '?');
+      freestyleInputRef.current = '';
+      setFreestyleInput('');
+      if (letter && freestyleWordModeRef.current) {
+        setFreestyleWord((prev) => prev + letter);
+        clearTimeoutRef(wordSpaceTimeoutRef);
+        wordSpaceTimeoutRef.current = setTimeout(() => {
+          if (!freestyleWordModeRef.current) {
+            return;
+          }
+          if (freestyleInputRef.current) {
+            return;
+          }
+          setFreestyleWord((prev) => {
+            if (!prev || prev.endsWith(' ')) {
+              return prev;
+            }
+            return `${prev} `;
+          });
+        }, WORD_GAP_EXTRA_MS);
+      }
     }, DEBOUNCE_DELAY);
     return () => clearTimeoutRef(freestyleTimeoutRef);
   }, [freestyleInput, isFreestyle]);
 
   useEffect(() => () => clearTimeoutRef(listenTimeoutRef), []);
 
+  useEffect(() => () => clearTimeoutRef(wordSpaceTimeoutRef), []);
+
   const handlePressIn = async () => {
     if (isListen) {
       return;
     }
     pressStartRef.current = Date.now();
+    clearTimeoutRef(wordSpaceTimeoutRef);
     await startTone();
   };
 
@@ -340,6 +529,14 @@ export default function App() {
       void triggerDotHaptic();
     }
     if (isPractice) {
+      if (
+        practiceWordMode &&
+        practiceWordIndexRef.current === 0 &&
+        practiceWordStartRef.current === null &&
+        practiceWordRef.current
+      ) {
+        practiceWordStartRef.current = Date.now();
+      }
       setInput((previous) => previous + signal);
     } else if (isFreestyle) {
       setFreestyleInput((previous) => previous + signal);
@@ -347,31 +544,55 @@ export default function App() {
     }
   };
 
-  const handleSkip = useCallback(() => {
-    setInput('');
-    setResult(null);
-    setShowHintOnce(false);
-    setTargetLetter((previous) =>
-      pickNextLetter(availableLetters, scoresRef.current, previous),
-    );
-  }, [availableLetters]);
-
-  const handleFreestyleClear = useCallback(() => {
-    setFreestyleInput('');
-    setFreestyleResult(null);
-  }, []);
-
   const handleMaxLevelCycle = useCallback(() => {
-    setProgress((prev) => {
-      const currentIndex = LEVELS.indexOf(prev.maxLevel);
-      const nextIndex =
-        currentIndex >= 0 ? (currentIndex + 1) % LEVELS.length : 0;
-      return {
+    const currentIndex = LEVELS.indexOf(progress.maxLevel);
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % LEVELS.length : 0;
+    const nextLevel = LEVELS[nextIndex];
+    setProgress((prev) => ({
+      ...prev,
+      maxLevel: nextLevel,
+    }));
+    if (!isPractice) {
+      return;
+    }
+    const nextLetters = getLettersForLevel(nextLevel);
+    if (practiceWordMode) {
+      const nextWord = getRandomWord(
+        getWordsForLetters(nextLetters),
+        practiceWordRef.current,
+      );
+      practiceWordStartRef.current = null;
+      setPracticeWord(nextWord);
+      setPracticeWordIndex(0);
+      setTargetLetter(nextWord[0] as Letter);
+      return;
+    }
+    if (!nextLetters.includes(targetLetter)) {
+      setTargetLetter(
+        pickNextLetter(nextLetters, scoresRef.current, targetLetter),
+      );
+    }
+  }, [isPractice, practiceWordMode, progress.maxLevel, targetLetter]);
+
+  const handlePracticeWordModeChange = useCallback(
+    (nextValue: boolean) => {
+      setProgress((prev) => ({
         ...prev,
-        maxLevel: LEVELS[nextIndex],
-      };
-    });
-  }, []);
+        practiceWordMode: nextValue,
+      }));
+      applyPracticeWordModeState(nextValue);
+    },
+    [applyPracticeWordModeState],
+  );
+
+  const handleWordModeToggle = useCallback(() => {
+    setProgress((prev) => ({
+      ...prev,
+      wordMode: !prev.wordMode,
+    }));
+    handleFreestyleClear();
+  }, [handleFreestyleClear]);
 
   const handleListenWpmCycle = useCallback(() => {
     setProgress((prev) => ({
@@ -395,8 +616,13 @@ export default function App() {
     }
   }, [soundCheckStatus]);
 
+  const listenUnitMs = useMemo(
+    () => Math.max(Math.round(1200 / progress.listenWpm), 40),
+    [progress.listenWpm],
+  );
+
   const playMorseSequence = useCallback(async (code: string) => {
-    const unitMs = UNIT_TIME_MS;
+    const unitMs = listenUnitMs;
     for (let index = 0; index < code.length; index += 1) {
       const symbol = code[index];
       const duration = symbol === '-' ? unitMs * 3 : unitMs;
@@ -406,7 +632,7 @@ export default function App() {
         await sleep(unitMs * INTER_LETTER_UNITS);
       }
     }
-  }, []);
+  }, [listenUnitMs]);
 
   const handleListenReplay = useCallback(async () => {
     if (!isListenIdle) {
@@ -460,18 +686,34 @@ export default function App() {
       setResult(null);
       setFreestyleInput('');
       setFreestyleResult(null);
+      setFreestyleWord('');
       setListenStatus('idle');
       setListenReveal(null);
       setListenPlaying(false);
       clearTimeoutRef(freestyleTimeoutRef);
       clearTimeoutRef(listenTimeoutRef);
+      clearTimeoutRef(wordSpaceTimeoutRef);
+      practiceWordStartRef.current = null;
+      if (nextMode !== 'practice') {
+        setPracticeWpm(null);
+      }
       if (nextMode === 'listen') {
         setListenTarget(
           pickNextLetter(availableLetters, scoresRef.current, listenTarget),
         );
+        return;
+      }
+      if (nextMode === 'practice' && practiceWordMode) {
+        const nextWord = getRandomWord(
+          availablePracticeWords,
+          practiceWordRef.current,
+        );
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setTargetLetter(nextWord[0] as Letter);
       }
     },
-    [availableLetters, listenTarget],
+    [availableLetters, availablePracticeWords, listenTarget, practiceWordMode],
   );
 
   const handleResetScores = useCallback(() => {
@@ -516,7 +758,7 @@ export default function App() {
         ? 'error'
         : 'idle'
     : 'idle';
-  const practiceStatusText =
+  const basePracticeStatusText =
     practiceStatus === 'success'
       ? 'Correct'
       : practiceStatus === 'error'
@@ -524,9 +766,19 @@ export default function App() {
         : mnemonicVisible
           ? MORSE_CODE[targetLetter].mnemonic
           : ' ';
+  const practiceProgressText =
+    isPractice &&
+    practiceWordMode &&
+    practiceStatus === 'idle' &&
+    !hintVisible &&
+    !mnemonicVisible &&
+    practiceWord
+      ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
+      : null;
+  const practiceStatusText = practiceProgressText ?? basePracticeStatusText;
   const practiceWpmText =
-    isPractice && progress.practiceWordMode
-      ? `${formatWpm(progress.listenWpm)} WPM`
+    isPractice && practiceWordMode && practiceWpm !== null
+      ? `${formatWpm(practiceWpm)} WPM`
       : null;
   const targetSymbols = practiceCode.split('');
   const isInputOnTrack = isPractice && Boolean(input) && practiceCode.startsWith(input);
@@ -552,13 +804,30 @@ export default function App() {
     );
   });
 
+  const isLetterResult = freestyleResult
+    ? /^[A-Z0-9]$/.test(freestyleResult)
+    : false;
   const freestyleStatus = freestyleResult
-    ? `Result ${freestyleResult}`
+    ? isLetterResult
+      ? freestyleWordMode
+        ? `Added ${freestyleResult}`
+        : `Result ${freestyleResult}`
+      : 'No match'
     : freestyleInput
       ? `Input ${freestyleInput}`
-      : 'Tap and pause';
-  const freestyleDisplay = freestyleResult ?? '';
-  const hasFreestyleDisplay = Boolean(freestyleResult);
+      : freestyleWordMode && freestyleWord
+        ? `Word ${freestyleWord}`
+        : 'Tap and pause';
+  const freestyleDisplay = freestyleWordMode
+    ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
+    : freestyleResult
+      ? isLetterResult
+        ? freestyleResult
+        : '?'
+      : '';
+  const hasFreestyleDisplay = freestyleWordMode
+    ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
+    : Boolean(freestyleResult);
 
   const listenDisplay = listenReveal ?? '?';
   const listenStatusText =
@@ -567,6 +836,8 @@ export default function App() {
       : listenStatus === 'error'
         ? 'Incorrect'
         : 'Listen and type the character';
+
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];
 
   const renderReferenceCard = (char: Letter) => {
     const scoreValue = progress.scores[char] ?? 0;
@@ -745,25 +1016,20 @@ export default function App() {
                   </Pressable>
                   {isFreestyle ? (
                     <Pressable
-                      onPress={() =>
-                        setProgress((prev) => ({
-                          ...prev,
-                          wordMode: !prev.wordMode,
-                        }))
-                      }
+                      onPress={handleWordModeToggle}
                       style={styles.toggleRow}
                     >
                       <Text style={styles.toggleLabel}>Word mode</Text>
                       <View
                         style={[
                           styles.toggleTrack,
-                          progress.wordMode && styles.toggleTrackActive,
+                          freestyleWordMode && styles.toggleTrackActive,
                         ]}
                       >
                         <View
                           style={[
                             styles.toggleThumb,
-                            progress.wordMode && styles.toggleThumbActive,
+                            freestyleWordMode && styles.toggleThumbActive,
                           ]}
                         />
                       </View>
@@ -788,10 +1054,7 @@ export default function App() {
                       {isPractice ? (
                         <Pressable
                           onPress={() =>
-                            setProgress((prev) => ({
-                              ...prev,
-                              practiceWordMode: !prev.practiceWordMode,
-                            }))
+                            handlePracticeWordModeChange(!practiceWordMode)
                           }
                           style={styles.toggleRow}
                         >
@@ -799,15 +1062,13 @@ export default function App() {
                           <View
                             style={[
                               styles.toggleTrack,
-                              progress.practiceWordMode &&
-                                styles.toggleTrackActive,
+                              practiceWordMode && styles.toggleTrackActive,
                             ]}
                           >
                             <View
                               style={[
                                 styles.toggleThumb,
-                                progress.practiceWordMode &&
-                                  styles.toggleThumbActive,
+                                practiceWordMode && styles.toggleThumbActive,
                               ]}
                             />
                           </View>
@@ -919,15 +1180,39 @@ export default function App() {
               </>
             ) : (
               <>
-                <Text
-                  style={[
-                    styles.letter,
-                    practiceStatus === 'success' && styles.letterSuccess,
-                    practiceStatus === 'error' && styles.letterError,
-                  ]}
-                >
-                  {targetLetter}
-                </Text>
+                {practiceWordMode ? (
+                  <View style={styles.wordDisplay}>
+                    {wordCharacters.map((char, index) => {
+                      const isDone = index < practiceWordIndex;
+                      const isActive = index === practiceWordIndex;
+                      return (
+                        <Text
+                          key={`${char}-${index}`}
+                          style={[
+                            styles.wordLetter,
+                            isDone && styles.wordLetterDone,
+                            isActive && styles.wordLetterActive,
+                            isActive &&
+                              practiceStatus === 'error' &&
+                              styles.wordLetterError,
+                          ]}
+                        >
+                          {char}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.letter,
+                      practiceStatus === 'success' && styles.letterSuccess,
+                      practiceStatus === 'error' && styles.letterError,
+                    ]}
+                  >
+                    {targetLetter}
+                  </Text>
+                )}
                 {hintVisible ? (
                   <View style={styles.progress}>{pips}</View>
                 ) : (
@@ -1003,7 +1288,11 @@ export default function App() {
                 </View>
               </View>
             ) : (
-              <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+              <Pressable
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                style={styles.morsePressable}
+              >
                 {({ pressed }) => (
                   <View style={styles.morseWrap}>
                     <View
@@ -1036,12 +1325,6 @@ export default function App() {
                 )}
               </Pressable>
             )}
-            {isPractice ? (
-              <View style={styles.actions}>
-                <GlassButton label="Clear" onPress={() => setInput('')} />
-                <GlassButton label="Skip" onPress={handleSkip} />
-              </View>
-            ) : null}
           </View>
         </SafeAreaView>
         {showReference ? (
@@ -1351,6 +1634,30 @@ const styles = StyleSheet.create({
   letterPlaceholder: {
     opacity: 0.35,
   },
+  wordDisplay: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  wordLetter: {
+    fontSize: 26,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: COLORS.muted,
+    fontWeight: '600',
+  },
+  wordLetterActive: {
+    color: COLORS.text,
+  },
+  wordLetterDone: {
+    color: COLORS.accent,
+  },
+  wordLetterError: {
+    color: COLORS.error,
+  },
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1478,6 +1785,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  morsePressable: {
+    width: '100%',
+    alignItems: 'center',
+  },
   morseGlow: {
     position: 'absolute',
     left: 8,
@@ -1515,11 +1826,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'center',
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,

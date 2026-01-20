@@ -4,6 +4,8 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeGlassView } from '../native/ditNative';
 
+const USE_NATIVE_GLASS = false;
+
 type GlassSurfaceProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
@@ -23,7 +25,7 @@ export const GlassSurface = ({
       ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)']
       : ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)'];
   const blurTint = tint === 'dark' ? 'dark' : 'light';
-  if (NativeGlassView) {
+  if (NativeGlassView && USE_NATIVE_GLASS) {
     return (
       <NativeGlassView style={[styles.container, style]} intensity={intensity}>
         <View style={[styles.content, contentStyle]}>{children}</View>
@@ -32,12 +34,18 @@ export const GlassSurface = ({
   }
   return (
     <View style={[styles.container, style]}>
-      <BlurView intensity={intensity} tint={blurTint} style={StyleSheet.absoluteFill} />
+      <BlurView
+        intensity={intensity}
+        tint={blurTint}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <LinearGradient
         colors={gradientColors}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
       <View style={[styles.content, contentStyle]}>{children}</View>
     </View>
