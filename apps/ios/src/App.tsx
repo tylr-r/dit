@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   DASH_THRESHOLD,
   MORSE_CODE,
@@ -208,7 +208,8 @@ export default function App() {
   });
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaProvider>
+      <View style={styles.screen}>
       <LinearGradient
         colors={['#e2e8f0', '#f8fafc', '#e0f2fe']}
         start={{ x: 0, y: 0 }}
@@ -302,6 +303,7 @@ export default function App() {
         </View>
       </SafeAreaView>
     </View>
+    </SafeAreaProvider>
   );
 }
 

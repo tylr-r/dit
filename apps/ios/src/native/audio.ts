@@ -1,35 +1,36 @@
-import { Audio } from 'expo-av';
+import { AudioModule, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { AUDIO_VOLUME } from '@dit/core';
 import { DitNative } from './ditNative';
 
 const TONE_SOURCE = require('../../assets/audio/dit-tone.wav');
 
-let toneSound: Audio.Sound | null = null;
-let loadingPromise: Promise<Audio.Sound> | null = null;
+let tonePlayer: AudioPlayer | null = null;
+let loadingPromise: Promise<AudioPlayer> | null = null;
 let stopTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const ensureTone = async () => {
-  if (toneSound) {
-    return toneSound;
+  if (tonePlayer) {
+    return tonePlayer;
   }
   if (loadingPromise) {
     return loadingPromise;
   }
   loadingPromise = (async () => {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      allowsRecordingIOS: false,
-      staysActiveInBackground: false,
-      interruptionModeIOS: Audio.InterruptionModeIOS.DoNotMix,
-    });
-    const { sound } = await Audio.Sound.createAsync(TONE_SOURCE, {
-      shouldPlay: false,
-      isLooping: true,
-      volume: AUDIO_VOLUME,
-    });
-    toneSound = sound;
-    loadingPromise = null;
-    return sound;
+    try {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+        shouldPlayInBackground: false,
+        interruptionMode: 'doNotMix',
+      });
+      const player = new AudioModule.AudioPlayer(TONE_SOURCE, 500, false);
+      player.loop = true;
+      player.volume = AUDIO_VOLUME;
+      tonePlayer = player;
+      return player;
+    } finally {
+      loadingPromise = null;
+    }
   })();
   return loadingPromise;
 };
@@ -39,9 +40,9 @@ export const startTone = async () => {
     await DitNative.startTone();
     return;
   }
-  const sound = await ensureTone();
-  await sound.setPositionAsync(0);
-  await sound.playAsync();
+  const player = await ensureTone();
+  await player.seekTo(0);
+  player.play();
 };
 
 export const playTone = async (durationMs: number) => {
@@ -63,22 +64,23 @@ export const stopTone = async () => {
     await DitNative.stopTone();
     return;
   }
-  if (!toneSound) {
+  if (!tonePlayer) {
     return;
   }
   if (stopTimeout) {
     clearTimeout(stopTimeout);
     stopTimeout = null;
   }
-  await toneSound.stopAsync();
-  await toneSound.setPositionAsync(0);
+  tonePlayer.pause();
+  await tonePlayer.seekTo(0);
 };
 
 export const unloadTone = async () => {
-  if (!toneSound) {
+  if (!tonePlayer) {
     return;
   }
-  await toneSound.unloadAsync();
-  toneSound = null;
+  tonePlayer.pause();
+  tonePlayer.release();
+  tonePlayer = null;
   loadingPromise = null;
 };

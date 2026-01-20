@@ -91,7 +91,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [ ] Bring up iOS build + Metro in pnpm workspace
   - [x] Switch pnpm to hoisted node linker for Metro resolution
   - [x] Add Expo runtime deps (`expo-asset`, `expo-file-system`, `expo-font`, `expo-keep-awake`, `expo-constants`, `expo-modules-core`, `expo-modules-autolinking`, `@babel/runtime`)
-  - [ ] Confirm `expo run:ios` succeeds end-to-end without Metro errors
+  - [x] Confirm `expo run:ios` succeeds end-to-end without Metro errors
 - [ ] Create SwiftUI components for "Liquid Glass" UI
 - [x] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)

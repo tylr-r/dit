@@ -22,7 +22,7 @@ This folder tracks the optional native implementation that Expo modules can surf
 
 ## Runtime behavior
 
-- When `DitNative` is available, `apps/ios/src/native/audio.ts` will route tone generation to the native implementation, bypassing Expo AvAudio.
+- When `DitNative` is available, `apps/ios/src/native/audio.ts` will route tone generation to the native implementation, bypassing the `expo-audio` fallback.
 - Haptics also prefer `DitNative.triggerHaptic(kind)` before falling back to `expo-haptics`.
 - `GlassSurface` renders the native view when `NativeGlassView` exists; otherwise it defaults to the JS blur+gradient surface.
 

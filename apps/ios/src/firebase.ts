@@ -1,16 +1,8 @@
 import { useCallback, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import {
-  GoogleAuthProvider,
-  getAuth,
-  onAuthStateChanged,
-  signInWithCredential,
-  signOut,
-} from 'firebase/auth';
-import { getReactNativePersistence, initializeAuth } from 'firebase/auth/react-native';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
 import { get, getDatabase, ref, set } from 'firebase/database';
 import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 
@@ -36,18 +28,9 @@ if (__DEV__ && missingFirebaseKeys.length > 0) {
   );
 }
 
-const app = initializeApp(firebaseConfig);
-const auth = (() => {
-  try {
-    return initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch {
-    return getAuth(app);
-  }
-})();
-const database = getDatabase(app);
-const googleProvider = new GoogleAuthProvider();
+const app = firebase.apps.length > 0 ? firebase.app() : firebase.initializeApp(firebaseConfig);
+const auth = app.auth();
+const database = getDatabase();
 
 type FirebaseServiceState = {
   firebaseService: FirebaseSyncService;
@@ -79,11 +62,11 @@ export const useFirebaseService = (): FirebaseServiceState => {
       if (result.type !== 'success' || !result.authentication?.idToken) {
         throw new Error('Google sign-in was cancelled or failed.');
       }
-      const credential = GoogleAuthProvider.credential(
+      const credential = firebase.auth.GoogleAuthProvider.credential(
         result.authentication.idToken,
         result.authentication.accessToken ?? undefined,
       );
-      await signInWithCredential(auth, credential);
+      await auth.signInWithCredential(credential);
       return 'native' as const;
     },
     [promptAsync, request],
@@ -92,7 +75,7 @@ export const useFirebaseService = (): FirebaseServiceState => {
   const firebaseService = useMemo<FirebaseSyncService>(
     () => ({
       onAuthStateChanged: (listener) =>
-        onAuthStateChanged(auth, (user) =>
+        auth.onAuthStateChanged((user) =>
           listener(
             user
               ? {
@@ -105,7 +88,7 @@ export const useFirebaseService = (): FirebaseServiceState => {
           ),
         ),
       signIn,
-      signOut: () => signOut(auth),
+      signOut: () => auth.signOut(),
       getProgress: async (userId: string) => {
         const progressRef = ref(database, `users/${userId}/progress`);
         const snapshot = await get(progressRef);
