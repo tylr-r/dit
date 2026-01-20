@@ -1,0 +1,74 @@
+import ExpoModulesCore
+import UIKit
+
+final class DitGlassView: UIView {
+  private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+  private let gradientLayer = CAGradientLayer()
+  private let contentView = UIView()
+  private var intensityValue: Double = 35 {
+    didSet {
+      blurView.alpha = CGFloat(min(max(intensityValue / 100, 0), 1))
+    }
+  }
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    setup()
+  }
+
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    setup()
+  }
+
+  private func setup() {
+    layer.cornerRadius = 24
+    layer.masksToBounds = true
+    layer.borderWidth = 1
+    layer.borderColor = UIColor.white.withAlphaComponent(0.35).cgColor
+    gradientLayer.colors = [
+      UIColor.white.withAlphaComponent(0.35).cgColor,
+      UIColor.white.withAlphaComponent(0.1).cgColor,
+    ]
+    gradientLayer.startPoint = CGPoint(x: 0.2, y: 0)
+    gradientLayer.endPoint = CGPoint(x: 0.8, y: 1)
+    blurView.frame = bounds
+    blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    contentView.frame = bounds
+    contentView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    layer.addSublayer(gradientLayer)
+    addSubview(blurView)
+    addSubview(contentView)
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    gradientLayer.frame = bounds
+    blurView.frame = bounds
+    contentView.frame = bounds
+  }
+
+  func setIntensity(_ value: Double) {
+    intensityValue = value
+  }
+
+  func setContent(_ view: UIView) {
+    contentView.subviews.forEach { $0.removeFromSuperview() }
+    view.frame = contentView.bounds
+    view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    contentView.addSubview(view)
+  }
+}
+
+public final class DitGlassViewManager: ViewManager {
+  public override func view() -> UIView {
+    DitGlassView()
+  }
+
+  public override func definition() -> ViewDefinition {
+    Name("DitGlassView")
+    Prop("intensity") { (view: DitGlassView, value: Double) in
+      view.setIntensity(value)
+    }
+  }
+}

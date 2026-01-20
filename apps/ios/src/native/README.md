@@ -17,8 +17,8 @@ This folder tracks the optional native implementation that Expo modules can surf
    @objc func playTone(_ durationMs: NSNumber, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
    @objc func triggerHaptic(_ kind: NSString, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
    ```
-3. Register the module under the name `DitNative` so `requireOptionalNativeModule('DitNative')` resolves.
-4. Add a view manager for `DitGlassView` that bridges a SwiftUI view or `UIVisualEffectView`/`CAGradientLayer` stack. Expose an `intensity` prop via `@objc` so the JS layer can animate or adjust blur.
+3. Register the module under the name `DitNative` so `requireOptionalNativeModule('DitNative')` resolves. The Swift source is staged under `apps/ios/native/ios/DitNativeModule.swift`.
+4. The view manager stub lives in `apps/ios/native/ios/DitGlassView.swift`; it exports `DitGlassView` with an `intensity` prop and renders a native blur/gradient surface before optionally injecting SwiftUI content.
 
 ## Runtime behavior
 
