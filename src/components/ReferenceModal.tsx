@@ -1,18 +1,8 @@
 import type { CSSProperties } from 'react'
 import type { Letter } from '../data/morse'
+import type { ReferenceModalProps } from './componentProps'
 
 const SCORE_INTENSITY_MAX = 15
-
-type MorseData = Record<Letter, { code: string }>
-
-type ReferenceModalProps = {
-  letters: Letter[]
-  morseData: MorseData
-  numbers: Letter[]
-  onClose: () => void
-  onResetScores: () => void
-  scores: Record<Letter, number>
-}
 
 const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
 

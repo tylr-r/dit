@@ -1,34 +1,4 @@
-import type { User } from 'firebase/auth'
-import type { ChangeEvent } from 'react'
-
-type SettingsPanelProps = {
-  freestyleWordMode: boolean
-  isFreestyle: boolean
-  isListen: boolean
-  levels: readonly number[]
-  listenWpm: number
-  listenWpmMax: number
-  listenWpmMin: number
-  maxLevel: number
-  practiceWordMode: boolean
-  onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
-  onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
-  onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onShowMnemonicChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onShowReference: () => void
-  onSoundCheck: () => void
-  onWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
-  showHint: boolean
-  showMnemonic: boolean
-  soundCheckStatus: 'idle' | 'playing'
-  user: User | null
-  userLabel: string
-  userInitial: string
-  authReady: boolean
-  onSignIn: () => void
-  onSignOut: () => void
-}
+import type { SettingsPanelProps } from './componentProps'
 
 /** Settings dropdown content and mode-specific controls. */
 export function SettingsPanel({

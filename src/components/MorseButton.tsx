@@ -3,25 +3,9 @@
  * Features a liquid/gel-style appearance with SVG displacement filters.
  */
 
-import type {
-  KeyboardEvent,
-  PointerEvent,
-  RefObject,
-  SyntheticEvent,
-} from 'react'
+import type { SyntheticEvent } from 'react'
 import './MorseButton.css'
-
-type MorseButtonProps = {
-  buttonRef: RefObject<HTMLButtonElement | null>
-  isPressing: boolean
-  onBlur: () => void
-  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void
-  onKeyUp: (event: KeyboardEvent<HTMLButtonElement>) => void
-  onPointerCancel: () => void
-  onPointerDown: (event: PointerEvent<HTMLButtonElement>) => void
-  onPointerLeave: () => void
-  onPointerUp: (event: PointerEvent<HTMLButtonElement>) => void
-}
+import type { MorseButtonProps } from './componentProps'
 
 /** Tap/press input button for dot/dah entry. */
 export function MorseButton({

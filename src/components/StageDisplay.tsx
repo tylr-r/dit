@@ -1,24 +1,4 @@
-import type { ReactNode } from 'react'
-import type { Letter } from '../data/morse'
-
-type StageDisplayProps = {
-  freestyleDisplay: string
-  hasFreestyleDisplay: boolean
-  hintVisible: boolean
-  isFreestyle: boolean
-  isListen: boolean
-  letter: Letter
-  listenDisplay: string
-  listenDisplayClass: string
-  listenStatusText: string
-  pips: ReactNode
-  practiceWord: string
-  practiceWordIndex: number
-  practiceWordMode: boolean
-  practiceWpmText: string | null
-  statusText: string
-  target: string
-}
+import type { StageDisplayProps } from './componentProps'
 
 /** Main output area for freestyle, listen, and character modes. */
 export function StageDisplay({

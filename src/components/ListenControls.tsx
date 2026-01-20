@@ -1,4 +1,5 @@
 import type { Letter } from '../data/morse'
+import type { ListenControlsProps } from './componentProps'
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -6,13 +7,6 @@ const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ]
-
-type ListenControlsProps = {
-  listenStatus: 'idle' | 'success' | 'error'
-  onReplay: () => void
-  onSubmitAnswer: (value: Letter) => void
-  useCustomKeyboard: boolean
-}
 
 /** Listen mode controls with optional on-screen keyboard. */
 export function ListenControls({

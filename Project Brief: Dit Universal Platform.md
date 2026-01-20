@@ -59,8 +59,8 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 - [x] Split `App.tsx` (~2030 lines) into custom hooks: `useMorseInput`, `useAudio`, `useProgress`, `useFirebaseSync`
 - [x] Abstract platform-specific code: `navigator.vibrate`, `localStorage`, `AudioContext`
-- [ ] Create shared component props interfaces
-- [ ] Add React Testing Library tests for key components
+- [x] Create shared component props interfaces
+- [x] Add React Testing Library tests for key components
 
 ### Phase 2: Monorepo Setup
 
