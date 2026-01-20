@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -35,6 +29,15 @@ import {
 
 const LETTERS = Object.keys(MORSE_CODE) as Letter[];
 const INITIAL_WPM = Math.round((WPM_RANGE[0] + WPM_RANGE[1]) / 2);
+const LOGO = require('../assets/icon.png');
+const COLORS = {
+  bg: '#0a0c12',
+  text: '#f4f7f9',
+  muted: '#8d98a5',
+  accent: '#38f2a2',
+  accentCool: '#4cc9ff',
+  error: '#ff6b6b',
+};
 
 const pickNextLetter = (scores: ScoreRecord, previous?: Letter) =>
   getRandomWeightedLetter(LETTERS, scores, previous);
@@ -55,9 +58,10 @@ export default function App() {
   );
   const [input, setInput] = useState('');
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
+  const [showHintOnce, setShowHintOnce] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const pressStartRef = useRef<number | null>(null);
   const scoresRef = useRef(progress.scores);
-  const drift = useRef(new Animated.Value(0)).current;
   const targetCode = MORSE_CODE[targetLetter].code;
 
   const { firebaseService, isAuthRequestReady } = useFirebaseService();
@@ -92,25 +96,6 @@ export default function App() {
     scoresRef.current = progress.scores;
   }, [progress.scores]);
 
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(drift, {
-          toValue: 1,
-          duration: 16000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(drift, {
-          toValue: 0,
-          duration: 16000,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [drift]);
-
   useEffect(() => () => void unloadTone(), []);
 
   useEffect(() => {
@@ -138,6 +123,7 @@ export default function App() {
     const timeout = setTimeout(() => {
       setInput('');
       setResult(null);
+      setShowHintOnce(false);
       setTargetLetter(pickNextLetter(nextScores, targetLetter));
     }, isMatch ? 700 : 900);
     return () => clearTimeout(timeout);
@@ -168,15 +154,11 @@ export default function App() {
   const handleSkip = useCallback(() => {
     setInput('');
     setResult(null);
+    setShowHintOnce(false);
     setTargetLetter((previous) =>
       pickNextLetter(scoresRef.current, previous),
     );
   }, []);
-
-  const headerWpm = useMemo(
-    () => formatWpm(progress.listenWpm),
-    [progress.listenWpm],
-  );
 
   const hasGoogleClient =
     Boolean(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID) ||
@@ -197,112 +179,255 @@ export default function App() {
         ? 'Ready'
         : 'Preparing auth'
       : 'Add Google client IDs';
+  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : '';
+  const userInitial = user
+    ? userLabel
+      ? userLabel[0].toUpperCase()
+      : '?'
+    : '';
 
-  const driftX = drift.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-18, 14],
-  });
-  const driftY = drift.interpolate({
-    inputRange: [0, 1],
-    outputRange: [12, -16],
+  const hintVisible = progress.showHint || showHintOnce;
+  const mnemonicVisible = progress.showMnemonic;
+  const status =
+    result === 'correct' ? 'success' : result === 'wrong' ? 'error' : 'idle';
+  const baseStatusText =
+    status === 'success'
+      ? 'Correct'
+      : status === 'error'
+        ? 'Missed. Start over.'
+        : mnemonicVisible
+          ? MORSE_CODE[targetLetter].mnemonic
+          : ' ';
+  const statusText = baseStatusText;
+  const practiceWpmText = progress.practiceWordMode
+    ? `${formatWpm(progress.listenWpm)} WPM`
+    : null;
+  const targetSymbols = targetCode.split('');
+  const isInputOnTrack = Boolean(input) && targetCode.startsWith(input);
+  const highlightCount =
+    status === 'success'
+      ? targetSymbols.length
+      : isInputOnTrack
+        ? input.length
+        : 0;
+  const pips = targetSymbols.map((symbol, index) => {
+    const isHit = index < highlightCount;
+    return (
+      <View
+        key={`${symbol}-${index}`}
+        style={[
+          styles.pip,
+          symbol === '.' ? styles.pipDot : styles.pipDash,
+          isHit ? styles.pipHit : styles.pipExpected,
+          status === 'success' && styles.pipSuccess,
+          status === 'error' && styles.pipError,
+        ]}
+      />
+    );
   });
 
   return (
     <SafeAreaProvider>
       <View style={styles.screen}>
-      <LinearGradient
-        colors={['#e2e8f0', '#f8fafc', '#e0f2fe']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <Animated.View
-        style={[
-          styles.orb,
-          styles.orbOne,
-          { transform: [{ translateX: driftX }, { translateY: driftY }] },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.orb,
-          styles.orbTwo,
-          {
-            transform: [
-              { translateX: Animated.multiply(driftX, -0.8) },
-              { translateY: Animated.multiply(driftY, 0.7) },
-            ],
-          },
-        ]}
-      />
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.kicker}>DIT</Text>
-            <Text style={styles.title}>Liquid Morse</Text>
-          </View>
-          <GlassSurface style={styles.wpmPill} intensity={30}>
-            <Text style={styles.wpmText}>{headerWpm} WPM</Text>
-          </GlassSurface>
-        </View>
-
-        <GlassSurface style={styles.authCard} intensity={32}>
-          <View style={styles.authRow}>
-            <View style={styles.authText}>
-              <Text style={styles.authLabel}>Cloud Sync</Text>
-              <Text style={styles.authStatus}>{authLabel}</Text>
-              <Text style={styles.authMeta}>{authMeta}</Text>
+        <LinearGradient
+          colors={['#0b0f15', '#0a0c12']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.glow, styles.glowOne]} />
+        <View style={[styles.glow, styles.glowTwo]} />
+        <View style={[styles.glow, styles.glowThree]} />
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar style="light" />
+          <View style={styles.topBar}>
+            <Pressable
+              style={styles.logoButton}
+              onPress={() => setShowSettings(false)}
+            >
+              <Image source={LOGO} style={styles.logoImage} />
+            </Pressable>
+            <GlassSurface
+              style={styles.modeSelect}
+              contentStyle={styles.modeSelectContent}
+              intensity={25}
+            >
+              <Text style={styles.modeSelectText}>Practice</Text>
+            </GlassSurface>
+            <View style={styles.settings}>
+              <Pressable
+                onPress={() => setShowSettings((prev) => !prev)}
+                style={({ pressed }) => [
+                  styles.settingsButton,
+                  pressed && styles.settingsButtonPressed,
+                  showSettings && styles.settingsButtonActive,
+                ]}
+              >
+                <Text style={styles.settingsButtonLabel}>...</Text>
+              </Pressable>
+              {showSettings ? (
+                <GlassSurface
+                  style={styles.settingsPanel}
+                  contentStyle={styles.settingsPanelContent}
+                  intensity={45}
+                >
+                  <Pressable
+                    onPress={() =>
+                      setProgress((prev) => ({
+                        ...prev,
+                        showHint: !prev.showHint,
+                      }))
+                    }
+                    style={styles.toggleRow}
+                  >
+                    <Text style={styles.toggleLabel}>Show hints</Text>
+                    <View
+                      style={[
+                        styles.toggleTrack,
+                        progress.showHint && styles.toggleTrackActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          progress.showHint && styles.toggleThumbActive,
+                        ]}
+                      />
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      setProgress((prev) => ({
+                        ...prev,
+                        showMnemonic: !prev.showMnemonic,
+                      }))
+                    }
+                    style={styles.toggleRow}
+                  >
+                    <Text style={styles.toggleLabel}>Show mnemonics</Text>
+                    <View
+                      style={[
+                        styles.toggleTrack,
+                        progress.showMnemonic && styles.toggleTrackActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.toggleThumb,
+                          progress.showMnemonic && styles.toggleThumbActive,
+                        ]}
+                      />
+                    </View>
+                  </Pressable>
+                  <View style={styles.settingsDivider} />
+                  <View style={styles.authRow}>
+                    <View style={styles.authAvatar}>
+                      <Text style={styles.authAvatarText}>
+                        {userInitial || '?'}
+                      </Text>
+                    </View>
+                    <View style={styles.authText}>
+                      <Text style={styles.authLabel}>Cloud Sync</Text>
+                      <Text style={styles.authStatus}>{authLabel}</Text>
+                      <Text style={styles.authMeta}>{authMeta}</Text>
+                    </View>
+                  </View>
+                  <GlassButton
+                    label={user ? 'Sign out' : 'Sign in'}
+                    onPress={user ? handleSignOut : handleSignIn}
+                    style={styles.authButton}
+                    labelStyle={styles.authButtonLabel}
+                    disabled={!user && !canSignIn}
+                  />
+                </GlassSurface>
+              ) : null}
             </View>
-            <GlassButton
-              label={user ? 'Sign out' : 'Sign in'}
-              onPress={user ? handleSignOut : handleSignIn}
-              style={styles.authButton}
-              labelStyle={styles.authButtonLabel}
-              disabled={!user && !canSignIn}
-            />
           </View>
-        </GlassSurface>
 
-        <GlassSurface style={styles.card} intensity={40}>
-          <Text style={styles.cardLabel}>Target</Text>
-          <Text style={styles.targetLetter}>{targetLetter}</Text>
-          <Text style={styles.targetCode}>{targetCode}</Text>
-          <Text style={styles.mnemonic}>{MORSE_CODE[targetLetter].mnemonic}</Text>
-          <View style={styles.progressRow}>
-            <Text style={styles.progressLabel}>Input</Text>
-            <Text style={styles.progressValue}>{input || '--'}</Text>
-          </View>
-          {result && (
+          <View
+            style={[
+              styles.stage,
+              status === 'success' && styles.stageSuccess,
+              status === 'error' && styles.stageError,
+            ]}
+          >
             <Text
               style={[
-                styles.result,
-                result === 'correct' ? styles.resultGood : styles.resultBad,
+                styles.letter,
+                status === 'success' && styles.letterSuccess,
+                status === 'error' && styles.letterError,
               ]}
             >
-              {result === 'correct' ? 'Nice. Next letter.' : 'Close. Try again.'}
+              {targetLetter}
             </Text>
-          )}
-        </GlassSurface>
-
-        <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
-          {({ pressed }) => (
-            <GlassSurface
-              style={[styles.morsePad, pressed && styles.morsePadPressed]}
-              intensity={55}
+            {hintVisible ? (
+              <View style={styles.progress} accessibilityLabel={`Target ${targetCode}`}>
+                {pips}
+              </View>
+            ) : (
+              <View style={[styles.progress, styles.progressHidden]} />
+            )}
+            <Text
+              style={[
+                styles.statusText,
+                status === 'success' && styles.statusTextSuccess,
+                status === 'error' && styles.statusTextError,
+              ]}
             >
-              <Text style={styles.morseTitle}>Tap + Hold</Text>
-              <Text style={styles.morseHint}>Dot or dash - release to commit</Text>
-            </GlassSurface>
-          )}
-        </Pressable>
+              {statusText}
+            </Text>
+            {practiceWpmText ? (
+              <Text style={styles.wpmText}>{practiceWpmText}</Text>
+            ) : null}
+          </View>
 
-        <View style={styles.actions}>
-          <GlassButton label="Clear" onPress={() => setInput('')} />
-          <GlassButton label="Skip" onPress={handleSkip} />
-        </View>
-      </SafeAreaView>
-    </View>
+          <View style={styles.controls}>
+            {!progress.showHint && !showHintOnce ? (
+              <GlassButton
+                label="Show this hint"
+                onPress={() => setShowHintOnce(true)}
+                style={styles.hintButton}
+              />
+            ) : null}
+            <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+              {({ pressed }) => (
+                <View style={styles.morseWrap}>
+                  <View
+                    style={[
+                      styles.morseGlow,
+                      pressed && styles.morseGlowPressed,
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.morseButton,
+                      pressed && styles.morseButtonPressed,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[
+                        '#a8d0ff',
+                        '#d0c0f0',
+                        '#ffccd8',
+                        '#b8d8ff',
+                        '#f0d0e8',
+                      ]}
+                      start={{ x: 0.1, y: 0.2 }}
+                      end={{ x: 0.9, y: 0.8 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <View style={styles.morseGlass} />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+            <View style={styles.actions}>
+              <GlassButton label="Clear" onPress={() => setInput('')} />
+              <GlassButton label="Skip" onPress={handleSkip} />
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
     </SafeAreaProvider>
   );
 }
@@ -310,169 +435,357 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.bg,
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    gap: 16,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 16,
+    gap: 18,
+    overflow: 'visible',
   },
-  header: {
+  topBar: {
+    width: '100%',
+    maxWidth: 960,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 3,
   },
-  kicker: {
-    fontSize: 12,
-    letterSpacing: 3.2,
-    fontWeight: '600',
-    color: '#334155',
+  logoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: 4,
+  logoImage: {
+    width: 44,
+    height: 44,
+    opacity: 0.6,
+    resizeMode: 'contain',
   },
-  wpmPill: {
+  modeSelect: {
     borderRadius: 999,
   },
-  wpmText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0f172a',
+  modeSelectContent: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  authCard: {
-    paddingVertical: 12,
+  modeSelectText: {
+    color: COLORS.text,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 2.4,
+    textTransform: 'uppercase',
+  },
+  settings: {
+    position: 'relative',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(10,16,20,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  settingsButtonPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  settingsButtonActive: {
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  settingsButtonLabel: {
+    color: COLORS.text,
+    fontSize: 16,
+    letterSpacing: 2,
+  },
+  settingsPanel: {
+    position: 'absolute',
+    top: 52,
+    right: 0,
+    minWidth: 240,
+    borderRadius: 16,
+    zIndex: 4,
+  },
+  settingsPanelContent: {
+    gap: 16,
+    padding: 16,
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  toggleLabel: {
+    fontSize: 12,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  toggleTrack: {
+    width: 48,
+    height: 26,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(9,14,18,0.8)',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleTrackActive: {
+    backgroundColor: 'rgba(56,242,162,0.9)',
+    borderColor: 'rgba(56,242,162,0.9)',
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  toggleThumbActive: {
+    backgroundColor: 'rgba(12,20,24,0.95)',
+    transform: [{ translateX: 22 }],
   },
   authRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 12,
+  },
+  authAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(12,18,24,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authAvatarText: {
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: COLORS.text,
+    textTransform: 'uppercase',
   },
   authText: {
     flex: 1,
   },
   authLabel: {
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 2.2,
     textTransform: 'uppercase',
-    color: '#64748b',
+    color: 'rgba(255,255,255,0.6)',
   },
   authStatus: {
-    marginTop: 6,
-    fontSize: 14,
-    color: '#0f172a',
-    fontWeight: '600',
-  },
-  authMeta: {
     marginTop: 4,
     fontSize: 12,
-    color: '#64748b',
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  authMeta: {
+    marginTop: 2,
+    fontSize: 11,
+    color: COLORS.muted,
   },
   authButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    marginTop: 6,
   },
   authButtonLabel: {
-    fontSize: 13,
-  },
-  card: {
-    paddingVertical: 22,
-  },
-  cardLabel: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 2.4,
-    color: '#64748b',
-  },
-  targetLetter: {
-    fontSize: 64,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: 6,
-  },
-  targetCode: {
-    fontSize: 20,
-    letterSpacing: 4,
-    color: '#1e293b',
-    marginTop: 6,
-  },
-  mnemonic: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#475569',
-  },
-  progressRow: {
-    marginTop: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 2,
-    textTransform: 'uppercase',
-    color: '#64748b',
   },
-  progressValue: {
-    fontSize: 16,
-    letterSpacing: 3,
-    color: '#0f172a',
-  },
-  result: {
-    marginTop: 16,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  resultGood: {
-    color: '#0f766e',
-  },
-  resultBad: {
-    color: '#b91c1c',
-  },
-  morsePad: {
-    paddingVertical: 28,
+  stage: {
+    flex: 1,
+    minHeight: 0,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
-  morsePadPressed: {
+  stageSuccess: {
+    zIndex: 1,
+  },
+  stageError: {
+    zIndex: 1,
+  },
+  letter: {
+    fontSize: 96,
+    lineHeight: 90,
+    letterSpacing: 6,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    color: COLORS.text,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 20 },
+    textShadowRadius: 60,
+  },
+  letterSuccess: {
+    color: COLORS.accent,
+  },
+  letterError: {
+    color: COLORS.error,
+  },
+  progress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 22,
+  },
+  progressHidden: {
+    opacity: 0,
+  },
+  pip: {
+    borderRadius: 999,
+    backgroundColor: COLORS.accentCool,
+    shadowColor: COLORS.accentCool,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  pipDot: {
+    width: 12,
+    height: 12,
+  },
+  pipDash: {
+    width: 34,
+    height: 12,
+  },
+  pipExpected: {
+    opacity: 0.3,
+  },
+  pipHit: {
+    opacity: 1,
+    transform: [{ translateY: -1 }],
+  },
+  pipSuccess: {
+    backgroundColor: COLORS.accent,
+    shadowColor: COLORS.accent,
+  },
+  pipError: {
+    backgroundColor: COLORS.error,
+    shadowColor: COLORS.error,
+  },
+  statusText: {
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2,
+    color: COLORS.muted,
+    textAlign: 'center',
+    minHeight: 18,
+  },
+  statusTextSuccess: {
+    color: COLORS.accent,
+  },
+  statusTextError: {
+    color: COLORS.error,
+  },
+  wpmText: {
+    fontSize: 11,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: COLORS.muted,
+  },
+  controls: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  hintButton: {
+    alignSelf: 'center',
+  },
+  morseWrap: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  morseGlow: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    top: 6,
+    bottom: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(147,197,253,0.25)',
+    shadowColor: 'rgba(147,197,253,0.4)',
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  morseGlowPressed: {
+    opacity: 1,
+  },
+  morseButton: {
+    width: '100%',
+    height: 88,
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  morseButtonPressed: {
     transform: [{ scale: 0.98 }],
   },
-  morseTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0f172a',
-  },
-  morseHint: {
-    marginTop: 6,
-    fontSize: 13,
-    color: '#475569',
+  morseGlass: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   actions: {
     flexDirection: 'row',
     gap: 12,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
-  orb: {
+  glow: {
     position: 'absolute',
-    borderRadius: 999,
-    opacity: 0.6,
+    width: 940,
+    height: 940,
+    borderRadius: 470,
+    opacity: 0.12,
   },
-  orbOne: {
-    width: 240,
-    height: 240,
-    backgroundColor: 'rgba(148, 163, 184, 0.45)',
-    top: -60,
-    right: -80,
+  glowOne: {
+    backgroundColor: 'rgba(168,192,255,0.08)',
+    left: '-45%',
+    top: '55%',
+    transform: [{ scaleX: 1.3 }, { scaleY: 1.05 }],
   },
-  orbTwo: {
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(125, 211, 252, 0.45)',
-    bottom: 120,
-    left: -60,
+  glowTwo: {
+    backgroundColor: 'rgba(196,181,253,0.06)',
+    right: '-50%',
+    top: '-35%',
+    transform: [{ scaleX: 1.2 }, { scaleY: 1.05 }],
+  },
+  glowThree: {
+    backgroundColor: 'rgba(245,199,247,0.04)',
+    left: '10%',
+    top: '15%',
+    transform: [{ scaleX: 1.15 }, { scaleY: 1 }],
   },
 });

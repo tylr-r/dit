@@ -6,27 +6,40 @@ import { NativeGlassView } from '../native/ditNative';
 
 type GlassSurfaceProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
   intensity?: number;
+  tint?: 'light' | 'dark';
 }>;
 
-export const GlassSurface = ({ children, style, intensity = 35 }: GlassSurfaceProps) => {
+export const GlassSurface = ({
+  children,
+  style,
+  contentStyle,
+  intensity = 35,
+  tint = 'dark',
+}: GlassSurfaceProps) => {
+  const gradientColors =
+    tint === 'dark'
+      ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)']
+      : ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)'];
+  const blurTint = tint === 'dark' ? 'dark' : 'light';
   if (NativeGlassView) {
     return (
       <NativeGlassView style={[styles.container, style]} intensity={intensity}>
-        <View style={styles.content}>{children}</View>
+        <View style={[styles.content, contentStyle]}>{children}</View>
       </NativeGlassView>
     );
   }
   return (
     <View style={[styles.container, style]}>
-      <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={intensity} tint={blurTint} style={StyleSheet.absoluteFill} />
       <LinearGradient
-        colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
+        colors={gradientColors}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.content}>{children}</View>
+      <View style={[styles.content, contentStyle]}>{children}</View>
     </View>
   );
 };
@@ -35,15 +48,15 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(12,18,24,0.72)',
     overflow: 'hidden',
-    shadowColor: '#0f172a',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
+    shadowOpacity: 0.4,
+    shadowRadius: 28,
   },
   content: {
-    padding: 18,
+    padding: 16,
   },
 });

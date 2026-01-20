@@ -2,7 +2,7 @@ import ExpoModulesCore
 import UIKit
 
 final class DitGlassView: UIView {
-  private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+  private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
   private let gradientLayer = CAGradientLayer()
   private let contentView = UIView()
   private var intensityValue: Double = 35 {
@@ -25,11 +25,11 @@ final class DitGlassView: UIView {
     layer.cornerRadius = 24
     layer.masksToBounds = true
     layer.borderWidth = 1
-    layer.borderColor = UIColor.white.withAlphaComponent(0.35).cgColor
+    layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
 
     gradientLayer.colors = [
-      UIColor.white.withAlphaComponent(0.35).cgColor,
-      UIColor.white.withAlphaComponent(0.1).cgColor,
+      UIColor.white.withAlphaComponent(0.12).cgColor,
+      UIColor.white.withAlphaComponent(0.03).cgColor,
     ]
     gradientLayer.startPoint = CGPoint(x: 0.2, y: 0)
     gradientLayer.endPoint = CGPoint(x: 0.8, y: 1)
