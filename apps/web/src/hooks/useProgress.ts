@@ -1,11 +1,7 @@
 import { useEffect, useMemo } from 'react';
-import type { Letter } from '../data/morse';
+import type { Letter } from '@dit/core';
 import { readStorageItem, writeStorageItem } from '../platform/storage';
-import {
-  clamp,
-  initializeScores,
-  parseLocalStorageScores,
-} from '../utils/morseUtils';
+import { clamp, initializeScores, parseLocalStorageScores } from '@dit/core';
 
 type StorageKeys = {
   mode: string;

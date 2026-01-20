@@ -1,17 +1,8 @@
-import { MORSE_DATA, type Letter } from '../data/morse';
+import { MORSE_CODE, type Letter } from '../data/morse';
 import { PRACTICE_WORDS } from '../data/practiceWords';
+import type { Progress, ScoreRecord } from '../types';
 
-const LETTERS = Object.keys(MORSE_DATA) as Letter[];
-
-export type Progress = {
-  listenWpm?: number;
-  maxLevel?: number;
-  showMnemonic?: boolean;
-  practiceWordMode?: boolean;
-  scores?: Record<Letter, number>;
-  showHint?: boolean;
-  wordMode?: boolean;
-};
+const LETTERS = Object.keys(MORSE_CODE) as Letter[];
 
 export type ParseProgressOptions = {
   listenWpmMin: number;
@@ -29,7 +20,7 @@ export const formatWpm = (value: number) => {
 };
 
 export const getLettersForLevel = (maxLevel: number) =>
-  LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel);
+  LETTERS.filter((letter) => MORSE_CODE[letter].level <= maxLevel);
 
 export const getRandomLetter = (
   letters: Letter[],
@@ -78,7 +69,7 @@ export const getRandomWord = (words: readonly string[], previous?: string) => {
 
 export const getRandomWeightedLetter = (
   letters: Letter[],
-  scores: Record<Letter, number>,
+  scores: ScoreRecord,
   previous?: Letter,
 ): Letter => {
   if (letters.length === 0) {
@@ -107,25 +98,25 @@ export const getRandomWeightedLetter = (
   return letters[letters.length - 1];
 };
 
-export const initializeScores = () =>
+export const initializeScores = (): ScoreRecord =>
   LETTERS.reduce(
     (acc, letter) => {
       acc[letter] = 0;
       return acc;
     },
-    {} as Record<Letter, number>,
+    {} as ScoreRecord,
   );
 
 export const applyScoreDelta = (
-  scores: Record<Letter, number>,
+  scores: ScoreRecord,
   targetLetter: Letter,
   delta: number,
-) => ({
+): ScoreRecord => ({
   ...scores,
   [targetLetter]: scores[targetLetter] + delta,
 });
 
-export const parseFirebaseScores = (value: unknown) => {
+export const parseFirebaseScores = (value: unknown): ScoreRecord | null => {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -179,7 +170,7 @@ export const parseProgress = (
   return progress;
 };
 
-export const parseLocalStorageScores = (stored: string | null) => {
+export const parseLocalStorageScores = (stored: string | null): ScoreRecord => {
   if (!stored) {
     return initializeScores();
   }

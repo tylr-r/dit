@@ -1,20 +1,14 @@
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-  type Auth,
-  type AuthProvider,
-  type User,
-} from 'firebase/auth';
-import { get, ref, set, type Database } from 'firebase/database';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  FirebaseSignInMethod,
+  FirebaseSyncService,
+  FirebaseUser,
+  ProgressSnapshot,
+} from '@dit/core';
 
 type UseFirebaseSyncOptions = {
-  auth: Auth;
-  database: Database;
-  googleProvider: AuthProvider;
-  progressSnapshot: Record<string, unknown>;
+  firebaseService: FirebaseSyncService;
+  progressSnapshot: ProgressSnapshot;
   progressSaveDebounceMs: number;
   onRemoteProgress: (raw: unknown) => void;
   trackEvent: (name: string, params?: Record<string, unknown>) => void;
@@ -27,71 +21,69 @@ const clearTimer = (ref: { current: number | null }) => {
   }
 };
 
+const getSignInMethodLabel = (method: FirebaseSignInMethod) => {
+  switch (method) {
+    case 'redirect':
+      return 'google_redirect';
+    case 'native':
+      return 'google_native';
+    default:
+      return 'google_popup';
+  }
+};
+
 export const useFirebaseSync = ({
-  auth,
-  database,
-  googleProvider,
+  firebaseService,
   progressSnapshot,
   progressSaveDebounceMs,
   onRemoteProgress,
   trackEvent,
 }: UseFirebaseSyncOptions) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const saveProgressTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+    const unsubscribe = firebaseService.onAuthStateChanged((nextUser) => {
       setUser(nextUser);
       setRemoteLoaded(false);
       setAuthReady(true);
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [firebaseService]);
 
   const handleSignIn = useCallback(async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      trackEvent('sign_in', { method: 'google_popup' });
+      const method = await firebaseService.signIn('popup');
+      trackEvent('sign_in', { method: getSignInMethodLabel(method) });
     } catch (error) {
-      const fallbackToRedirect =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error.code === 'auth/popup-blocked' ||
-          error.code === 'auth/operation-not-supported-in-this-environment');
-      if (fallbackToRedirect) {
-        trackEvent('sign_in', { method: 'google_redirect' });
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
       console.error('Failed to sign in', error);
     }
-  }, [auth, googleProvider, trackEvent]);
+  }, [firebaseService, trackEvent]);
 
   const handleSignOut = useCallback(async () => {
     try {
-      await signOut(auth);
+      await firebaseService.signOut();
       trackEvent('sign_out');
     } catch (error) {
       console.error('Failed to sign out', error);
     }
-  }, [auth, trackEvent]);
+  }, [firebaseService, trackEvent]);
 
   useEffect(() => {
     if (!user) {
       return;
     }
-    const progressRef = ref(database, `users/${user.uid}/progress`);
     let isActive = true;
-    get(progressRef)
-      .then((snapshot) => {
+    firebaseService
+      .getProgress(user.uid)
+      .then((progress) => {
         if (!isActive) {
           return;
         }
-        if (snapshot.exists()) {
-          onRemoteProgress(snapshot.val());
+        if (progress !== null) {
+          onRemoteProgress(progress);
         }
       })
       .catch((error) => {
@@ -109,7 +101,7 @@ export const useFirebaseSync = ({
     return () => {
       isActive = false;
     };
-  }, [database, onRemoteProgress, user]);
+  }, [firebaseService, onRemoteProgress, user]);
 
   useEffect(() => {
     if (!user || !remoteLoaded) {
@@ -122,18 +114,19 @@ export const useFirebaseSync = ({
         return;
       }
 
-      const progressRef = ref(database, `users/${user.uid}/progress`);
-      void set(progressRef, {
-        ...progressSnapshot,
-        updatedAt: Date.now(),
-      }).catch((error) => {
-        console.error('Failed to save progress', error);
-      });
+      void firebaseService
+        .setProgress(user.uid, {
+          ...progressSnapshot,
+          updatedAt: Date.now(),
+        })
+        .catch((error) => {
+          console.error('Failed to save progress', error);
+        });
     }, progressSaveDebounceMs);
     return () => {
       clearTimer(saveProgressTimeoutRef);
     };
-  }, [database, progressSaveDebounceMs, progressSnapshot, remoteLoaded, user]);
+  }, [firebaseService, progressSaveDebounceMs, progressSnapshot, remoteLoaded, user]);
 
   return {
     authReady,

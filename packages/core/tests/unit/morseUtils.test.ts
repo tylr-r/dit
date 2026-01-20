@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MORSE_DATA, type Letter } from '../../src/data/morse';
+import { MORSE_CODE, type Letter } from '../../src/data/morse';
 import {
   applyScoreDelta,
   clamp,
@@ -12,7 +12,7 @@ import {
   parseProgress,
 } from '../../src/utils/morseUtils';
 
-const LETTERS = Object.keys(MORSE_DATA) as Letter[];
+const LETTERS = Object.keys(MORSE_CODE) as Letter[];
 
 describe('morse utils', () => {
   afterEach(() => {
@@ -37,7 +37,7 @@ describe('morse utils', () => {
     expect(levelOneLetters).toContain('A');
     expect(levelOneLetters).not.toContain('B');
     levelOneLetters.forEach((letter) => {
-      expect(MORSE_DATA[letter].level).toBeLessThanOrEqual(1);
+      expect(MORSE_CODE[letter].level).toBeLessThanOrEqual(1);
     });
   });
 

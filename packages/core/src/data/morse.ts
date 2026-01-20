@@ -1,4 +1,4 @@
-export const MORSE_DATA = {
+export const MORSE_CODE = {
   A: { code: '.-', mnemonic: 'a-PART', level: 1 },
   B: { code: '-...', mnemonic: 'BOB-is-the-uncle', level: 3 },
   C: { code: '-.-.', mnemonic: 'CO-ca-CO-la', level: 3 },
@@ -37,4 +37,4 @@ export const MORSE_DATA = {
   '0': { code: '-----', mnemonic: 'FIVE-DASHES', level: 4 },
 } as const;
 
-export type Letter = keyof typeof MORSE_DATA;
+export type Letter = keyof typeof MORSE_CODE;

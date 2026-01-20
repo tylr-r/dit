@@ -72,14 +72,14 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 ### Phase 3: Core Package Extraction
 
-- [ ] Extract `MORSE_CODE` and `Letter` type from `src/data/morse.ts`
-- [ ] Extract `PRACTICE_WORDS` from `src/data/practiceWords.ts`
-- [ ] Extract utility functions: `clamp`, `formatWpm`, `getLettersForLevel`, `getRandomLetter`, `getRandomWeightedLetter`, `getWordsForLetters`, `getRandomWord`, `initializeScores`, `parseFirebaseScores`, `parseProgress`
-- [ ] Extract constants: `DASH_THRESHOLD`, `UNIT_TIME_MS`, `INTER_LETTER_UNITS`, `INTER_WORD_UNITS`, `AUDIO_FREQUENCY`, `AUDIO_VOLUME`, `DEBOUNCE_DELAY`, `WPM_RANGE`
-- [ ] Create TypeScript types package: `Progress`, `Letter`, score records
-- [ ] Set up Vitest and write unit tests for all core utilities
-- [ ] Create platform-agnostic Firebase service abstraction
-- [ ] Update `apps/web` to import from `@dit/core`
+- [x] Extract `MORSE_CODE` and `Letter` type from `src/data/morse.ts`
+- [x] Extract `PRACTICE_WORDS` from `src/data/practiceWords.ts`
+- [x] Extract utility functions: `clamp`, `formatWpm`, `getLettersForLevel`, `getRandomLetter`, `getRandomWeightedLetter`, `getWordsForLetters`, `getRandomWord`, `initializeScores`, `parseFirebaseScores`, `parseProgress`
+- [x] Extract constants: `DASH_THRESHOLD`, `UNIT_TIME_MS`, `INTER_LETTER_UNITS`, `INTER_WORD_UNITS`, `AUDIO_FREQUENCY`, `AUDIO_VOLUME`, `DEBOUNCE_DELAY`, `WPM_RANGE`
+- [x] Create TypeScript types package: `Progress`, `Letter`, score records
+- [x] Set up Vitest and write unit tests for all core utilities
+- [x] Create platform-agnostic Firebase service abstraction
+- [x] Update `apps/web` to import from `@dit/core`
 
 ### Phase 4: iOS App Development
 
