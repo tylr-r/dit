@@ -84,7 +84,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 ### Phase 4: iOS App Development
 
 - [x] Initialize Expo app in `apps/ios/`
-- [ ] Configure Expo Modules for native bridging
+- [x] Configure Expo Modules for native bridging
 - [ ] Create SwiftUI components for "Liquid Glass" UI
 - [x] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)

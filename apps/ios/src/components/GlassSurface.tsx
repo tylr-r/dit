@@ -2,24 +2,34 @@ import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { NativeGlassView } from '../native/ditNative';
 
 type GlassSurfaceProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   intensity?: number;
 }>;
 
-export const GlassSurface = ({ children, style, intensity = 35 }: GlassSurfaceProps) => (
-  <View style={[styles.container, style]}>
-    <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
-    <LinearGradient
-      colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 0.8, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-    <View style={styles.content}>{children}</View>
-  </View>
-);
+export const GlassSurface = ({ children, style, intensity = 35 }: GlassSurfaceProps) => {
+  if (NativeGlassView) {
+    return (
+      <NativeGlassView style={[styles.container, style]} intensity={intensity}>
+        <View style={styles.content}>{children}</View>
+      </NativeGlassView>
+    );
+  }
+  return (
+    <View style={[styles.container, style]}>
+      <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.content}>{children}</View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

@@ -1,5 +1,6 @@
 import { Audio } from 'expo-av';
 import { AUDIO_VOLUME } from '@dit/core';
+import { DitNative } from './ditNative';
 
 const TONE_SOURCE = require('../../assets/audio/dit-tone.wav');
 
@@ -34,12 +35,20 @@ const ensureTone = async () => {
 };
 
 export const startTone = async () => {
+  if (DitNative?.startTone) {
+    await DitNative.startTone();
+    return;
+  }
   const sound = await ensureTone();
   await sound.setPositionAsync(0);
   await sound.playAsync();
 };
 
 export const playTone = async (durationMs: number) => {
+  if (DitNative?.playTone) {
+    await DitNative.playTone(durationMs);
+    return;
+  }
   await startTone();
   if (stopTimeout) {
     clearTimeout(stopTimeout);
@@ -50,6 +59,10 @@ export const playTone = async (durationMs: number) => {
 };
 
 export const stopTone = async () => {
+  if (DitNative?.stopTone) {
+    await DitNative.stopTone();
+    return;
+  }
   if (!toneSound) {
     return;
   }
