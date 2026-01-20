@@ -40,7 +40,7 @@ This document captures the intended, shared behavior across web and iOS.
 - Show mnemonics
 - Max level (letter set size)
 - Words (practice word mode)
-- Listen speed (WPM)
+- Listen speed (WPM) formula: Tdit(ms) = 1200 / WPM
 - Reference chart modal
 - Sound check
 - Cloud sync (sign in/out)
