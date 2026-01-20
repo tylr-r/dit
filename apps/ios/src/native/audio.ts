@@ -1,12 +1,26 @@
-import { AudioModule, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+  type AudioPlayer,
+} from 'expo-audio';
 import { AUDIO_VOLUME } from '@dit/core';
+import toneSource from '../../assets/audio/dit-tone.wav';
 import { DitNative } from './ditNative';
 
-const TONE_SOURCE = require('../../assets/audio/dit-tone.wav');
+const TONE_SOURCE = toneSource;
 
 let tonePlayer: AudioPlayer | null = null;
 let loadingPromise: Promise<AudioPlayer> | null = null;
 let stopTimeout: ReturnType<typeof setTimeout> | null = null;
+let useNativeTone = Boolean(DitNative?.startTone);
+
+const waitForPlayerLoad = async (player: AudioPlayer) => {
+  const start = Date.now();
+  while (!player.isLoaded && Date.now() - start < 1500) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+};
 
 const ensureTone = async () => {
   if (tonePlayer) {
@@ -23,9 +37,17 @@ const ensureTone = async () => {
         shouldPlayInBackground: false,
         interruptionMode: 'doNotMix',
       });
-      const player = new AudioModule.AudioPlayer(TONE_SOURCE, 500, false);
+      await setIsAudioActiveAsync(true);
+      const player = createAudioPlayer(TONE_SOURCE, {
+        updateInterval: 250,
+        downloadFirst: true,
+        keepAudioSessionActive: true,
+      });
+      await waitForPlayerLoad(player);
       player.loop = true;
       player.volume = AUDIO_VOLUME;
+      player.muted = true;
+      player.play();
       tonePlayer = player;
       return player;
     } finally {
@@ -36,19 +58,40 @@ const ensureTone = async () => {
 };
 
 export const startTone = async () => {
-  if (DitNative?.startTone) {
-    await DitNative.startTone();
+  if (useNativeTone && DitNative?.startTone) {
+    try {
+      await DitNative.startTone();
+      return;
+    } catch (error) {
+      console.warn('DitNative startTone failed, using fallback.', error);
+      useNativeTone = false;
+    }
+  }
+  if (stopTimeout) {
+    clearTimeout(stopTimeout);
+    stopTimeout = null;
+  }
+  if (tonePlayer) {
+    tonePlayer.muted = false;
+    if (!tonePlayer.playing) {
+      tonePlayer.play();
+    }
     return;
   }
   const player = await ensureTone();
-  await player.seekTo(0);
-  player.play();
+  await waitForPlayerLoad(player);
+  player.muted = false;
 };
 
 export const playTone = async (durationMs: number) => {
-  if (DitNative?.playTone) {
-    await DitNative.playTone(durationMs);
-    return;
+  if (useNativeTone && DitNative?.playTone) {
+    try {
+      await DitNative.playTone(durationMs);
+      return;
+    } catch (error) {
+      console.warn('DitNative playTone failed, using fallback.', error);
+      useNativeTone = false;
+    }
   }
   await startTone();
   if (stopTimeout) {
@@ -60,9 +103,14 @@ export const playTone = async (durationMs: number) => {
 };
 
 export const stopTone = async () => {
-  if (DitNative?.stopTone) {
-    await DitNative.stopTone();
-    return;
+  if (useNativeTone && DitNative?.stopTone) {
+    try {
+      await DitNative.stopTone();
+      return;
+    } catch (error) {
+      console.warn('DitNative stopTone failed, using fallback.', error);
+      useNativeTone = false;
+    }
   }
   if (!tonePlayer) {
     return;
@@ -71,8 +119,7 @@ export const stopTone = async () => {
     clearTimeout(stopTimeout);
     stopTimeout = null;
   }
-  tonePlayer.pause();
-  await tonePlayer.seekTo(0);
+  tonePlayer.muted = true;
 };
 
 export const unloadTone = async () => {
@@ -80,7 +127,7 @@ export const unloadTone = async () => {
     return;
   }
   tonePlayer.pause();
-  tonePlayer.release();
+  tonePlayer.remove();
   tonePlayer = null;
   loadingPromise = null;
 };

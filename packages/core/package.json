@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "lint": "eslint .",
     "test:unit": "vitest",
     "test:unit:run": "vitest run",
     "test:types": "tsc -b --pretty false"
