@@ -27,6 +27,6 @@ Morse code practice. Tap for dot, hold for dah.
 ## Running locally
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
