@@ -30,3 +30,6 @@ plans
 *.env
 *.env.*
 *.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
