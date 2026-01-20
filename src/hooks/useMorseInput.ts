@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react';
 
 type UseMorseInputOptions = {
   dotThresholdMs: number;
@@ -94,7 +94,7 @@ export const useMorseInput = ({
   }, [onCancel, releasePress]);
 
   const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLButtonElement>) => {
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (event.repeat) {
         return;
       }
@@ -108,7 +108,7 @@ export const useMorseInput = ({
   );
 
   const handleKeyUp = useCallback(
-    (event: KeyboardEvent<HTMLButtonElement>) => {
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (event.key !== ' ' && event.key !== 'Enter') {
         return;
       }
@@ -125,7 +125,7 @@ export const useMorseInput = ({
     if (!enableGlobalKeyboard) {
       return;
     }
-    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+    const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (isGlobalShortcutBlocked()) {
         return;
       }
@@ -139,7 +139,7 @@ export const useMorseInput = ({
       beginPress();
     };
 
-    const handleGlobalKeyUp = (event: KeyboardEvent) => {
+    const handleGlobalKeyUp = (event: globalThis.KeyboardEvent) => {
       if (isGlobalShortcutBlocked()) {
         return;
       }

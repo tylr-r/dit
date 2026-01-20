@@ -11,6 +11,7 @@
     "deploy": "npm run build && firebase deploy",
     "test:unit": "vitest",
     "test:unit:run": "vitest run",
+    "test:types": "tsc -b --pretty false",
     "test:e2e": "playwright test"
   },
   "dependencies": {
