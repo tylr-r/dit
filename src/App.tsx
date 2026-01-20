@@ -17,8 +17,20 @@ import { ReferenceModal } from './components/ReferenceModal';
 import { SettingsPanel } from './components/SettingsPanel';
 import { StageDisplay } from './components/StageDisplay';
 import { MORSE_DATA, type Letter } from './data/morse';
-import { PRACTICE_WORDS } from './data/practiceWords';
 import { auth, database, googleProvider } from './firebase';
+import {
+  applyScoreDelta,
+  clamp,
+  formatWpm,
+  getLettersForLevel,
+  getRandomLetter,
+  getRandomWeightedLetter,
+  getRandomWord,
+  getWordsForLetters,
+  initializeScores,
+  parseLocalStorageScores,
+  parseProgress,
+} from './utils/morseUtils';
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[];
 const LEVELS = [1, 2, 3, 4] as const;
@@ -58,14 +70,6 @@ const STORAGE_KEYS = {
   listenWpm: 'morse-listen-wpm',
 };
 
-const clampNumber = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, Math.round(value)));
-
-const formatWpm = (value: number) => {
-  const rounded = Math.round(value * 10) / 10;
-  return rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1);
-};
-
 const readStoredBoolean = (key: string, fallback: boolean) => {
   if (typeof window === 'undefined') {
     return fallback;
@@ -94,83 +98,7 @@ const readStoredNumber = (
   if (!Number.isFinite(parsed)) {
     return fallback;
   }
-  return clampNumber(parsed, min, max);
-};
-
-const getLettersForLevel = (maxLevel: number) =>
-  LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel);
-
-const pickNewLetter = (letters: Letter[], previous?: Letter): Letter => {
-  if (letters.length === 0) {
-    return LETTERS[0];
-  }
-  if (letters.length === 1) {
-    return letters[0];
-  }
-  if (!previous || !letters.includes(previous)) {
-    return letters[Math.floor(Math.random() * letters.length)];
-  }
-  let next = previous;
-  while (next === previous) {
-    next = letters[Math.floor(Math.random() * letters.length)];
-  }
-  return next;
-};
-
-const getPracticeWordsForLetters = (letters: Letter[]) => {
-  const allowed = new Set(letters);
-  const filtered = PRACTICE_WORDS.filter((word) =>
-    word.split('').every((char) => allowed.has(char as Letter)),
-  );
-  return filtered.length > 0 ? filtered : letters.map((letter) => letter);
-};
-
-const pickNewWord = (words: readonly string[], previous?: string) => {
-  if (words.length === 0) {
-    return LETTERS[0];
-  }
-  if (words.length === 1) {
-    return words[0];
-  }
-  if (!previous || !words.includes(previous)) {
-    return words[Math.floor(Math.random() * words.length)];
-  }
-  let next = previous;
-  while (next === previous) {
-    next = words[Math.floor(Math.random() * words.length)];
-  }
-  return next;
-};
-
-const pickWeightedLetter = (
-  letters: Letter[],
-  scores: Record<Letter, number>,
-  previous?: Letter,
-): Letter => {
-  if (letters.length === 0) {
-    return LETTERS[0];
-  }
-  if (letters.length === 1) {
-    return letters[0];
-  }
-  const maxScore = Math.max(...letters.map((item) => scores[item] ?? 0));
-  const baseline = 3;
-  const weights = letters.map(
-    (item) => Math.max(maxScore - (scores[item] ?? 0), 0) + baseline,
-  );
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  let roll = Math.random() * totalWeight;
-  for (let index = 0; index < letters.length; index += 1) {
-    roll -= weights[index];
-    if (roll <= 0) {
-      const picked = letters[index];
-      if (picked === previous) {
-        return letters[(index + 1) % letters.length];
-      }
-      return picked;
-    }
-  }
-  return letters[letters.length - 1];
+  return clamp(parsed, min, max);
 };
 
 const clearTimer = (ref: { current: number | null }) => {
@@ -180,101 +108,13 @@ const clearTimer = (ref: { current: number | null }) => {
   }
 };
 
-const buildScoreMap = () =>
-  LETTERS.reduce(
-    (acc, letter) => {
-      acc[letter] = 0;
-      return acc;
-    },
-    {} as Record<Letter, number>,
-  );
-
-type RemoteProgress = {
-  listenWpm?: number;
-  maxLevel?: number;
-  showMnemonic?: boolean;
-  practiceWordMode?: boolean;
-  scores?: Record<Letter, number>;
-  showHint?: boolean;
-  wordMode?: boolean;
-};
-
-const parseRemoteScores = (value: unknown) => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const next = buildScoreMap();
-  let hasScore = false;
-  LETTERS.forEach((letter) => {
-    const entry = record[letter];
-    if (typeof entry === 'number' && Number.isFinite(entry)) {
-      next[letter] = entry;
-      hasScore = true;
-    }
-  });
-  return hasScore ? next : null;
-};
-
-const parseRemoteProgress = (value: unknown) => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const progress: RemoteProgress = {};
-  if (typeof record.showHint === 'boolean') {
-    progress.showHint = record.showHint;
-  }
-  if (typeof record.showMnemonic === 'boolean') {
-    progress.showMnemonic = record.showMnemonic;
-  }
-  if (typeof record.wordMode === 'boolean') {
-    progress.wordMode = record.wordMode;
-  }
-  if (typeof record.practiceWordMode === 'boolean') {
-    progress.practiceWordMode = record.practiceWordMode;
-  }
-  if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
-    progress.maxLevel = clampNumber(record.maxLevel, 1, 4);
-  }
-  if (
-    typeof record.listenWpm === 'number' &&
-    Number.isFinite(record.listenWpm)
-  ) {
-    progress.listenWpm = clampNumber(
-      record.listenWpm,
-      LISTEN_WPM_MIN,
-      LISTEN_WPM_MAX,
-    );
-  }
-  const scores = parseRemoteScores(record.scores);
-  if (scores) {
-    progress.scores = scores;
-  }
-  return progress;
-};
-
 const readStoredScores = () => {
   if (typeof window === 'undefined') {
-    return buildScoreMap();
+    return initializeScores();
   }
-  const stored = window.localStorage.getItem(STORAGE_KEYS.scores);
-  if (!stored) {
-    return buildScoreMap();
-  }
-  try {
-    const parsed = JSON.parse(stored) as Record<string, unknown>;
-    const next = buildScoreMap();
-    LETTERS.forEach((letter) => {
-      const value = parsed[letter];
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        next[letter] = value;
-      }
-    });
-    return next;
-  } catch {
-    return buildScoreMap();
-  }
+  return parseLocalStorageScores(
+    window.localStorage.getItem(STORAGE_KEYS.scores),
+  );
 };
 
 const useStoredValue = (key: string, value: string) => {
@@ -341,12 +181,12 @@ function MainApp() {
       false,
     );
     const availableLetters = getLettersForLevel(maxLevel);
-    const practiceWord = pickNewWord(
-      getPracticeWordsForLetters(availableLetters),
+    const practiceWord = getRandomWord(
+      getWordsForLetters(availableLetters),
     );
     const letter = practiceWordMode
       ? (practiceWord[0] as Letter)
-      : pickNewLetter(availableLetters);
+      : getRandomLetter(availableLetters);
     return {
       letter,
       maxLevel,
@@ -447,7 +287,7 @@ function MainApp() {
     [maxLevel],
   );
   const availablePracticeWords = useMemo(
-    () => getPracticeWordsForLetters(availableLetters),
+    () => getWordsForLetters(availableLetters),
     [availableLetters],
   );
   const scoresStorageValue = useMemo(() => JSON.stringify(scores), [scores]);
@@ -491,13 +331,10 @@ function MainApp() {
     navigator.vibrate(pattern);
   }, []);
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
-    setScores((prev) => ({
-      ...prev,
-      [targetLetter]: prev[targetLetter] + delta,
-    }));
+    setScores((prev) => applyScoreDelta(prev, targetLetter, delta));
   }, []);
   const handleResetScores = useCallback(() => {
-    setScores(buildScoreMap());
+    setScores(initializeScores());
   }, []);
   const isErrorLocked = useCallback(
     () => performance.now() < errorLockoutUntilRef.current,
@@ -865,13 +702,13 @@ function MainApp() {
       if (nextMode === 'listen') {
         const nextLetter = availableLetters.includes(letter)
           ? letter
-          : pickWeightedLetter(availableLetters, scores);
+          : getRandomWeightedLetter(availableLetters, scores);
         setLetter(nextLetter);
         void playListenSequence(MORSE_DATA[nextLetter].code);
         return;
       }
       if (practiceWordModeRef.current) {
-        const nextWord = pickNewWord(
+        const nextWord = getRandomWord(
           availablePracticeWords,
           practiceWordRef.current,
         );
@@ -884,7 +721,7 @@ function MainApp() {
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
-          : pickWeightedLetter(availableLetters, scores),
+          : getRandomWeightedLetter(availableLetters, scores),
       );
     },
     [
@@ -937,7 +774,7 @@ function MainApp() {
       setStatus('idle');
       setShowHintOnce(false);
       if (!nextValue) {
-        const nextLetter = pickWeightedLetter(
+        const nextLetter = getRandomWeightedLetter(
           availableLetters,
           scoresRef.current,
           letterRef.current,
@@ -946,7 +783,7 @@ function MainApp() {
         setLetter(nextLetter);
         return;
       }
-      const nextWord = pickNewWord(
+      const nextWord = getRandomWord(
         availablePracticeWords,
         practiceWordRef.current,
       );
@@ -973,8 +810,8 @@ function MainApp() {
       resetListenState();
       const nextLetters = getLettersForLevel(nextLevel);
       if (!isListen && practiceWordModeRef.current) {
-        const nextWord = pickNewWord(
-          getPracticeWordsForLetters(nextLetters),
+        const nextWord = getRandomWord(
+          getWordsForLetters(nextLetters),
           practiceWordRef.current,
         );
         practiceWordStartRef.current = null;
@@ -985,7 +822,7 @@ function MainApp() {
       }
       const nextLetter = nextLetters.includes(letter)
         ? letter
-        : pickWeightedLetter(nextLetters, scores);
+        : getRandomWeightedLetter(nextLetters, scores);
       setLetter(nextLetter);
       if (isListen) {
         void playListenSequence(MORSE_DATA[nextLetter].code);
@@ -1045,7 +882,10 @@ function MainApp() {
   }, [trackEvent]);
 
   const applyRemoteProgress = useCallback((raw: unknown) => {
-    const progress = parseRemoteProgress(raw);
+    const progress = parseProgress(raw, {
+      listenWpmMin: LISTEN_WPM_MIN,
+      listenWpmMax: LISTEN_WPM_MAX,
+    });
     if (!progress) {
       return;
     }
@@ -1074,7 +914,7 @@ function MainApp() {
       const currentLetter = letterRef.current;
       const nextLetter = nextLetters.includes(currentLetter)
         ? currentLetter
-        : pickWeightedLetter(nextLetters, nextScores, currentLetter);
+        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter);
       setMaxLevel(progress.maxLevel);
       setLetter(nextLetter);
     }
@@ -1086,7 +926,7 @@ function MainApp() {
       }
       if (progress.practiceWordMode) {
         const nextLetters = getLettersForLevel(resolvedMaxLevel);
-        const nextWord = pickNewWord(getPracticeWordsForLetters(nextLetters));
+        const nextWord = getRandomWord(getWordsForLetters(nextLetters));
         setPracticeWord(nextWord);
         setPracticeWordIndex(0);
         setLetter(nextWord[0] as Letter);
@@ -1214,7 +1054,7 @@ function MainApp() {
           if (practiceWordModeRef.current) {
             const currentWord = practiceWordRef.current;
             if (!currentWord) {
-              const nextWord = pickNewWord(availablePracticeWords);
+              const nextWord = getRandomWord(availablePracticeWords);
               const nextLetter = nextWord[0] as Letter;
               practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
@@ -1239,7 +1079,7 @@ function MainApp() {
                   setPracticeWpm(Math.round(nextWpm * 10) / 10);
                 }
               }
-              const nextWord = pickNewWord(availablePracticeWords, currentWord);
+              const nextWord = getRandomWord(availablePracticeWords, currentWord);
               const nextLetter = nextWord[0] as Letter;
               practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
@@ -1264,7 +1104,7 @@ function MainApp() {
           setStatus('success');
           successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
-              pickWeightedLetter(availableLetters, scoresRef.current, current),
+              getRandomWeightedLetter(availableLetters, scoresRef.current, current),
             );
             setShowHintOnce(false);
             setStatus('idle');
@@ -1360,7 +1200,7 @@ function MainApp() {
       bumpScore(letter, isCorrect ? 1 : -1);
       listenTimeoutRef.current = window.setTimeout(
         () => {
-          const nextLetter = pickWeightedLetter(
+          const nextLetter = getRandomWeightedLetter(
             availableLetters,
             scores,
             letter,
