@@ -25,6 +25,7 @@ Morse code practice across web and iOS. Tap for dot, hold for dah.
 - iOS app in `apps/ios` (Expo + React Native)
 - Native bridge in `modules/dit-native` (audio, haptics, glass view)
 - Firebase Auth + Realtime Database for sync
+- UI intent: web ships custom React components; iOS prefers Expo UI/SwiftUI components when available, with React Native fallbacks as needed
 
 ## Repo layout
 

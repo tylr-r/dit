@@ -21,3 +21,8 @@
 - Use concise but useful JSDoc above exported component functions.
 - Describe the role and intent without repeating the component name.
 - Keep wording helpful and scannable.
+
+## UI intent
+
+- Web UI: build custom React components that match the product’s design language.
+- iOS UI: prefer Expo UI/SwiftUI components when available, and use the liquid glass aesthetic when native components are in play; fall back to React Native or native modules when needed.
