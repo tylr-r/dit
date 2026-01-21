@@ -21,7 +21,17 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import {
+  ActionSheetIOS,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import Stepper from 'react-native-ios-stepper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, SvgXml } from 'react-native-svg';
 import { GlassButton } from './components/GlassButton';
@@ -549,11 +559,11 @@ export default function App() {
     }
   };
 
-  const handleMaxLevelCycle = useCallback(() => {
-    const currentIndex = LEVELS.indexOf(progress.maxLevel);
-    const nextIndex =
-      currentIndex >= 0 ? (currentIndex + 1) % LEVELS.length : 0;
-    const nextLevel = LEVELS[nextIndex];
+  const handleMaxLevelChange = useCallback((nextValue: number) => {
+    const nextLevel = Number(nextValue);
+    if (!Number.isFinite(nextLevel) || nextLevel === progress.maxLevel) {
+      return;
+    }
     setProgress((prev) => ({
       ...prev,
       maxLevel: nextLevel,
@@ -579,6 +589,29 @@ export default function App() {
       );
     }
   }, [isPractice, practiceWordMode, progress.maxLevel, targetLetter]);
+
+  const handleModeSelect = useCallback(
+    (nextMode: Mode) => {
+      applyModeChange(nextMode);
+    },
+    [applyModeChange],
+  );
+
+  const openModeActionSheet = useCallback(() => {
+    const labels = MODE_OPTIONS.map((option) => option.label);
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: 'Mode',
+        options: [...labels, 'Cancel'],
+        cancelButtonIndex: labels.length,
+      },
+      (index) => {
+        if (index < labels.length) {
+          handleModeSelect(MODE_OPTIONS[index].key);
+        }
+      },
+    );
+  }, [handleModeSelect]);
 
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
@@ -909,28 +942,35 @@ export default function App() {
               />
             </Pressable>
             <View style={styles.modeSelect}>
-              <View style={styles.modeSelectRow}>
-                {MODE_OPTIONS.map((option) => (
-                  <Pressable
-                    key={option.key}
-                    onPress={() => applyModeChange(option.key)}
-                    style={({ pressed }) => [
-                      styles.modePill,
-                      mode === option.key && styles.modePillActive,
-                      pressed && styles.modePillPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.modePillText,
-                        mode === option.key && styles.modePillTextActive,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              {Platform.OS === 'ios' ? (
+                <Pressable
+                  onPress={openModeActionSheet}
+                  style={styles.modeSelectButton}
+                  accessibilityLabel="Mode"
+                >
+                  <Text style={styles.modeSelectText}>
+                    {MODE_OPTIONS.find((option) => option.key === mode)?.label ??
+                      'Mode'}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Picker
+                  selectedValue={mode}
+                  onValueChange={(value) => handleModeSelect(value as Mode)}
+                  style={styles.modePicker}
+                  itemStyle={styles.modePickerItem}
+                  dropdownIconColor={COLORS.text}
+                  accessibilityLabel="Mode"
+                >
+                  {MODE_OPTIONS.map((option) => (
+                    <Picker.Item
+                      key={option.key}
+                      label={option.label}
+                      value={option.key}
+                    />
+                  ))}
+                </Picker>
+              )}
             </View>
             <View style={styles.settings}>
               <Pressable
@@ -1049,18 +1089,21 @@ export default function App() {
                   {!isFreestyle ? (
                     <View style={styles.panelGroup}>
                       <View style={styles.toggleRow}>
-                        <Text style={styles.toggleLabel}>Max level</Text>
-                        <Pressable
-                          onPress={handleMaxLevelCycle}
-                          style={({ pressed }) => [
-                            styles.panelSelect,
-                            pressed && styles.panelSelectPressed,
-                          ]}
-                        >
-                          <Text style={styles.panelSelectText}>
+                        <View style={styles.toggleLabelGroup}>
+                          <Text style={styles.toggleLabel}>Max level</Text>
+                          <Text style={styles.panelStepperValue}>
                             Level {progress.maxLevel}
                           </Text>
-                        </Pressable>
+                        </View>
+                        <View style={styles.panelStepper}>
+                          <Stepper
+                            value={progress.maxLevel}
+                            minValue={LEVELS[0]}
+                            maxValue={LEVELS[LEVELS.length - 1]}
+                            color={COLORS.accent}
+                            onPress={handleMaxLevelChange}
+                          />
+                        </View>
                       </View>
                       {isPractice ? (
                         <Pressable
@@ -1423,33 +1466,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    overflow: 'hidden',
   },
-  modeSelectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  modePill: {
+  modeSelectButton: {
     paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+    paddingHorizontal: 14,
+    minWidth: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  modePillActive: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  modePillPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  modePillText: {
-    color: 'rgba(255,255,255,0.65)',
+  modeSelectText: {
     fontSize: 10,
-    fontWeight: '600',
     letterSpacing: 2,
     textTransform: 'uppercase',
+    fontWeight: '600',
+    color: COLORS.text,
   },
-  modePillTextActive: {
+  modePicker: {
+    height: 32,
+    minWidth: 150,
+    color: COLORS.text,
+  },
+  modePickerItem: {
+    fontSize: 12,
+    fontWeight: '600',
     color: COLORS.text,
   },
   settings: {
@@ -1498,6 +1538,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
+  },
+  toggleLabelGroup: {
+    gap: 6,
   },
   toggleRowDisabled: {
     opacity: 0.5,
@@ -1554,10 +1597,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
   },
-  panelSelectPressed: {
-    transform: [{ scale: 0.98 }],
-  },
   panelSelectText: {
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: COLORS.text,
+  },
+  panelStepper: {
+    minWidth: 120,
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  panelStepperValue: {
     fontSize: 10,
     letterSpacing: 2,
     textTransform: 'uppercase',
