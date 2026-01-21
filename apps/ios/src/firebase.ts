@@ -1,10 +1,10 @@
-import { useCallback, useMemo } from 'react';
+import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import { get, getDatabase, ref, set } from 'firebase/database';
-import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import { useCallback, useMemo } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -28,7 +28,10 @@ if (__DEV__ && missingFirebaseKeys.length > 0) {
   );
 }
 
-const app = firebase.apps.length > 0 ? firebase.app() : firebase.initializeApp(firebaseConfig);
+const app =
+  firebase.apps.length > 0
+    ? firebase.app()
+    : firebase.initializeApp(firebaseConfig);
 const auth = app.auth();
 const database = getDatabase();
 
@@ -38,27 +41,30 @@ type FirebaseServiceState = {
 };
 
 export const useFirebaseService = (): FirebaseServiceState => {
-  const [request, promptAsync] = Google.useAuthRequest({
+  const [request, , promptAsync] = Google.useAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   const signIn = useCallback(
-    async (_method: FirebaseSignInMethod = 'native') => {
-      if (!request) {
+    async (method: FirebaseSignInMethod = 'native') => {
+      if (!request || !promptAsync) {
         throw new Error('Google auth request not ready.');
+      }
+      if (__DEV__ && method !== 'native') {
+        console.warn('Expo iOS sign-in only supports the native flow.');
       }
       if (
         !process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID &&
         !process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID &&
         !process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
       ) {
-        throw new Error('Missing Google OAuth client IDs for Expo AuthSession.');
+        throw new Error(
+          'Missing Google OAuth client IDs for Expo AuthSession.',
+        );
       }
-      const result = await promptAsync({
-        useProxy: Boolean(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID),
-      });
+      const result = await promptAsync();
       if (result.type !== 'success' || !result.authentication?.idToken) {
         throw new Error('Google sign-in was cancelled or failed.');
       }

@@ -1,5 +1,4 @@
 import { requireNativeViewManager, requireOptionalNativeModule } from 'expo-modules-core';
-import type { ComponentType } from 'react';
 import type { ViewProps } from 'react-native';
 
 type DitNativeModule = {

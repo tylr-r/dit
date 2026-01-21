@@ -7,7 +7,6 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { GlassSurface } from './GlassSurface';
 
 type GlassButtonProps = {
   label: string;
@@ -28,18 +27,21 @@ export const GlassButton = ({
 }: GlassButtonProps) => (
   <Pressable onPress={onPress} disabled={disabled}>
     {({ pressed }) => (
-      <View style={[pressed && styles.pressed, disabled && styles.disabled]}>
-        <GlassSurface
-          style={[styles.surface, style]}
-          contentStyle={[styles.content, contentStyle]}
-          intensity={45}
-        >
+      <View
+        style={[
+          styles.surface,
+          style,
+          pressed && styles.pressed,
+          disabled && styles.disabled,
+        ]}
+      >
+        <View style={[styles.content, contentStyle]}>
           <Text
             style={[styles.label, disabled && styles.labelDisabled, labelStyle]}
           >
             {label}
           </Text>
-        </GlassSurface>
+        </View>
       </View>
     )}
   </Pressable>
@@ -48,6 +50,13 @@ export const GlassButton = ({
 const styles = StyleSheet.create({
   surface: {
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   content: {
     paddingVertical: 10,

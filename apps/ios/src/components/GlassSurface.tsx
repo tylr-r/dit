@@ -20,7 +20,7 @@ export const GlassSurface = ({
   intensity = 35,
   tint = 'dark',
 }: GlassSurfaceProps) => {
-  const gradientColors =
+  const gradientColors: [string, string] =
     tint === 'dark'
       ? ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)']
       : ['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)'];

@@ -908,11 +908,7 @@ export default function App() {
                 style={styles.logoImage}
               />
             </Pressable>
-            <GlassSurface
-              style={styles.modeSelect}
-              contentStyle={styles.modeSelectContent}
-              intensity={25}
-            >
+            <View style={styles.modeSelect}>
               <View style={styles.modeSelectRow}>
                 {MODE_OPTIONS.map((option) => (
                   <Pressable
@@ -935,7 +931,7 @@ export default function App() {
                   </Pressable>
                 ))}
               </View>
-            </GlassSurface>
+            </View>
             <View style={styles.settings}>
               <Pressable
                 onPress={() => setShowSettings((prev) => !prev)}
@@ -1054,16 +1050,16 @@ export default function App() {
                     <View style={styles.panelGroup}>
                       <View style={styles.toggleRow}>
                         <Text style={styles.toggleLabel}>Max level</Text>
-                        <Pressable onPress={handleMaxLevelCycle}>
-                          <GlassSurface
-                            style={styles.panelSelect}
-                            contentStyle={styles.panelSelectContent}
-                            intensity={35}
-                          >
-                            <Text style={styles.panelSelectText}>
-                              Level {progress.maxLevel}
-                            </Text>
-                          </GlassSurface>
+                        <Pressable
+                          onPress={handleMaxLevelCycle}
+                          style={({ pressed }) => [
+                            styles.panelSelect,
+                            pressed && styles.panelSelectPressed,
+                          ]}
+                        >
+                          <Text style={styles.panelSelectText}>
+                            Level {progress.maxLevel}
+                          </Text>
                         </Pressable>
                       </View>
                       {isPractice ? (
@@ -1424,10 +1420,11 @@ const styles = StyleSheet.create({
   },
   modeSelect: {
     borderRadius: 999,
-  },
-  modeSelectContent: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   modeSelectRow: {
     flexDirection: 'row',
@@ -1547,10 +1544,18 @@ const styles = StyleSheet.create({
   },
   panelSelect: {
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
   panelSelectContent: {
     paddingVertical: 6,
     paddingHorizontal: 14,
+  },
+  panelSelectPressed: {
+    transform: [{ scale: 0.98 }],
   },
   panelSelectText: {
     fontSize: 10,
