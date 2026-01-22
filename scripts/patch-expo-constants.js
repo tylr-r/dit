@@ -13,6 +13,21 @@ import path from 'path';
 
 const repoRoot = process.cwd();
 const pnpmStoreDir = path.join(repoRoot, 'node_modules', '.pnpm');
+const hoistedExpoConstantsRoot = path.join(
+  repoRoot,
+  'node_modules',
+  'expo-constants',
+);
+const hoistedScriptPath = path.join(
+  hoistedExpoConstantsRoot,
+  'scripts',
+  'get-app-config-ios.sh',
+);
+const hoistedPodspecPath = path.join(
+  hoistedExpoConstantsRoot,
+  'ios',
+  'EXConstants.podspec',
+);
 
 // PATCH 1: Fix missing mkdir in expo-constants get-app-config-ios.sh
 // The original script fails to create RESOURCE_DEST directory for shallow bundles,
@@ -28,6 +43,10 @@ const podspecNeedle =
   ':script => "bash -l -c \\"#{env_vars}$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh\\"",';
 const podspecReplacement =
   ':script => "#{env_vars}bash -l \\"$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh\\"",';
+const podspecEnvNeedle =
+  'env_vars = ENV[\'PROJECT_ROOT\'] ? "PROJECT_ROOT=#{ENV[\'PROJECT_ROOT\']} " : ""';
+const podspecEnvReplacement =
+  'env_vars = ENV[\'PROJECT_ROOT\'] ? "PROJECT_ROOT=\\"#{ENV[\'PROJECT_ROOT\']}\\" " : ""';
 
 // PATCH 3: Fix command substitution in Xcode project bundler script
 // Backtick-style command substitution in the bundle phase causes Xcode build failures.
@@ -40,41 +59,46 @@ const pbxprojPath = path.join(
   'Dit.xcodeproj',
   'project.pbxproj',
 );
+const rootPbxprojPath = path.join(
+  repoRoot,
+  'ios',
+  'dit.xcodeproj',
+  'project.pbxproj',
+);
 const pbxprojNeedle =
   "`\\\"$NODE_BINARY\\\" --print \\\"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\\\"`";
 const pbxprojReplacement =
-  '"$(\\"$NODE_BINARY\\" --print \\"require(\'path\').dirname(require.resolve(\'react-native/package.json\')) + \'/scripts/react-native-xcode.sh\'\\")"';
-
-// Exit early if pnpm store doesn't exist (e.g., fresh clone before install)
-if (!fs.existsSync(pnpmStoreDir)) {
-  console.warn('pnpm store not found; skipping expo-constants patch.');
-  process.exit(0);
-}
+  '\\"$(\\"$NODE_BINARY\\" --print \\"require(\\\'path\\\').dirname(require.resolve(\\\'react-native/package.json\\\')) + \\\'/scripts/react-native-xcode.sh\\\'\\")\\"';
 
 // Locate all expo-constants installations in the pnpm store.
 // pnpm can have multiple versions of the same package, so we patch all of them.
-const candidates = fs
-  .readdirSync(pnpmStoreDir, { withFileTypes: true })
-  .filter(
-    (entry) => entry.isDirectory() && entry.name.startsWith('expo-constants@'),
-  )
-  .map((entry) =>
-    path.join(
-      pnpmStoreDir,
-      entry.name,
-      'node_modules',
-      'expo-constants',
-      'scripts',
-      'get-app-config-ios.sh',
-    ),
-  )
-  .filter((scriptPath) => fs.existsSync(scriptPath));
+const pnpmCandidates = fs.existsSync(pnpmStoreDir)
+  ? fs
+      .readdirSync(pnpmStoreDir, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isDirectory() && entry.name.startsWith('expo-constants@'),
+      )
+      .map((entry) =>
+        path.join(
+          pnpmStoreDir,
+          entry.name,
+          'node_modules',
+          'expo-constants',
+          'scripts',
+          'get-app-config-ios.sh',
+        ),
+      )
+      .filter((scriptPath) => fs.existsSync(scriptPath))
+  : [];
+const candidates = [
+  ...pnpmCandidates,
+  ...(fs.existsSync(hoistedScriptPath) ? [hoistedScriptPath] : []),
+].filter((scriptPath, index, all) => all.indexOf(scriptPath) === index);
 
 // Exit early if expo-constants isn't installed (shouldn't happen in normal workflow)
-if (candidates.length === 0) {
-  console.warn(
-    'expo-constants script not found in pnpm store; skipping patch.',
-  );
+if (candidates.length === 0 && !fs.existsSync(hoistedPodspecPath)) {
+  console.warn('expo-constants script not found; skipping patch.');
   process.exit(0);
 }
 
@@ -113,32 +137,38 @@ const podspecCandidates = candidates
       'EXConstants.podspec',
     ),
   )
+  .concat(fs.existsSync(hoistedPodspecPath) ? [hoistedPodspecPath] : [])
   .filter((podspecPath, index, all) => all.indexOf(podspecPath) === index) // Deduplicate paths
   .filter((podspecPath) => fs.existsSync(podspecPath)); // Only include files that exist
 
 for (const podspecPath of podspecCandidates) {
   const contents = fs.readFileSync(podspecPath, 'utf8');
-  // Skip if the needle isn't found (already patched or version mismatch)
-  if (!contents.includes(podspecNeedle)) {
-    continue;
+  let updated = contents;
+  if (updated.includes(podspecNeedle)) {
+    updated = updated.replace(podspecNeedle, podspecReplacement);
   }
-  // Replace bash -l -c wrapper with simpler bash -l execution
-  const updated = contents.replace(podspecNeedle, podspecReplacement);
-  fs.writeFileSync(podspecPath, updated);
-  podspecPatchedCount += 1;
+  if (updated.includes(podspecEnvNeedle)) {
+    updated = updated.replace(podspecEnvNeedle, podspecEnvReplacement);
+  }
+  if (updated !== contents) {
+    fs.writeFileSync(podspecPath, updated);
+    podspecPatchedCount += 1;
+  }
 }
 
-// Apply PATCH 3: Fix command substitution syntax in Xcode project
-// This only needs to be applied once to the main Xcode project file
-if (fs.existsSync(pbxprojPath)) {
-  const contents = fs.readFileSync(pbxprojPath, 'utf8');
-  // Only patch if the old backtick syntax is present
-  if (contents.includes(pbxprojNeedle)) {
-    // Replace backticks with $() command substitution syntax
-    const updated = contents.replace(pbxprojNeedle, pbxprojReplacement);
-    fs.writeFileSync(pbxprojPath, updated);
-    pbxprojPatched = true;
+// Apply PATCH 3: Fix command substitution syntax in Xcode projects
+// Replace backticks with $() command substitution syntax for paths with spaces.
+for (const projectPath of [pbxprojPath, rootPbxprojPath]) {
+  if (!fs.existsSync(projectPath)) {
+    continue;
   }
+  const contents = fs.readFileSync(projectPath, 'utf8');
+  if (!contents.includes(pbxprojNeedle)) {
+    continue;
+  }
+  const updated = contents.replace(pbxprojNeedle, pbxprojReplacement);
+  fs.writeFileSync(projectPath, updated);
+  pbxprojPatched = true;
 }
 
 // Report results to user
