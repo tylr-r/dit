@@ -1,6 +1,6 @@
 # Dit
 
-Morse code practice. Tap for dot, hold for dah.
+Morse code practice across web and iOS. Tap for dot, hold for dah.
 
 ## Principles
 
@@ -18,15 +18,57 @@ Morse code practice. Tap for dot, hold for dah.
 
 **Listen** — Hear a letter, type the answer.
 
-## TODO
+## Architecture
 
-- Add prosigns
-- Word practice mode
-- Conversation practice mode where you can chat with AI
+- Turborepo monorepo with shared look and feel and logic
+- UI intent:
+  - Similar look and feel across versions
+  - Web ships custom React components
+  - iOS looks like web version but prefers Expo UI/SwiftUI components when available
+
+## Repo layout
+
+- `apps/web`: React Web application (Vite)
+- `apps/ios`: Native iOS application (Expo/React Native)
+- `packages/core`: Shared business logic and types
+- `docs/`: Project documentation, style guides, and architectural decisions
 
 ## Running locally
 
+Install deps:
+
 ```bash
-npm install
-npm run dev
+pnpm install
 ```
+
+Web app:
+
+```bash
+pnpm --filter @dit/web dev
+```
+
+iOS app (Expo):
+
+```bash
+pnpm --filter @dit/ios dev
+```
+
+Run all dev servers via Turbo:
+
+```bash
+pnpm run dev
+```
+
+## Tooling
+
+```bash
+pnpm run build
+pnpm run lint
+pnpm run test:unit
+pnpm run test:e2e
+pnpm run test:types
+```
+
+## Environment
+
+- Root `.env` for config

@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.turbo
 .firebase
 *.local
 
@@ -28,3 +29,12 @@ plans
 
 *.env
 *.env.*
+*.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+
+# Expo
+**/.expo/
+/ios/
+/app.json

@@ -19,13 +19,13 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - **Structure**: A Turborepo monorepo to manage shared code and platform-specific apps.
 - **Shared Core**: All Morse code encoding/decoding logic, signal processing algorithms, and Firebase data schemas will reside in a shared TypeScript package (`packages/core`).
 - **Web App** (`apps/web`): Maintain the existing React/Vite/Firebase web app, pulling from the shared logic package.
-- **iOS App** (`apps/ios`): Built using React Native/Expo, with emphasis on Native Modules.
+- **iOS App** (`apps/ios`): Built using React Native/Expo, with native UIKit components and Expo packages for authentic iOS appearance.
 
 ## 4. Design & Performance Intentions
 
-- **"Liquid Glass" UI**: The iOS app should not feel like a web wrapper. Use SwiftUI for high-fidelity components, specifically focusing on glassmorphism, fluid gestures, and Apple-standard blur effects.
-- **Native Integration**: Where performance or "feel" is critical (e.g., haptics, real-time audio synthesis for Morse signals, or complex shaders), prioritize writing native Swift code and bridging it to the React Native layer.
-- **AI-Assisted Development**: Leverage AI to generate SwiftUI views and bridge code (Expo Modules) based on existing React component specifications.
+- **"Liquid Glass" UI**: The iOS app uses authentic Apple design language with native `UIVisualEffectView` blur effects. Prefer Expo packages (`expo-glass-effect`) when available; use custom UIKit components for native controls (`UISegmentedControl`, etc.).
+- **Native Integration**: Critical features (haptics, audio synthesis, glass effects) use native Swift/UIKit modules bridged via Expo Modules API. Avoid SwiftUI with `UIHostingController` due to React Native bridge complexity.
+- **Development Approach**: Use UIKit for reliable native components; leverage official Expo packages to reduce custom native code.
 
 ## 5. Maintenance & Scalability
 
@@ -36,7 +36,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 ## 6. Coding Assistant Instructions
 
 - **When writing Web UI**: Use React functional components with plain CSS (current convention).
-- **When writing iOS UI**: Prioritize SwiftUI for native views.
+- **When writing iOS UI**: Use native UIKit components for authentic appearance; prefer Expo packages when available. See `docs/NATIVE_IOS.md` for specific architectural guidelines.
 - **When writing Logic**: Ensure code is strictly typed in TypeScript. Currently in `src/data/`; will migrate to `packages/core/` when monorepo is established.
 - **Flexibility**: Suggest the most performant "native" way to achieve an effect before defaulting to a cross-platform library.
 - **Context Awareness**: Always consider how changes affect shared logic and both platforms once the monorepo structure is in place.
@@ -85,11 +85,22 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 - [ ] Initialize Expo app in `apps/ios/`
 - [ ] Configure Expo Modules for native bridging
-- [ ] Create SwiftUI components for "Liquid Glass" UI
+  - [ ] Create local `modules/dit-native` Expo module with Swift stubs
+  - [ ] Wire JS fallbacks for audio/haptics
+- [ ] Bring up iOS build + Metro in pnpm workspace
+  - [ ] Confirm `expo run:ios` succeeds end-to-end without Metro errors
 - [ ] Implement native haptics module (replace `navigator.vibrate`)
 - [ ] Implement native audio synthesis module (replace Web Audio API)
 - [ ] Connect to `@dit/core` for Morse logic
 - [ ] Implement Firebase Auth (Google Sign-In) for iOS
+- [ ] Align iOS UI with mobile web baseline
+  - [ ] Match top bar controls (logo, mode selector, settings)
+  - [ ] Add settings panel controls (levels, words, listen speed, sound check)
+  - [ ] Add reference modal grid
+  - [ ] Implement basic mode switching (practice, freestyle, listen)
+  - [ ] Add listen mode keyboard + playback controls
+  - [ ] Replace `expo-av` with `expo-audio` fallback
+  - [ ] Wire iOS `GoogleService-Info.plist` in Expo config
 - [ ] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission
