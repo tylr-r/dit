@@ -64,11 +64,11 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 ### Phase 2: Monorepo Setup
 
-- [ ] Initialize Turborepo at project root
-- [ ] Configure `turbo.json` with build/lint/test pipelines
-- [ ] Move web app to `apps/web/`
-- [ ] Create `packages/core/` directory structure with `package.json` and `tsconfig.json`
-- [ ] Verify web app builds and deploys correctly
+- [x] Initialize Turborepo at project root
+- [x] Configure `turbo.json` with build/lint/test pipelines
+- [x] Move web app to `apps/web/`
+- [x] Create `packages/core/` directory structure with `package.json` and `tsconfig.json`
+- [x] Verify web app builds and deploys correctly
 
 ### Phase 3: Core Package Extraction
 
