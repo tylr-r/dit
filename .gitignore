@@ -33,3 +33,8 @@ plans
 
 # Playwright
 apps/web/test-results/
+
+# Expo
+**/.expo/
+/ios/
+/app.json
