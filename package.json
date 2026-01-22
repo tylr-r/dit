@@ -4,16 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "packageManager": "pnpm@10.28.1",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "ios": "pnpm --filter @dit/ios ios",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "postinstall": "node scripts/patch-expo-constants.js",
     "test:unit": "turbo run test:unit",
     "test:unit:run": "turbo run test:unit:run",
     "test:e2e": "turbo run test:e2e",
-    "test:types": "turbo run test:types"
+    "test:types": "turbo run test:types",
+    "android": "pnpm --filter @dit/ios android"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -23,5 +28,10 @@
     "globals": "^16.5.0",
     "typescript-eslint": "^8.46.4",
     "turbo": "^2.5.0"
+  },
+  "dependencies": {
+    "expo": "~54.0.31",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }
