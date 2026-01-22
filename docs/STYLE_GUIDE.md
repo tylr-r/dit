@@ -25,4 +25,4 @@
 ## UI intent
 
 - Web UI: build custom React components that match the product’s design language.
-- iOS UI: prefer Expo UI/SwiftUI components when available, and use the liquid glass aesthetic when native components are in play; fall back to React Native or native modules when needed.
+- iOS UI: use native UIKit components (e.g., `UISegmentedControl`, `UIVisualEffectView`) for authentic iOS appearance. Prefer Expo packages (`expo-glass-effect`) when available. Avoid SwiftUI with `UIHostingController` due to React Native bridge complexity.

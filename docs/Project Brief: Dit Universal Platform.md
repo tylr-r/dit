@@ -19,13 +19,13 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - **Structure**: A Turborepo monorepo to manage shared code and platform-specific apps.
 - **Shared Core**: All Morse code encoding/decoding logic, signal processing algorithms, and Firebase data schemas will reside in a shared TypeScript package (`packages/core`).
 - **Web App** (`apps/web`): Maintain the existing React/Vite/Firebase web app, pulling from the shared logic package.
-- **iOS App** (`apps/ios`): Built using React Native/Expo, with Expo UI/SwiftUI where possible and native modules when needed.
+- **iOS App** (`apps/ios`): Built using React Native/Expo, with native UIKit components and Expo packages for authentic iOS appearance.
 
 ## 4. Design & Performance Intentions
 
-- **"Liquid Glass" UI**: The iOS app should not feel like a web wrapper. Prefer Expo UI/SwiftUI for high-fidelity components; when native components are used, adopt the liquid glass aesthetic with glassmorphism, fluid gestures, and Apple-standard blur effects.
-- **Native Integration**: Where performance or "feel" is critical (e.g., haptics, real-time audio synthesis for Morse signals, or complex shaders), prioritize native Swift/SwiftUI modules bridged to React Native.
-- **AI-Assisted Development**: Leverage AI to generate SwiftUI views and bridge code (Expo Modules) based on existing React component specifications.
+- **"Liquid Glass" UI**: The iOS app uses authentic Apple design language with native `UIVisualEffectView` blur effects. Prefer Expo packages (`expo-glass-effect`) when available; use custom UIKit components for native controls (`UISegmentedControl`, etc.).
+- **Native Integration**: Critical features (haptics, audio synthesis, glass effects) use native Swift/UIKit modules bridged via Expo Modules API. Avoid SwiftUI with `UIHostingController` due to React Native bridge complexity.
+- **Development Approach**: Use UIKit for reliable native components; leverage official Expo packages to reduce custom native code.
 
 ## 5. Maintenance & Scalability
 
@@ -36,7 +36,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 ## 6. Coding Assistant Instructions
 
 - **When writing Web UI**: Use React functional components with plain CSS (current convention).
-- **When writing iOS UI**: Prefer Expo UI/SwiftUI components; fall back to native modules or React Native views when needed.
+- **When writing iOS UI**: Use native UIKit components for authentic appearance; prefer Expo packages when available; avoid SwiftUI/UIHostingController.
 - **When writing Logic**: Ensure code is strictly typed in TypeScript. Currently in `src/data/`; will migrate to `packages/core/` when monorepo is established.
 - **Flexibility**: Suggest the most performant "native" way to achieve an effect before defaulting to a cross-platform library.
 - **Context Awareness**: Always consider how changes affect shared logic and both platforms once the monorepo structure is in place.
@@ -92,8 +92,11 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
   - [x] Switch pnpm to hoisted node linker for Metro resolution
   - [x] Add Expo runtime deps (`expo-asset`, `expo-file-system`, `expo-font`, `expo-keep-awake`, `expo-constants`, `expo-modules-core`, `expo-modules-autolinking`, `@babel/runtime`)
   - [x] Confirm `expo run:ios` succeeds end-to-end without Metro errors
-- [ ] Create SwiftUI components for "Liquid Glass" UI
-- [ ] Prefer Expo UI/SwiftUI native controls with the liquid glass aesthetic where available
+- [x] Create native glass UI components
+  - [x] Glass surface container (`DitGlassView` using UIVisualEffectView)
+  - [x] Glass buttons (using `expo-glass-effect` package)
+  - [x] Native mode selector (`UISegmentedControl`)
+  - [ ] Refine glass opacity and appearance
 - [x] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
