@@ -17,7 +17,6 @@ export const GlassButton = ({
   onPress,
   style,
   disabled = false,
-  variant = 'primary',
 }: GlassButtonProps) => {
   return (
     <Pressable
@@ -61,4 +60,3 @@ const styles = StyleSheet.create({
     opacity: 0.7, // Even more transparent when pressed
   },
 });
-
