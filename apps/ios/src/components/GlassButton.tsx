@@ -1,12 +1,5 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { GlassView } from 'expo-glass-effect';
+import { Pressable, StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 type GlassButtonProps = {
   label: string;
@@ -15,68 +8,57 @@ type GlassButtonProps = {
   contentStyle?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
+  variant?: 'primary' | 'secondary';
+  icon?: string;
 };
 
 export const GlassButton = ({
   label,
   onPress,
   style,
-  contentStyle,
-  labelStyle,
   disabled = false,
-}: GlassButtonProps) => (
-  <Pressable onPress={onPress} disabled={disabled}>
-    {({ pressed }) => (
-      <View
-        style={[
-          styles.surface,
-          style,
-          pressed && styles.pressed,
-          disabled && styles.disabled,
-        ]}
-      >
-        <View style={[styles.content, contentStyle]}>
-          <Text
-            style={[styles.label, disabled && styles.labelDisabled, labelStyle]}
-          >
-            {label}
-          </Text>
-        </View>
-      </View>
-    )}
-  </Pressable>
-);
+  variant = 'primary',
+}: GlassButtonProps) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.container,
+        style,
+        disabled && styles.disabled,
+        pressed && styles.pressed,
+      ]}
+    >
+      <GlassView
+        style={StyleSheet.absoluteFill}
+        glassEffectStyle="clear"
+        isInteractive
+      />
+      <Text style={styles.label}>{label}</Text>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
-  surface: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  content: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+  container: {
+    height: 50,
+    borderRadius: 14,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.85, // More transparent by default to show glass effect
   },
   label: {
-    color: '#f4f7f9',
-    fontSize: 12,
+    fontSize: 17,
     fontWeight: '600',
-    letterSpacing: 2,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  labelDisabled: {
-    color: '#8d98a5',
-  },
-  pressed: {
-    transform: [{ scale: 0.98 }],
+    color: '#fff',
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.4,
+  },
+  pressed: {
+    opacity: 0.7, // Even more transparent when pressed
   },
 });
+

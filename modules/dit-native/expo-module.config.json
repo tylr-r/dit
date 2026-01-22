@@ -1,7 +1,13 @@
 {
-  "platforms": ["apple"],
+  "platforms": [
+    "apple"
+  ],
   "apple": {
-    "modules": ["DitNativeModule", "DitGlassViewModule"],
+    "modules": [
+      "DitNativeModule",
+      "DitGlassViewModule",
+      "DitGlassSegmentedControlModule"
+    ],
     "podspecPath": "ios/DitNative.podspec"
   }
 }

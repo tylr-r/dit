@@ -13,8 +13,8 @@
   "dependencies": {
     "@babel/runtime": "7.28.6",
     "@dit/core": "workspace:*",
-    "@react-native-picker/picker": "2.7.5",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-picker/picker": "2.7.5",
     "dit-native": "workspace:*",
     "expo": "~54.0.31",
     "expo-asset": "~12.0.12",
@@ -24,6 +24,7 @@
     "expo-constants": "~18.0.13",
     "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.10",
+    "expo-glass-effect": "~0.1.8",
     "expo-haptics": "~15.0.8",
     "expo-keep-awake": "~15.0.8",
     "expo-linear-gradient": "~15.0.8",

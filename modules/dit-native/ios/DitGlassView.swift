@@ -2,10 +2,14 @@ import ExpoModulesCore
 import UIKit
 
 final class DitGlassView: UIView {
-  private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
-  private let gradientLayer = CAGradientLayer()
+  // Use adaptive system material (adapts to light/dark mode automatically)
+  private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
   private let contentView = UIView()
-  private var intensityValue: Double = 35 {
+  
+  // Maps intensity to alpha is a partial override of system behavior, 
+  // but preserving for now if user wants to fade it out. 
+  // Ideally, we just show/hide.
+  private var intensityValue: Double = 100 {
     didSet {
       blurView.alpha = CGFloat(min(max(intensityValue / 100, 0), 1))
     }
@@ -21,38 +25,38 @@ final class DitGlassView: UIView {
     setup()
   }
 
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    blurView.frame = bounds
+  }
+
   private func setup() {
+    // Corner radius handled by parent container clipping or can be set here too,
+    // but if absolute filled, usually follows parent.
+    // We keep it just in case.
     layer.cornerRadius = 24
     layer.masksToBounds = true
-    layer.borderWidth = 1
-    layer.borderColor = UIColor.white.withAlphaComponent(0.15).cgColor
-
-    gradientLayer.colors = [
-      UIColor.white.withAlphaComponent(0.12).cgColor,
-      UIColor.white.withAlphaComponent(0.03).cgColor,
-    ]
-    gradientLayer.startPoint = CGPoint(x: 0.2, y: 0)
-    gradientLayer.endPoint = CGPoint(x: 0.8, y: 1)
+    
+    // Border
+    layer.borderWidth = 1.0 / UIScreen.main.scale
+    layer.borderColor = UIColor.separator.cgColor
 
     blurView.frame = bounds
     blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    contentView.frame = bounds
-    contentView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
-    layer.addSublayer(gradientLayer)
+    
     addSubview(blurView)
-    addSubview(contentView)
-  }
-
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    gradientLayer.frame = bounds
-    blurView.frame = bounds
-    contentView.frame = bounds
   }
 
   func setIntensity(_ value: Double) {
     intensityValue = value
+  }
+  
+  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+      super.traitCollectionDidChange(previousTraitCollection)
+      // Update border color for dark/light mode changes if needed
+      if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+          layer.borderColor = UIColor.separator.cgColor
+      }
   }
 }
 

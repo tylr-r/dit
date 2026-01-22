@@ -4,15 +4,19 @@
   "private": true,
   "description": "Dit native module bridge",
   "license": "MIT",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "index.tsx",
+  "source": "index.tsx",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": "./index.js"
+      "source": "./index.tsx",
+      "default": "./index.tsx"
     }
   },
-  "keywords": ["expo-module", "react-native", "dit"],
+  "keywords": [
+    "expo-module",
+    "react-native",
+    "dit"
+  ],
   "peerDependencies": {
     "expo": "*",
     "expo-modules-core": "*",

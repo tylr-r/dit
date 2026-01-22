@@ -18,23 +18,23 @@ import {
   type ProgressSnapshot,
   type ScoreRecord,
 } from '@dit/core';
+import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Picker } from '@react-native-picker/picker';
 import {
-  ActionSheetIOS,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from 'react-native';
 import Stepper from 'react-native-ios-stepper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, SvgXml } from 'react-native-svg';
 import { GlassButton } from './components/GlassButton';
+import { GlassSegmentedControl } from './components/GlassSegmentedControl';
 import { GlassSurface } from './components/GlassSurface';
 import { useFirebaseService } from './firebase';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -590,6 +590,46 @@ export default function App() {
     }
   }, [isPractice, practiceWordMode, progress.maxLevel, targetLetter]);
 
+  const applyModeChange = useCallback(
+    (nextMode: Mode) => {
+      setMode(nextMode);
+      setShowSettings(false);
+      setShowReference(false);
+      setShowHintOnce(false);
+      setInput('');
+      setResult(null);
+      setFreestyleInput('');
+      setFreestyleResult(null);
+      setFreestyleWord('');
+      setListenStatus('idle');
+      setListenReveal(null);
+      setListenPlaying(false);
+      clearTimeoutRef(freestyleTimeoutRef);
+      clearTimeoutRef(listenTimeoutRef);
+      clearTimeoutRef(wordSpaceTimeoutRef);
+      practiceWordStartRef.current = null;
+      if (nextMode !== 'practice') {
+        setPracticeWpm(null);
+      }
+      if (nextMode === 'listen') {
+        setListenTarget(
+          pickNextLetter(availableLetters, scoresRef.current, listenTarget),
+        );
+        return;
+      }
+      if (nextMode === 'practice' && practiceWordMode) {
+        const nextWord = getRandomWord(
+          availablePracticeWords,
+          practiceWordRef.current,
+        );
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setTargetLetter(nextWord[0] as Letter);
+      }
+    },
+    [availableLetters, availablePracticeWords, listenTarget, practiceWordMode],
+  );
+
   const handleModeSelect = useCallback(
     (nextMode: Mode) => {
       applyModeChange(nextMode);
@@ -597,21 +637,7 @@ export default function App() {
     [applyModeChange],
   );
 
-  const openModeActionSheet = useCallback(() => {
-    const labels = MODE_OPTIONS.map((option) => option.label);
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: 'Mode',
-        options: [...labels, 'Cancel'],
-        cancelButtonIndex: labels.length,
-      },
-      (index) => {
-        if (index < labels.length) {
-          handleModeSelect(MODE_OPTIONS[index].key);
-        }
-      },
-    );
-  }, [handleModeSelect]);
+
 
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
@@ -718,45 +744,8 @@ export default function App() {
     [availableLetters, isListenIdle, listenTarget],
   );
 
-  const applyModeChange = useCallback(
-    (nextMode: Mode) => {
-      setMode(nextMode);
-      setShowSettings(false);
-      setShowReference(false);
-      setShowHintOnce(false);
-      setInput('');
-      setResult(null);
-      setFreestyleInput('');
-      setFreestyleResult(null);
-      setFreestyleWord('');
-      setListenStatus('idle');
-      setListenReveal(null);
-      setListenPlaying(false);
-      clearTimeoutRef(freestyleTimeoutRef);
-      clearTimeoutRef(listenTimeoutRef);
-      clearTimeoutRef(wordSpaceTimeoutRef);
-      practiceWordStartRef.current = null;
-      if (nextMode !== 'practice') {
-        setPracticeWpm(null);
-      }
-      if (nextMode === 'listen') {
-        setListenTarget(
-          pickNextLetter(availableLetters, scoresRef.current, listenTarget),
-        );
-        return;
-      }
-      if (nextMode === 'practice' && practiceWordMode) {
-        const nextWord = getRandomWord(
-          availablePracticeWords,
-          practiceWordRef.current,
-        );
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setTargetLetter(nextWord[0] as Letter);
-      }
-    },
-    [availableLetters, availablePracticeWords, listenTarget, practiceWordMode],
-  );
+  // ... (keep usage in handleModeSelect same, just moving definition up)
+
 
   const handleResetScores = useCallback(() => {
     setProgress((prev) => ({
@@ -941,18 +930,16 @@ export default function App() {
                 style={styles.logoImage}
               />
             </Pressable>
-            <View style={styles.modeSelect}>
+            <View style={Platform.OS === 'ios' ? null : styles.modeSelect}>
               {Platform.OS === 'ios' ? (
-                <Pressable
-                  onPress={openModeActionSheet}
-                  style={styles.modeSelectButton}
-                  accessibilityLabel="Mode"
-                >
-                  <Text style={styles.modeSelectText}>
-                    {MODE_OPTIONS.find((option) => option.key === mode)?.label ??
-                      'Mode'}
-                  </Text>
-                </Pressable>
+                <GlassSegmentedControl
+                  values={MODE_OPTIONS.map((m) => m.label)}
+                  selectedIndex={MODE_OPTIONS.findIndex((m) => m.key === mode)}
+                  onChange={(index) =>
+                    handleModeSelect(MODE_OPTIONS[index].key)
+                  }
+                  style={{ width: 280 }}
+                />
               ) : (
                 <Picker
                   selectedValue={mode}
