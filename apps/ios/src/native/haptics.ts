@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { DitNative } from './ditNative';
+import { DitNative } from 'dit-native';
 
 export const triggerDotHaptic = async () => {
   if (DitNative?.triggerHaptic) {

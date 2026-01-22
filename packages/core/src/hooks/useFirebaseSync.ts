@@ -3,8 +3,8 @@ import type {
   FirebaseSignInMethod,
   FirebaseSyncService,
   FirebaseUser,
-  ProgressSnapshot,
-} from '@dit/core';
+} from '../firebase';
+import type { ProgressSnapshot } from '../types';
 
 type UseFirebaseSyncOptions = {
   firebaseService: FirebaseSyncService;
@@ -12,6 +12,8 @@ type UseFirebaseSyncOptions = {
   progressSaveDebounceMs: number;
   onRemoteProgress: (raw: unknown) => void;
   trackEvent: (name: string, params?: Record<string, unknown>) => void;
+  signInMethod?: FirebaseSignInMethod;
+  isOnline?: () => boolean;
 };
 
 const clearTimer = (ref: { current: ReturnType<typeof setTimeout> | null }) => {
@@ -32,12 +34,15 @@ const getSignInMethodLabel = (method: FirebaseSignInMethod) => {
   }
 };
 
+/** Manages auth state and debounced progress sync for Firebase. */
 export const useFirebaseSync = ({
   firebaseService,
   progressSnapshot,
   progressSaveDebounceMs,
   onRemoteProgress,
   trackEvent,
+  signInMethod = 'popup',
+  isOnline = () => true,
 }: UseFirebaseSyncOptions) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -57,12 +62,12 @@ export const useFirebaseSync = ({
 
   const handleSignIn = useCallback(async () => {
     try {
-      const method = await firebaseService.signIn('native');
+      const method = await firebaseService.signIn(signInMethod);
       trackEvent('sign_in', { method: getSignInMethodLabel(method) });
     } catch (error) {
       console.error('Failed to sign in', error);
     }
-  }, [firebaseService, trackEvent]);
+  }, [firebaseService, signInMethod, trackEvent]);
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -89,6 +94,9 @@ export const useFirebaseSync = ({
         }
       })
       .catch((error) => {
+        if (!isOnline()) {
+          return;
+        }
         console.error('Failed to load progress', error);
       })
       .finally(() => {
@@ -99,7 +107,7 @@ export const useFirebaseSync = ({
     return () => {
       isActive = false;
     };
-  }, [firebaseService, onRemoteProgress, user]);
+  }, [firebaseService, isOnline, onRemoteProgress, user]);
 
   useEffect(() => {
     if (!user || !remoteLoaded) {
@@ -107,6 +115,9 @@ export const useFirebaseSync = ({
     }
     clearTimer(saveProgressTimeoutRef);
     saveProgressTimeoutRef.current = setTimeout(() => {
+      if (!isOnline()) {
+        return;
+      }
       void firebaseService
         .setProgress(user.uid, {
           ...progressSnapshot,
@@ -119,7 +130,14 @@ export const useFirebaseSync = ({
     return () => {
       clearTimer(saveProgressTimeoutRef);
     };
-  }, [firebaseService, progressSaveDebounceMs, progressSnapshot, remoteLoaded, user]);
+  }, [
+    firebaseService,
+    isOnline,
+    progressSaveDebounceMs,
+    progressSnapshot,
+    remoteLoaded,
+    user,
+  ]);
 
   return {
     authReady,

@@ -59,12 +59,6 @@ const pbxprojPath = path.join(
   'Dit.xcodeproj',
   'project.pbxproj',
 );
-const rootPbxprojPath = path.join(
-  repoRoot,
-  'ios',
-  'dit.xcodeproj',
-  'project.pbxproj',
-);
 const pbxprojNeedle =
   "`\\\"$NODE_BINARY\\\" --print \\\"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\\\"`";
 const pbxprojReplacement =
@@ -156,19 +150,15 @@ for (const podspecPath of podspecCandidates) {
   }
 }
 
-// Apply PATCH 3: Fix command substitution syntax in Xcode projects
+// Apply PATCH 3: Fix command substitution syntax in the Xcode project
 // Replace backticks with $() command substitution syntax for paths with spaces.
-for (const projectPath of [pbxprojPath, rootPbxprojPath]) {
-  if (!fs.existsSync(projectPath)) {
-    continue;
+if (fs.existsSync(pbxprojPath)) {
+  const contents = fs.readFileSync(pbxprojPath, 'utf8');
+  if (contents.includes(pbxprojNeedle)) {
+    const updated = contents.replace(pbxprojNeedle, pbxprojReplacement);
+    fs.writeFileSync(pbxprojPath, updated);
+    pbxprojPatched = true;
   }
-  const contents = fs.readFileSync(projectPath, 'utf8');
-  if (!contents.includes(pbxprojNeedle)) {
-    continue;
-  }
-  const updated = contents.replace(pbxprojNeedle, pbxprojReplacement);
-  fs.writeFileSync(projectPath, updated);
-  pbxprojPatched = true;
 }
 
 // Report results to user

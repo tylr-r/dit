@@ -6,7 +6,7 @@ import {
 } from 'expo-audio';
 import { AUDIO_VOLUME } from '@dit/core';
 import toneSource from '../../assets/audio/dit-tone.wav';
-import { DitNative } from './ditNative';
+import { DitNative } from 'dit-native';
 
 const TONE_SOURCE = toneSource;
 

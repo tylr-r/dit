@@ -14,6 +14,7 @@ import {
   getWordsForLetters,
   initializeScores,
   parseProgress,
+  useFirebaseSync,
   type Letter,
   type ProgressSnapshot,
   type ScoreRecord,
@@ -37,7 +38,6 @@ import { GlassButton } from './components/GlassButton';
 import { GlassSegmentedControl } from './components/GlassSegmentedControl';
 import { GlassSurface } from './components/GlassSurface';
 import { useFirebaseService } from './firebase';
-import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { playTone, startTone, stopTone, unloadTone } from './native/audio';
 import {
   triggerDashHaptic,
@@ -330,6 +330,7 @@ export default function App() {
       progressSnapshot: progress,
       progressSaveDebounceMs: 900,
       onRemoteProgress: handleRemoteProgress,
+      signInMethod: 'native',
       trackEvent: () => {},
     });
 

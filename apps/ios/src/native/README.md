@@ -1,10 +1,10 @@
 # Native Module Bridge Guide
 
-This folder tracks the optional native implementation that Expo modules can surface to replace the JavaScript-only fallbacks.
+This folder tracks native integration points that the Expo module surfaces to the app.
 
 ## Goals
 
-- Provide a `DitGlassView` view manager that renders SwiftUI glass surfaces (blur, gradient, rounded corners with shadows).
+- Provide a `DitGlassView` view manager that renders UIKit glass surfaces (`UIVisualEffectView`).
 - Provide a `DitNative` module with functions for precise audio playback (dot/dash tone scheduling) and haptics patterns (dot, dash, success).
 
 ## Expo module setup
@@ -18,13 +18,14 @@ This folder tracks the optional native implementation that Expo modules can surf
    @objc func triggerHaptic(_ kind: NSString, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock)
    ```
 3. The local module lives in `modules/dit-native` and is included via workspace dependencies (`dit-native` in `apps/ios/package.json`).
-4. The Swift source lives in `modules/dit-native/ios` and exposes `DitNativeModule` and `DitGlassViewModule`, which register the `DitNative` module and `DitGlassView` view manager.
+4. The Swift source lives in `modules/dit-native/ios` and exposes `DitNativeModule`, `DitGlassViewModule`, and `DitGlassSegmentedControlModule`.
+5. JS access goes through the `dit-native` package, which provides optional fallbacks when the native view managers are unavailable.
 
 ## Runtime behavior
 
-- When `DitNative` is available, `apps/ios/src/native/audio.ts` will route tone generation to the native implementation, bypassing the `expo-audio` fallback.
+- When `DitNative` is available, `apps/ios/src/native/audio.ts` routes tone generation to the native implementation, bypassing the `expo-audio` fallback.
 - Haptics also prefer `DitNative.triggerHaptic(kind)` before falling back to `expo-haptics`.
-- `GlassSurface` renders the native view when `NativeGlassView` exists; otherwise it defaults to the JS blur+gradient surface.
+- If a native view manager is missing (tests, non-native environments), `dit-native` falls back to a plain `View` so layouts still render.
 
 ## Testing
 

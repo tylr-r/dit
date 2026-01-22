@@ -27,12 +27,12 @@ import {
   getWordsForLetters,
   initializeScores,
   parseProgress,
+  useFirebaseSync,
   type Letter,
   type ProgressSnapshot,
 } from '@dit/core';
 import { firebaseService } from './firebase';
 import { useAudio } from './hooks/useAudio';
-import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { useMorseInput } from './hooks/useMorseInput';
 import {
   readStoredBoolean,
@@ -724,7 +724,9 @@ function MainApp() {
     onRemoteProgress: applyRemoteProgress,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
     progressSnapshot,
+    signInMethod: 'popup',
     trackEvent,
+    isOnline: () => navigator.onLine,
   });
 
   const scheduleWordSpace = useCallback(() => {

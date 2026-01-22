@@ -27,9 +27,7 @@ final class DitGlassSegmentedControlHostView: UIView {
   
   func setSelectedIndex(_ index: Int) {
     selectedIndex = index
-    if index >= 0 && index < segmentedControl.numberOfSegments {
-      segmentedControl.selectedSegmentIndex = index
-    }
+    applySelectedIndex()
   }
 
   private func setupView() {
@@ -47,15 +45,14 @@ final class DitGlassSegmentedControlHostView: UIView {
     segmentedControl.setTitleTextAttributes(normalAttributes, for: .normal)
     segmentedControl.setTitleTextAttributes(selectedAttributes, for: .selected)
 
-    // Set initial frame to match bounds
     segmentedControl.frame = bounds
-    
-    // TEMPORARY: Hardcode mode names until Expo prop system is fixed
+
+    // Default to static mode labels in case Expo prop binding is unavailable.
     segmentedControl.insertSegment(withTitle: "Practice", at: 0, animated: false)
     segmentedControl.insertSegment(withTitle: "Freestyle", at: 1, animated: false)
     segmentedControl.insertSegment(withTitle: "Listen", at: 2, animated: false)
     segmentedControl.selectedSegmentIndex = 0
-    
+
     addSubview(segmentedControl)
     segmentedControl.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
   }
@@ -63,6 +60,7 @@ final class DitGlassSegmentedControlHostView: UIView {
   override func layoutSubviews() {
     super.layoutSubviews()
     segmentedControl.frame = bounds
+    applySelectedIndex()
   }
   
   private func updateSegments() {
@@ -70,16 +68,24 @@ final class DitGlassSegmentedControlHostView: UIView {
     for (index, item) in items.enumerated() {
       segmentedControl.insertSegment(withTitle: item, at: index, animated: false)
     }
-    
-    // Restore selection if possible
-    if selectedIndex >= 0 && selectedIndex < items.count {
-      segmentedControl.selectedSegmentIndex = selectedIndex
-    }
-    
+
+    applySelectedIndex()
+
     // Force layout after updating items
     segmentedControl.frame = bounds
     segmentedControl.setNeedsLayout()
     segmentedControl.layoutIfNeeded()
+  }
+
+  private func applySelectedIndex() {
+    guard segmentedControl.numberOfSegments > 0 else {
+      return
+    }
+    if selectedIndex >= 0 && selectedIndex < segmentedControl.numberOfSegments {
+      segmentedControl.selectedSegmentIndex = selectedIndex
+      return
+    }
+    segmentedControl.selectedSegmentIndex = UISegmentedControl.noSegment
   }
   
   @objc private func valueChanged() {
