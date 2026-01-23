@@ -83,7 +83,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 ### Phase 4: iOS App Development
 
-- [ ] Initialize Expo app in `apps/ios/`
+- [x] Initialize Expo app in `apps/ios/`
 - [ ] Configure Expo Modules for native bridging
   - [ ] Create local `modules/dit-native` Expo module with Swift stubs
   - [ ] Wire JS fallbacks for audio/haptics
