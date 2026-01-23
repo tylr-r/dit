@@ -115,6 +115,7 @@ export function SettingsPanel({
 const styles = StyleSheet.create({
   panel: {
     width: 280,
+    alignSelf: 'center',
     borderRadius: 18,
     padding: 16,
     backgroundColor: 'rgba(12, 18, 24, 0.9)',

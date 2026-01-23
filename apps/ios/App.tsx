@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
+import { AboutPanel } from './src/components/AboutPanel'
 import { MorseButton } from './src/components/MorseButton'
 import { SettingsPanel } from './src/components/SettingsPanel'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
@@ -117,6 +118,7 @@ const SettingsIcon = () => (
 export default function App() {
   const [isPressing, setIsPressing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [maxLevel, setMaxLevel] = useState(4)
@@ -129,11 +131,24 @@ export default function App() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topBar}>
-          <View style={styles.logo}>
-            <DitLogo />
-          </View>
           <Pressable
-            onPress={() => setShowSettings((prev) => !prev)}
+            onPress={() => {
+              setShowSettings(false)
+              setShowAbout((prev) => !prev)
+            }}
+            accessibilityRole='button'
+            accessibilityLabel='About Dit'
+            style={styles.logoButton}
+          >
+            <View style={styles.logo}>
+              <DitLogo />
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setShowAbout(false)
+              setShowSettings((prev) => !prev)
+            }}
             accessibilityRole='button'
             accessibilityLabel='Settings'
             style={({ pressed }) => [
@@ -144,14 +159,27 @@ export default function App() {
             <SettingsIcon />
           </Pressable>
         </View>
+        {showAbout ? (
+          <View style={styles.modalOverlay} pointerEvents='box-none'>
+            <Pressable
+              onPress={() => setShowAbout(false)}
+              style={styles.modalBackdrop}
+            />
+            <View style={styles.modalCenter} pointerEvents='box-none'>
+              <Pressable style={styles.modalCard} onPress={() => {}}>
+                <AboutPanel onClose={() => setShowAbout(false)} />
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         {showSettings ? (
-          <View style={styles.settingsOverlay} pointerEvents='box-none'>
+          <View style={styles.modalOverlay} pointerEvents='box-none'>
             <Pressable
               onPress={() => setShowSettings(false)}
-              style={styles.settingsBackdrop}
+              style={styles.modalBackdrop}
             />
-            <View style={styles.settingsCenter} pointerEvents='box-none'>
-              <Pressable style={styles.settingsCard} onPress={() => {}}>
+            <View style={styles.modalCenter} pointerEvents='box-none'>
+              <Pressable style={styles.modalCard} onPress={() => {}}>
                 <SettingsPanel
                   isFreestyle={isFreestyle}
                   isListen={isListen}
@@ -206,6 +234,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
   },
+  logoButton: {
+    borderRadius: 16,
+  },
   settingsButton: {
     width: 40,
     height: 40,
@@ -224,23 +255,24 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  settingsOverlay: {
+  modalOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 10,
   },
-  settingsBackdrop: {
+  modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(6, 10, 14, 0.72)',
   },
-  settingsCenter: {
+  modalCenter: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  settingsCard: {
+  modalCard: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 360,
+    alignItems: 'center',
   },
   controls: {
     alignItems: 'center',
