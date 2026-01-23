@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { Letter } from '../data/morse'
+import type { Letter } from '@dit/core'
 import type { ReferenceModalProps } from './componentProps'
 
 const SCORE_INTENSITY_MAX = 15

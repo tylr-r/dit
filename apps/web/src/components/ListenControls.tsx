@@ -1,4 +1,4 @@
-import type { Letter } from '../data/morse'
+import type { Letter } from '@dit/core'
 import type { ListenControlsProps } from './componentProps'
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [

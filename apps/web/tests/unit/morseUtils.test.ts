@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MORSE_DATA, type Letter } from '../../src/data/morse';
+import { MORSE_DATA, type Letter } from '@dit/core';
 import {
   applyScoreDelta,
   clamp,
@@ -10,7 +10,7 @@ import {
   parseFirebaseScores,
   parseLocalStorageScores,
   parseProgress,
-} from '../../src/utils/morseUtils';
+} from '@dit/core';
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[];
 

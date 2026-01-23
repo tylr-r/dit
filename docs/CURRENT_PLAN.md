@@ -79,7 +79,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [x] Create TypeScript types package: `Progress`, `Letter`, score records
 - [x] Set up Vitest and write unit tests for all core utilities
 - [x] Create platform-agnostic Firebase service abstraction
-- [ ] Update `apps/web` to import from `@dit/core`
+- [x] Update `apps/web` to import from `@dit/core`
 
 ### Phase 4: iOS App Development
 

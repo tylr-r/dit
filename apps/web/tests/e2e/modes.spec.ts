@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { MORSE_DATA, type Letter } from '../../src/data/morse';
+import { MORSE_DATA, type Letter } from '@dit/core';
 
 const DOT_PRESS_MS = 80;
 const DASH_PRESS_MS = 360;

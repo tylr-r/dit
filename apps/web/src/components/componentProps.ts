@@ -6,7 +6,7 @@ import type {
   RefObject,
 } from 'react'
 import type { User } from 'firebase/auth'
-import type { Letter } from '../data/morse'
+import type { Letter } from '@dit/core'
 
 export interface ListenControlsProps {
   listenStatus: 'idle' | 'success' | 'error'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MORSE_DATA } from '../../src/data/morse';
+import { MORSE_DATA } from '@dit/core';
 
 describe('MORSE_DATA', () => {
   it('contains 36 characters', () => {

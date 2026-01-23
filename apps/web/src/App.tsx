@@ -8,7 +8,27 @@ import { Page404 } from './components/Page404';
 import { ReferenceModal } from './components/ReferenceModal';
 import { SettingsPanel } from './components/SettingsPanel';
 import { StageDisplay } from './components/StageDisplay';
-import { MORSE_DATA, type Letter } from './data/morse';
+import {
+  AUDIO_FREQUENCY,
+  AUDIO_VOLUME,
+  DASH_THRESHOLD,
+  DEBOUNCE_DELAY,
+  INTER_LETTER_UNITS,
+  INTER_WORD_UNITS,
+  MORSE_DATA,
+  UNIT_TIME_MS,
+  WPM_RANGE,
+  applyScoreDelta,
+  formatWpm,
+  getLettersForLevel,
+  getRandomLetter,
+  getRandomWeightedLetter,
+  getRandomWord,
+  getWordsForLetters,
+  initializeScores,
+  parseProgress,
+  type Letter,
+} from '@dit/core';
 import { auth, database, googleProvider } from './firebase';
 import { useAudio } from './hooks/useAudio';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -21,18 +41,6 @@ import {
 } from './hooks/useProgress';
 import { vibrate } from './platform/haptics';
 import { readStorageItem } from './platform/storage';
-import {
-  applyScoreDelta,
-  formatWpm,
-  getLettersForLevel,
-  getRandomLetter,
-  getRandomWeightedLetter,
-  getRandomWord,
-  getWordsForLetters,
-  initializeScores,
-  parseProgress,
-} from './utils/morseUtils';
-
 const LETTERS = Object.keys(MORSE_DATA) as Letter[];
 const LEVELS = [1, 2, 3, 4] as const;
 const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter));
@@ -48,18 +56,18 @@ const REFERENCE_NUMBERS: Letter[] = [
   '9',
   '0',
 ];
-const DOT_THRESHOLD_MS = 200;
-const UNIT_MS = DOT_THRESHOLD_MS;
-const LISTEN_WPM_MIN = 10;
-const LISTEN_WPM_MAX = 30;
-const INTER_CHAR_GAP_MS = UNIT_MS * 1;
-const WORD_GAP_MS = UNIT_MS * 7;
+const DOT_THRESHOLD_MS = DASH_THRESHOLD;
+const UNIT_MS = UNIT_TIME_MS;
+const LISTEN_WPM_MIN = WPM_RANGE.min;
+const LISTEN_WPM_MAX = WPM_RANGE.max;
+const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS;
+const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS;
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
 const PRACTICE_WORD_UNITS = 5;
-const TONE_FREQUENCY = 640;
-const TONE_GAIN = 0.06;
+const TONE_FREQUENCY = AUDIO_FREQUENCY;
+const TONE_GAIN = AUDIO_VOLUME;
 const ERROR_LOCKOUT_MS = 1000;
-const PROGRESS_SAVE_DEBOUNCE_MS = 800;
+const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',

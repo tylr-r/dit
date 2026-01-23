@@ -2,8 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ReferenceModal } from '../../../src/components/ReferenceModal'
-import { MORSE_DATA } from '../../../src/data/morse'
-import { initializeScores } from '../../../src/utils/morseUtils'
+import { MORSE_DATA, initializeScores } from '@dit/core'
 
 describe('ReferenceModal', () => {
   it('fires reset and close actions', async () => {
