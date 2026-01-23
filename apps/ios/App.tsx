@@ -4,6 +4,7 @@ import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import {
   applyScoreDelta,
+  AUDIO_VOLUME,
   DASH_THRESHOLD,
   formatWpm,
   getLettersForLevel,
@@ -17,6 +18,7 @@ import {
   UNIT_TIME_MS,
   type Letter,
 } from '@dit/core'
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio'
 import { triggerHaptics } from '@dit/dit-native'
 import { AboutPanel } from './src/components/AboutPanel'
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher'
@@ -29,6 +31,8 @@ const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
 const ERROR_LOCKOUT_MS = 1000
 const PRACTICE_WORD_UNITS = 5
+const TONE_VOLUME = AUDIO_VOLUME
+const TONE_SOURCE = require('./assets/audio/tone-640.wav')
 
 type TimeoutHandle = ReturnType<typeof setTimeout>
 
@@ -174,6 +178,14 @@ export default function App() {
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
+  const tonePlayer = useMemo(
+    () =>
+      createAudioPlayer(TONE_SOURCE, {
+        keepAudioSessionActive: true,
+        updateInterval: 1000,
+      }),
+    [],
+  )
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
   const availableLetters = useMemo(
@@ -227,12 +239,37 @@ export default function App() {
   }, [scores])
 
   useEffect(() => {
+    tonePlayer.loop = true
+    tonePlayer.volume = 1
+  }, [tonePlayer])
+
+  useEffect(() => {
+    void setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      allowsRecording: false,
+      shouldPlayInBackground: false,
+      shouldRouteThroughEarpiece: false,
+    })
+  }, [])
+
+  const stopTonePlayback = useCallback(() => {
+    if (!tonePlayer.isLoaded) {
+      return
+    }
+    tonePlayer.pause()
+    void tonePlayer.seekTo(0)
+  }, [tonePlayer])
+
+  useEffect(() => {
     return () => {
       clearTimer(letterTimeoutRef)
       clearTimer(successTimeoutRef)
       clearTimer(errorTimeoutRef)
+      stopTonePlayback()
+      tonePlayer.release()
     }
-  }, [])
+  }, [stopTonePlayback, tonePlayer])
 
   useEffect(() => {
     if (!availableLetters.includes(letterRef.current)) {
@@ -438,10 +475,16 @@ export default function App() {
     setIsPressing(true)
     pressStartRef.current = now()
     clearTimer(letterTimeoutRef)
-  }, [isErrorLocked, isFreestyle, isListen])
+    if (!tonePlayer.isLoaded) {
+      return
+    }
+    void tonePlayer.seekTo(0)
+    tonePlayer.play()
+  }, [isErrorLocked, isFreestyle, isListen, tonePlayer])
 
   const handlePressOut = useCallback(() => {
     setIsPressing(false)
+    stopTonePlayback()
     if (isListen) {
       pressStartRef.current = null
       return
@@ -454,7 +497,7 @@ export default function App() {
     const duration = now() - start
     const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-'
     registerSymbol(symbol)
-  }, [isListen, registerSymbol])
+  }, [isListen, registerSymbol, stopTonePlayback])
 
   const handleMaxLevelChange = useCallback((value: number) => {
     setMaxLevel(value)
@@ -495,6 +538,7 @@ export default function App() {
 
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
+      stopTonePlayback()
       setMode(nextMode)
       setShowSettings(false)
       setShowAbout(false)
@@ -511,7 +555,7 @@ export default function App() {
         setPracticeWpm(null)
       }
     },
-    [],
+    [stopTonePlayback],
   )
 
   const target = MORSE_DATA[letter].code

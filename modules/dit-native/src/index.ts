@@ -4,6 +4,8 @@ import { Vibration } from 'react-native'
 export type DitNativeModule = {
   getHello?: () => string
   triggerHaptics?: (pattern: number | number[]) => boolean | Promise<boolean>
+  startTone?: (frequency: number, volume: number) => boolean | Promise<boolean>
+  stopTone?: () => boolean | Promise<boolean>
   playTone?: (
     frequency: number,
     durationMs: number,
@@ -37,6 +39,28 @@ export const playTone = async (
 ) => {
   if (DitNative?.playTone) {
     const handled = await DitNative.playTone(frequency, durationMs, volume)
+    if (handled) {
+      return true
+    }
+  }
+
+  return false
+}
+
+export const startTone = async (frequency: number, volume: number) => {
+  if (DitNative?.startTone) {
+    const handled = await DitNative.startTone(frequency, volume)
+    if (handled) {
+      return true
+    }
+  }
+
+  return false
+}
+
+export const stopTone = async () => {
+  if (DitNative?.stopTone) {
+    const handled = await DitNative.stopTone()
     if (handled) {
       return true
     }
