@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar'
 import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { AboutPanel } from './src/components/AboutPanel'
+import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher'
 import { MorseButton } from './src/components/MorseButton'
 import { SettingsPanel } from './src/components/SettingsPanel'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
@@ -119,45 +120,53 @@ export default function App() {
   const [isPressing, setIsPressing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [mode, setMode] = useState<Mode>('practice')
   const [showHint, setShowHint] = useState(true)
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [maxLevel, setMaxLevel] = useState(4)
   const [practiceWordMode, setPracticeWordMode] = useState(false)
-  const isFreestyle = false
-  const isListen = false
+  const isFreestyle = mode === 'freestyle'
+  const isListen = mode === 'listen'
   const levels = [1, 2, 3, 4] as const
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.topBar}>
-          <Pressable
-            onPress={() => {
-              setShowSettings(false)
-              setShowAbout((prev) => !prev)
-            }}
-            accessibilityRole='button'
-            accessibilityLabel='About Dit'
-            style={styles.logoButton}
-          >
-            <View style={styles.logo}>
-              <DitLogo />
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              setShowAbout(false)
-              setShowSettings((prev) => !prev)
-            }}
-            accessibilityRole='button'
-            accessibilityLabel='Settings'
-            style={({ pressed }) => [
-              styles.settingsButton,
-              pressed && styles.settingsButtonPressed,
-            ]}
-          >
-            <SettingsIcon />
-          </Pressable>
+          <View style={styles.topBarSide}>
+            <Pressable
+              onPress={() => {
+                setShowSettings(false)
+                setShowAbout((prev) => !prev)
+              }}
+              accessibilityRole='button'
+              accessibilityLabel='About Dit'
+              style={styles.logoButton}
+            >
+              <View style={styles.logo}>
+                <DitLogo />
+              </View>
+            </Pressable>
+          </View>
+          <View style={styles.topBarCenter}>
+            <ModeSwitcher value={mode} onChange={setMode} />
+          </View>
+          <View style={styles.topBarSide}>
+            <Pressable
+              onPress={() => {
+                setShowAbout(false)
+                setShowSettings((prev) => !prev)
+              }}
+              accessibilityRole='button'
+              accessibilityLabel='Settings'
+              style={({ pressed }) => [
+                styles.settingsButton,
+                pressed && styles.settingsButtonPressed,
+              ]}
+            >
+              <SettingsIcon />
+            </Pressable>
+          </View>
         </View>
         {showAbout ? (
           <View style={styles.modalOverlay} pointerEvents='box-none'>
@@ -202,7 +211,7 @@ export default function App() {
           letter='A'
           statusText='Tap and pause'
           pips={STAGE_PIPS}
-          hintVisible
+          hintVisible={showHint && !isFreestyle && !isListen}
         />
         <View style={styles.controls}>
           <MorseButton
@@ -233,6 +242,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingTop: 12,
+  },
+  topBarSide: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   logoButton: {
     borderRadius: 16,
