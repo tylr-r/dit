@@ -1,21 +1,21 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native';
 
 export type StagePip = {
-  type: 'dot' | 'dah'
-  state?: 'expected' | 'hit'
-}
+  type: 'dot' | 'dah';
+  state?: 'expected' | 'hit';
+};
 
 type StageDisplayProps = {
-  letter: string
-  statusText: string
-  pips: StagePip[]
-  hintVisible?: boolean
-  letterPlaceholder?: boolean
-  practiceWpmText?: string | null
-  practiceWordMode?: boolean
-  practiceWord?: string | null
-  practiceWordIndex?: number
-}
+  letter: string;
+  statusText: string;
+  pips: StagePip[];
+  hintVisible?: boolean;
+  letterPlaceholder?: boolean;
+  practiceWpmText?: string | null;
+  practiceWordMode?: boolean;
+  practiceWord?: string | null;
+  practiceWordIndex?: number;
+};
 
 /** Main output area for practice, freestyle, and listen states. */
 export function StageDisplay({
@@ -29,7 +29,7 @@ export function StageDisplay({
   practiceWord = null,
   practiceWordIndex = 0,
 }: StageDisplayProps) {
-  const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];
 
   return (
     <View style={styles.stage}>
@@ -41,8 +41,8 @@ export function StageDisplay({
           }
         >
           {wordCharacters.map((char, index) => {
-            const isDone = index < practiceWordIndex
-            const isActive = index === practiceWordIndex
+            const isDone = index < practiceWordIndex;
+            const isActive = index === practiceWordIndex;
             return (
               <Text
                 key={`${char}-${index}`}
@@ -54,13 +54,13 @@ export function StageDisplay({
               >
                 {char}
               </Text>
-            )
+            );
           })}
         </View>
       ) : (
         <Text
           style={[styles.letter, letterPlaceholder && styles.letterPlaceholder]}
-          accessibilityRole='header'
+          accessibilityRole="header"
         >
           {letter}
         </Text>
@@ -86,7 +86,7 @@ export function StageDisplay({
         <Text style={styles.wpmText}>{practiceWpmText}</Text>
       ) : null}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -107,6 +107,9 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 20 },
     textShadowRadius: 60,
     marginBottom: 12,
+    textAlign: 'center',
+    width: '100%',
+    marginLeft: 16,
   },
   letterPlaceholder: {
     opacity: 0.4,
@@ -132,8 +135,10 @@ const styles = StyleSheet.create({
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     minHeight: 22,
     marginBottom: 12,
+    width: '100%',
   },
   progressHidden: {
     opacity: 0,
@@ -178,4 +183,4 @@ const styles = StyleSheet.create({
     color: 'rgba(141, 152, 165, 0.9)',
     textTransform: 'uppercase',
   },
-})
+});
