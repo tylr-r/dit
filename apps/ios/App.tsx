@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StatusBar } from 'expo-status-bar'
-import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Circle, Path } from 'react-native-svg'
 import {
   applyScoreDelta,
@@ -622,8 +623,9 @@ export default function App() {
   const showPracticeWord = !isFreestyle && !isListen && practiceWordMode
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
             <Pressable
@@ -716,9 +718,10 @@ export default function App() {
             onPressOut={handlePressOut}
           />
         </View>
-      </SafeAreaView>
-      <StatusBar style='light' />
-    </View>
+        </SafeAreaView>
+        <StatusBar style='light' />
+      </View>
+    </SafeAreaProvider>
   )
 }
 
