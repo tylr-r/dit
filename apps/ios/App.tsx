@@ -10,6 +10,7 @@ import {
   getWordsForLetters,
   initializeScores,
   INTER_LETTER_UNITS,
+  INTER_WORD_UNITS,
   MORSE_DATA,
   UNIT_TIME_MS,
   WPM_RANGE,
@@ -24,7 +25,7 @@ import {
 } from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { AboutPanel } from './src/components/AboutPanel';
@@ -40,12 +41,13 @@ const DOT_THRESHOLD_MS = DASH_THRESHOLD;
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS;
 const ERROR_LOCKOUT_MS = 1000;
 const PRACTICE_WORD_UNITS = 5;
+const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS;
+const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
 const LISTEN_WPM_MIN = WPM_RANGE.min;
 const LISTEN_WPM_MAX = WPM_RANGE.max;
 const LISTEN_MIN_UNIT_MS = 40;
 const TONE_VOLUME = AUDIO_VOLUME;
 const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
-const SOUND_CHECK_DURATION_MS = 5000;
 const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
   (letter) => /^[A-Z]$/.test(letter),
 );
@@ -213,14 +215,13 @@ export default function App() {
   const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
   const [freestyleInput, setFreestyleInput] = useState('');
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
+  const [freestyleWordMode, setFreestyleWordMode] = useState(false);
+  const [freestyleWord, setFreestyleWord] = useState('');
   const [listenWpm, setListenWpm] = useState(20);
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle');
   const [listenReveal, setListenReveal] = useState<Letter | null>(null);
-  const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
-    'idle',
-  );
   const [scores, setScores] = useState(() => initializeScores());
   const tonePlayer = useMemo(
     () =>
@@ -249,6 +250,8 @@ export default function App() {
   const practiceWordIndexRef = useRef(practiceWordIndex);
   const practiceWordModeRef = useRef(practiceWordMode);
   const practiceWordStartRef = useRef<number | null>(null);
+  const freestyleWordModeRef = useRef(freestyleWordMode);
+  const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null);
   const scoresRef = useRef(scores);
   const errorLockoutUntilRef = useRef(0);
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null);
@@ -259,7 +262,6 @@ export default function App() {
     token: number;
     timeouts: TimeoutHandle[];
   }>({ token: 0, timeouts: [] });
-  const soundCheckTimeoutRef = useRef<TimeoutHandle | null>(null);
   const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null);
   const toneReadyRef = useRef(false);
   const toneLoadingRef = useRef<Promise<AudioPlayer> | null>(null);
@@ -287,6 +289,10 @@ export default function App() {
   useEffect(() => {
     practiceWordModeRef.current = practiceWordMode;
   }, [practiceWordMode]);
+
+  useEffect(() => {
+    freestyleWordModeRef.current = freestyleWordMode;
+  }, [freestyleWordMode]);
 
   useEffect(() => {
     scoresRef.current = scores;
@@ -442,7 +448,7 @@ export default function App() {
       clearTimer(successTimeoutRef);
       clearTimer(errorTimeoutRef);
       clearTimer(listenTimeoutRef);
-      clearTimer(soundCheckTimeoutRef);
+      clearTimer(wordSpaceTimeoutRef);
       clearTimer(toneUnloadTimeoutRef);
       stopListenPlayback();
       unloadTonePlayer();
@@ -489,26 +495,6 @@ export default function App() {
     errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS;
   }, []);
 
-  const handleSoundCheck = useCallback(() => {
-    if (soundCheckStatus !== 'idle') {
-      return;
-    }
-    stopListenPlayback();
-    clearTimer(soundCheckTimeoutRef);
-    setSoundCheckStatus('playing');
-    void startTonePlayback();
-    soundCheckTimeoutRef.current = setTimeout(() => {
-      stopTonePlayback();
-      setSoundCheckStatus('idle');
-    }, SOUND_CHECK_DURATION_MS);
-    void triggerHaptics([40, 40, 40]);
-  }, [
-    soundCheckStatus,
-    startTonePlayback,
-    stopListenPlayback,
-    stopTonePlayback,
-  ]);
-
   const handleShowReference = useCallback(() => {
     setShowSettings(false);
     setShowAbout(false);
@@ -519,18 +505,43 @@ export default function App() {
     setScores(initializeScores());
   }, []);
 
-  const submitFreestyleInput = useCallback((value: string) => {
-    if (!value) {
-      setFreestyleResult('No input');
-      return;
-    }
-    const match = Object.entries(MORSE_DATA).find(
-      ([, data]) => data.code === value,
-    );
-    const result = match ? match[0] : 'No match';
-    setFreestyleResult(result);
-    setFreestyleInput('');
+  const scheduleWordSpace = useCallback(() => {
+    clearTimer(wordSpaceTimeoutRef);
+    wordSpaceTimeoutRef.current = setTimeout(() => {
+      if (!freestyleWordModeRef.current) {
+        return;
+      }
+      if (freestyleInputRef.current) {
+        return;
+      }
+      setFreestyleWord((prev) => {
+        if (!prev || prev.endsWith(' ')) {
+          return prev;
+        }
+        return `${prev} `;
+      });
+    }, WORD_GAP_EXTRA_MS);
   }, []);
+
+  const submitFreestyleInput = useCallback(
+    (value: string) => {
+      if (!value) {
+        setFreestyleResult('No input');
+        return;
+      }
+      const match = Object.entries(MORSE_DATA).find(
+        ([, data]) => data.code === value,
+      );
+      const result = match ? match[0] : 'No match';
+      if (result !== 'No match' && freestyleWordMode) {
+        setFreestyleWord((prev) => prev + result);
+        scheduleWordSpace();
+      }
+      setFreestyleResult(result);
+      setFreestyleInput('');
+    },
+    [freestyleWordMode, scheduleWordSpace],
+  );
 
   const submitListenAnswer = useCallback(
     (value: Letter) => {
@@ -685,6 +696,22 @@ export default function App() {
       startErrorLockout,
       submitFreestyleInput,
     ],
+  );
+
+  const handleFreestyleClear = useCallback(() => {
+    clearTimer(letterTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef);
+    setFreestyleResult(null);
+    setFreestyleInput('');
+    setFreestyleWord('');
+  }, []);
+
+  const handleFreestyleWordModeChange = useCallback(
+    (value: boolean) => {
+      setFreestyleWordMode(value);
+      handleFreestyleClear();
+    },
+    [handleFreestyleClear],
   );
 
   const registerSymbol = useCallback(
@@ -862,6 +889,8 @@ export default function App() {
       setInput('');
       setFreestyleInput('');
       setFreestyleResult(null);
+      setFreestyleWord('');
+      clearTimer(wordSpaceTimeoutRef);
       setStatus('idle');
       clearTimer(letterTimeoutRef);
       clearTimer(successTimeoutRef);
@@ -965,16 +994,22 @@ export default function App() {
     : false;
   const freestyleStatus = freestyleResult
     ? isLetterResult
-      ? `Result ${freestyleResult}`
+      ? freestyleWordMode
+        ? `Added ${freestyleResult}`
+        : `Result ${freestyleResult}`
       : freestyleResult
     : freestyleInput
       ? `Input ${freestyleInput}`
-      : 'Tap and pause';
-  const freestyleDisplay = freestyleResult
-    ? isLetterResult
-      ? freestyleResult
-      : '?'
-    : freestyleInput || '?';
+      : freestyleWordMode && freestyleWord
+        ? `Word ${freestyleWord}`
+        : 'Tap and pause';
+  const freestyleDisplay = freestyleWordMode
+    ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
+    : freestyleResult
+      ? isLetterResult
+        ? freestyleResult
+        : '?'
+      : freestyleInput || '?';
   const listenStatusText =
     listenStatus === 'success'
       ? 'Correct'
@@ -1065,20 +1100,20 @@ export default function App() {
                     levels={LEVELS}
                     maxLevel={maxLevel}
                     practiceWordMode={practiceWordMode}
+                    freestyleWordMode={freestyleWordMode}
                     listenWpm={listenWpm}
                     listenWpmMin={LISTEN_WPM_MIN}
                     listenWpmMax={LISTEN_WPM_MAX}
                     showHint={showHint}
                     showMnemonic={showMnemonic}
-                    soundCheckStatus={soundCheckStatus}
                     onClose={() => setShowSettings(false)}
                     onMaxLevelChange={handleMaxLevelChange}
                     onPracticeWordModeChange={handlePracticeWordModeChange}
+                    onFreestyleWordModeChange={handleFreestyleWordModeChange}
                     onListenWpmChange={handleListenWpmChange}
                     onShowHintChange={setShowHint}
                     onShowMnemonicChange={setShowMnemonic}
                     onShowReference={handleShowReference}
-                    onSoundCheck={handleSoundCheck}
                   />
                 </Pressable>
               </View>
@@ -1114,6 +1149,7 @@ export default function App() {
             practiceWordMode={showPracticeWord}
             practiceWord={showPracticeWord ? practiceWord : null}
             practiceWordIndex={practiceWordIndex}
+            isFreestyle={isFreestyle}
           />
           <View style={styles.controls}>
             {isListen ? (
@@ -1123,11 +1159,26 @@ export default function App() {
                 onSubmitAnswer={submitListenAnswer}
               />
             ) : (
-              <MorseButton
-                isPressing={isPressing}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-              />
+              <>
+                {isFreestyle ? (
+                  <Pressable
+                    onPress={handleFreestyleClear}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear freestyle word"
+                    style={({ pressed }) => [
+                      styles.clearButton,
+                      pressed && styles.clearButtonPressed,
+                    ]}
+                  >
+                    <Text style={styles.clearButtonText}>Clear</Text>
+                  </Pressable>
+                ) : null}
+                <MorseButton
+                  isPressing={isPressing}
+                  onPressIn={handlePressIn}
+                  onPressOut={handlePressOut}
+                />
+              </>
             )}
           </View>
         </SafeAreaView>
@@ -1209,6 +1260,26 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 24,
     width: '100%',
+  },
+  clearButton: {
+    alignSelf: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    alignItems: 'center',
+  },
+  clearButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  clearButtonText: {
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    color: 'rgba(244, 247, 249, 0.85)',
   },
   logo: {
     width: 60,

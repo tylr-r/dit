@@ -1,12 +1,4 @@
-import {
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { Letter, ScoreRecord } from '@dit/core'
 
 type ReferenceModalProps = {
@@ -34,17 +26,6 @@ const getScoreTint = (scoreValue: number) => {
       ? `rgba(56, 242, 162, ${alpha})`
       : `rgba(255, 90, 96, ${alpha})`
   return { borderColor: tint }
-}
-
-const logScrollPosition = (
-  event: NativeSyntheticEvent<NativeScrollEvent>,
-) => {
-  if (__DEV__) {
-    console.log(
-      'Reference modal scroll',
-      event.nativeEvent.contentOffset.y.toFixed(2),
-    )
-  }
 }
 
 /** Modal panel with the Morse reference grid and scores. */
@@ -119,8 +100,6 @@ export function ReferenceModal({
         </View>
       </View>
       <ScrollView
-        onScroll={logScrollPosition}
-        scrollEventThrottle={16}
         style={styles.scrollArea}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}

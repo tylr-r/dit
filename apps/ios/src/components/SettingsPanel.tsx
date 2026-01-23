@@ -6,20 +6,20 @@ type SettingsPanelProps = {
   levels: readonly number[]
   maxLevel: number
   practiceWordMode: boolean
+  freestyleWordMode: boolean
   listenWpm: number
   listenWpmMin: number
   listenWpmMax: number
   showHint: boolean
   showMnemonic: boolean
-  soundCheckStatus: 'idle' | 'playing'
   onClose: () => void
   onMaxLevelChange: (value: number) => void
   onPracticeWordModeChange: (value: boolean) => void
+  onFreestyleWordModeChange: (value: boolean) => void
   onListenWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
   onShowReference: () => void
-  onSoundCheck: () => void
 }
 
 const ToggleRow = ({
@@ -54,24 +54,24 @@ export function SettingsPanel({
   levels,
   maxLevel,
   practiceWordMode,
+  freestyleWordMode,
   listenWpm,
   listenWpmMin,
   listenWpmMax,
   showHint,
   showMnemonic,
-  soundCheckStatus,
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
+  onFreestyleWordModeChange,
   onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
   onShowReference,
-  onSoundCheck,
 }: SettingsPanelProps) {
-  const canShowPracticeOptions = !isFreestyle
+  const showPracticeControls = !isFreestyle && !isListen
   const canShowWordsToggle = !isListen
-  const isHintDisabled = isFreestyle || isListen
+  const showHintControls = !isFreestyle && !isListen
   const nextLevel =
     levels[(levels.indexOf(maxLevel) + 1) % levels.length] ?? maxLevel
   const nextListenWpm =
@@ -90,31 +90,32 @@ export function SettingsPanel({
           <Text style={styles.closeButtonText}>Close</Text>
         </Pressable>
       </View>
-      <ToggleRow
-        label='Show hints'
-        value={showHint}
-        disabled={isHintDisabled}
-        onValueChange={onShowHintChange}
-      />
-      <ToggleRow
-        label='Show mnemonics'
-        value={showMnemonic}
-        disabled={isHintDisabled}
-        onValueChange={onShowMnemonicChange}
-      />
-      {canShowPracticeOptions ? (
+      <View style={styles.divider} />
+      {showHintControls ? (
+        <>
+          <ToggleRow
+            label='Show hints'
+            value={showHint}
+            onValueChange={onShowHintChange}
+          />
+          <ToggleRow
+            label='Show mnemonics'
+            value={showMnemonic}
+            onValueChange={onShowMnemonicChange}
+          />
+        </>
+      ) : null}
+      {isFreestyle && !isListen ? (
         <View style={styles.section}>
-          <Pressable
-            onPress={onShowReference}
-            accessibilityRole='button'
-            accessibilityLabel='Open reference'
-            style={({ pressed }) => [
-              styles.panelButton,
-              pressed && styles.panelButtonPressed,
-            ]}
-          >
-            <Text style={styles.panelButtonText}>Reference</Text>
-          </Pressable>
+          <ToggleRow
+            label='Word mode'
+            value={freestyleWordMode}
+            onValueChange={onFreestyleWordModeChange}
+          />
+        </View>
+      ) : null}
+      {showPracticeControls ? (
+        <View style={styles.section}>
           <Pressable
             onPress={() => onMaxLevelChange(nextLevel)}
             accessibilityRole='button'
@@ -133,39 +134,36 @@ export function SettingsPanel({
               onValueChange={onPracticeWordModeChange}
             />
           ) : null}
-          {isListen ? (
-            <Pressable
-              onPress={() => onListenWpmChange(nextListenWpm)}
-              accessibilityRole='button'
-              accessibilityLabel='Change listen speed'
-              style={styles.row}
-            >
-              <Text style={styles.rowLabel}>Listen speed</Text>
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>{listenWpm} WPM</Text>
-              </View>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
       {isListen ? (
         <View style={styles.section}>
           <Pressable
-            onPress={onSoundCheck}
+            onPress={() => onListenWpmChange(nextListenWpm)}
             accessibilityRole='button'
-            accessibilityLabel='Sound check'
-            disabled={soundCheckStatus !== 'idle'}
-            style={({ pressed }) => [
-              styles.panelButton,
-              soundCheckStatus !== 'idle' && styles.panelButtonDisabled,
-              pressed && soundCheckStatus === 'idle' && styles.panelButtonPressed,
-            ]}
+            accessibilityLabel='Change listen speed'
+            style={styles.row}
           >
-            <Text style={styles.panelButtonText}>Sound check</Text>
+            <Text style={styles.rowLabel}>Listen speed</Text>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{listenWpm} WPM</Text>
+            </View>
           </Pressable>
-          <Text style={styles.panelHint}>No sound? Turn off Silent Mode.</Text>
         </View>
       ) : null}
+      <View style={styles.section}>
+        <Pressable
+          onPress={onShowReference}
+          accessibilityRole='button'
+          accessibilityLabel='Open reference'
+          style={({ pressed }) => [
+            styles.panelButton,
+            pressed && styles.panelButtonPressed,
+          ]}
+        >
+          <Text style={styles.panelButtonText}>Reference</Text>
+        </Pressable>
+      </View>
     </View>
   )
 }
@@ -188,6 +186,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     marginBottom: 12,
   },
   title: {
@@ -227,21 +230,11 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
-  panelButtonDisabled: {
-    opacity: 0.5,
-  },
   panelButtonText: {
     fontSize: 12,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.9)',
-  },
-  panelHint: {
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(141, 152, 165, 0.9)',
-    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',

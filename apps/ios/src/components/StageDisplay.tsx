@@ -15,6 +15,18 @@ type StageDisplayProps = {
   practiceWordMode?: boolean;
   practiceWord?: string | null;
   practiceWordIndex?: number;
+  isFreestyle?: boolean;
+};
+
+const getFreestyleLetterStyle = (value: string) => {
+  const length = Math.max(1, value.length);
+  const fontSize = Math.max(48, 140 - (length - 1) * 18);
+  const letterSpacing = Math.max(2, 10 - (length - 1) * 2);
+  return {
+    fontSize,
+    lineHeight: fontSize,
+    letterSpacing,
+  };
 };
 
 /** Main output area for practice, freestyle, and listen states. */
@@ -28,7 +40,31 @@ export function StageDisplay({
   practiceWordMode = false,
   practiceWord = null,
   practiceWordIndex = 0,
+  isFreestyle = false,
 }: StageDisplayProps) {
+  const displayLetter = letter || '?';
+  const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter);
+
+  if (isFreestyle) {
+    return (
+      <View style={styles.stage}>
+        <Text
+          style={[
+            styles.letter,
+            styles.freestyleLetter,
+            !letter && styles.letterPlaceholder,
+            freestyleLetterStyle,
+          ]}
+          accessibilityRole="header"
+        >
+          {displayLetter}
+        </Text>
+        <View style={[styles.progress, styles.progressHidden]} />
+        <Text style={styles.statusText}>{statusText}</Text>
+      </View>
+    )
+  }
+
   const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];
 
   return (
@@ -113,6 +149,9 @@ const styles = StyleSheet.create({
   },
   letterPlaceholder: {
     opacity: 0.4,
+  },
+  freestyleLetter: {
+    marginLeft: 0,
   },
   wordDisplay: {
     flexDirection: 'row',

@@ -92,9 +92,9 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [ ] Align iOS UI with mobile web baseline
   - [x] Match top bar controls (logo, mode selector, settings)
   - [x] Add settings panel controls (levels, words, listen speed, sound check)
-  - [ ] Add reference modal grid
+  - [x] Add reference modal grid
   - [x] Implement basic mode switching (practice, freestyle, listen)
-  - [ ] Add listen mode keyboard + playback controls
+  - [x] Add listen mode keyboard + playback controls
   - [x] Replace `expo-av` with `expo-audio` fallback
   - [ ] Wire iOS `GoogleService-Info.plist` in Expo config
 - [ ] Implement native haptics module (replace `navigator.vibrate`)
