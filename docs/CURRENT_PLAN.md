@@ -96,7 +96,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
   - [x] Implement basic mode switching (practice, freestyle, listen)
   - [x] Add listen mode keyboard + playback controls
   - [x] Replace `expo-av` with `expo-audio` fallback
-  - [ ] Wire iOS `GoogleService-Info.plist` in Expo config
+  - [x] Wire iOS `GoogleService-Info.plist` in Expo config
 - [ ] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
