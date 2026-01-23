@@ -20,7 +20,12 @@ import {
   WPM_RANGE,
   type Letter,
 } from '@dit/core'
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio'
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+  type AudioPlayer,
+} from 'expo-audio'
 import { triggerHaptics } from '@dit/dit-native'
 import { AboutPanel } from './src/components/AboutPanel'
 import { ListenControls } from './src/components/ListenControls'
@@ -38,7 +43,8 @@ const LISTEN_WPM_MIN = WPM_RANGE.min
 const LISTEN_WPM_MAX = WPM_RANGE.max
 const LISTEN_MIN_UNIT_MS = 40
 const TONE_VOLUME = AUDIO_VOLUME
-const TONE_SOURCE = require('./assets/audio/tone-640.wav')
+const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav')
+const SOUND_CHECK_DURATION_MS = 5000
 
 type TimeoutHandle = ReturnType<typeof setTimeout>
 
@@ -50,6 +56,13 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 }
 
 const now = () => Date.now()
+
+const waitForPlayerLoad = async (player: AudioPlayer) => {
+  const start = Date.now()
+  while (!player.isLoaded && Date.now() - start < 1500) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}
 
 const initialConfig = (() => {
   const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1])
@@ -196,7 +209,8 @@ export default function App() {
     () =>
       createAudioPlayer(TONE_SOURCE, {
         keepAudioSessionActive: true,
-        updateInterval: 1000,
+        updateInterval: 250,
+        downloadFirst: true,
       }),
     [],
   )
@@ -228,6 +242,9 @@ export default function App() {
     { token: 0, timeouts: [] },
   )
   const soundCheckTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const toneReadyRef = useRef(false)
+  const toneLoadingRef = useRef<Promise<AudioPlayer> | null>(null)
 
   useEffect(() => {
     inputRef.current = input
@@ -257,36 +274,72 @@ export default function App() {
     scoresRef.current = scores
   }, [scores])
 
-  useEffect(() => {
-    tonePlayer.loop = true
-    tonePlayer.volume = 1
-  }, [tonePlayer])
-
-  useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: 'mixWithOthers',
-      allowsRecording: false,
-      shouldPlayInBackground: false,
-      shouldRouteThroughEarpiece: false,
-    })
-  }, [])
-
-  const stopTonePlayback = useCallback(() => {
-    if (!tonePlayer.isLoaded) {
+  const unloadTonePlayer = useCallback(() => {
+    if (!toneReadyRef.current) {
       return
     }
     tonePlayer.pause()
-    void tonePlayer.seekTo(0)
+    tonePlayer.remove()
+    toneReadyRef.current = false
+    toneLoadingRef.current = null
   }, [tonePlayer])
 
-  const startTonePlayback = useCallback(() => {
-    if (!tonePlayer.isLoaded) {
+  const scheduleToneUnload = useCallback(() => {
+    clearTimer(toneUnloadTimeoutRef)
+    toneUnloadTimeoutRef.current = setTimeout(() => {
+      unloadTonePlayer()
+    }, 4000)
+  }, [unloadTonePlayer])
+
+  const prepareTonePlayer = useCallback(async () => {
+    if (toneReadyRef.current) {
+      return tonePlayer
+    }
+    if (toneLoadingRef.current) {
+      return toneLoadingRef.current
+    }
+    toneLoadingRef.current = (async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          allowsRecording: false,
+          shouldPlayInBackground: false,
+          interruptionMode: 'doNotMix',
+        })
+        await setIsAudioActiveAsync(true)
+        await waitForPlayerLoad(tonePlayer)
+        tonePlayer.loop = true
+        tonePlayer.volume = Math.min(1, Math.max(0.4, TONE_VOLUME))
+        tonePlayer.muted = true
+        tonePlayer.play()
+        toneReadyRef.current = true
+        return tonePlayer
+      } finally {
+        toneLoadingRef.current = null
+      }
+    })()
+    return toneLoadingRef.current
+  }, [tonePlayer])
+
+  const stopTonePlayback = useCallback(() => {
+    if (!toneReadyRef.current) {
       return
     }
-    void tonePlayer.seekTo(0)
-    tonePlayer.play()
-  }, [tonePlayer])
+    tonePlayer.muted = true
+    scheduleToneUnload()
+  }, [scheduleToneUnload, tonePlayer])
+
+  const startTonePlayback = useCallback(async () => {
+    clearTimer(toneUnloadTimeoutRef)
+    const player = await prepareTonePlayer()
+    if (!player) {
+      return
+    }
+    player.muted = false
+    if (!player.playing) {
+      player.play()
+    }
+  }, [prepareTonePlayer])
 
   const clearListenPlaybackTimeouts = useCallback(() => {
     listenPlaybackRef.current.timeouts.forEach((timeout) => {
@@ -372,10 +425,11 @@ export default function App() {
       clearTimer(errorTimeoutRef)
       clearTimer(listenTimeoutRef)
       clearTimer(soundCheckTimeoutRef)
+      clearTimer(toneUnloadTimeoutRef)
       stopListenPlayback()
-      tonePlayer.release()
+      unloadTonePlayer()
     }
-  }, [stopListenPlayback, tonePlayer])
+  }, [stopListenPlayback, unloadTonePlayer])
 
   useEffect(() => {
     if (mode === 'listen') {
@@ -424,11 +478,11 @@ export default function App() {
     stopListenPlayback()
     clearTimer(soundCheckTimeoutRef)
     setSoundCheckStatus('playing')
-    startTonePlayback()
+    void startTonePlayback()
     soundCheckTimeoutRef.current = setTimeout(() => {
       stopTonePlayback()
       setSoundCheckStatus('idle')
-    }, 250)
+    }, SOUND_CHECK_DURATION_MS)
     void triggerHaptics([40, 40, 40])
   }, [soundCheckStatus, startTonePlayback, stopListenPlayback, stopTonePlayback])
 
