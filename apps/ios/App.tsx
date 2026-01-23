@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { StatusBar } from 'expo-status-bar'
-import { SafeAreaView, StyleSheet, View } from 'react-native'
+import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
 import { MorseButton } from './src/components/MorseButton'
+import { SettingsPanel } from './src/components/SettingsPanel'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
 
 const STAGE_PIPS: StagePip[] = ['dot', 'dah', 'dot']
@@ -103,9 +104,26 @@ const DitLogo = () => (
   </Svg>
 )
 
+const SettingsIcon = () => (
+  <Svg width={22} height={22} viewBox='0 0 24 24'>
+    <Path
+      d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z'
+      fill='rgba(244, 247, 249, 0.9)'
+    />
+  </Svg>
+)
+
 /** Primary app entry for Dit iOS. */
 export default function App() {
   const [isPressing, setIsPressing] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showHint, setShowHint] = useState(true)
+  const [showMnemonic, setShowMnemonic] = useState(false)
+  const [maxLevel, setMaxLevel] = useState(4)
+  const [practiceWordMode, setPracticeWordMode] = useState(false)
+  const isFreestyle = false
+  const isListen = false
+  const levels = [1, 2, 3, 4] as const
 
   return (
     <View style={styles.container}>
@@ -114,7 +132,44 @@ export default function App() {
           <View style={styles.logo}>
             <DitLogo />
           </View>
+          <Pressable
+            onPress={() => setShowSettings((prev) => !prev)}
+            accessibilityRole='button'
+            accessibilityLabel='Settings'
+            style={({ pressed }) => [
+              styles.settingsButton,
+              pressed && styles.settingsButtonPressed,
+            ]}
+          >
+            <SettingsIcon />
+          </Pressable>
         </View>
+        {showSettings ? (
+          <View style={styles.settingsOverlay} pointerEvents='box-none'>
+            <Pressable
+              onPress={() => setShowSettings(false)}
+              style={styles.settingsBackdrop}
+            />
+            <View style={styles.settingsCenter} pointerEvents='box-none'>
+              <Pressable style={styles.settingsCard} onPress={() => {}}>
+                <SettingsPanel
+                  isFreestyle={isFreestyle}
+                  isListen={isListen}
+                  levels={levels}
+                  maxLevel={maxLevel}
+                  practiceWordMode={practiceWordMode}
+                  showHint={showHint}
+                  showMnemonic={showMnemonic}
+                  onClose={() => setShowSettings(false)}
+                  onMaxLevelChange={setMaxLevel}
+                  onPracticeWordModeChange={setPracticeWordMode}
+                  onShowHintChange={setShowHint}
+                  onShowMnemonicChange={setShowMnemonic}
+                />
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
         <StageDisplay
           letter='A'
           statusText='Tap and pause'
@@ -142,10 +197,50 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    position: 'relative',
   },
   topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingTop: 12,
+  },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  settingsButtonPressed: {
+    transform: [{ scale: 0.97 }],
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  settingsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+  settingsBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(6, 10, 14, 0.72)',
+  },
+  settingsCenter: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  settingsCard: {
+    width: '100%',
+    maxWidth: 320,
   },
   controls: {
     alignItems: 'center',
