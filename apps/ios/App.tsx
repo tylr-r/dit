@@ -1,8 +1,3 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StatusBar } from 'expo-status-bar'
-import { Pressable, StyleSheet, View } from 'react-native'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import Svg, { Circle, Path } from 'react-native-svg'
 import {
   applyScoreDelta,
   AUDIO_VOLUME,
@@ -19,192 +14,197 @@ import {
   UNIT_TIME_MS,
   WPM_RANGE,
   type Letter,
-} from '@dit/core'
+} from '@dit/core';
+import { triggerHaptics } from '@dit/dit-native';
 import {
   createAudioPlayer,
   setAudioModeAsync,
   setIsAudioActiveAsync,
   type AudioPlayer,
-} from 'expo-audio'
-import { triggerHaptics } from '@dit/dit-native'
-import { AboutPanel } from './src/components/AboutPanel'
-import { ListenControls } from './src/components/ListenControls'
-import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher'
-import { MorseButton } from './src/components/MorseButton'
-import { SettingsPanel } from './src/components/SettingsPanel'
-import { StageDisplay, type StagePip } from './src/components/StageDisplay'
+} from 'expo-audio';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { AboutPanel } from './src/components/AboutPanel';
+import { ListenControls } from './src/components/ListenControls';
+import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher';
+import { MorseButton } from './src/components/MorseButton';
+import { SettingsPanel } from './src/components/SettingsPanel';
+import { StageDisplay, type StagePip } from './src/components/StageDisplay';
 
-const LEVELS = [1, 2, 3, 4] as const
-const DOT_THRESHOLD_MS = DASH_THRESHOLD
-const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
-const ERROR_LOCKOUT_MS = 1000
-const PRACTICE_WORD_UNITS = 5
-const LISTEN_WPM_MIN = WPM_RANGE.min
-const LISTEN_WPM_MAX = WPM_RANGE.max
-const LISTEN_MIN_UNIT_MS = 40
-const TONE_VOLUME = AUDIO_VOLUME
-const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav')
-const SOUND_CHECK_DURATION_MS = 5000
+const LEVELS = [1, 2, 3, 4] as const;
+const DOT_THRESHOLD_MS = DASH_THRESHOLD;
+const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS;
+const ERROR_LOCKOUT_MS = 1000;
+const PRACTICE_WORD_UNITS = 5;
+const LISTEN_WPM_MIN = WPM_RANGE.min;
+const LISTEN_WPM_MAX = WPM_RANGE.max;
+const LISTEN_MIN_UNIT_MS = 40;
+const TONE_VOLUME = AUDIO_VOLUME;
+const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
+const SOUND_CHECK_DURATION_MS = 5000;
 
-type TimeoutHandle = ReturnType<typeof setTimeout>
+type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 const clearTimer = (ref: { current: TimeoutHandle | null }) => {
   if (ref.current !== null) {
-    clearTimeout(ref.current)
-    ref.current = null
+    clearTimeout(ref.current);
+    ref.current = null;
   }
-}
+};
 
-const now = () => Date.now()
+const now = () => Date.now();
 
 const waitForPlayerLoad = async (player: AudioPlayer) => {
-  const start = Date.now()
+  const start = Date.now();
   while (!player.isLoaded && Date.now() - start < 1500) {
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise((resolve) => setTimeout(resolve, 25));
   }
-}
+};
 
 const initialConfig = (() => {
-  const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1])
-  const practiceWord = getRandomWord(getWordsForLetters(availableLetters))
+  const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1]);
+  const practiceWord = getRandomWord(getWordsForLetters(availableLetters));
   return {
     letter: getRandomLetter(availableLetters),
     practiceWord,
-  }
-})()
+  };
+})();
 
 const DitLogo = () => (
-  <Svg width={60} height={60} viewBox='0 0 806 806' opacity={0.5}>
+  <Svg width={60} height={60} viewBox="0 0 806 806" opacity={0.5}>
     <Path
-      d='M92.1113 255.555C74.9852 291.601 63.9443 331.099 60.3145 372.72L4.51855 367.913C8.72293 319.533 21.5381 273.619 41.4258 231.712L92.1113 255.555Z'
-      fill='white'
+      d="M92.1113 255.555C74.9852 291.601 63.9443 331.099 60.3145 372.72L4.51855 367.913C8.72293 319.533 21.5381 273.619 41.4258 231.712L92.1113 255.555Z"
+      fill="white"
     />
     <Path
-      d='M260.393 89.8623C224.063 106.377 190.159 129.454 160.553 158.931L120.998 119.287C155.401 85.0127 194.798 58.1747 237.017 38.9598L260.393 89.8623Z'
-      fill='white'
+      d="M260.393 89.8623C224.063 106.377 190.159 129.454 160.553 158.931L120.998 119.287C155.401 85.0127 194.798 58.1747 237.017 38.9598L260.393 89.8623Z"
+      fill="white"
     />
     <Path
-      d='M405.179 58.9257C365.272 58.6455 324.81 65.3391 285.557 79.6465L266.323 27.0505C311.944 10.4061 358.971 2.60752 405.357 2.91256L405.179 58.9257Z'
-      fill='white'
+      d="M405.179 58.9257C365.272 58.6455 324.81 65.3391 285.557 79.6465L266.323 27.0505C311.944 10.4061 358.971 2.60752 405.357 2.91256L405.179 58.9257Z"
+      fill="white"
     />
     <Path
-      d='M550.068 91.9326C514.001 74.8502 474.49 63.8573 432.864 60.278L437.603 4.47627C485.988 8.62192 531.918 21.3814 573.849 41.2181L550.068 91.9326Z'
-      fill='white'
+      d="M550.068 91.9326C514.001 74.8502 474.49 63.8573 432.864 60.278L437.603 4.47627C485.988 8.62192 531.918 21.3814 573.849 41.2181L550.068 91.9326Z"
+      fill="white"
     />
     <Path
-      d='M715.074 258.079C698.29 221.872 674.963 188.141 645.267 158.753L684.618 118.906C719.146 153.054 746.275 192.251 765.802 234.327L715.074 258.079Z'
-      fill='white'
+      d="M715.074 258.079C698.29 221.872 674.963 188.141 645.267 158.753L684.618 118.906C719.146 153.054 746.275 192.251 765.802 234.327L715.074 258.079Z"
+      fill="white"
     />
     <Path
-      d='M735.04 493.228C745.532 454.724 749.424 413.897 745.647 372.289L801.415 367.167C805.82 415.529 801.315 462.985 789.14 507.745L735.04 493.228Z'
-      fill='white'
+      d="M735.04 493.228C745.532 454.724 749.424 413.897 745.647 372.289L801.415 367.167C805.82 415.529 801.315 462.985 789.14 507.745L735.04 493.228Z"
+      fill="white"
     />
     <Path
-      d='M431.712 745.881C471.483 742.578 511.181 732.28 548.991 714.507L572.868 765.164C528.926 785.836 482.788 797.824 436.563 801.684L431.712 745.881Z'
-      fill='white'
+      d="M431.712 745.881C471.483 742.578 511.181 732.28 548.991 714.507L572.868 765.164C528.926 785.836 482.788 797.824 436.563 801.684L431.712 745.881Z"
+      fill="white"
     />
     <Path
-      d='M283.877 725.802C321.308 739.645 361.633 747.118 403.412 747.02L403.602 803.022C355.04 803.151 308.165 794.483 264.651 778.413L283.877 725.802Z'
-      fill='white'
+      d="M283.877 725.802C321.308 739.645 361.633 747.118 403.412 747.02L403.602 803.022C355.04 803.151 308.165 794.483 264.651 778.413L283.877 725.802Z"
+      fill="white"
     />
     <Path
-      d='M104.124 573.485C123.874 608.163 149.937 639.828 181.984 666.633L146.1 709.628C108.84 678.483 78.5317 641.69 55.558 601.392L104.124 573.485Z'
-      fill='white'
+      d="M104.124 573.485C123.874 608.163 149.937 639.828 181.984 666.633L146.1 709.628C108.84 678.483 78.5317 641.69 55.558 601.392L104.124 573.485Z"
+      fill="white"
     />
-    <Circle cx='99' cy='189' r='28' fill='white' />
-    <Circle cx='617' cy='99' r='28' fill='white' />
-    <Circle cx='615.933' cy='707.749' r='28' fill='white' />
-    <Circle cx='762.114' cy='306.827' r='28' fill='white' />
-    <Circle cx='740.405' cy='559.108' r='28' fill='white' />
-    <Circle cx='688.211' cy='641.467' r='28' fill='white' />
-    <Circle cx='215.711' cy='724.146' r='28' fill='white' />
-    <Circle cx='53.2655' cy='529.086' r='28' fill='white' />
-    <Circle cx='32.5273' cy='434.015' r='28' fill='white' />
-    <Circle cx='630.682' cy='508.496' r='21' fill='white' />
-    <Circle cx='650.503' cy='445.807' r='21' fill='white' />
-    <Circle cx='620.825' cy='276.778' r='21' fill='white' />
-    <Circle cx='379.724' cy='152.108' r='21' fill='white' />
-    <Circle cx='315.716' cy='166.752' r='21' fill='white' />
-    <Circle cx='257.693' cy='197.49' r='21' fill='white' />
-    <Circle cx='160.812' cy='336.686' r='21' fill='white' />
-    <Circle cx='176.189' cy='509.334' r='21' fill='white' />
-    <Circle cx='509.219' cy='629.738' r='21' fill='white' />
+    <Circle cx="99" cy="189" r="28" fill="white" />
+    <Circle cx="617" cy="99" r="28" fill="white" />
+    <Circle cx="615.933" cy="707.749" r="28" fill="white" />
+    <Circle cx="762.114" cy="306.827" r="28" fill="white" />
+    <Circle cx="740.405" cy="559.108" r="28" fill="white" />
+    <Circle cx="688.211" cy="641.467" r="28" fill="white" />
+    <Circle cx="215.711" cy="724.146" r="28" fill="white" />
+    <Circle cx="53.2655" cy="529.086" r="28" fill="white" />
+    <Circle cx="32.5273" cy="434.015" r="28" fill="white" />
+    <Circle cx="630.682" cy="508.496" r="21" fill="white" />
+    <Circle cx="650.503" cy="445.807" r="21" fill="white" />
+    <Circle cx="620.825" cy="276.778" r="21" fill="white" />
+    <Circle cx="379.724" cy="152.108" r="21" fill="white" />
+    <Circle cx="315.716" cy="166.752" r="21" fill="white" />
+    <Circle cx="257.693" cy="197.49" r="21" fill="white" />
+    <Circle cx="160.812" cy="336.686" r="21" fill="white" />
+    <Circle cx="176.189" cy="509.334" r="21" fill="white" />
+    <Circle cx="509.219" cy="629.738" r="21" fill="white" />
     <Path
-      d='M633.796 403.321C633.856 376.485 629.218 349.3 619.458 322.959L657.877 308.632C669.377 339.625 674.853 371.611 674.806 403.19L633.796 403.321Z'
-      fill='white'
-    />
-    <Path
-      d='M579.591 254.275C562.335 233.722 541.264 215.932 516.821 202.088L536.952 166.367C565.724 182.644 590.532 203.565 610.855 227.735L579.591 254.275Z'
-      fill='white'
+      d="M633.796 403.321C633.856 376.485 629.218 349.3 619.458 322.959L657.877 308.632C669.377 339.625 674.853 371.611 674.806 403.19L633.796 403.321Z"
+      fill="white"
     />
     <Path
-      d='M500.371 193.555C476.056 182.199 449.446 174.956 421.445 172.714L424.631 131.835C457.584 134.457 488.902 142.962 517.523 156.304L500.371 193.555Z'
-      fill='white'
+      d="M579.591 254.275C562.335 233.722 541.264 215.932 516.821 202.088L536.952 166.367C565.724 182.644 590.532 203.565 610.855 227.735L579.591 254.275Z"
+      fill="white"
     />
     <Path
-      d='M239.571 239.382C220.558 258.321 204.62 280.827 192.901 306.357L155.6 289.33C169.376 259.28 188.115 232.785 210.473 210.484L239.571 239.382Z'
-      fill='white'
+      d="M500.371 193.555C476.056 182.199 449.446 174.956 421.445 172.714L424.631 131.835C457.584 134.457 488.902 142.962 517.523 156.304L500.371 193.555Z"
+      fill="white"
     />
     <Path
-      d='M172.556 382.964C170.214 409.697 172.522 437.178 180.005 464.254L140.507 475.261C131.685 443.402 128.95 411.066 131.684 379.606L172.556 382.964Z'
-      fill='white'
+      d="M239.571 239.382C220.558 258.321 204.62 280.827 192.901 306.357L155.6 289.33C169.376 259.28 188.115 232.785 210.473 210.484L239.571 239.382Z"
+      fill="white"
     />
     <Path
-      d='M213.114 534.982C228.431 557.017 247.799 576.649 270.883 592.656L247.589 626.4C220.415 607.576 197.61 584.488 179.567 558.571L213.114 534.982Z'
-      fill='white'
+      d="M172.556 382.964C170.214 409.697 172.522 437.178 180.005 464.254L140.507 475.261C131.685 443.402 128.95 411.066 131.684 379.606L172.556 382.964Z"
+      fill="white"
     />
     <Path
-      d='M286.688 602.764C309.884 616.259 335.735 625.864 363.421 630.614L356.574 671.041C323.99 665.468 293.564 654.183 266.257 638.322L286.688 602.764Z'
-      fill='white'
+      d="M213.114 534.982C228.431 557.017 247.799 576.649 270.883 592.656L247.589 626.4C220.415 607.576 197.61 584.488 179.567 558.571L213.114 534.982Z"
+      fill="white"
     />
     <Path
-      d='M382.018 633.093C408.744 635.519 436.232 633.297 463.331 625.898L474.214 665.43C442.328 674.152 409.984 676.787 378.532 673.955L382.018 633.093Z'
-      fill='white'
+      d="M286.688 602.764C309.884 616.259 335.735 625.864 363.421 630.614L356.574 671.041C323.99 665.468 293.564 654.183 266.257 638.322L286.688 602.764Z"
+      fill="white"
     />
     <Path
-      d='M535.023 591.889C557.076 576.598 576.731 557.254 592.766 534.189L626.482 557.523C607.625 584.675 584.51 607.452 558.572 625.464L535.023 591.889Z'
-      fill='white'
+      d="M382.018 633.093C408.744 635.519 436.232 633.297 463.331 625.898L474.214 665.43C442.328 674.152 409.984 676.787 378.532 673.955L382.018 633.093Z"
+      fill="white"
     />
-    <Circle cx='403' cy='403' r='62' fill='white' />
+    <Path
+      d="M535.023 591.889C557.076 576.598 576.731 557.254 592.766 534.189L626.482 557.523C607.625 584.675 584.51 607.452 558.572 625.464L535.023 591.889Z"
+      fill="white"
+    />
+    <Circle cx="403" cy="403" r="62" fill="white" />
   </Svg>
-)
+);
 
 const SettingsIcon = () => (
-  <Svg width={22} height={22} viewBox='0 0 24 24'>
+  <Svg width={22} height={22} viewBox="0 0 24 24">
     <Path
-      d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z'
-      fill='rgba(244, 247, 249, 0.9)'
+      d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
+      fill="rgba(244, 247, 249, 0.9)"
     />
   </Svg>
-)
+);
 
 /** Primary app entry for Dit iOS. */
 export default function App() {
-  const [isPressing, setIsPressing] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
-  const [mode, setMode] = useState<Mode>('practice')
-  const [showHint, setShowHint] = useState(true)
-  const [showMnemonic, setShowMnemonic] = useState(false)
-  const [maxLevel, setMaxLevel] = useState(LEVELS[LEVELS.length - 1])
-  const [practiceWordMode, setPracticeWordMode] = useState(false)
-  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
-  const [input, setInput] = useState('')
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord)
-  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
-  const [practiceWpm, setPracticeWpm] = useState<number | null>(null)
-  const [freestyleInput, setFreestyleInput] = useState('')
-  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
-  const [listenWpm, setListenWpm] = useState(20)
-  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
+  const [isPressing, setIsPressing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [mode, setMode] = useState<Mode>('practice');
+  const [showHint, setShowHint] = useState(true);
+  const [showMnemonic, setShowMnemonic] = useState(false);
+  const [maxLevel, setMaxLevel] = useState(LEVELS[LEVELS.length - 1]);
+  const [practiceWordMode, setPracticeWordMode] = useState(false);
+  const [letter, setLetter] = useState<Letter>(initialConfig.letter);
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord);
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0);
+  const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
+  const [freestyleInput, setFreestyleInput] = useState('');
+  const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
+  const [listenWpm, setListenWpm] = useState(20);
+  const [listenStatus, setListenStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
+  const [listenReveal, setListenReveal] = useState<Letter | null>(null);
+  const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
     'idle',
-  )
-  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
-  const [soundCheckStatus, setSoundCheckStatus] = useState<
-    'idle' | 'playing'
-  >('idle')
-  const [scores, setScores] = useState(() => initializeScores())
+  );
+  const [scores, setScores] = useState(() => initializeScores());
   const tonePlayer = useMemo(
     () =>
       createAudioPlayer(TONE_SOURCE, {
@@ -213,90 +213,91 @@ export default function App() {
         downloadFirst: true,
       }),
     [],
-  )
-  const isFreestyle = mode === 'freestyle'
-  const isListen = mode === 'listen'
+  );
+  const isFreestyle = mode === 'freestyle';
+  const isListen = mode === 'listen';
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
-  )
+  );
   const availablePracticeWords = useMemo(
     () => getWordsForLetters(availableLetters),
     [availableLetters],
-  )
-  const pressStartRef = useRef<number | null>(null)
-  const inputRef = useRef(input)
-  const freestyleInputRef = useRef(freestyleInput)
-  const letterRef = useRef(letter)
-  const practiceWordRef = useRef(practiceWord)
-  const practiceWordIndexRef = useRef(practiceWordIndex)
-  const practiceWordModeRef = useRef(practiceWordMode)
-  const practiceWordStartRef = useRef<number | null>(null)
-  const scoresRef = useRef(scores)
-  const errorLockoutUntilRef = useRef(0)
-  const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const successTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const listenTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const listenPlaybackRef = useRef<{ token: number; timeouts: TimeoutHandle[] }>(
-    { token: 0, timeouts: [] },
-  )
-  const soundCheckTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const toneReadyRef = useRef(false)
-  const toneLoadingRef = useRef<Promise<AudioPlayer> | null>(null)
+  );
+  const pressStartRef = useRef<number | null>(null);
+  const inputRef = useRef(input);
+  const freestyleInputRef = useRef(freestyleInput);
+  const letterRef = useRef(letter);
+  const practiceWordRef = useRef(practiceWord);
+  const practiceWordIndexRef = useRef(practiceWordIndex);
+  const practiceWordModeRef = useRef(practiceWordMode);
+  const practiceWordStartRef = useRef<number | null>(null);
+  const scoresRef = useRef(scores);
+  const errorLockoutUntilRef = useRef(0);
+  const letterTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const successTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const errorTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const listenTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const listenPlaybackRef = useRef<{
+    token: number;
+    timeouts: TimeoutHandle[];
+  }>({ token: 0, timeouts: [] });
+  const soundCheckTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const toneReadyRef = useRef(false);
+  const toneLoadingRef = useRef<Promise<AudioPlayer> | null>(null);
 
   useEffect(() => {
-    inputRef.current = input
-  }, [input])
+    inputRef.current = input;
+  }, [input]);
 
   useEffect(() => {
-    freestyleInputRef.current = freestyleInput
-  }, [freestyleInput])
+    freestyleInputRef.current = freestyleInput;
+  }, [freestyleInput]);
 
   useEffect(() => {
-    letterRef.current = letter
-  }, [letter])
+    letterRef.current = letter;
+  }, [letter]);
 
   useEffect(() => {
-    practiceWordRef.current = practiceWord
-  }, [practiceWord])
+    practiceWordRef.current = practiceWord;
+  }, [practiceWord]);
 
   useEffect(() => {
-    practiceWordIndexRef.current = practiceWordIndex
-  }, [practiceWordIndex])
+    practiceWordIndexRef.current = practiceWordIndex;
+  }, [practiceWordIndex]);
 
   useEffect(() => {
-    practiceWordModeRef.current = practiceWordMode
-  }, [practiceWordMode])
+    practiceWordModeRef.current = practiceWordMode;
+  }, [practiceWordMode]);
 
   useEffect(() => {
-    scoresRef.current = scores
-  }, [scores])
+    scoresRef.current = scores;
+  }, [scores]);
 
   const unloadTonePlayer = useCallback(() => {
     if (!toneReadyRef.current) {
-      return
+      return;
     }
-    tonePlayer.pause()
-    tonePlayer.remove()
-    toneReadyRef.current = false
-    toneLoadingRef.current = null
-  }, [tonePlayer])
+    tonePlayer.pause();
+    tonePlayer.remove();
+    toneReadyRef.current = false;
+    toneLoadingRef.current = null;
+  }, [tonePlayer]);
 
   const scheduleToneUnload = useCallback(() => {
-    clearTimer(toneUnloadTimeoutRef)
+    clearTimer(toneUnloadTimeoutRef);
     toneUnloadTimeoutRef.current = setTimeout(() => {
-      unloadTonePlayer()
-    }, 4000)
-  }, [unloadTonePlayer])
+      unloadTonePlayer();
+    }, 4000);
+  }, [unloadTonePlayer]);
 
   const prepareTonePlayer = useCallback(async () => {
     if (toneReadyRef.current) {
-      return tonePlayer
+      return tonePlayer;
     }
     if (toneLoadingRef.current) {
-      return toneLoadingRef.current
+      return toneLoadingRef.current;
     }
     toneLoadingRef.current = (async () => {
       try {
@@ -305,102 +306,102 @@ export default function App() {
           allowsRecording: false,
           shouldPlayInBackground: false,
           interruptionMode: 'doNotMix',
-        })
-        await setIsAudioActiveAsync(true)
-        await waitForPlayerLoad(tonePlayer)
-        tonePlayer.loop = true
-        tonePlayer.volume = Math.min(1, Math.max(0.4, TONE_VOLUME))
-        tonePlayer.muted = true
-        tonePlayer.play()
-        toneReadyRef.current = true
-        return tonePlayer
+        });
+        await setIsAudioActiveAsync(true);
+        await waitForPlayerLoad(tonePlayer);
+        tonePlayer.loop = true;
+        tonePlayer.volume = Math.min(1, Math.max(0.4, TONE_VOLUME));
+        tonePlayer.muted = true;
+        tonePlayer.play();
+        toneReadyRef.current = true;
+        return tonePlayer;
       } finally {
-        toneLoadingRef.current = null
+        toneLoadingRef.current = null;
       }
-    })()
-    return toneLoadingRef.current
-  }, [tonePlayer])
+    })();
+    return toneLoadingRef.current;
+  }, [tonePlayer]);
 
   const stopTonePlayback = useCallback(() => {
     if (!toneReadyRef.current) {
-      return
+      return;
     }
-    tonePlayer.muted = true
-    scheduleToneUnload()
-  }, [scheduleToneUnload, tonePlayer])
+    tonePlayer.muted = true;
+    scheduleToneUnload();
+  }, [scheduleToneUnload, tonePlayer]);
 
   const startTonePlayback = useCallback(async () => {
-    clearTimer(toneUnloadTimeoutRef)
-    const player = await prepareTonePlayer()
+    clearTimer(toneUnloadTimeoutRef);
+    const player = await prepareTonePlayer();
     if (!player) {
-      return
+      return;
     }
-    player.muted = false
+    player.muted = false;
     if (!player.playing) {
-      player.play()
+      player.play();
     }
-  }, [prepareTonePlayer])
+  }, [prepareTonePlayer]);
 
   const clearListenPlaybackTimeouts = useCallback(() => {
     listenPlaybackRef.current.timeouts.forEach((timeout) => {
-      clearTimeout(timeout)
-    })
-    listenPlaybackRef.current.timeouts = []
-  }, [])
+      clearTimeout(timeout);
+    });
+    listenPlaybackRef.current.timeouts = [];
+  }, []);
 
   const stopListenPlayback = useCallback(() => {
-    listenPlaybackRef.current.token += 1
-    clearListenPlaybackTimeouts()
-    stopTonePlayback()
-  }, [clearListenPlaybackTimeouts, stopTonePlayback])
+    listenPlaybackRef.current.token += 1;
+    clearListenPlaybackTimeouts();
+    stopTonePlayback();
+  }, [clearListenPlaybackTimeouts, stopTonePlayback]);
 
   const playListenSequence = useCallback(
     (code: string, overrideWpm?: number) => {
-      stopListenPlayback()
-      const token = listenPlaybackRef.current.token + 1
-      listenPlaybackRef.current.token = token
-      const resolvedWpm = overrideWpm ?? listenWpm
+      stopListenPlayback();
+      const token = listenPlaybackRef.current.token + 1;
+      listenPlaybackRef.current.token = token;
+      const resolvedWpm = overrideWpm ?? listenWpm;
       const unitMs = Math.max(
         Math.round(1200 / resolvedWpm),
         LISTEN_MIN_UNIT_MS,
-      )
-      const pattern: number[] = []
+      );
+      const pattern: number[] = [];
       for (let index = 0; index < code.length; index += 1) {
-        const symbol = code[index]
-        pattern.push(symbol === '.' ? unitMs : unitMs * 3)
+        const symbol = code[index];
+        pattern.push(symbol === '.' ? unitMs : unitMs * 3);
         if (index < code.length - 1) {
-          pattern.push(unitMs)
+          pattern.push(unitMs);
         }
       }
-      void triggerHaptics(pattern)
+      void triggerHaptics(pattern);
 
-      let currentMs = 0
+      let currentMs = 0;
       for (const symbol of code) {
-        const duration = symbol === '.' ? unitMs : unitMs * 3
+        const duration = symbol === '.' ? unitMs : unitMs * 3;
         listenPlaybackRef.current.timeouts.push(
           setTimeout(() => {
             if (listenPlaybackRef.current.token !== token) {
-              return
+              return;
             }
-            startTonePlayback()
+            startTonePlayback();
           }, currentMs),
           setTimeout(() => {
             if (listenPlaybackRef.current.token !== token) {
-              return
+              return;
             }
-            stopTonePlayback()
+            stopTonePlayback();
           }, currentMs + duration),
-        )
-        currentMs += duration + unitMs
+        );
+        currentMs += duration + unitMs;
       }
       listenPlaybackRef.current.timeouts.push(
         setTimeout(() => {
           if (listenPlaybackRef.current.token !== token) {
-            return
+            return;
           }
-          clearListenPlaybackTimeouts()
+          clearListenPlaybackTimeouts();
         }, currentMs),
-      )
+      );
     },
     [
       clearListenPlaybackTimeouts,
@@ -410,122 +411,130 @@ export default function App() {
       stopTonePlayback,
       triggerHaptics,
     ],
-  )
+  );
 
   const resetListenState = useCallback(() => {
-    clearTimer(listenTimeoutRef)
-    setListenStatus('idle')
-    setListenReveal(null)
-  }, [])
+    clearTimer(listenTimeoutRef);
+    setListenStatus('idle');
+    setListenReveal(null);
+  }, []);
 
   useEffect(() => {
     return () => {
-      clearTimer(letterTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      clearTimer(listenTimeoutRef)
-      clearTimer(soundCheckTimeoutRef)
-      clearTimer(toneUnloadTimeoutRef)
-      stopListenPlayback()
-      unloadTonePlayer()
-    }
-  }, [stopListenPlayback, unloadTonePlayer])
+      clearTimer(letterTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      clearTimer(listenTimeoutRef);
+      clearTimer(soundCheckTimeoutRef);
+      clearTimer(toneUnloadTimeoutRef);
+      stopListenPlayback();
+      unloadTonePlayer();
+    };
+  }, [stopListenPlayback, unloadTonePlayer]);
 
   useEffect(() => {
     if (mode === 'listen') {
-      return
+      return;
     }
     if (!availableLetters.includes(letterRef.current)) {
-      const nextLetter = getRandomLetter(availableLetters)
-      letterRef.current = nextLetter
-      setLetter(nextLetter)
+      const nextLetter = getRandomLetter(availableLetters);
+      letterRef.current = nextLetter;
+      setLetter(nextLetter);
     }
     if (practiceWordModeRef.current) {
       const nextWord = getRandomWord(
         availablePracticeWords,
         practiceWordRef.current,
-      )
-      practiceWordRef.current = nextWord
-      practiceWordIndexRef.current = 0
-      practiceWordStartRef.current = null
-      setPracticeWord(nextWord)
-      setPracticeWordIndex(0)
-      const nextLetter = nextWord[0] as Letter
-      letterRef.current = nextLetter
-      setLetter(nextLetter)
+      );
+      practiceWordRef.current = nextWord;
+      practiceWordIndexRef.current = 0;
+      practiceWordStartRef.current = null;
+      setPracticeWord(nextWord);
+      setPracticeWordIndex(0);
+      const nextLetter = nextWord[0] as Letter;
+      letterRef.current = nextLetter;
+      setLetter(nextLetter);
     }
-  }, [availableLetters, availablePracticeWords, mode])
+  }, [availableLetters, availablePracticeWords, mode]);
 
-  const canScoreAttempt = useCallback(() => !showHint, [showHint])
+  const canScoreAttempt = useCallback(() => !showHint, [showHint]);
 
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
-    setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
-  }, [])
+    setScores((prev) => applyScoreDelta(prev, targetLetter, delta));
+  }, []);
 
   const isErrorLocked = useCallback(
     () => now() < errorLockoutUntilRef.current,
     [],
-  )
+  );
 
   const startErrorLockout = useCallback(() => {
-    errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS
-  }, [])
+    errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS;
+  }, []);
 
   const handleSoundCheck = useCallback(() => {
     if (soundCheckStatus !== 'idle') {
-      return
+      return;
     }
-    stopListenPlayback()
-    clearTimer(soundCheckTimeoutRef)
-    setSoundCheckStatus('playing')
-    void startTonePlayback()
+    stopListenPlayback();
+    clearTimer(soundCheckTimeoutRef);
+    setSoundCheckStatus('playing');
+    void startTonePlayback();
     soundCheckTimeoutRef.current = setTimeout(() => {
-      stopTonePlayback()
-      setSoundCheckStatus('idle')
-    }, SOUND_CHECK_DURATION_MS)
-    void triggerHaptics([40, 40, 40])
-  }, [soundCheckStatus, startTonePlayback, stopListenPlayback, stopTonePlayback])
+      stopTonePlayback();
+      setSoundCheckStatus('idle');
+    }, SOUND_CHECK_DURATION_MS);
+    void triggerHaptics([40, 40, 40]);
+  }, [
+    soundCheckStatus,
+    startTonePlayback,
+    stopListenPlayback,
+    stopTonePlayback,
+  ]);
 
   const submitFreestyleInput = useCallback((value: string) => {
     if (!value) {
-      setFreestyleResult('No input')
-      return
+      setFreestyleResult('No input');
+      return;
     }
     const match = Object.entries(MORSE_DATA).find(
       ([, data]) => data.code === value,
-    )
-    const result = match ? match[0] : 'No match'
-    setFreestyleResult(result)
-    setFreestyleInput('')
-  }, [])
+    );
+    const result = match ? match[0] : 'No match';
+    setFreestyleResult(result);
+    setFreestyleInput('');
+  }, []);
 
   const submitListenAnswer = useCallback(
     (value: Letter) => {
       if (listenStatus !== 'idle') {
-        return
+        return;
       }
       if (!/^[A-Z0-9]$/.test(value)) {
-        return
+        return;
       }
-      void triggerHaptics(10)
-      clearTimer(listenTimeoutRef)
-      stopListenPlayback()
-      const isCorrect = value === letterRef.current
-      setListenStatus(isCorrect ? 'success' : 'error')
-      setListenReveal(letterRef.current)
-      bumpScore(letterRef.current, isCorrect ? 1 : -1)
-      listenTimeoutRef.current = setTimeout(() => {
-        const nextLetter = getRandomWeightedLetter(
-          availableLetters,
-          scoresRef.current,
-          letterRef.current,
-        )
-        letterRef.current = nextLetter
-        setListenStatus('idle')
-        setListenReveal(null)
-        setLetter(nextLetter)
-        playListenSequence(MORSE_DATA[nextLetter].code)
-      }, isCorrect ? 650 : ERROR_LOCKOUT_MS)
+      void triggerHaptics(10);
+      clearTimer(listenTimeoutRef);
+      stopListenPlayback();
+      const isCorrect = value === letterRef.current;
+      setListenStatus(isCorrect ? 'success' : 'error');
+      setListenReveal(letterRef.current);
+      bumpScore(letterRef.current, isCorrect ? 1 : -1);
+      listenTimeoutRef.current = setTimeout(
+        () => {
+          const nextLetter = getRandomWeightedLetter(
+            availableLetters,
+            scoresRef.current,
+            letterRef.current,
+          );
+          letterRef.current = nextLetter;
+          setListenStatus('idle');
+          setListenReveal(null);
+          setLetter(nextLetter);
+          playListenSequence(MORSE_DATA[nextLetter].code);
+        },
+        isCorrect ? 650 : ERROR_LOCKOUT_MS,
+      );
     },
     [
       availableLetters,
@@ -535,89 +544,89 @@ export default function App() {
       stopListenPlayback,
       triggerHaptics,
     ],
-  )
+  );
 
   const handleListenReplay = useCallback(() => {
     if (listenStatus !== 'idle') {
-      return
+      return;
     }
-    setListenReveal(null)
-    void triggerHaptics(12)
-    playListenSequence(MORSE_DATA[letterRef.current].code)
-  }, [listenStatus, playListenSequence, triggerHaptics])
+    setListenReveal(null);
+    void triggerHaptics(12);
+    playListenSequence(MORSE_DATA[letterRef.current].code);
+  }, [listenStatus, playListenSequence, triggerHaptics]);
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
-      clearTimer(letterTimeoutRef)
+      clearTimer(letterTimeoutRef);
       letterTimeoutRef.current = setTimeout(() => {
         if (nextMode === 'freestyle') {
-          submitFreestyleInput(freestyleInputRef.current)
-          return
+          submitFreestyleInput(freestyleInputRef.current);
+          return;
         }
-        const attempt = inputRef.current
+        const attempt = inputRef.current;
         if (!attempt) {
-          return
+          return;
         }
-        clearTimer(errorTimeoutRef)
-        clearTimer(successTimeoutRef)
-        const target = MORSE_DATA[letterRef.current].code
-        const isCorrect = attempt === target
+        clearTimer(errorTimeoutRef);
+        clearTimer(successTimeoutRef);
+        const target = MORSE_DATA[letterRef.current].code;
+        const isCorrect = attempt === target;
         if (isCorrect) {
           if (canScoreAttempt()) {
-            bumpScore(letterRef.current, 1)
+            bumpScore(letterRef.current, 1);
           }
-          setInput('')
+          setInput('');
           if (practiceWordModeRef.current) {
-            const currentWord = practiceWordRef.current
+            const currentWord = practiceWordRef.current;
             if (!currentWord) {
-              const nextWord = getRandomWord(availablePracticeWords)
-              const nextLetter = nextWord[0] as Letter
-              practiceWordStartRef.current = null
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setStatus('idle')
-              return
+              const nextWord = getRandomWord(availablePracticeWords);
+              const nextLetter = nextWord[0] as Letter;
+              practiceWordStartRef.current = null;
+              practiceWordRef.current = nextWord;
+              practiceWordIndexRef.current = 0;
+              letterRef.current = nextLetter;
+              setPracticeWord(nextWord);
+              setPracticeWordIndex(0);
+              setLetter(nextLetter);
+              setStatus('idle');
+              return;
             }
-            const nextIndex = practiceWordIndexRef.current + 1
+            const nextIndex = practiceWordIndexRef.current + 1;
             if (nextIndex >= currentWord.length) {
-              const startTime = practiceWordStartRef.current
+              const startTime = practiceWordStartRef.current;
               if (startTime && currentWord.length > 0) {
-                const elapsedMs = now() - startTime
+                const elapsedMs = now() - startTime;
                 if (elapsedMs > 0) {
                   const nextWpm =
                     (currentWord.length / PRACTICE_WORD_UNITS) *
-                    (60000 / elapsedMs)
-                  setPracticeWpm(Math.round(nextWpm * 10) / 10)
+                    (60000 / elapsedMs);
+                  setPracticeWpm(Math.round(nextWpm * 10) / 10);
                 }
               }
               const nextWord = getRandomWord(
                 availablePracticeWords,
                 currentWord,
-              )
-              const nextLetter = nextWord[0] as Letter
-              practiceWordStartRef.current = null
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setStatus('idle')
-              return
+              );
+              const nextLetter = nextWord[0] as Letter;
+              practiceWordStartRef.current = null;
+              practiceWordRef.current = nextWord;
+              practiceWordIndexRef.current = 0;
+              letterRef.current = nextLetter;
+              setPracticeWord(nextWord);
+              setPracticeWordIndex(0);
+              setLetter(nextLetter);
+              setStatus('idle');
+              return;
             }
-            const nextLetter = currentWord[nextIndex] as Letter
-            practiceWordIndexRef.current = nextIndex
-            letterRef.current = nextLetter
-            setPracticeWordIndex(nextIndex)
-            setLetter(nextLetter)
-            setStatus('idle')
-            return
+            const nextLetter = currentWord[nextIndex] as Letter;
+            practiceWordIndexRef.current = nextIndex;
+            letterRef.current = nextLetter;
+            setPracticeWordIndex(nextIndex);
+            setLetter(nextLetter);
+            setStatus('idle');
+            return;
           }
-          setStatus('success')
+          setStatus('success');
           successTimeoutRef.current = setTimeout(() => {
             setLetter((current) =>
               getRandomWeightedLetter(
@@ -625,21 +634,21 @@ export default function App() {
                 scoresRef.current,
                 current,
               ),
-            )
-            setStatus('idle')
-          }, 650)
-          return
+            );
+            setStatus('idle');
+          }, 650);
+          return;
         }
-        startErrorLockout()
+        startErrorLockout();
         if (canScoreAttempt()) {
-          bumpScore(letterRef.current, -1)
+          bumpScore(letterRef.current, -1);
         }
-        setStatus('error')
-        setInput('')
+        setStatus('error');
+        setInput('');
         errorTimeoutRef.current = setTimeout(() => {
-          setStatus('idle')
-        }, ERROR_LOCKOUT_MS)
-      }, INTER_CHAR_GAP_MS)
+          setStatus('idle');
+        }, ERROR_LOCKOUT_MS);
+      }, INTER_CHAR_GAP_MS);
     },
     [
       availableLetters,
@@ -649,26 +658,26 @@ export default function App() {
       startErrorLockout,
       submitFreestyleInput,
     ],
-  )
+  );
 
   const registerSymbol = useCallback(
     (symbol: '.' | '-') => {
       if (!isFreestyle && isErrorLocked()) {
-        return
+        return;
       }
-      void triggerHaptics(symbol === '.' ? 12 : 28)
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
+      void triggerHaptics(symbol === '.' ? 12 : 28);
+      clearTimer(errorTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(letterTimeoutRef);
 
       if (isFreestyle) {
         setFreestyleInput((prev) => {
-          const next = prev + symbol
-          scheduleLetterReset('freestyle')
-          return next
-        })
-        setFreestyleResult(null)
-        return
+          const next = prev + symbol;
+          scheduleLetterReset('freestyle');
+          return next;
+        });
+        setFreestyleResult(null);
+        return;
       }
 
       if (
@@ -677,158 +686,166 @@ export default function App() {
         practiceWordStartRef.current === null &&
         practiceWordRef.current
       ) {
-        practiceWordStartRef.current = now()
+        practiceWordStartRef.current = now();
       }
 
-      setStatus('idle')
-      setInput((prev) => prev + symbol)
-      scheduleLetterReset('practice')
+      setStatus('idle');
+      setInput((prev) => prev + symbol);
+      scheduleLetterReset('practice');
     },
     [isErrorLocked, isFreestyle, scheduleLetterReset],
-  )
+  );
 
   const handlePressIn = useCallback(() => {
     if (pressStartRef.current !== null) {
-      return
+      return;
     }
     if (isListen) {
-      return
+      return;
     }
     if (!isFreestyle && isErrorLocked()) {
-      return
+      return;
     }
-    setIsPressing(true)
-    pressStartRef.current = now()
-    clearTimer(letterTimeoutRef)
-    startTonePlayback()
-  }, [isErrorLocked, isFreestyle, isListen, startTonePlayback])
+    setIsPressing(true);
+    pressStartRef.current = now();
+    clearTimer(letterTimeoutRef);
+    startTonePlayback();
+  }, [isErrorLocked, isFreestyle, isListen, startTonePlayback]);
 
   const handlePressOut = useCallback(() => {
-    setIsPressing(false)
-    stopTonePlayback()
+    setIsPressing(false);
+    stopTonePlayback();
     if (isListen) {
-      pressStartRef.current = null
-      return
+      pressStartRef.current = null;
+      return;
     }
-    const start = pressStartRef.current
-    pressStartRef.current = null
+    const start = pressStartRef.current;
+    pressStartRef.current = null;
     if (start === null) {
-      return
+      return;
     }
-    const duration = now() - start
-    const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-'
-    registerSymbol(symbol)
-  }, [isListen, registerSymbol, stopTonePlayback])
+    const duration = now() - start;
+    const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-';
+    registerSymbol(symbol);
+  }, [isListen, registerSymbol, stopTonePlayback]);
 
   const handleMaxLevelChange = useCallback(
     (value: number) => {
-      setMaxLevel(value)
-      setInput('')
-      setStatus('idle')
-      clearTimer(letterTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      practiceWordStartRef.current = null
-      const nextLetters = getLettersForLevel(value)
+      setMaxLevel(value);
+      setInput('');
+      setStatus('idle');
+      clearTimer(letterTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      practiceWordStartRef.current = null;
+      const nextLetters = getLettersForLevel(value);
       if (isListen) {
-        resetListenState()
-        const currentLetter = letterRef.current
+        resetListenState();
+        const currentLetter = letterRef.current;
         const nextLetter = nextLetters.includes(currentLetter)
           ? currentLetter
-          : getRandomWeightedLetter(nextLetters, scoresRef.current, currentLetter)
-        letterRef.current = nextLetter
-        setLetter(nextLetter)
-        playListenSequence(MORSE_DATA[nextLetter].code)
-        return
+          : getRandomWeightedLetter(
+              nextLetters,
+              scoresRef.current,
+              currentLetter,
+            );
+        letterRef.current = nextLetter;
+        setLetter(nextLetter);
+        playListenSequence(MORSE_DATA[nextLetter].code);
+        return;
       }
       if (practiceWordModeRef.current) {
         const nextWord = getRandomWord(
           getWordsForLetters(nextLetters),
           practiceWordRef.current,
-        )
-        practiceWordRef.current = nextWord
-        practiceWordIndexRef.current = 0
-        const nextLetter = nextWord[0] as Letter
-        letterRef.current = nextLetter
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextLetter)
-        return
+        );
+        practiceWordRef.current = nextWord;
+        practiceWordIndexRef.current = 0;
+        const nextLetter = nextWord[0] as Letter;
+        letterRef.current = nextLetter;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextLetter);
+        return;
       }
       const nextLetter = nextLetters.includes(letterRef.current)
         ? letterRef.current
-        : getRandomWeightedLetter(nextLetters, scoresRef.current, letterRef.current)
-      letterRef.current = nextLetter
-      setLetter(nextLetter)
+        : getRandomWeightedLetter(
+            nextLetters,
+            scoresRef.current,
+            letterRef.current,
+          );
+      letterRef.current = nextLetter;
+      setLetter(nextLetter);
     },
     [isListen, playListenSequence, resetListenState],
-  )
+  );
 
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
-      setPracticeWordMode(value)
-      practiceWordModeRef.current = value
-      practiceWordStartRef.current = null
-      clearTimer(letterTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      setPracticeWpm(null)
-      setInput('')
-      setStatus('idle')
+      setPracticeWordMode(value);
+      practiceWordModeRef.current = value;
+      practiceWordStartRef.current = null;
+      clearTimer(letterTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      setPracticeWpm(null);
+      setInput('');
+      setStatus('idle');
       if (value) {
-        const nextWord = getRandomWord(availablePracticeWords)
-        const nextLetter = nextWord[0] as Letter
-        practiceWordRef.current = nextWord
-        practiceWordIndexRef.current = 0
-        letterRef.current = nextLetter
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextLetter)
+        const nextWord = getRandomWord(availablePracticeWords);
+        const nextLetter = nextWord[0] as Letter;
+        practiceWordRef.current = nextWord;
+        practiceWordIndexRef.current = 0;
+        letterRef.current = nextLetter;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextLetter);
       } else {
         const nextLetter = getRandomWeightedLetter(
           availableLetters,
           scoresRef.current,
           letterRef.current,
-        )
-        letterRef.current = nextLetter
-        setLetter(nextLetter)
+        );
+        letterRef.current = nextLetter;
+        setLetter(nextLetter);
       }
     },
     [availableLetters, availablePracticeWords],
-  )
+  );
 
   const handleListenWpmChange = useCallback(
     (value: number) => {
-      setListenWpm(value)
+      setListenWpm(value);
       if (!isListen || listenStatus !== 'idle') {
-        return
+        return;
       }
-      playListenSequence(MORSE_DATA[letterRef.current].code, value)
+      playListenSequence(MORSE_DATA[letterRef.current].code, value);
     },
     [isListen, listenStatus, playListenSequence],
-  )
+  );
 
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
-      stopListenPlayback()
-      setMode(nextMode)
-      setShowSettings(false)
-      setShowAbout(false)
-      setIsPressing(false)
-      setInput('')
-      setFreestyleInput('')
-      setFreestyleResult(null)
-      setStatus('idle')
-      clearTimer(letterTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      practiceWordStartRef.current = null
-      resetListenState()
+      stopListenPlayback();
+      setMode(nextMode);
+      setShowSettings(false);
+      setShowAbout(false);
+      setIsPressing(false);
+      setInput('');
+      setFreestyleInput('');
+      setFreestyleResult(null);
+      setStatus('idle');
+      clearTimer(letterTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      practiceWordStartRef.current = null;
+      resetListenState();
       if (nextMode !== 'practice') {
-        setPracticeWpm(null)
+        setPracticeWpm(null);
       }
       if (nextMode === 'freestyle') {
-        return
+        return;
       }
       if (nextMode === 'listen') {
         const nextLetter = availableLetters.includes(letterRef.current)
@@ -837,26 +854,26 @@ export default function App() {
               availableLetters,
               scoresRef.current,
               letterRef.current,
-            )
-        letterRef.current = nextLetter
-        setLetter(nextLetter)
-        playListenSequence(MORSE_DATA[nextLetter].code)
-        return
+            );
+        letterRef.current = nextLetter;
+        setLetter(nextLetter);
+        playListenSequence(MORSE_DATA[nextLetter].code);
+        return;
       }
       if (practiceWordModeRef.current) {
         const nextWord = getRandomWord(
           availablePracticeWords,
           practiceWordRef.current,
-        )
-        practiceWordStartRef.current = null
-        practiceWordRef.current = nextWord
-        practiceWordIndexRef.current = 0
-        const nextLetter = nextWord[0] as Letter
-        letterRef.current = nextLetter
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextLetter)
-        return
+        );
+        practiceWordStartRef.current = null;
+        practiceWordRef.current = nextWord;
+        practiceWordIndexRef.current = 0;
+        const nextLetter = nextWord[0] as Letter;
+        letterRef.current = nextLetter;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextLetter);
+        return;
       }
       const nextLetter = availableLetters.includes(letterRef.current)
         ? letterRef.current
@@ -864,9 +881,9 @@ export default function App() {
             availableLetters,
             scoresRef.current,
             letterRef.current,
-          )
-      letterRef.current = nextLetter
-      setLetter(nextLetter)
+          );
+      letterRef.current = nextLetter;
+      setLetter(nextLetter);
     },
     [
       availableLetters,
@@ -875,12 +892,12 @@ export default function App() {
       resetListenState,
       stopListenPlayback,
     ],
-  )
+  );
 
-  const target = MORSE_DATA[letter].code
-  const targetSymbols = target.split('')
-  const hintVisible = !isFreestyle && !isListen && showHint
-  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
+  const target = MORSE_DATA[letter].code;
+  const targetSymbols = target.split('');
+  const hintVisible = !isFreestyle && !isListen && showHint;
+  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -888,7 +905,7 @@ export default function App() {
         ? 'Missed. Start over.'
         : mnemonicVisible
           ? MORSE_DATA[letter].mnemonic
-          : ' '
+          : ' ';
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -898,176 +915,176 @@ export default function App() {
     !mnemonicVisible &&
     practiceWord
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
-      : null
-  const practiceStatusText = practiceProgressText ?? baseStatusText
+      : null;
+  const practiceStatusText = practiceProgressText ?? baseStatusText;
   const practiceWpmText =
     !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
-      : null
+      : null;
   const isInputOnTrack =
-    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
+    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input);
   const highlightCount =
     status === 'success'
       ? targetSymbols.length
       : isInputOnTrack
         ? input.length
-        : 0
+        : 0;
   const pips: StagePip[] = targetSymbols.map((symbol, index) => ({
     type: symbol === '.' ? 'dot' : 'dah',
     state: index < highlightCount ? 'hit' : 'expected',
-  }))
+  }));
   const isLetterResult = freestyleResult
     ? /^[A-Z0-9]$/.test(freestyleResult)
-    : false
+    : false;
   const freestyleStatus = freestyleResult
     ? isLetterResult
       ? `Result ${freestyleResult}`
       : freestyleResult
     : freestyleInput
       ? `Input ${freestyleInput}`
-      : 'Tap and pause'
+      : 'Tap and pause';
   const freestyleDisplay = freestyleResult
     ? isLetterResult
       ? freestyleResult
       : '?'
-    : freestyleInput || '?'
+    : freestyleInput || '?';
   const listenStatusText =
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
         ? 'Incorrect'
-        : 'Listen and type the character'
-  const listenDisplay = listenReveal ?? '?'
+        : 'Listen and type the character';
+  const listenDisplay = listenReveal ?? '?';
   const statusText = isFreestyle
     ? freestyleStatus
     : isListen
       ? listenStatusText
-      : practiceStatusText
+      : practiceStatusText;
   const stageLetter = isFreestyle
     ? freestyleDisplay
     : isListen
       ? listenDisplay
-      : letter
-  const stagePips = isFreestyle || isListen ? [] : pips
-  const showPracticeWord = !isFreestyle && !isListen && practiceWordMode
-  const letterPlaceholder = isListen && listenReveal === null
+      : letter;
+  const stagePips = isFreestyle || isListen ? [] : pips;
+  const showPracticeWord = !isFreestyle && !isListen && practiceWordMode;
+  const letterPlaceholder = isListen && listenReveal === null;
 
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Pressable
-              onPress={() => {
-                setShowSettings(false)
-                setShowAbout((prev) => !prev)
-              }}
-              accessibilityRole='button'
-              accessibilityLabel='About Dit'
-              style={styles.logoButton}
-            >
-              <View style={styles.logo}>
-                <DitLogo />
+          <View style={styles.topBar}>
+            <View style={styles.topBarSide}>
+              <Pressable
+                onPress={() => {
+                  setShowSettings(false);
+                  setShowAbout((prev) => !prev);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="About Dit"
+                style={styles.logoButton}
+              >
+                <View style={styles.logo}>
+                  <DitLogo />
+                </View>
+              </Pressable>
+            </View>
+            <View style={styles.topBarCenter}>
+              <ModeSwitcher value={mode} onChange={handleModeChange} />
+            </View>
+            <View style={styles.topBarSide}>
+              <Pressable
+                onPress={() => {
+                  setShowAbout(false);
+                  setShowSettings((prev) => !prev);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                style={({ pressed }) => [
+                  styles.settingsButton,
+                  pressed && styles.settingsButtonPressed,
+                ]}
+              >
+                <SettingsIcon />
+              </Pressable>
+            </View>
+          </View>
+          {showAbout ? (
+            <View style={styles.modalOverlay} pointerEvents="box-none">
+              <Pressable
+                onPress={() => setShowAbout(false)}
+                style={styles.modalBackdrop}
+              />
+              <View style={styles.modalCenter} pointerEvents="box-none">
+                <Pressable style={styles.modalCard} onPress={() => {}}>
+                  <AboutPanel onClose={() => setShowAbout(false)} />
+                </Pressable>
               </View>
-            </Pressable>
-          </View>
-          <View style={styles.topBarCenter}>
-            <ModeSwitcher value={mode} onChange={handleModeChange} />
-          </View>
-          <View style={styles.topBarSide}>
-            <Pressable
-              onPress={() => {
-                setShowAbout(false)
-                setShowSettings((prev) => !prev)
-              }}
-              accessibilityRole='button'
-              accessibilityLabel='Settings'
-              style={({ pressed }) => [
-                styles.settingsButton,
-                pressed && styles.settingsButtonPressed,
-              ]}
-            >
-              <SettingsIcon />
-            </Pressable>
-          </View>
-        </View>
-        {showAbout ? (
-          <View style={styles.modalOverlay} pointerEvents='box-none'>
-            <Pressable
-              onPress={() => setShowAbout(false)}
-              style={styles.modalBackdrop}
-            />
-            <View style={styles.modalCenter} pointerEvents='box-none'>
-              <Pressable style={styles.modalCard} onPress={() => {}}>
-                <AboutPanel onClose={() => setShowAbout(false)} />
-              </Pressable>
             </View>
-          </View>
-        ) : null}
-        {showSettings ? (
-          <View style={styles.modalOverlay} pointerEvents='box-none'>
-            <Pressable
-              onPress={() => setShowSettings(false)}
-              style={styles.modalBackdrop}
-            />
-            <View style={styles.modalCenter} pointerEvents='box-none'>
-              <Pressable style={styles.modalCard} onPress={() => {}}>
-                <SettingsPanel
-                  isFreestyle={isFreestyle}
-                  isListen={isListen}
-                  levels={LEVELS}
-                  maxLevel={maxLevel}
-                  practiceWordMode={practiceWordMode}
-                  listenWpm={listenWpm}
-                  listenWpmMin={LISTEN_WPM_MIN}
-                  listenWpmMax={LISTEN_WPM_MAX}
-                  showHint={showHint}
-                  showMnemonic={showMnemonic}
-                  soundCheckStatus={soundCheckStatus}
-                  onClose={() => setShowSettings(false)}
-                  onMaxLevelChange={handleMaxLevelChange}
-                  onPracticeWordModeChange={handlePracticeWordModeChange}
-                  onListenWpmChange={handleListenWpmChange}
-                  onShowHintChange={setShowHint}
-                  onShowMnemonicChange={setShowMnemonic}
-                  onSoundCheck={handleSoundCheck}
-                />
-              </Pressable>
+          ) : null}
+          {showSettings ? (
+            <View style={styles.modalOverlay} pointerEvents="box-none">
+              <Pressable
+                onPress={() => setShowSettings(false)}
+                style={styles.modalBackdrop}
+              />
+              <View style={styles.modalCenter} pointerEvents="box-none">
+                <Pressable style={styles.modalCard} onPress={() => {}}>
+                  <SettingsPanel
+                    isFreestyle={isFreestyle}
+                    isListen={isListen}
+                    levels={LEVELS}
+                    maxLevel={maxLevel}
+                    practiceWordMode={practiceWordMode}
+                    listenWpm={listenWpm}
+                    listenWpmMin={LISTEN_WPM_MIN}
+                    listenWpmMax={LISTEN_WPM_MAX}
+                    showHint={showHint}
+                    showMnemonic={showMnemonic}
+                    soundCheckStatus={soundCheckStatus}
+                    onClose={() => setShowSettings(false)}
+                    onMaxLevelChange={handleMaxLevelChange}
+                    onPracticeWordModeChange={handlePracticeWordModeChange}
+                    onListenWpmChange={handleListenWpmChange}
+                    onShowHintChange={setShowHint}
+                    onShowMnemonicChange={setShowMnemonic}
+                    onSoundCheck={handleSoundCheck}
+                  />
+                </Pressable>
+              </View>
             </View>
+          ) : null}
+          <StageDisplay
+            letter={stageLetter}
+            statusText={statusText}
+            pips={stagePips}
+            hintVisible={hintVisible}
+            letterPlaceholder={letterPlaceholder}
+            practiceWpmText={practiceWpmText}
+            practiceWordMode={showPracticeWord}
+            practiceWord={showPracticeWord ? practiceWord : null}
+            practiceWordIndex={practiceWordIndex}
+          />
+          <View style={styles.controls}>
+            {isListen ? (
+              <ListenControls
+                listenStatus={listenStatus}
+                onReplay={handleListenReplay}
+                onSubmitAnswer={submitListenAnswer}
+              />
+            ) : (
+              <MorseButton
+                isPressing={isPressing}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+              />
+            )}
           </View>
-        ) : null}
-        <StageDisplay
-          letter={stageLetter}
-          statusText={statusText}
-          pips={stagePips}
-          hintVisible={hintVisible}
-          letterPlaceholder={letterPlaceholder}
-          practiceWpmText={practiceWpmText}
-          practiceWordMode={showPracticeWord}
-          practiceWord={showPracticeWord ? practiceWord : null}
-          practiceWordIndex={practiceWordIndex}
-        />
-        <View style={styles.controls}>
-          {isListen ? (
-            <ListenControls
-              listenStatus={listenStatus}
-              onReplay={handleListenReplay}
-              onSubmitAnswer={submitListenAnswer}
-            />
-          ) : (
-            <MorseButton
-              isPressing={isPressing}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-            />
-          )}
-        </View>
         </SafeAreaView>
-        <StatusBar style='light' />
+        <StatusBar style="light" />
       </View>
     </SafeAreaProvider>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -1151,4 +1168,4 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 10 },
   },
-})
+});
