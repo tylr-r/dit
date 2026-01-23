@@ -1,5 +1,6 @@
 packages:
   - apps/*
+  - modules/*
   - packages/*
 
 nodeLinker: hoisted

@@ -85,7 +85,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 
 - [x] Initialize Expo app in `apps/ios/`
 - [ ] Configure Expo Modules for native bridging
-  - [ ] Create local `modules/dit-native` Expo module with Swift stubs
+  - [x] Create local `modules/dit-native` Expo module with Swift stubs
   - [ ] Wire JS fallbacks for audio/haptics
 - [ ] Bring up iOS build + Metro in pnpm workspace
   - [ ] Confirm `expo run:ios` succeeds end-to-end without Metro errors
