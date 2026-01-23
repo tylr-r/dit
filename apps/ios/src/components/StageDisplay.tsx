@@ -10,6 +10,7 @@ type StageDisplayProps = {
   statusText: string
   pips: StagePip[]
   hintVisible?: boolean
+  letterPlaceholder?: boolean
   practiceWpmText?: string | null
   practiceWordMode?: boolean
   practiceWord?: string | null
@@ -22,6 +23,7 @@ export function StageDisplay({
   statusText,
   pips,
   hintVisible = true,
+  letterPlaceholder = false,
   practiceWpmText = null,
   practiceWordMode = false,
   practiceWord = null,
@@ -56,7 +58,10 @@ export function StageDisplay({
           })}
         </View>
       ) : (
-        <Text style={styles.letter} accessibilityRole='header'>
+        <Text
+          style={[styles.letter, letterPlaceholder && styles.letterPlaceholder]}
+          accessibilityRole='header'
+        >
           {letter}
         </Text>
       )}
@@ -102,6 +107,9 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 20 },
     textShadowRadius: 60,
     marginBottom: 12,
+  },
+  letterPlaceholder: {
+    opacity: 0.4,
   },
   wordDisplay: {
     flexDirection: 'row',

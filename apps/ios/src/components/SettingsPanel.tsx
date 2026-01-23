@@ -6,13 +6,19 @@ type SettingsPanelProps = {
   levels: readonly number[]
   maxLevel: number
   practiceWordMode: boolean
+  listenWpm: number
+  listenWpmMin: number
+  listenWpmMax: number
   showHint: boolean
   showMnemonic: boolean
+  soundCheckStatus: 'idle' | 'playing'
   onClose: () => void
   onMaxLevelChange: (value: number) => void
   onPracticeWordModeChange: (value: boolean) => void
+  onListenWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
+  onSoundCheck: () => void
 }
 
 const ToggleRow = ({
@@ -47,19 +53,27 @@ export function SettingsPanel({
   levels,
   maxLevel,
   practiceWordMode,
+  listenWpm,
+  listenWpmMin,
+  listenWpmMax,
   showHint,
   showMnemonic,
+  soundCheckStatus,
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
+  onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
+  onSoundCheck,
 }: SettingsPanelProps) {
   const canShowPracticeOptions = !isFreestyle
   const canShowWordsToggle = !isListen
   const isHintDisabled = isFreestyle || isListen
   const nextLevel =
     levels[(levels.indexOf(maxLevel) + 1) % levels.length] ?? maxLevel
+  const nextListenWpm =
+    listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1
 
   return (
     <View style={styles.panel}>
@@ -106,6 +120,37 @@ export function SettingsPanel({
               onValueChange={onPracticeWordModeChange}
             />
           ) : null}
+          {isListen ? (
+            <Pressable
+              onPress={() => onListenWpmChange(nextListenWpm)}
+              accessibilityRole='button'
+              accessibilityLabel='Change listen speed'
+              style={styles.row}
+            >
+              <Text style={styles.rowLabel}>Listen speed</Text>
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{listenWpm} WPM</Text>
+              </View>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {isListen ? (
+        <View style={styles.section}>
+          <Pressable
+            onPress={onSoundCheck}
+            accessibilityRole='button'
+            accessibilityLabel='Sound check'
+            disabled={soundCheckStatus !== 'idle'}
+            style={({ pressed }) => [
+              styles.panelButton,
+              soundCheckStatus !== 'idle' && styles.panelButtonDisabled,
+              pressed && soundCheckStatus === 'idle' && styles.panelButtonPressed,
+            ]}
+          >
+            <Text style={styles.panelButtonText}>Sound check</Text>
+          </Pressable>
+          <Text style={styles.panelHint}>No sound? Turn off Silent Mode.</Text>
         </View>
       ) : null}
     </View>
@@ -155,6 +200,35 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 12,
     gap: 10,
+  },
+  panelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    alignItems: 'center',
+  },
+  panelButtonPressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  panelButtonDisabled: {
+    opacity: 0.5,
+  },
+  panelButtonText: {
+    fontSize: 12,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: 'rgba(244, 247, 249, 0.9)',
+  },
+  panelHint: {
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: 'rgba(141, 152, 165, 0.9)',
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',

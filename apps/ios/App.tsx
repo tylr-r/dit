@@ -17,11 +17,13 @@ import {
   INTER_LETTER_UNITS,
   MORSE_DATA,
   UNIT_TIME_MS,
+  WPM_RANGE,
   type Letter,
 } from '@dit/core'
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio'
 import { triggerHaptics } from '@dit/dit-native'
 import { AboutPanel } from './src/components/AboutPanel'
+import { ListenControls } from './src/components/ListenControls'
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher'
 import { MorseButton } from './src/components/MorseButton'
 import { SettingsPanel } from './src/components/SettingsPanel'
@@ -32,6 +34,9 @@ const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
 const ERROR_LOCKOUT_MS = 1000
 const PRACTICE_WORD_UNITS = 5
+const LISTEN_WPM_MIN = WPM_RANGE.min
+const LISTEN_WPM_MAX = WPM_RANGE.max
+const LISTEN_MIN_UNIT_MS = 40
 const TONE_VOLUME = AUDIO_VOLUME
 const TONE_SOURCE = require('./assets/audio/tone-640.wav')
 
@@ -178,6 +183,14 @@ export default function App() {
   const [practiceWpm, setPracticeWpm] = useState<number | null>(null)
   const [freestyleInput, setFreestyleInput] = useState('')
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
+  const [listenWpm, setListenWpm] = useState(20)
+  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>(
+    'idle',
+  )
+  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
+  const [soundCheckStatus, setSoundCheckStatus] = useState<
+    'idle' | 'playing'
+  >('idle')
   const [scores, setScores] = useState(() => initializeScores())
   const tonePlayer = useMemo(
     () =>
@@ -210,6 +223,11 @@ export default function App() {
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
   const successTimeoutRef = useRef<TimeoutHandle | null>(null)
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const listenTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const listenPlaybackRef = useRef<{ token: number; timeouts: TimeoutHandle[] }>(
+    { token: 0, timeouts: [] },
+  )
+  const soundCheckTimeoutRef = useRef<TimeoutHandle | null>(null)
 
   useEffect(() => {
     inputRef.current = input
@@ -262,17 +280,107 @@ export default function App() {
     void tonePlayer.seekTo(0)
   }, [tonePlayer])
 
+  const startTonePlayback = useCallback(() => {
+    if (!tonePlayer.isLoaded) {
+      return
+    }
+    void tonePlayer.seekTo(0)
+    tonePlayer.play()
+  }, [tonePlayer])
+
+  const clearListenPlaybackTimeouts = useCallback(() => {
+    listenPlaybackRef.current.timeouts.forEach((timeout) => {
+      clearTimeout(timeout)
+    })
+    listenPlaybackRef.current.timeouts = []
+  }, [])
+
+  const stopListenPlayback = useCallback(() => {
+    listenPlaybackRef.current.token += 1
+    clearListenPlaybackTimeouts()
+    stopTonePlayback()
+  }, [clearListenPlaybackTimeouts, stopTonePlayback])
+
+  const playListenSequence = useCallback(
+    (code: string, overrideWpm?: number) => {
+      stopListenPlayback()
+      const token = listenPlaybackRef.current.token + 1
+      listenPlaybackRef.current.token = token
+      const resolvedWpm = overrideWpm ?? listenWpm
+      const unitMs = Math.max(
+        Math.round(1200 / resolvedWpm),
+        LISTEN_MIN_UNIT_MS,
+      )
+      const pattern: number[] = []
+      for (let index = 0; index < code.length; index += 1) {
+        const symbol = code[index]
+        pattern.push(symbol === '.' ? unitMs : unitMs * 3)
+        if (index < code.length - 1) {
+          pattern.push(unitMs)
+        }
+      }
+      void triggerHaptics(pattern)
+
+      let currentMs = 0
+      for (const symbol of code) {
+        const duration = symbol === '.' ? unitMs : unitMs * 3
+        listenPlaybackRef.current.timeouts.push(
+          setTimeout(() => {
+            if (listenPlaybackRef.current.token !== token) {
+              return
+            }
+            startTonePlayback()
+          }, currentMs),
+          setTimeout(() => {
+            if (listenPlaybackRef.current.token !== token) {
+              return
+            }
+            stopTonePlayback()
+          }, currentMs + duration),
+        )
+        currentMs += duration + unitMs
+      }
+      listenPlaybackRef.current.timeouts.push(
+        setTimeout(() => {
+          if (listenPlaybackRef.current.token !== token) {
+            return
+          }
+          clearListenPlaybackTimeouts()
+        }, currentMs),
+      )
+    },
+    [
+      clearListenPlaybackTimeouts,
+      listenWpm,
+      startTonePlayback,
+      stopListenPlayback,
+      stopTonePlayback,
+      triggerHaptics,
+    ],
+  )
+
+  const resetListenState = useCallback(() => {
+    clearTimer(listenTimeoutRef)
+    setListenStatus('idle')
+    setListenReveal(null)
+  }, [])
+
   useEffect(() => {
     return () => {
       clearTimer(letterTimeoutRef)
       clearTimer(successTimeoutRef)
       clearTimer(errorTimeoutRef)
-      stopTonePlayback()
+      clearTimer(listenTimeoutRef)
+      clearTimer(soundCheckTimeoutRef)
+      stopListenPlayback()
       tonePlayer.release()
     }
-  }, [stopTonePlayback, tonePlayer])
+  }, [stopListenPlayback, tonePlayer])
 
   useEffect(() => {
+    if (mode === 'listen') {
+      return
+    }
     if (!availableLetters.includes(letterRef.current)) {
       const nextLetter = getRandomLetter(availableLetters)
       letterRef.current = nextLetter
@@ -292,7 +400,7 @@ export default function App() {
       letterRef.current = nextLetter
       setLetter(nextLetter)
     }
-  }, [availableLetters, availablePracticeWords])
+  }, [availableLetters, availablePracticeWords, mode])
 
   const canScoreAttempt = useCallback(() => !showHint, [showHint])
 
@@ -309,6 +417,21 @@ export default function App() {
     errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS
   }, [])
 
+  const handleSoundCheck = useCallback(() => {
+    if (soundCheckStatus !== 'idle') {
+      return
+    }
+    stopListenPlayback()
+    clearTimer(soundCheckTimeoutRef)
+    setSoundCheckStatus('playing')
+    startTonePlayback()
+    soundCheckTimeoutRef.current = setTimeout(() => {
+      stopTonePlayback()
+      setSoundCheckStatus('idle')
+    }, 250)
+    void triggerHaptics([40, 40, 40])
+  }, [soundCheckStatus, startTonePlayback, stopListenPlayback, stopTonePlayback])
+
   const submitFreestyleInput = useCallback((value: string) => {
     if (!value) {
       setFreestyleResult('No input')
@@ -321,6 +444,53 @@ export default function App() {
     setFreestyleResult(result)
     setFreestyleInput('')
   }, [])
+
+  const submitListenAnswer = useCallback(
+    (value: Letter) => {
+      if (listenStatus !== 'idle') {
+        return
+      }
+      if (!/^[A-Z0-9]$/.test(value)) {
+        return
+      }
+      void triggerHaptics(10)
+      clearTimer(listenTimeoutRef)
+      stopListenPlayback()
+      const isCorrect = value === letterRef.current
+      setListenStatus(isCorrect ? 'success' : 'error')
+      setListenReveal(letterRef.current)
+      bumpScore(letterRef.current, isCorrect ? 1 : -1)
+      listenTimeoutRef.current = setTimeout(() => {
+        const nextLetter = getRandomWeightedLetter(
+          availableLetters,
+          scoresRef.current,
+          letterRef.current,
+        )
+        letterRef.current = nextLetter
+        setListenStatus('idle')
+        setListenReveal(null)
+        setLetter(nextLetter)
+        playListenSequence(MORSE_DATA[nextLetter].code)
+      }, isCorrect ? 650 : ERROR_LOCKOUT_MS)
+    },
+    [
+      availableLetters,
+      bumpScore,
+      listenStatus,
+      playListenSequence,
+      stopListenPlayback,
+      triggerHaptics,
+    ],
+  )
+
+  const handleListenReplay = useCallback(() => {
+    if (listenStatus !== 'idle') {
+      return
+    }
+    setListenReveal(null)
+    void triggerHaptics(12)
+    playListenSequence(MORSE_DATA[letterRef.current].code)
+  }, [listenStatus, playListenSequence, triggerHaptics])
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
@@ -476,12 +646,8 @@ export default function App() {
     setIsPressing(true)
     pressStartRef.current = now()
     clearTimer(letterTimeoutRef)
-    if (!tonePlayer.isLoaded) {
-      return
-    }
-    void tonePlayer.seekTo(0)
-    tonePlayer.play()
-  }, [isErrorLocked, isFreestyle, isListen, tonePlayer])
+    startTonePlayback()
+  }, [isErrorLocked, isFreestyle, isListen, startTonePlayback])
 
   const handlePressOut = useCallback(() => {
     setIsPressing(false)
@@ -500,9 +666,49 @@ export default function App() {
     registerSymbol(symbol)
   }, [isListen, registerSymbol, stopTonePlayback])
 
-  const handleMaxLevelChange = useCallback((value: number) => {
-    setMaxLevel(value)
-  }, [])
+  const handleMaxLevelChange = useCallback(
+    (value: number) => {
+      setMaxLevel(value)
+      setInput('')
+      setStatus('idle')
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      practiceWordStartRef.current = null
+      const nextLetters = getLettersForLevel(value)
+      if (isListen) {
+        resetListenState()
+        const currentLetter = letterRef.current
+        const nextLetter = nextLetters.includes(currentLetter)
+          ? currentLetter
+          : getRandomWeightedLetter(nextLetters, scoresRef.current, currentLetter)
+        letterRef.current = nextLetter
+        setLetter(nextLetter)
+        playListenSequence(MORSE_DATA[nextLetter].code)
+        return
+      }
+      if (practiceWordModeRef.current) {
+        const nextWord = getRandomWord(
+          getWordsForLetters(nextLetters),
+          practiceWordRef.current,
+        )
+        practiceWordRef.current = nextWord
+        practiceWordIndexRef.current = 0
+        const nextLetter = nextWord[0] as Letter
+        letterRef.current = nextLetter
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextLetter)
+        return
+      }
+      const nextLetter = nextLetters.includes(letterRef.current)
+        ? letterRef.current
+        : getRandomWeightedLetter(nextLetters, scoresRef.current, letterRef.current)
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
+    },
+    [isListen, playListenSequence, resetListenState],
+  )
 
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
@@ -537,9 +743,20 @@ export default function App() {
     [availableLetters, availablePracticeWords],
   )
 
+  const handleListenWpmChange = useCallback(
+    (value: number) => {
+      setListenWpm(value)
+      if (!isListen || listenStatus !== 'idle') {
+        return
+      }
+      playListenSequence(MORSE_DATA[letterRef.current].code, value)
+    },
+    [isListen, listenStatus, playListenSequence],
+  )
+
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
-      stopTonePlayback()
+      stopListenPlayback()
       setMode(nextMode)
       setShowSettings(false)
       setShowAbout(false)
@@ -552,11 +769,58 @@ export default function App() {
       clearTimer(successTimeoutRef)
       clearTimer(errorTimeoutRef)
       practiceWordStartRef.current = null
+      resetListenState()
       if (nextMode !== 'practice') {
         setPracticeWpm(null)
       }
+      if (nextMode === 'freestyle') {
+        return
+      }
+      if (nextMode === 'listen') {
+        const nextLetter = availableLetters.includes(letterRef.current)
+          ? letterRef.current
+          : getRandomWeightedLetter(
+              availableLetters,
+              scoresRef.current,
+              letterRef.current,
+            )
+        letterRef.current = nextLetter
+        setLetter(nextLetter)
+        playListenSequence(MORSE_DATA[nextLetter].code)
+        return
+      }
+      if (practiceWordModeRef.current) {
+        const nextWord = getRandomWord(
+          availablePracticeWords,
+          practiceWordRef.current,
+        )
+        practiceWordStartRef.current = null
+        practiceWordRef.current = nextWord
+        practiceWordIndexRef.current = 0
+        const nextLetter = nextWord[0] as Letter
+        letterRef.current = nextLetter
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextLetter)
+        return
+      }
+      const nextLetter = availableLetters.includes(letterRef.current)
+        ? letterRef.current
+        : getRandomWeightedLetter(
+            availableLetters,
+            scoresRef.current,
+            letterRef.current,
+          )
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
     },
-    [stopTonePlayback],
+    [
+      availableLetters,
+      availablePracticeWords,
+      playListenSequence,
+      resetListenState,
+      stopListenPlayback,
+    ],
   )
 
   const target = MORSE_DATA[letter].code
@@ -613,14 +877,26 @@ export default function App() {
       ? freestyleResult
       : '?'
     : freestyleInput || '?'
+  const listenStatusText =
+    listenStatus === 'success'
+      ? 'Correct'
+      : listenStatus === 'error'
+        ? 'Incorrect'
+        : 'Listen and type the character'
+  const listenDisplay = listenReveal ?? '?'
   const statusText = isFreestyle
     ? freestyleStatus
     : isListen
-      ? 'Listen mode coming soon'
+      ? listenStatusText
       : practiceStatusText
-  const stageLetter = isFreestyle ? freestyleDisplay : isListen ? '?' : letter
+  const stageLetter = isFreestyle
+    ? freestyleDisplay
+    : isListen
+      ? listenDisplay
+      : letter
   const stagePips = isFreestyle || isListen ? [] : pips
   const showPracticeWord = !isFreestyle && !isListen && practiceWordMode
+  const letterPlaceholder = isListen && listenReveal === null
 
   return (
     <SafeAreaProvider>
@@ -689,13 +965,19 @@ export default function App() {
                   levels={LEVELS}
                   maxLevel={maxLevel}
                   practiceWordMode={practiceWordMode}
+                  listenWpm={listenWpm}
+                  listenWpmMin={LISTEN_WPM_MIN}
+                  listenWpmMax={LISTEN_WPM_MAX}
                   showHint={showHint}
                   showMnemonic={showMnemonic}
+                  soundCheckStatus={soundCheckStatus}
                   onClose={() => setShowSettings(false)}
                   onMaxLevelChange={handleMaxLevelChange}
                   onPracticeWordModeChange={handlePracticeWordModeChange}
+                  onListenWpmChange={handleListenWpmChange}
                   onShowHintChange={setShowHint}
                   onShowMnemonicChange={setShowMnemonic}
+                  onSoundCheck={handleSoundCheck}
                 />
               </Pressable>
             </View>
@@ -706,17 +988,26 @@ export default function App() {
           statusText={statusText}
           pips={stagePips}
           hintVisible={hintVisible}
+          letterPlaceholder={letterPlaceholder}
           practiceWpmText={practiceWpmText}
           practiceWordMode={showPracticeWord}
           practiceWord={showPracticeWord ? practiceWord : null}
           practiceWordIndex={practiceWordIndex}
         />
         <View style={styles.controls}>
-          <MorseButton
-            isPressing={isPressing}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-          />
+          {isListen ? (
+            <ListenControls
+              listenStatus={listenStatus}
+              onReplay={handleListenReplay}
+              onSubmitAnswer={submitListenAnswer}
+            />
+          ) : (
+            <MorseButton
+              isPressing={isPressing}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+            />
+          )}
         </View>
         </SafeAreaView>
         <StatusBar style='light' />
