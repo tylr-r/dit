@@ -2,7 +2,7 @@
 
 - Prefer `pnpm` when installing dependencies.
 - Ask for confirmation before adding new production dependencies.
-- Run `npm run lint` before running a build or making a commit.
+- Run `pnpm run lint` before running a build or making a commit.
 
 ## Build, Test, and Development Commands
 
