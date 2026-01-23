@@ -11,6 +11,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@dit/core": "workspace:*",
     "@dit/dit-native": "workspace:*",
     "@expo/ui": "0.2.0-beta.9",
     "expo": "~54.0.32",

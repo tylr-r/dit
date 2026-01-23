@@ -1,14 +1,54 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { Pressable, SafeAreaView, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path } from 'react-native-svg'
+import {
+  applyScoreDelta,
+  DASH_THRESHOLD,
+  formatWpm,
+  getLettersForLevel,
+  getRandomLetter,
+  getRandomWeightedLetter,
+  getRandomWord,
+  getWordsForLetters,
+  initializeScores,
+  INTER_LETTER_UNITS,
+  MORSE_DATA,
+  UNIT_TIME_MS,
+  type Letter,
+} from '@dit/core'
+import { triggerHaptics } from '@dit/dit-native'
 import { AboutPanel } from './src/components/AboutPanel'
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher'
 import { MorseButton } from './src/components/MorseButton'
 import { SettingsPanel } from './src/components/SettingsPanel'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
 
-const STAGE_PIPS: StagePip[] = ['dot', 'dah', 'dot']
+const LEVELS = [1, 2, 3, 4] as const
+const DOT_THRESHOLD_MS = DASH_THRESHOLD
+const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
+const ERROR_LOCKOUT_MS = 1000
+const PRACTICE_WORD_UNITS = 5
+
+type TimeoutHandle = ReturnType<typeof setTimeout>
+
+const clearTimer = (ref: { current: TimeoutHandle | null }) => {
+  if (ref.current !== null) {
+    clearTimeout(ref.current)
+    ref.current = null
+  }
+}
+
+const now = () => Date.now()
+
+const initialConfig = (() => {
+  const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1])
+  const practiceWord = getRandomWord(getWordsForLetters(availableLetters))
+  return {
+    letter: getRandomLetter(availableLetters),
+    practiceWord,
+  }
+})()
 
 const DitLogo = () => (
   <Svg width={60} height={60} viewBox='0 0 806 806' opacity={0.5}>
@@ -123,11 +163,419 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('practice')
   const [showHint, setShowHint] = useState(true)
   const [showMnemonic, setShowMnemonic] = useState(false)
-  const [maxLevel, setMaxLevel] = useState(4)
+  const [maxLevel, setMaxLevel] = useState(LEVELS[LEVELS.length - 1])
   const [practiceWordMode, setPracticeWordMode] = useState(false)
+  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
+  const [input, setInput] = useState('')
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord)
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
+  const [practiceWpm, setPracticeWpm] = useState<number | null>(null)
+  const [freestyleInput, setFreestyleInput] = useState('')
+  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
+  const [scores, setScores] = useState(() => initializeScores())
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
-  const levels = [1, 2, 3, 4] as const
+  const availableLetters = useMemo(
+    () => getLettersForLevel(maxLevel),
+    [maxLevel],
+  )
+  const availablePracticeWords = useMemo(
+    () => getWordsForLetters(availableLetters),
+    [availableLetters],
+  )
+  const pressStartRef = useRef<number | null>(null)
+  const inputRef = useRef(input)
+  const freestyleInputRef = useRef(freestyleInput)
+  const letterRef = useRef(letter)
+  const practiceWordRef = useRef(practiceWord)
+  const practiceWordIndexRef = useRef(practiceWordIndex)
+  const practiceWordModeRef = useRef(practiceWordMode)
+  const practiceWordStartRef = useRef<number | null>(null)
+  const scoresRef = useRef(scores)
+  const errorLockoutUntilRef = useRef(0)
+  const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const successTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
+
+  useEffect(() => {
+    inputRef.current = input
+  }, [input])
+
+  useEffect(() => {
+    freestyleInputRef.current = freestyleInput
+  }, [freestyleInput])
+
+  useEffect(() => {
+    letterRef.current = letter
+  }, [letter])
+
+  useEffect(() => {
+    practiceWordRef.current = practiceWord
+  }, [practiceWord])
+
+  useEffect(() => {
+    practiceWordIndexRef.current = practiceWordIndex
+  }, [practiceWordIndex])
+
+  useEffect(() => {
+    practiceWordModeRef.current = practiceWordMode
+  }, [practiceWordMode])
+
+  useEffect(() => {
+    scoresRef.current = scores
+  }, [scores])
+
+  useEffect(() => {
+    return () => {
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!availableLetters.includes(letterRef.current)) {
+      const nextLetter = getRandomLetter(availableLetters)
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
+    }
+    if (practiceWordModeRef.current) {
+      const nextWord = getRandomWord(
+        availablePracticeWords,
+        practiceWordRef.current,
+      )
+      practiceWordRef.current = nextWord
+      practiceWordIndexRef.current = 0
+      practiceWordStartRef.current = null
+      setPracticeWord(nextWord)
+      setPracticeWordIndex(0)
+      const nextLetter = nextWord[0] as Letter
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
+    }
+  }, [availableLetters, availablePracticeWords])
+
+  const canScoreAttempt = useCallback(() => !showHint, [showHint])
+
+  const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
+    setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
+  }, [])
+
+  const isErrorLocked = useCallback(
+    () => now() < errorLockoutUntilRef.current,
+    [],
+  )
+
+  const startErrorLockout = useCallback(() => {
+    errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS
+  }, [])
+
+  const submitFreestyleInput = useCallback((value: string) => {
+    if (!value) {
+      setFreestyleResult('No input')
+      return
+    }
+    const match = Object.entries(MORSE_DATA).find(
+      ([, data]) => data.code === value,
+    )
+    const result = match ? match[0] : 'No match'
+    setFreestyleResult(result)
+    setFreestyleInput('')
+  }, [])
+
+  const scheduleLetterReset = useCallback(
+    (nextMode: 'practice' | 'freestyle') => {
+      clearTimer(letterTimeoutRef)
+      letterTimeoutRef.current = setTimeout(() => {
+        if (nextMode === 'freestyle') {
+          submitFreestyleInput(freestyleInputRef.current)
+          return
+        }
+        const attempt = inputRef.current
+        if (!attempt) {
+          return
+        }
+        clearTimer(errorTimeoutRef)
+        clearTimer(successTimeoutRef)
+        const target = MORSE_DATA[letterRef.current].code
+        const isCorrect = attempt === target
+        if (isCorrect) {
+          if (canScoreAttempt()) {
+            bumpScore(letterRef.current, 1)
+          }
+          setInput('')
+          if (practiceWordModeRef.current) {
+            const currentWord = practiceWordRef.current
+            if (!currentWord) {
+              const nextWord = getRandomWord(availablePracticeWords)
+              const nextLetter = nextWord[0] as Letter
+              practiceWordStartRef.current = null
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
+              setStatus('idle')
+              return
+            }
+            const nextIndex = practiceWordIndexRef.current + 1
+            if (nextIndex >= currentWord.length) {
+              const startTime = practiceWordStartRef.current
+              if (startTime && currentWord.length > 0) {
+                const elapsedMs = now() - startTime
+                if (elapsedMs > 0) {
+                  const nextWpm =
+                    (currentWord.length / PRACTICE_WORD_UNITS) *
+                    (60000 / elapsedMs)
+                  setPracticeWpm(Math.round(nextWpm * 10) / 10)
+                }
+              }
+              const nextWord = getRandomWord(
+                availablePracticeWords,
+                currentWord,
+              )
+              const nextLetter = nextWord[0] as Letter
+              practiceWordStartRef.current = null
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
+              setStatus('idle')
+              return
+            }
+            const nextLetter = currentWord[nextIndex] as Letter
+            practiceWordIndexRef.current = nextIndex
+            letterRef.current = nextLetter
+            setPracticeWordIndex(nextIndex)
+            setLetter(nextLetter)
+            setStatus('idle')
+            return
+          }
+          setStatus('success')
+          successTimeoutRef.current = setTimeout(() => {
+            setLetter((current) =>
+              getRandomWeightedLetter(
+                availableLetters,
+                scoresRef.current,
+                current,
+              ),
+            )
+            setStatus('idle')
+          }, 650)
+          return
+        }
+        startErrorLockout()
+        if (canScoreAttempt()) {
+          bumpScore(letterRef.current, -1)
+        }
+        setStatus('error')
+        setInput('')
+        errorTimeoutRef.current = setTimeout(() => {
+          setStatus('idle')
+        }, ERROR_LOCKOUT_MS)
+      }, INTER_CHAR_GAP_MS)
+    },
+    [
+      availableLetters,
+      availablePracticeWords,
+      bumpScore,
+      canScoreAttempt,
+      startErrorLockout,
+      submitFreestyleInput,
+    ],
+  )
+
+  const registerSymbol = useCallback(
+    (symbol: '.' | '-') => {
+      if (!isFreestyle && isErrorLocked()) {
+        return
+      }
+      void triggerHaptics(symbol === '.' ? 12 : 28)
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
+
+      if (isFreestyle) {
+        setFreestyleInput((prev) => {
+          const next = prev + symbol
+          scheduleLetterReset('freestyle')
+          return next
+        })
+        setFreestyleResult(null)
+        return
+      }
+
+      if (
+        practiceWordModeRef.current &&
+        practiceWordIndexRef.current === 0 &&
+        practiceWordStartRef.current === null &&
+        practiceWordRef.current
+      ) {
+        practiceWordStartRef.current = now()
+      }
+
+      setStatus('idle')
+      setInput((prev) => prev + symbol)
+      scheduleLetterReset('practice')
+    },
+    [isErrorLocked, isFreestyle, scheduleLetterReset],
+  )
+
+  const handlePressIn = useCallback(() => {
+    if (pressStartRef.current !== null) {
+      return
+    }
+    if (isListen) {
+      return
+    }
+    if (!isFreestyle && isErrorLocked()) {
+      return
+    }
+    setIsPressing(true)
+    pressStartRef.current = now()
+    clearTimer(letterTimeoutRef)
+  }, [isErrorLocked, isFreestyle, isListen])
+
+  const handlePressOut = useCallback(() => {
+    setIsPressing(false)
+    if (isListen) {
+      pressStartRef.current = null
+      return
+    }
+    const start = pressStartRef.current
+    pressStartRef.current = null
+    if (start === null) {
+      return
+    }
+    const duration = now() - start
+    const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-'
+    registerSymbol(symbol)
+  }, [isListen, registerSymbol])
+
+  const handleMaxLevelChange = useCallback((value: number) => {
+    setMaxLevel(value)
+  }, [])
+
+  const handlePracticeWordModeChange = useCallback(
+    (value: boolean) => {
+      setPracticeWordMode(value)
+      practiceWordModeRef.current = value
+      practiceWordStartRef.current = null
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      setPracticeWpm(null)
+      setInput('')
+      setStatus('idle')
+      if (value) {
+        const nextWord = getRandomWord(availablePracticeWords)
+        const nextLetter = nextWord[0] as Letter
+        practiceWordRef.current = nextWord
+        practiceWordIndexRef.current = 0
+        letterRef.current = nextLetter
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextLetter)
+      } else {
+        const nextLetter = getRandomWeightedLetter(
+          availableLetters,
+          scoresRef.current,
+          letterRef.current,
+        )
+        letterRef.current = nextLetter
+        setLetter(nextLetter)
+      }
+    },
+    [availableLetters, availablePracticeWords],
+  )
+
+  const handleModeChange = useCallback(
+    (nextMode: Mode) => {
+      setMode(nextMode)
+      setShowSettings(false)
+      setShowAbout(false)
+      setIsPressing(false)
+      setInput('')
+      setFreestyleInput('')
+      setFreestyleResult(null)
+      setStatus('idle')
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      practiceWordStartRef.current = null
+      if (nextMode !== 'practice') {
+        setPracticeWpm(null)
+      }
+    },
+    [],
+  )
+
+  const target = MORSE_DATA[letter].code
+  const targetSymbols = target.split('')
+  const hintVisible = !isFreestyle && !isListen && showHint
+  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
+  const baseStatusText =
+    status === 'success'
+      ? 'Correct'
+      : status === 'error'
+        ? 'Missed. Start over.'
+        : mnemonicVisible
+          ? MORSE_DATA[letter].mnemonic
+          : ' '
+  const practiceProgressText =
+    !isFreestyle &&
+    !isListen &&
+    practiceWordMode &&
+    status === 'idle' &&
+    !hintVisible &&
+    !mnemonicVisible &&
+    practiceWord
+      ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
+      : null
+  const practiceStatusText = practiceProgressText ?? baseStatusText
+  const practiceWpmText =
+    !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
+      ? `${formatWpm(practiceWpm)} WPM`
+      : null
+  const isInputOnTrack =
+    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
+  const highlightCount =
+    status === 'success'
+      ? targetSymbols.length
+      : isInputOnTrack
+        ? input.length
+        : 0
+  const pips: StagePip[] = targetSymbols.map((symbol, index) => ({
+    type: symbol === '.' ? 'dot' : 'dah',
+    state: index < highlightCount ? 'hit' : 'expected',
+  }))
+  const isLetterResult = freestyleResult
+    ? /^[A-Z0-9]$/.test(freestyleResult)
+    : false
+  const freestyleStatus = freestyleResult
+    ? isLetterResult
+      ? `Result ${freestyleResult}`
+      : freestyleResult
+    : freestyleInput
+      ? `Input ${freestyleInput}`
+      : 'Tap and pause'
+  const freestyleDisplay = freestyleResult
+    ? isLetterResult
+      ? freestyleResult
+      : '?'
+    : freestyleInput || '?'
+  const statusText = isFreestyle
+    ? freestyleStatus
+    : isListen
+      ? 'Listen mode coming soon'
+      : practiceStatusText
+  const stageLetter = isFreestyle ? freestyleDisplay : isListen ? '?' : letter
+  const stagePips = isFreestyle || isListen ? [] : pips
+  const showPracticeWord = !isFreestyle && !isListen && practiceWordMode
 
   return (
     <View style={styles.container}>
@@ -149,7 +597,7 @@ export default function App() {
             </Pressable>
           </View>
           <View style={styles.topBarCenter}>
-            <ModeSwitcher value={mode} onChange={setMode} />
+            <ModeSwitcher value={mode} onChange={handleModeChange} />
           </View>
           <View style={styles.topBarSide}>
             <Pressable
@@ -192,14 +640,14 @@ export default function App() {
                 <SettingsPanel
                   isFreestyle={isFreestyle}
                   isListen={isListen}
-                  levels={levels}
+                  levels={LEVELS}
                   maxLevel={maxLevel}
                   practiceWordMode={practiceWordMode}
                   showHint={showHint}
                   showMnemonic={showMnemonic}
                   onClose={() => setShowSettings(false)}
-                  onMaxLevelChange={setMaxLevel}
-                  onPracticeWordModeChange={setPracticeWordMode}
+                  onMaxLevelChange={handleMaxLevelChange}
+                  onPracticeWordModeChange={handlePracticeWordModeChange}
                   onShowHintChange={setShowHint}
                   onShowMnemonicChange={setShowMnemonic}
                 />
@@ -208,16 +656,20 @@ export default function App() {
           </View>
         ) : null}
         <StageDisplay
-          letter='A'
-          statusText='Tap and pause'
-          pips={STAGE_PIPS}
-          hintVisible={showHint && !isFreestyle && !isListen}
+          letter={stageLetter}
+          statusText={statusText}
+          pips={stagePips}
+          hintVisible={hintVisible}
+          practiceWpmText={practiceWpmText}
+          practiceWordMode={showPracticeWord}
+          practiceWord={showPracticeWord ? practiceWord : null}
+          practiceWordIndex={practiceWordIndex}
         />
         <View style={styles.controls}>
           <MorseButton
             isPressing={isPressing}
-            onPressIn={() => setIsPressing(true)}
-            onPressOut={() => setIsPressing(false)}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
           />
         </View>
       </SafeAreaView>

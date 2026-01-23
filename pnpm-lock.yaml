@@ -14,6 +14,9 @@ importers:
 
   apps/ios:
     dependencies:
+      '@dit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@dit/dit-native':
         specifier: workspace:*
         version: link:../../modules/dit-native

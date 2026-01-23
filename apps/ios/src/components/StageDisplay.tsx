@@ -1,6 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native'
 
-export type StagePip = 'dot' | 'dah'
+export type StagePip = {
+  type: 'dot' | 'dah'
+  state?: 'expected' | 'hit'
+}
 
 type StageDisplayProps = {
   letter: string
@@ -8,29 +11,64 @@ type StageDisplayProps = {
   pips: StagePip[]
   hintVisible?: boolean
   practiceWpmText?: string | null
+  practiceWordMode?: boolean
+  practiceWord?: string | null
+  practiceWordIndex?: number
 }
 
-/** Main output area for character practice. */
+/** Main output area for practice, freestyle, and listen states. */
 export function StageDisplay({
   letter,
   statusText,
   pips,
   hintVisible = true,
   practiceWpmText = null,
+  practiceWordMode = false,
+  practiceWord = null,
+  practiceWordIndex = 0,
 }: StageDisplayProps) {
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
+
   return (
     <View style={styles.stage}>
-      <Text style={styles.letter} accessibilityRole='header'>
-        {letter}
-      </Text>
+      {practiceWordMode ? (
+        <View
+          style={styles.wordDisplay}
+          accessibilityLabel={
+            practiceWord ? `Word ${practiceWord}` : 'Practice word'
+          }
+        >
+          {wordCharacters.map((char, index) => {
+            const isDone = index < practiceWordIndex
+            const isActive = index === practiceWordIndex
+            return (
+              <Text
+                key={`${char}-${index}`}
+                style={[
+                  styles.wordLetter,
+                  isDone && styles.wordLetterDone,
+                  isActive && styles.wordLetterActive,
+                ]}
+              >
+                {char}
+              </Text>
+            )
+          })}
+        </View>
+      ) : (
+        <Text style={styles.letter} accessibilityRole='header'>
+          {letter}
+        </Text>
+      )}
       {hintVisible ? (
         <View style={styles.progress}>
           {pips.map((pip, index) => (
             <View
-              key={`${pip}-${index}`}
+              key={`${pip.type}-${index}`}
               style={[
                 styles.pip,
-                pip === 'dot' ? styles.pipDot : styles.pipDah,
+                pip.type === 'dot' ? styles.pipDot : styles.pipDah,
+                pip.state === 'hit' ? styles.pipHit : styles.pipExpected,
               ]}
             />
           ))}
@@ -65,6 +103,24 @@ const styles = StyleSheet.create({
     textShadowRadius: 60,
     marginBottom: 12,
   },
+  wordDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  wordLetter: {
+    fontSize: 36,
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    color: 'rgba(244, 247, 249, 0.4)',
+  },
+  wordLetterDone: {
+    color: 'rgba(244, 247, 249, 0.85)',
+  },
+  wordLetterActive: {
+    color: '#f4f7f9',
+  },
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -90,6 +146,12 @@ const styles = StyleSheet.create({
   pipDah: {
     width: 34,
     height: 12,
+  },
+  pipExpected: {
+    opacity: 0.35,
+  },
+  pipHit: {
+    opacity: 1,
   },
   statusText: {
     fontSize: 14,
