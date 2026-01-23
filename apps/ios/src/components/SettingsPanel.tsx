@@ -18,6 +18,7 @@ type SettingsPanelProps = {
   onListenWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
+  onShowReference: () => void
   onSoundCheck: () => void
 }
 
@@ -65,6 +66,7 @@ export function SettingsPanel({
   onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
+  onShowReference,
   onSoundCheck,
 }: SettingsPanelProps) {
   const canShowPracticeOptions = !isFreestyle
@@ -102,6 +104,17 @@ export function SettingsPanel({
       />
       {canShowPracticeOptions ? (
         <View style={styles.section}>
+          <Pressable
+            onPress={onShowReference}
+            accessibilityRole='button'
+            accessibilityLabel='Open reference'
+            style={({ pressed }) => [
+              styles.panelButton,
+              pressed && styles.panelButtonPressed,
+            ]}
+          >
+            <Text style={styles.panelButtonText}>Reference</Text>
+          </Pressable>
           <Pressable
             onPress={() => onMaxLevelChange(nextLevel)}
             accessibilityRole='button'

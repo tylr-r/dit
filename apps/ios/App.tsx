@@ -31,6 +31,7 @@ import { AboutPanel } from './src/components/AboutPanel';
 import { ListenControls } from './src/components/ListenControls';
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher';
 import { MorseButton } from './src/components/MorseButton';
+import { ReferenceModal } from './src/components/ReferenceModal';
 import { SettingsPanel } from './src/components/SettingsPanel';
 import { StageDisplay, type StagePip } from './src/components/StageDisplay';
 
@@ -45,6 +46,21 @@ const LISTEN_MIN_UNIT_MS = 40;
 const TONE_VOLUME = AUDIO_VOLUME;
 const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
 const SOUND_CHECK_DURATION_MS = 5000;
+const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
+  (letter) => /^[A-Z]$/.test(letter),
+);
+const REFERENCE_NUMBERS: Letter[] = [
+  '0',
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+];
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
@@ -183,6 +199,7 @@ export default function App() {
   const [isPressing, setIsPressing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showReference, setShowReference] = useState(false);
   const [mode, setMode] = useState<Mode>('practice');
   const [showHint, setShowHint] = useState(true);
   const [showMnemonic, setShowMnemonic] = useState(false);
@@ -491,6 +508,16 @@ export default function App() {
     stopListenPlayback,
     stopTonePlayback,
   ]);
+
+  const handleShowReference = useCallback(() => {
+    setShowSettings(false);
+    setShowAbout(false);
+    setShowReference(true);
+  }, []);
+
+  const handleResetScores = useCallback(() => {
+    setScores(initializeScores());
+  }, []);
 
   const submitFreestyleInput = useCallback((value: string) => {
     if (!value) {
@@ -978,6 +1005,7 @@ export default function App() {
               <Pressable
                 onPress={() => {
                   setShowSettings(false);
+                  setShowReference(false);
                   setShowAbout((prev) => !prev);
                 }}
                 accessibilityRole="button"
@@ -996,6 +1024,7 @@ export default function App() {
               <Pressable
                 onPress={() => {
                   setShowAbout(false);
+                  setShowReference(false);
                   setShowSettings((prev) => !prev);
                 }}
                 accessibilityRole="button"
@@ -1048,9 +1077,30 @@ export default function App() {
                     onListenWpmChange={handleListenWpmChange}
                     onShowHintChange={setShowHint}
                     onShowMnemonicChange={setShowMnemonic}
+                    onShowReference={handleShowReference}
                     onSoundCheck={handleSoundCheck}
                   />
                 </Pressable>
+              </View>
+            </View>
+          ) : null}
+          {showReference ? (
+            <View style={styles.modalOverlay} pointerEvents="box-none">
+              <Pressable
+                onPress={() => setShowReference(false)}
+                style={styles.modalBackdrop}
+              />
+              <View style={styles.modalCenter} pointerEvents="box-none">
+              <View style={styles.modalCard}>
+                <ReferenceModal
+                  letters={REFERENCE_LETTERS}
+                  numbers={REFERENCE_NUMBERS}
+                  morseData={MORSE_DATA}
+                  scores={scores}
+                  onClose={() => setShowReference(false)}
+                  onResetScores={handleResetScores}
+                />
+              </View>
               </View>
             </View>
           ) : null}
