@@ -1,6 +1,7 @@
 import {
   applyScoreDelta,
   AUDIO_VOLUME,
+  DEBOUNCE_DELAY,
   DASH_THRESHOLD,
   formatWpm,
   getLettersForLevel,
@@ -12,9 +13,11 @@ import {
   INTER_LETTER_UNITS,
   INTER_WORD_UNITS,
   MORSE_DATA,
+  parseProgress,
   UNIT_TIME_MS,
   WPM_RANGE,
   type Letter,
+  type ProgressSnapshot,
 } from '@dit/core';
 import { triggerHaptics } from '@dit/dit-native';
 import {
@@ -35,7 +38,9 @@ import { MorseButton } from './src/components/MorseButton';
 import { ReferenceModal } from './src/components/ReferenceModal';
 import { SettingsPanel } from './src/components/SettingsPanel';
 import { StageDisplay, type StagePip } from './src/components/StageDisplay';
+import { database } from './src/firebase';
 import { useAuth } from './src/hooks/useAuth';
+import { useFirebaseSync } from './src/hooks/useFirebaseSync';
 import { signInWithGoogle, signOut } from './src/services/auth';
 
 const LEVELS = [1, 2, 3, 4] as const;
@@ -48,6 +53,7 @@ const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
 const LISTEN_WPM_MIN = WPM_RANGE.min;
 const LISTEN_WPM_MAX = WPM_RANGE.max;
 const LISTEN_MIN_UNIT_MS = 40;
+const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
 const TONE_VOLUME = AUDIO_VOLUME;
 const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
 const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
@@ -245,6 +251,26 @@ export default function App() {
     () => getWordsForLetters(availableLetters),
     [availableLetters],
   );
+  const progressSnapshot = useMemo<ProgressSnapshot>(
+    () => ({
+      listenWpm,
+      maxLevel,
+      practiceWordMode,
+      scores,
+      showHint,
+      showMnemonic,
+      wordMode: freestyleWordMode,
+    }),
+    [
+      freestyleWordMode,
+      listenWpm,
+      maxLevel,
+      practiceWordMode,
+      scores,
+      showHint,
+      showMnemonic,
+    ],
+  );
   const pressStartRef = useRef<number | null>(null);
   const inputRef = useRef(input);
   const freestyleInputRef = useRef(freestyleInput);
@@ -256,6 +282,9 @@ export default function App() {
   const freestyleWordModeRef = useRef(freestyleWordMode);
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null);
   const scoresRef = useRef(scores);
+  const maxLevelRef = useRef(maxLevel);
+  const modeRef = useRef(mode);
+  const listenStatusRef = useRef(listenStatus);
   const errorLockoutUntilRef = useRef(0);
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null);
   const successTimeoutRef = useRef<TimeoutHandle | null>(null);
@@ -300,6 +329,18 @@ export default function App() {
   useEffect(() => {
     scoresRef.current = scores;
   }, [scores]);
+
+  useEffect(() => {
+    maxLevelRef.current = maxLevel;
+  }, [maxLevel]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    listenStatusRef.current = listenStatus;
+  }, [listenStatus]);
 
   const unloadTonePlayer = useCallback(() => {
     if (!toneReadyRef.current) {
@@ -438,6 +479,12 @@ export default function App() {
       triggerHaptics,
     ],
   );
+
+  const playListenSequenceRef = useRef(playListenSequence);
+
+  useEffect(() => {
+    playListenSequenceRef.current = playListenSequence;
+  }, [playListenSequence]);
 
   const resetListenState = useCallback(() => {
     clearTimer(listenTimeoutRef);
@@ -952,6 +999,100 @@ export default function App() {
       stopListenPlayback,
     ],
   );
+
+  const applyRemoteProgress = useCallback((raw: unknown) => {
+    const progress = parseProgress(raw, {
+      listenWpmMin: LISTEN_WPM_MIN,
+      listenWpmMax: LISTEN_WPM_MAX,
+      levelMin: LEVELS[0],
+      levelMax: LEVELS[LEVELS.length - 1],
+    });
+    if (!progress) {
+      return;
+    }
+    const nextScores = progress.scores ?? scoresRef.current;
+    const resolvedMaxLevel =
+      typeof progress.maxLevel === 'number'
+        ? progress.maxLevel
+        : maxLevelRef.current;
+
+    if (progress.scores) {
+      scoresRef.current = progress.scores;
+      setScores(progress.scores);
+    }
+    if (typeof progress.showHint === 'boolean') {
+      setShowHint(progress.showHint);
+    }
+    if (typeof progress.showMnemonic === 'boolean') {
+      setShowMnemonic(progress.showMnemonic);
+    }
+    if (typeof progress.wordMode === 'boolean') {
+      if (freestyleWordModeRef.current !== progress.wordMode) {
+        freestyleWordModeRef.current = progress.wordMode;
+        clearTimer(wordSpaceTimeoutRef);
+        setFreestyleWordMode(progress.wordMode);
+        setFreestyleResult(null);
+        setFreestyleInput('');
+        setFreestyleWord('');
+      }
+    }
+    if (typeof progress.listenWpm === 'number') {
+      setListenWpm(progress.listenWpm);
+      if (
+        modeRef.current === 'listen' &&
+        listenStatusRef.current === 'idle'
+      ) {
+        playListenSequenceRef.current(
+          MORSE_DATA[letterRef.current].code,
+          progress.listenWpm,
+        );
+      }
+    }
+    if (typeof progress.maxLevel === 'number') {
+      maxLevelRef.current = progress.maxLevel;
+      const nextLetters = getLettersForLevel(progress.maxLevel);
+      const currentLetter = letterRef.current;
+      const nextLetter = nextLetters.includes(currentLetter)
+        ? currentLetter
+        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter);
+      letterRef.current = nextLetter;
+      setMaxLevel(progress.maxLevel);
+      setLetter(nextLetter);
+      if (
+        modeRef.current === 'listen' &&
+        listenStatusRef.current === 'idle'
+      ) {
+        playListenSequenceRef.current(MORSE_DATA[nextLetter].code);
+      }
+    }
+    if (typeof progress.practiceWordMode === 'boolean') {
+      practiceWordModeRef.current = progress.practiceWordMode;
+      practiceWordStartRef.current = null;
+      setPracticeWordMode(progress.practiceWordMode);
+      if (!progress.practiceWordMode) {
+        setPracticeWpm(null);
+      }
+      if (progress.practiceWordMode) {
+        const nextLetters = getLettersForLevel(resolvedMaxLevel);
+        const nextWord = getRandomWord(getWordsForLetters(nextLetters));
+        practiceWordRef.current = nextWord;
+        practiceWordIndexRef.current = 0;
+        const nextLetter = nextWord[0] as Letter;
+        letterRef.current = nextLetter;
+        setPracticeWord(nextWord);
+        setPracticeWordIndex(0);
+        setLetter(nextLetter);
+      }
+    }
+  }, []);
+
+  useFirebaseSync({
+    database,
+    user,
+    onRemoteProgress: applyRemoteProgress,
+    progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
+    progressSnapshot,
+  });
 
   const target = MORSE_DATA[letter].code;
   const targetSymbols = target.split('');

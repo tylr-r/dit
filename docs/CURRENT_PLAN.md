@@ -101,6 +101,6 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
 - [x] Implement Firebase Auth (Google Sign-In) for iOS
-- [ ] Implement Firebase Realtime Database sync
+- [x] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission
