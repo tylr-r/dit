@@ -1,5 +1,8 @@
 import AVFoundation
 import ExpoModulesCore
+import FirebaseAuth
+import GoogleSignIn
+import FirebaseCore
 
 private final class ToneGenerator {
   private let engine = AVAudioEngine()
@@ -101,6 +104,34 @@ private final class ToneGenerator {
 public final class DitNativeModule: Module {
   private let toneGenerator = ToneGenerator()
 
+  private func ensureFirebaseConfigured(promise: Promise) -> FirebaseApp? {
+    if let app = FirebaseApp.app() {
+      return app
+    }
+
+    guard let filePath = Bundle.main.path(
+      forResource: "GoogleService-Info",
+      ofType: "plist"
+    ) else {
+      promise.reject(
+        "ERR_FIREBASE_CONFIG",
+        "GoogleService-Info.plist not found in app bundle"
+      )
+      return nil
+    }
+
+    guard let options = FirebaseOptions(contentsOfFile: filePath) else {
+      promise.reject(
+        "ERR_FIREBASE_CONFIG",
+        "Could not load Firebase options from GoogleService-Info.plist"
+      )
+      return nil
+    }
+
+    FirebaseApp.configure(options: options)
+    return FirebaseApp.app()
+  }
+
   public func definition() -> ModuleDefinition {
     Name("DitNative")
 
@@ -126,6 +157,56 @@ public final class DitNativeModule: Module {
         durationMs: durationMs,
         volume: volume
       )
+    }
+
+    AsyncFunction("signInWithGoogle") { (promise: Promise) in
+      DispatchQueue.main.async { [weak self] in
+        guard let self else {
+          promise.reject("ERR_GOOGLE_SIGN_IN", "Module unavailable")
+          return
+        }
+
+        guard let app = self.ensureFirebaseConfigured(promise: promise) else {
+          return
+        }
+
+        guard let clientID = app.options.clientID else {
+          promise.reject(
+            "ERR_GOOGLE_SIGN_IN",
+            "Missing Google Sign-In client ID"
+          )
+          return
+        }
+
+        let configuration = GIDConfiguration(clientID: clientID)
+        if GIDSignIn.sharedInstance.configuration?.clientID != configuration.clientID {
+          GIDSignIn.sharedInstance.configuration = configuration
+        }
+
+        guard let currentViewController = self.appContext?.utilities?.currentViewController() else {
+          promise.reject("ERR_NO_VIEW_CONTROLLER", "Could not find current view controller")
+          return
+        }
+
+        GIDSignIn.sharedInstance.signIn(withPresenting: currentViewController) { result, error in
+          if let error = error {
+            promise.reject("ERR_GOOGLE_SIGN_IN", error.localizedDescription)
+            return
+          }
+
+          guard let user = result?.user,
+                let idToken = user.idToken?.tokenString else {
+            promise.reject("ERR_NO_TOKEN", "No ID token found in Google Sign-In result")
+            return
+          }
+          
+          promise.resolve([
+            "idToken": idToken,
+            "accessToken": user.accessToken.tokenString,
+            "email": user.profile?.email ?? ""
+          ])
+        }
+      }
     }
   }
 }

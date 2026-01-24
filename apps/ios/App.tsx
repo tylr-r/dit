@@ -35,6 +35,8 @@ import { MorseButton } from './src/components/MorseButton';
 import { ReferenceModal } from './src/components/ReferenceModal';
 import { SettingsPanel } from './src/components/SettingsPanel';
 import { StageDisplay, type StagePip } from './src/components/StageDisplay';
+import { useAuth } from './src/hooks/useAuth';
+import { signInWithGoogle, signOut } from './src/services/auth';
 
 const LEVELS = [1, 2, 3, 4] as const;
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
@@ -198,6 +200,7 @@ const SettingsIcon = () => (
 
 /** Primary app entry for Dit iOS. */
 export default function App() {
+  const { user } = useAuth();
   const [isPressing, setIsPressing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
@@ -785,7 +788,7 @@ export default function App() {
 
   const handleMaxLevelChange = useCallback(
     (value: number) => {
-      setMaxLevel(value);
+      setMaxLevel(value as (typeof LEVELS)[number]);
       setInput('');
       setStatus('idle');
       clearTimer(letterTimeoutRef);
@@ -1114,6 +1117,9 @@ export default function App() {
                     onShowHintChange={setShowHint}
                     onShowMnemonicChange={setShowMnemonic}
                     onShowReference={handleShowReference}
+                    user={user}
+                    onSignIn={signInWithGoogle}
+                    onSignOut={signOut}
                   />
                 </Pressable>
               </View>
@@ -1126,16 +1132,16 @@ export default function App() {
                 style={styles.modalBackdrop}
               />
               <View style={styles.modalCenter} pointerEvents="box-none">
-              <View style={styles.modalCard}>
-                <ReferenceModal
-                  letters={REFERENCE_LETTERS}
-                  numbers={REFERENCE_NUMBERS}
-                  morseData={MORSE_DATA}
-                  scores={scores}
-                  onClose={() => setShowReference(false)}
-                  onResetScores={handleResetScores}
-                />
-              </View>
+                <View style={styles.modalCard}>
+                  <ReferenceModal
+                    letters={REFERENCE_LETTERS}
+                    numbers={REFERENCE_NUMBERS}
+                    morseData={MORSE_DATA}
+                    scores={scores}
+                    onClose={() => setShowReference(false)}
+                    onResetScores={handleResetScores}
+                  />
+                </View>
               </View>
             </View>
           ) : null}

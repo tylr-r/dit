@@ -1,3 +1,4 @@
+import type { User } from '@firebase/auth'
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 
 type SettingsPanelProps = {
@@ -12,6 +13,7 @@ type SettingsPanelProps = {
   listenWpmMax: number
   showHint: boolean
   showMnemonic: boolean
+  user: User | null
   onClose: () => void
   onMaxLevelChange: (value: number) => void
   onPracticeWordModeChange: (value: boolean) => void
@@ -20,6 +22,8 @@ type SettingsPanelProps = {
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
   onShowReference: () => void
+  onSignIn: () => Promise<unknown>
+  onSignOut: () => Promise<unknown>
 }
 
 const ToggleRow = ({
@@ -60,6 +64,7 @@ export function SettingsPanel({
   listenWpmMax,
   showHint,
   showMnemonic,
+  user,
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
@@ -68,6 +73,8 @@ export function SettingsPanel({
   onShowHintChange,
   onShowMnemonicChange,
   onShowReference,
+  onSignIn,
+  onSignOut,
 }: SettingsPanelProps) {
   const showPracticeControls = !isFreestyle && !isListen
   const canShowWordsToggle = !isListen
@@ -163,6 +170,42 @@ export function SettingsPanel({
         >
           <Text style={styles.panelButtonText}>Reference</Text>
         </Pressable>
+      </View>
+      <View style={styles.section}>
+        {user ? (
+          <View style={styles.row}>
+            <Text
+              style={[
+                styles.rowLabel,
+                { fontSize: 12, flex: 1, marginRight: 8 },
+              ]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+            <Pressable onPress={onSignOut} style={styles.pill}>
+              <Text style={styles.pillText}>Sign Out</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            onPress={onSignIn}
+            accessibilityRole='button'
+            accessibilityLabel='Sign in with Google'
+            style={({ pressed }) => [
+              styles.panelButton,
+              pressed && styles.panelButtonPressed,
+              {
+                backgroundColor: 'rgba(66, 133, 244, 0.2)',
+                borderColor: '#4285F4',
+              },
+            ]}
+          >
+            <Text style={[styles.panelButtonText, { color: '#4285F4' }]}>
+              Sign in with Google
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   )

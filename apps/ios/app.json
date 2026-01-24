@@ -14,8 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.dit-ios",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.tylerobinson.dit",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.tylerobinson.dit",
+              "com.googleusercontent.apps.953685874761-462qofr0tpi3s1t58hg7h07cbic50vuc"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

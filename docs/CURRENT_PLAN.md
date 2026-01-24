@@ -100,7 +100,7 @@ Transition an existing React TypeScript web app (hosted on Firebase) into a high
 - [ ] Implement native haptics module (replace `navigator.vibrate`)
 - [x] Implement native audio synthesis module (replace Web Audio API)
 - [x] Connect to `@dit/core` for Morse logic
-- [ ] Implement Firebase Auth (Google Sign-In) for iOS
+- [x] Implement Firebase Auth (Google Sign-In) for iOS
 - [ ] Implement Firebase Realtime Database sync
 - [ ] TestFlight beta deployment
 - [ ] App Store submission
