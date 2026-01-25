@@ -15,8 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
+      "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
