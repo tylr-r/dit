@@ -1,4 +1,5 @@
 import { Host, Picker } from '@expo/ui/swift-ui'
+import { accessibilityLabel, frame } from '@expo/ui/swift-ui/modifiers'
 import { GlassView } from 'expo-glass-effect'
 import { StyleSheet, View } from 'react-native'
 
@@ -16,6 +17,7 @@ const MODE_LABELS: Record<Mode, string> = {
 }
 
 const MODE_ORDER: Mode[] = ['practice', 'freestyle', 'listen']
+const MENU_MIN_WIDTH = 132
 
 /** Toggle between practice, freestyle, and listen modes. */
 export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
@@ -25,7 +27,7 @@ export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
     <GlassView
       style={styles.glass}
       glassEffectStyle='regular'
-      tintColor='rgba(255, 255, 255, 0.25)'
+      tintColor='rgba(0, 0, 0, 0.5)'
       isInteractive
     >
       <View style={styles.pickerWrap}>
@@ -33,13 +35,15 @@ export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
           <Picker
             options={MODE_ORDER.map((mode) => MODE_LABELS[mode])}
             selectedIndex={selectedIndex}
+            label={MODE_LABELS[value]}
+            modifiers={[accessibilityLabel('Mode'), frame({ minWidth: MENU_MIN_WIDTH })]}
             onOptionSelected={({ nativeEvent }) => {
               const nextMode = MODE_ORDER[nativeEvent.index]
               if (nextMode) {
                 onChange(nextMode)
               }
             }}
-            variant='segmented'
+            variant='menu'
           />
         </Host>
       </View>
@@ -57,6 +61,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
   },
   pickerWrap: {
-    width: 220,
+    alignSelf: 'center',
   },
 })
