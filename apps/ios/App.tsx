@@ -282,7 +282,7 @@ export default function App() {
   const freestyleWordModeRef = useRef(freestyleWordMode);
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null);
   const scoresRef = useRef(scores);
-  const maxLevelRef = useRef(maxLevel);
+  const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel);
   const modeRef = useRef(mode);
   const listenStatusRef = useRef(listenStatus);
   const errorLockoutUntilRef = useRef(0);
@@ -1049,14 +1049,14 @@ export default function App() {
       }
     }
     if (typeof progress.maxLevel === 'number') {
-      maxLevelRef.current = progress.maxLevel;
+      maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number];
       const nextLetters = getLettersForLevel(progress.maxLevel);
       const currentLetter = letterRef.current;
       const nextLetter = nextLetters.includes(currentLetter)
         ? currentLetter
         : getRandomWeightedLetter(nextLetters, nextScores, currentLetter);
       letterRef.current = nextLetter;
-      setMaxLevel(progress.maxLevel);
+      setMaxLevel(progress.maxLevel as (typeof LEVELS)[number]);
       setLetter(nextLetter);
       if (
         modeRef.current === 'listen' &&
