@@ -1,0 +1,144 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:1.00000,1.00000,1.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "blend-mode-specializations" : [
+        {
+          "value" : "normal"
+        },
+        {
+          "appearance" : "dark",
+          "value" : "normal"
+        }
+      ],
+      "blur-material" : null,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.46607,0.47446,0.50000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "Dit-Center.svg",
+          "name" : "Dit-Center",
+          "opacity-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : 0.35
+            }
+          ],
+          "position" : {
+            "scale" : 14.2,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.46607,0.47446,0.50000,1.00000"
+              }
+            }
+          ],
+          "image-name" : "Dit-Inner.svg",
+          "name" : "Dit-Inner",
+          "opacity-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : 0.35
+            }
+          ],
+          "position" : {
+            "scale" : 14.4,
+            "translation-in-points" : [
+              5,
+              6
+            ]
+          }
+        },
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.46607,0.47446,0.50000,1.00000"
+              }
+            }
+          ],
+          "image-name" : "Dit-Outter.svg",
+          "name" : "Dit-Outter",
+          "opacity-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : 0.35
+            }
+          ],
+          "position" : {
+            "scale" : 15.68,
+            "translation-in-points" : [
+              7,
+              7
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "shadow-specializations" : [
+        {
+          "value" : {
+            "kind" : "layer-color",
+            "opacity" : 0.5
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "kind" : "layer-color",
+            "opacity" : 0.69
+          }
+        }
+      ],
+      "specular-specializations" : [
+        {
+          "value" : true
+        },
+        {
+          "appearance" : "dark",
+          "value" : false
+        }
+      ],
+      "translucency-specializations" : [
+        {
+          "value" : {
+            "enabled" : true,
+            "value" : 0.01
+          }
+        },
+        {
+          "appearance" : "tinted",
+          "value" : {
+            "enabled" : true,
+            "value" : 1
+          }
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
