@@ -1,30 +1,32 @@
+import { Host, Picker } from '@expo/ui/swift-ui';
+import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers';
 import type { User } from '@firebase/auth';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 type SettingsPanelProps = {
-  isFreestyle: boolean
-  isListen: boolean
-  levels: readonly number[]
-  maxLevel: number
-  practiceWordMode: boolean
-  freestyleWordMode: boolean
-  listenWpm: number
-  listenWpmMin: number
-  listenWpmMax: number
-  showHint: boolean
-  showMnemonic: boolean
-  user: User | null
-  onClose: () => void
-  onMaxLevelChange: (value: number) => void
-  onPracticeWordModeChange: (value: boolean) => void
-  onFreestyleWordModeChange: (value: boolean) => void
-  onListenWpmChange: (value: number) => void
-  onShowHintChange: (value: boolean) => void
-  onShowMnemonicChange: (value: boolean) => void
-  onShowReference: () => void
-  onSignIn: () => Promise<unknown>
-  onSignOut: () => Promise<unknown>
-}
+  isFreestyle: boolean;
+  isListen: boolean;
+  levels: readonly number[];
+  maxLevel: number;
+  practiceWordMode: boolean;
+  freestyleWordMode: boolean;
+  listenWpm: number;
+  listenWpmMin: number;
+  listenWpmMax: number;
+  showHint: boolean;
+  showMnemonic: boolean;
+  user: User | null;
+  onClose: () => void;
+  onMaxLevelChange: (value: number) => void;
+  onPracticeWordModeChange: (value: boolean) => void;
+  onFreestyleWordModeChange: (value: boolean) => void;
+  onListenWpmChange: (value: number) => void;
+  onShowHintChange: (value: boolean) => void;
+  onShowMnemonicChange: (value: boolean) => void;
+  onShowReference: () => void;
+  onSignIn: () => Promise<unknown>;
+  onSignOut: () => Promise<unknown>;
+};
 
 const ToggleRow = ({
   label,
@@ -32,10 +34,10 @@ const ToggleRow = ({
   disabled,
   onValueChange,
 }: {
-  label: string
-  value: boolean
-  disabled?: boolean
-  onValueChange: (value: boolean) => void
+  label: string;
+  value: boolean;
+  disabled?: boolean;
+  onValueChange: (value: boolean) => void;
 }) => (
   <View style={styles.row}>
     <Text style={[styles.rowLabel, disabled && styles.rowLabelDisabled]}>
@@ -56,7 +58,7 @@ export function SettingsPanel({
   isFreestyle,
   isListen,
   levels,
-  maxLevel,
+  maxLevel = 3,
   practiceWordMode,
   freestyleWordMode,
   listenWpm,
@@ -79,8 +81,6 @@ export function SettingsPanel({
   const showPracticeControls = !isFreestyle && !isListen;
   const canShowWordsToggle = !isListen;
   const showHintControls = !isFreestyle && !isListen;
-  const nextLevel =
-    levels[(levels.indexOf(maxLevel) + 1) % levels.length] ?? maxLevel;
   const nextListenWpm =
     listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1;
 
@@ -90,8 +90,8 @@ export function SettingsPanel({
         <Text style={styles.title}>Settings</Text>
         <Pressable
           onPress={onClose}
-          accessibilityRole='button'
-          accessibilityLabel='Close settings'
+          accessibilityRole="button"
+          accessibilityLabel="Close settings"
           style={styles.closeButton}
         >
           <Text style={styles.closeButtonText}>Close</Text>
@@ -101,12 +101,12 @@ export function SettingsPanel({
       {showHintControls ? (
         <>
           <ToggleRow
-            label='Show hints'
+            label="Show hints"
             value={showHint}
             onValueChange={onShowHintChange}
           />
           <ToggleRow
-            label='Show mnemonics'
+            label="Show mnemonics"
             value={showMnemonic}
             onValueChange={onShowMnemonicChange}
           />
@@ -115,7 +115,7 @@ export function SettingsPanel({
       {isFreestyle && !isListen ? (
         <View style={styles.section}>
           <ToggleRow
-            label='Word mode'
+            label="Word mode"
             value={freestyleWordMode}
             onValueChange={onFreestyleWordModeChange}
           />
@@ -123,20 +123,33 @@ export function SettingsPanel({
       ) : null}
       {showPracticeControls ? (
         <View style={styles.section}>
-          <Pressable
-            onPress={() => onMaxLevelChange(nextLevel)}
-            accessibilityRole='button'
-            accessibilityLabel='Change max level'
-            style={styles.row}
-          >
+          <View style={styles.row}>
             <Text style={styles.rowLabel}>Max level</Text>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>Level {maxLevel}</Text>
+            <View
+              style={{
+                alignItems: 'flex-end',
+                alignSelf: 'flex-end',
+                marginRight: -10,
+              }}
+            >
+              <Host matchContents>
+                <Picker
+                  options={levels.map((level) => `Level ${level}`)}
+                  selectedIndex={levels.indexOf(maxLevel)}
+                  label={`Level ${maxLevel}`}
+                  onOptionSelected={({ nativeEvent }) => {
+                    const newLevel = levels[nativeEvent.index];
+                    if (newLevel !== undefined) onMaxLevelChange(newLevel);
+                  }}
+                  variant="menu"
+                  modifiers={[accessibilityLabel('Max level')]}
+                />
+              </Host>
             </View>
-          </Pressable>
+          </View>
           {canShowWordsToggle ? (
             <ToggleRow
-              label='Words'
+              label="Words"
               value={practiceWordMode}
               onValueChange={onPracticeWordModeChange}
             />
@@ -147,8 +160,8 @@ export function SettingsPanel({
         <View style={styles.section}>
           <Pressable
             onPress={() => onListenWpmChange(nextListenWpm)}
-            accessibilityRole='button'
-            accessibilityLabel='Change listen speed'
+            accessibilityRole="button"
+            accessibilityLabel="Change listen speed"
             style={styles.row}
           >
             <Text style={styles.rowLabel}>Listen speed</Text>
@@ -161,8 +174,8 @@ export function SettingsPanel({
       <View style={styles.section}>
         <Pressable
           onPress={onShowReference}
-          accessibilityRole='button'
-          accessibilityLabel='Open reference'
+          accessibilityRole="button"
+          accessibilityLabel="Open reference"
           style={({ pressed }) => [
             styles.panelButton,
             pressed && styles.panelButtonPressed,
@@ -190,8 +203,8 @@ export function SettingsPanel({
         ) : (
           <Pressable
             onPress={onSignIn}
-            accessibilityRole='button'
-            accessibilityLabel='Sign in with Google'
+            accessibilityRole="button"
+            accessibilityLabel="Sign in with Google"
             style={({ pressed }) => [
               styles.panelButton,
               pressed && styles.panelButtonPressed,
