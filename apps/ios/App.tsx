@@ -20,6 +20,7 @@ import {
   type ProgressSnapshot,
 } from '@dit/core';
 import { triggerHaptics } from '@dit/dit-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createAudioPlayer,
   setAudioModeAsync,
@@ -56,6 +57,10 @@ const LISTEN_MIN_UNIT_MS = 40;
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
 const TONE_VOLUME = AUDIO_VOLUME;
 const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
+const INTRO_HINTS_KEY = 'dit-intro-hint-step';
+const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed';
+
+type IntroHintStep = 'morse' | 'settings' | 'done';
 const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
   (letter) => /^[A-Z]$/.test(letter),
 );
@@ -72,7 +77,7 @@ const REFERENCE_NUMBERS: Letter[] = [
   '9',
 ];
 
-type TimeoutHandle = ReturnType<typeof setTimeout>
+type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 const clearTimer = (ref: { current: TimeoutHandle | null }) => {
   if (ref.current !== null) {
@@ -214,6 +219,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('practice');
   const [showHint, setShowHint] = useState(true);
   const [showMnemonic, setShowMnemonic] = useState(false);
+  const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse');
   const [maxLevel, setMaxLevel] = useState(LEVELS[LEVELS.length - 1]);
   const [practiceWordMode, setPracticeWordMode] = useState(false);
   const [letter, setLetter] = useState<Letter>(initialConfig.letter);
@@ -241,6 +247,52 @@ export default function App() {
       }),
     [],
   );
+  useEffect(() => {
+    let isActive = true;
+    const loadIntroHints = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(INTRO_HINTS_KEY);
+        if (!isActive) {
+          return;
+        }
+        if (stored === 'morse' || stored === 'settings' || stored === 'done') {
+          setIntroHintStep(stored);
+          return;
+        }
+        const legacy = await AsyncStorage.getItem(LEGACY_INTRO_HINTS_KEY);
+        if (legacy === 'true') {
+          setIntroHintStep('done');
+          void AsyncStorage.setItem(INTRO_HINTS_KEY, 'done');
+          return;
+        }
+        setIntroHintStep('morse');
+      } catch (error) {
+        console.error('Failed to load intro hints', error);
+      }
+    };
+    void loadIntroHints();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+  const persistIntroHintStep = useCallback((next: IntroHintStep) => {
+    setIntroHintStep(next);
+    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error) => {
+      console.error('Failed to save intro hints', error);
+    });
+  }, []);
+  const dismissMorseHint = useCallback(() => {
+    if (introHintStep !== 'morse') {
+      return;
+    }
+    persistIntroHintStep('settings');
+  }, [introHintStep, persistIntroHintStep]);
+  const dismissSettingsHint = useCallback(() => {
+    if (introHintStep !== 'settings') {
+      return;
+    }
+    persistIntroHintStep('done');
+  }, [introHintStep, persistIntroHintStep]);
   const isFreestyle = mode === 'freestyle';
   const isListen = mode === 'listen';
   const availableLetters = useMemo(
@@ -291,8 +343,8 @@ export default function App() {
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null);
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null);
   const listenPlaybackRef = useRef<{
-    token: number
-    timeouts: TimeoutHandle[]
+    token: number;
+    timeouts: TimeoutHandle[];
   }>({ token: 0, timeouts: [] });
   const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null);
   const toneReadyRef = useRef(false);
@@ -550,6 +602,13 @@ export default function App() {
     setShowAbout(false);
     setShowReference(true);
   }, []);
+
+  const handleSettingsToggle = useCallback(() => {
+    setShowAbout(false);
+    setShowReference(false);
+    dismissSettingsHint();
+    setShowSettings((prev) => !prev);
+  }, [dismissSettingsHint]);
 
   const handleResetScores = useCallback(() => {
     setScores(initializeScores());
@@ -815,6 +874,10 @@ export default function App() {
     clearTimer(letterTimeoutRef);
     startTonePlayback();
   }, [isErrorLocked, isFreestyle, isListen, startTonePlayback]);
+  const handleIntroPressIn = useCallback(() => {
+    dismissMorseHint();
+    handlePressIn();
+  }, [dismissMorseHint, handlePressIn]);
 
   const handlePressOut = useCallback(() => {
     setIsPressing(false);
@@ -1092,6 +1155,8 @@ export default function App() {
   const targetSymbols = target.split('');
   const hintVisible = !isFreestyle && !isListen && showHint;
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
+  const showMorseHint = introHintStep === 'morse' && !isListen;
+  const showSettingsHint = introHintStep === 'settings' && !isListen;
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -1194,21 +1259,38 @@ export default function App() {
               <ModeSwitcher value={mode} onChange={handleModeChange} />
             </View>
             <View style={styles.topBarSide}>
-              <Pressable
-                onPress={() => {
-                  setShowAbout(false);
-                  setShowReference(false);
-                  setShowSettings((prev) => !prev);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Settings"
-                style={({ pressed }) => [
-                  styles.settingsButton,
-                  pressed && styles.settingsButtonPressed,
-                ]}
-              >
-                <SettingsIcon />
-              </Pressable>
+              <View style={styles.settingsButtonWrap}>
+                {showSettingsHint ? (
+                  <View style={styles.settingsHint}>
+                    <Text style={styles.hintText}>
+                      Add hints, change speed, and save progress in settings.
+                    </Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss settings tip"
+                      onPress={dismissSettingsHint}
+                      style={({ pressed }) => [
+                        styles.hintButton,
+                        pressed && styles.hintButtonPressed,
+                      ]}
+                    >
+                      <Text style={styles.hintButtonText}>Got it</Text>
+                    </Pressable>
+                    <View style={styles.settingsHintArrow} />
+                  </View>
+                ) : null}
+                <Pressable
+                  onPress={handleSettingsToggle}
+                  accessibilityRole="button"
+                  accessibilityLabel="Settings"
+                  style={({ pressed }) => [
+                    styles.settingsButton,
+                    pressed && styles.settingsButtonPressed,
+                  ]}
+                >
+                  <SettingsIcon />
+                </Pressable>
+              </View>
             </View>
           </View>
           {showAbout ? (
@@ -1314,11 +1396,33 @@ export default function App() {
                     <Text style={styles.clearButtonText}>Clear</Text>
                   </Pressable>
                 ) : null}
-                <MorseButton
-                  isPressing={isPressing}
-                  onPressIn={handlePressIn}
-                  onPressOut={handlePressOut}
-                />
+                <View style={styles.morseButtonWrap}>
+                  {showMorseHint ? (
+                    <View style={styles.morseHint}>
+                      <Text style={styles.hintText}>
+                        Tap the big Morse key to make a dit (short press) or dah
+                        (long press).
+                      </Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Dismiss Morse tip"
+                        onPress={dismissMorseHint}
+                        style={({ pressed }) => [
+                          styles.hintButton,
+                          pressed && styles.hintButtonPressed,
+                        ]}
+                      >
+                        <Text style={styles.hintButtonText}>Got it</Text>
+                      </Pressable>
+                      <View style={styles.morseHintArrow} />
+                    </View>
+                  ) : null}
+                  <MorseButton
+                    isPressing={isPressing}
+                    onPressIn={handleIntroPressIn}
+                    onPressOut={handlePressOut}
+                  />
+                </View>
               </>
             )}
           </View>
@@ -1401,6 +1505,89 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 24,
     width: '100%',
+  },
+  settingsButtonWrap: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  settingsHint: {
+    position: 'absolute',
+    top: 54,
+    right: -8,
+    width: 190,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(12, 18, 24, 0.95)',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 4,
+  },
+  settingsHintArrow: {
+    position: 'absolute',
+    top: -6,
+    right: 22,
+    width: 12,
+    height: 12,
+    backgroundColor: 'rgba(12, 18, 24, 0.95)',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    transform: [{ rotate: '45deg' }],
+  },
+  morseButtonWrap: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 12,
+  },
+  morseHint: {
+    width: '100%',
+    maxWidth: 320,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(12, 18, 24, 0.9)',
+    alignItems: 'center',
+    gap: 8,
+  },
+  morseHintArrow: {
+    position: 'absolute',
+    bottom: -6,
+    left: '50%',
+    width: 12,
+    height: 12,
+    backgroundColor: 'rgba(12, 18, 24, 0.9)',
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    transform: [{ translateX: -6 }, { rotate: '45deg' }],
+  },
+  hintText: {
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(244, 247, 249, 0.9)',
+  },
+  hintButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  hintButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  hintButtonText: {
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: 'rgba(244, 247, 249, 0.85)',
   },
   clearButton: {
     alignSelf: 'center',

@@ -1,13 +1,3 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import './App.css';
-import { Footer } from './components/Footer';
-import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
-import { ListenControls } from './components/ListenControls';
-import { MorseButton } from './components/MorseButton';
-import { Page404 } from './components/Page404';
-import { ReferenceModal } from './components/ReferenceModal';
-import { SettingsPanel } from './components/SettingsPanel';
-import { StageDisplay } from './components/StageDisplay';
 import {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
@@ -29,6 +19,16 @@ import {
   parseProgress,
   type Letter,
 } from '@dit/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import './App.css';
+import { Footer } from './components/Footer';
+import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
+import { ListenControls } from './components/ListenControls';
+import { MorseButton } from './components/MorseButton';
+import { Page404 } from './components/Page404';
+import { ReferenceModal } from './components/ReferenceModal';
+import { SettingsPanel } from './components/SettingsPanel';
+import { StageDisplay } from './components/StageDisplay';
 import { auth, database, googleProvider } from './firebase';
 import { useAudio } from './hooks/useAudio';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -40,7 +40,7 @@ import {
   useProgress,
 } from './hooks/useProgress';
 import { vibrate } from './platform/haptics';
-import { readStorageItem } from './platform/storage';
+import { readStorageItem, writeStorageItem } from './platform/storage';
 const LETTERS = Object.keys(MORSE_DATA) as Letter[];
 const LEVELS = [1, 2, 3, 4] as const;
 const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter));
@@ -77,6 +77,8 @@ const STORAGE_KEYS = {
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
+  introHintStep: 'morse-intro-hint-step',
+  legacyIntroHintsDismissed: 'morse-intro-hints-dismissed',
 };
 
 const clearTimer = (ref: { current: number | null }) => {
@@ -114,9 +116,7 @@ function MainApp() {
       false,
     );
     const availableLetters = getLettersForLevel(maxLevel);
-    const practiceWord = getRandomWord(
-      getWordsForLetters(availableLetters),
-    );
+    const practiceWord = getRandomWord(getWordsForLetters(availableLetters));
     const letter = practiceWordMode
       ? (practiceWord[0] as Letter)
       : getRandomLetter(availableLetters);
@@ -138,6 +138,20 @@ function MainApp() {
   const [showMnemonic, setShowMnemonic] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showMnemonic, false),
   );
+  const [introHintStep, setIntroHintStep] = useState<
+    'morse' | 'settings' | 'done'
+  >(() => {
+    const stored = readStorageItem(STORAGE_KEYS.introHintStep);
+    if (stored === 'morse' || stored === 'settings' || stored === 'done') {
+      return stored;
+    }
+    const legacy = readStorageItem(STORAGE_KEYS.legacyIntroHintsDismissed);
+    if (legacy === 'true') {
+      writeStorageItem(STORAGE_KEYS.introHintStep, 'done');
+      return 'done';
+    }
+    return 'morse';
+  });
   const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
       return 'practice';
@@ -555,8 +569,8 @@ function MainApp() {
       value === 'freestyle'
         ? 'freestyle'
         : value === 'listen'
-          ? 'listen'
-          : 'practice';
+        ? 'listen'
+        : 'practice';
     applyModeChange(nextMode);
   };
 
@@ -817,7 +831,10 @@ function MainApp() {
                   setPracticeWpm(Math.round(nextWpm * 10) / 10);
                 }
               }
-              const nextWord = getRandomWord(availablePracticeWords, currentWord);
+              const nextWord = getRandomWord(
+                availablePracticeWords,
+                currentWord,
+              );
               const nextLetter = nextWord[0] as Letter;
               practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
@@ -842,7 +859,11 @@ function MainApp() {
           setStatus('success');
           successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
-              getRandomWeightedLetter(availableLetters, scoresRef.current, current),
+              getRandomWeightedLetter(
+                availableLetters,
+                scoresRef.current,
+                current,
+              ),
             );
             setShowHintOnce(false);
             setStatus('idle');
@@ -1146,6 +1167,47 @@ function MainApp() {
     onPressStart: handlePressStart,
     onSymbol: registerSymbol,
   });
+  const persistIntroHintStep = useCallback(
+    (next: 'morse' | 'settings' | 'done') => {
+      setIntroHintStep(next);
+      writeStorageItem(STORAGE_KEYS.introHintStep, next);
+    },
+    [],
+  );
+  const dismissMorseHint = useCallback(() => {
+    if (introHintStep !== 'morse') {
+      return;
+    }
+    persistIntroHintStep('settings');
+  }, [introHintStep, persistIntroHintStep]);
+  const dismissSettingsHint = useCallback(() => {
+    if (introHintStep !== 'settings') {
+      return;
+    }
+    persistIntroHintStep('done');
+  }, [introHintStep, persistIntroHintStep]);
+  const handleSettingsToggle = useCallback(() => {
+    dismissSettingsHint();
+    setShowSettings((prev) => !prev);
+  }, [dismissSettingsHint]);
+  interface IntroPointerDownEvent
+    extends React.PointerEvent<HTMLButtonElement> {}
+  interface IntroKeyDownEvent extends React.KeyboardEvent<HTMLButtonElement> {}
+
+  const handleIntroPointerDown = useCallback(
+    (event: IntroPointerDownEvent) => {
+      dismissMorseHint();
+      handlePointerDown(event);
+    },
+    [dismissMorseHint, handlePointerDown],
+  );
+  const handleIntroKeyDown = useCallback(
+    (event: IntroKeyDownEvent) => {
+      dismissMorseHint();
+      handleKeyDown(event);
+    },
+    [dismissMorseHint, handleKeyDown],
+  );
 
   useEffect(() => {
     if (!isListen) {
@@ -1181,16 +1243,18 @@ function MainApp() {
 
   const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce);
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
+  const showMorseHint = introHintStep === 'morse' && !isListen;
+  const showSettingsHint = introHintStep === 'settings' && !isListen;
   const target = MORSE_DATA[letter].code;
   const mnemonic = MORSE_DATA[letter].mnemonic;
   const baseStatusText =
     status === 'success'
       ? 'Correct'
       : status === 'error'
-        ? 'Missed. Start over.'
-        : mnemonicVisible
-          ? mnemonic
-          : ' ';
+      ? 'Missed. Start over.'
+      : mnemonicVisible
+      ? mnemonic
+      : ' ';
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -1213,8 +1277,8 @@ function MainApp() {
     status === 'success'
       ? targetSymbols.length
       : isInputOnTrack
-        ? input.length
-        : 0;
+      ? input.length
+      : 0;
   const pips = targetSymbols.map((symbol, index) => {
     const isHit = index < highlightCount;
     return (
@@ -1236,17 +1300,17 @@ function MainApp() {
         : `Result ${freestyleResult}`
       : freestyleResult
     : freestyleInput
-      ? `Input ${freestyleInput}`
-      : freestyleWordMode && freestyleWord
-        ? `Word ${freestyleWord}`
-        : 'Tap and pause';
+    ? `Input ${freestyleInput}`
+    : freestyleWordMode && freestyleWord
+    ? `Word ${freestyleWord}`
+    : 'Tap and pause';
   const freestyleDisplay = freestyleWordMode
     ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
     : freestyleResult
-      ? isLetterResult
-        ? freestyleResult
-        : '?'
-      : '';
+    ? isLetterResult
+      ? freestyleResult
+      : '?'
+    : '';
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
     : Boolean(freestyleResult);
@@ -1254,14 +1318,14 @@ function MainApp() {
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
-        ? 'Incorrect'
-        : 'Listen and type the character';
+      ? 'Incorrect'
+      : 'Listen and type the character';
   const listenDisplay = listenReveal ?? '?';
   const listenDisplayClass = `letter ${
     listenReveal ? '' : 'letter-placeholder'
   }`;
   const listenFocused = isListen && useCustomKeyboard;
-  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : '';
+  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : '';
   const userInitial = user
     ? userLabel
       ? userLabel[0].toUpperCase()
@@ -1298,10 +1362,23 @@ function MainApp() {
           <option value="listen">Listen</option>
         </select>
         <div className="settings">
+          {showSettingsHint ? (
+            <div className="intro-hint intro-hint-settings" role="status">
+              <p>Hints live in settings.</p>
+              <button
+                type="button"
+                className="intro-hint-dismiss"
+                onClick={dismissSettingsHint}
+              >
+                Got it
+              </button>
+              <span className="intro-hint-arrow" aria-hidden="true" />
+            </div>
+          ) : null}
           <button
             type="button"
             className="settings-button"
-            onClick={() => setShowSettings((prev) => !prev)}
+            onClick={handleSettingsToggle}
             aria-expanded={showSettings}
             aria-controls="settings-panel"
             aria-label="Settings"
@@ -1396,17 +1473,35 @@ function MainApp() {
             useCustomKeyboard={useCustomKeyboard}
           />
         ) : (
-          <MorseButton
-            buttonRef={morseButtonRef}
-            isPressing={isPressing}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            onPointerLeave={handlePointerCancel}
-            onKeyDown={handleKeyDown}
-            onKeyUp={handleKeyUp}
-            onBlur={handlePointerCancel}
-          />
+          <>
+            {showMorseHint ? (
+              <div className="intro-hint intro-hint-morse" role="status">
+                <p>
+                  Tap the big Morse key to make a dit (short press) or dah (long
+                  press).
+                </p>
+                <button
+                  type="button"
+                  className="intro-hint-dismiss"
+                  onClick={dismissMorseHint}
+                >
+                  Got it
+                </button>
+                <span className="intro-hint-arrow" aria-hidden="true" />
+              </div>
+            ) : null}
+            <MorseButton
+              buttonRef={morseButtonRef}
+              isPressing={isPressing}
+              onPointerDown={handleIntroPointerDown}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onPointerLeave={handlePointerCancel}
+              onKeyDown={handleIntroKeyDown}
+              onKeyUp={handleKeyUp}
+              onBlur={handlePointerCancel}
+            />
+          </>
         )}
       </div>
       {showReference ? (
