@@ -1,14 +1,15 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Letter, ScoreRecord } from '@dit/core';
+import { MORSE_DATA } from '@dit/core';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type ReferenceModalProps = {
-  letters: Letter[]
-  numbers: Letter[]
-  morseData: Record<Letter, { code: string }>
-  scores: ScoreRecord
-  onClose: () => void
-  onResetScores: () => void
-}
+  letters: Letter[];
+  numbers: Letter[];
+  morseData: Record<Letter, { code: string }>;
+  scores: ScoreRecord;
+  onClose: () => void;
+  onResetScores: () => void;
+};
 
 const SCORE_INTENSITY_MAX = 15;
 
@@ -45,8 +46,8 @@ export function ReferenceModal({
       scoreValue > 0
         ? styles.scorePositive
         : scoreValue < 0
-          ? styles.scoreNegative
-          : styles.scoreNeutral;
+        ? styles.scoreNegative
+        : styles.scoreNeutral;
 
     return (
       <View key={char} style={[styles.card, scoreTint]}>
@@ -74,8 +75,8 @@ export function ReferenceModal({
         <View style={styles.actions}>
           <Pressable
             onPress={onResetScores}
-            accessibilityRole='button'
-            accessibilityLabel='Reset scores'
+            accessibilityRole="button"
+            accessibilityLabel="Reset scores"
             style={({ pressed }) => [
               styles.actionButton,
               styles.resetButton,
@@ -88,8 +89,8 @@ export function ReferenceModal({
           </Pressable>
           <Pressable
             onPress={onClose}
-            accessibilityRole='button'
-            accessibilityLabel='Close reference'
+            accessibilityRole="button"
+            accessibilityLabel="Close reference"
             style={({ pressed }) => [
               styles.actionButton,
               pressed && styles.actionButtonPressed,
@@ -104,9 +105,35 @@ export function ReferenceModal({
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
       >
-        {letters.map(renderReferenceCard)}
+        {[1, 2, 3, 4].map((level) => {
+          let levelLetters = letters.filter(
+            (l) => MORSE_DATA[l].level === level,
+          );
+          if (level === 4) {
+            levelLetters = [...levelLetters, ...numbers];
+          }
+          if (levelLetters.length === 0) return null;
+          return (
+            <View key={`level-${level}`} style={{ width: '100%' }}>
+              <Text
+                style={{
+                  color: '#38f2a2',
+                  fontWeight: '600',
+                  marginVertical: 6,
+                  marginLeft: 2,
+                  letterSpacing: 1,
+                  fontSize: 13,
+                }}
+              >
+                Level {level}
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {levelLetters.map(renderReferenceCard)}
+              </View>
+            </View>
+          );
+        })}
         <View style={styles.rowSpacer} />
-        {numbers.map(renderReferenceCard)}
       </ScrollView>
     </View>
   );
