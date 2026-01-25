@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import type { Letter, ScoreRecord } from '@dit/core'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Letter, ScoreRecord } from '@dit/core';
 
 type ReferenceModalProps = {
   letters: Letter[]
@@ -10,23 +10,23 @@ type ReferenceModalProps = {
   onResetScores: () => void
 }
 
-const SCORE_INTENSITY_MAX = 15
+const SCORE_INTENSITY_MAX = 15;
 
-const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
+const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`);
 
 const getScoreTint = (scoreValue: number) => {
   if (scoreValue === 0) {
-    return null
+    return null;
   }
-  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
-  const intensity = Math.min(Math.max(normalized, 0.2), 1)
-  const alpha = 0.35 * intensity
+  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX;
+  const intensity = Math.min(Math.max(normalized, 0.2), 1);
+  const alpha = 0.35 * intensity;
   const tint =
     scoreValue > 0
       ? `rgba(56, 242, 162, ${alpha})`
-      : `rgba(255, 90, 96, ${alpha})`
-  return { borderColor: tint }
-}
+      : `rgba(255, 90, 96, ${alpha})`;
+  return { borderColor: tint };
+};
 
 /** Modal panel with the Morse reference grid and scores. */
 export function ReferenceModal({
@@ -38,15 +38,15 @@ export function ReferenceModal({
   onResetScores,
 }: ReferenceModalProps) {
   const renderReferenceCard = (char: Letter) => {
-    const scoreValue = scores[char] ?? 0
-    const scoreTint = getScoreTint(scoreValue)
-    const code = morseData[char].code
+    const scoreValue = scores[char] ?? 0;
+    const scoreTint = getScoreTint(scoreValue);
+    const code = morseData[char].code;
     const scoreStyle =
       scoreValue > 0
         ? styles.scorePositive
         : scoreValue < 0
           ? styles.scoreNegative
-          : styles.scoreNeutral
+          : styles.scoreNeutral;
 
     return (
       <View key={char} style={[styles.card, scoreTint]}>
@@ -64,8 +64,8 @@ export function ReferenceModal({
           ))}
         </View>
       </View>
-    )
-  }
+    );
+  };
 
   return (
     <View style={styles.panel}>
@@ -109,7 +109,7 @@ export function ReferenceModal({
         {numbers.map(renderReferenceCard)}
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -229,4 +229,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: 'rgba(141, 152, 165, 0.9)',
   },
-})
+});

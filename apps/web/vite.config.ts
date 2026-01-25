@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -9,4 +9,4 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
   },
-})
+});

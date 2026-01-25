@@ -1,17 +1,17 @@
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
-import type { Letter } from '@dit/core'
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import type { Letter } from '@dit/core';
 
-const MAX_KEYS_PER_ROW = 10
-const KEYBOARD_GAP = 6
-const KEYBOARD_HORIZONTAL_PADDING = 12
-const MIN_KEY_SIZE = 24
+const MAX_KEYS_PER_ROW = 10;
+const KEYBOARD_GAP = 6;
+const KEYBOARD_HORIZONTAL_PADDING = 12;
+const MIN_KEY_SIZE = 24;
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-]
+];
 
 type ListenControlsProps = {
   listenStatus: 'idle' | 'success' | 'error'
@@ -25,8 +25,8 @@ export function ListenControls({
   onReplay,
   onSubmitAnswer,
 }: ListenControlsProps) {
-  const isIdle = listenStatus === 'idle'
-  const { width } = useWindowDimensions()
+  const isIdle = listenStatus === 'idle';
+  const { width } = useWindowDimensions();
   const keySize = Math.max(
     MIN_KEY_SIZE,
     Math.floor(
@@ -35,8 +35,8 @@ export function ListenControls({
         KEYBOARD_GAP * (MAX_KEYS_PER_ROW - 1)) /
         MAX_KEYS_PER_ROW,
     ),
-  )
-  const keyRadius = Math.round(keySize / 2)
+  );
+  const keyRadius = Math.round(keySize / 2);
 
   return (
     <View style={styles.container}>
@@ -77,7 +77,7 @@ export function ListenControls({
         ))}
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -146,4 +146,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#f4f7f9',
   },
-})
+});

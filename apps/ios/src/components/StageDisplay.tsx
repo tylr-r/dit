@@ -62,7 +62,7 @@ export function StageDisplay({
         <View style={[styles.progress, styles.progressHidden]} />
         <Text style={styles.statusText}>{statusText}</Text>
       </View>
-    )
+    );
   }
 
   const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];

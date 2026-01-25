@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { SettingsPanel } from '../../../src/components/SettingsPanel'
-import type { SettingsPanelProps } from '../../../src/components/componentProps'
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { SettingsPanel } from '../../../src/components/SettingsPanel';
+import type { SettingsPanelProps } from '../../../src/components/componentProps';
 
 const baseProps: SettingsPanelProps = {
   freestyleWordMode: false,
@@ -30,20 +30,20 @@ const baseProps: SettingsPanelProps = {
   authReady: true,
   onSignIn: vi.fn(),
   onSignOut: vi.fn(),
-}
+};
 
 describe('SettingsPanel', () => {
   it('disables hint toggles in freestyle mode', () => {
-    render(<SettingsPanel {...baseProps} isFreestyle />)
+    render(<SettingsPanel {...baseProps} isFreestyle />);
 
-    const showHints = screen.getByRole('checkbox', { name: /show hints/i })
+    const showHints = screen.getByRole('checkbox', { name: /show hints/i });
     const showMnemonic = screen.getByRole('checkbox', {
       name: /show mnemonics/i,
-    })
+    });
 
-    expect(showHints).toBeDisabled()
-    expect(showMnemonic).toBeDisabled()
-  })
+    expect(showHints).toBeDisabled();
+    expect(showMnemonic).toBeDisabled();
+  });
 
   it('disables sound check while playing', () => {
     render(
@@ -52,10 +52,10 @@ describe('SettingsPanel', () => {
         isListen
         soundCheckStatus="playing"
       />,
-    )
+    );
 
     expect(
       screen.getByRole('button', { name: /sound check/i }),
-    ).toBeDisabled()
-  })
-})
+    ).toBeDisabled();
+  });
+});

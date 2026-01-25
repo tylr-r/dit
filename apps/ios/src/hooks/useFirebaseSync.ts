@@ -1,7 +1,7 @@
-import { createFirebaseProgressService, type ProgressPayload, type ProgressSnapshot } from '@dit/core'
-import type { User } from '@firebase/auth'
-import { get, ref, set, type Database } from '@firebase/database'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { createFirebaseProgressService, type ProgressPayload, type ProgressSnapshot } from '@dit/core';
+import type { User } from '@firebase/auth';
+import { get, ref, set, type Database } from '@firebase/database';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type UseFirebaseSyncOptions = {
   database: Database
@@ -15,10 +15,10 @@ type TimeoutHandle = ReturnType<typeof setTimeout>
 
 const clearTimer = (ref: { current: TimeoutHandle | null }) => {
   if (ref.current !== null) {
-    clearTimeout(ref.current)
-    ref.current = null
+    clearTimeout(ref.current);
+    ref.current = null;
   }
-}
+};
 
 /** Syncs signed-in progress with Firebase Realtime Database. */
 export const useFirebaseSync = ({
@@ -28,63 +28,63 @@ export const useFirebaseSync = ({
   progressSaveDebounceMs,
   onRemoteProgress,
 }: UseFirebaseSyncOptions) => {
-  const [remoteLoaded, setRemoteLoaded] = useState(false)
-  const saveTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const saveTimeoutRef = useRef<TimeoutHandle | null>(null);
 
   const service = useMemo(() => {
     const adapter = {
       read: async (path: string) => {
-        const snapshot = await get(ref(database, path))
-        return snapshot.exists() ? snapshot.val() : null
+        const snapshot = await get(ref(database, path));
+        return snapshot.exists() ? snapshot.val() : null;
       },
       write: (path: string, payload: ProgressPayload) =>
         set(ref(database, path), payload),
-    }
-    return createFirebaseProgressService(adapter)
-  }, [database])
+    };
+    return createFirebaseProgressService(adapter);
+  }, [database]);
 
   useEffect(() => {
-    setRemoteLoaded(false)
+    setRemoteLoaded(false);
     if (!user) {
-      return
+      return;
     }
-    let isActive = true
+    let isActive = true;
     service
       .load(user.uid)
       .then((data) => {
         if (!isActive || data === null || data === undefined) {
-          return
+          return;
         }
-        onRemoteProgress(data)
+        onRemoteProgress(data);
       })
       .catch((error) => {
-        console.error('Failed to load progress', error)
+        console.error('Failed to load progress', error);
       })
       .finally(() => {
         if (isActive) {
-          setRemoteLoaded(true)
+          setRemoteLoaded(true);
         }
-      })
+      });
     return () => {
-      isActive = false
-    }
-  }, [onRemoteProgress, service, user])
+      isActive = false;
+    };
+  }, [onRemoteProgress, service, user]);
 
   useEffect(() => {
     if (!user || !remoteLoaded) {
-      return
+      return;
     }
-    clearTimer(saveTimeoutRef)
+    clearTimer(saveTimeoutRef);
     saveTimeoutRef.current = setTimeout(() => {
       void service.save(user.uid, progressSnapshot).catch((error) => {
-        console.error('Failed to save progress', error)
-      })
-    }, progressSaveDebounceMs)
+        console.error('Failed to save progress', error);
+      });
+    }, progressSaveDebounceMs);
 
     return () => {
-      clearTimer(saveTimeoutRef)
-    }
-  }, [progressSaveDebounceMs, progressSnapshot, remoteLoaded, service, user])
+      clearTimer(saveTimeoutRef);
+    };
+  }, [progressSaveDebounceMs, progressSnapshot, remoteLoaded, service, user]);
 
-  return { remoteLoaded }
-}
+  return { remoteLoaded };
+};

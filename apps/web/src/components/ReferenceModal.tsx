@@ -1,26 +1,26 @@
-import type { CSSProperties } from 'react'
-import type { Letter } from '@dit/core'
-import type { ReferenceModalProps } from './componentProps'
+import type { CSSProperties } from 'react';
+import type { Letter } from '@dit/core';
+import type { ReferenceModalProps } from './componentProps';
 
-const SCORE_INTENSITY_MAX = 15
+const SCORE_INTENSITY_MAX = 15;
 
-const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
+const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`);
 
 const getScoreStyle = (
   scoreValue: number,
 ): CSSProperties | undefined => {
   if (scoreValue === 0) {
-    return
+    return;
   }
-  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
-  const intensity = Math.min(Math.max(normalized, 0.2), 1)
-  const alpha = 0.35 * intensity
-  const tint = scoreValue > 0 ? '56, 242, 162' : '255, 90, 96'
+  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX;
+  const intensity = Math.min(Math.max(normalized, 0.2), 1);
+  const alpha = 0.35 * intensity;
+  const tint = scoreValue > 0 ? '56, 242, 162' : '255, 90, 96';
   return {
     '--score-tint': tint,
     '--score-alpha': String(alpha),
-  } as CSSProperties
-}
+  } as CSSProperties;
+};
 
 /** Modal overlay with the Morse reference grid and scores. */
 export function ReferenceModal({
@@ -32,14 +32,14 @@ export function ReferenceModal({
   scores,
 }: ReferenceModalProps) {
   const renderReferenceCard = (char: Letter) => {
-    const scoreValue = scores[char]
+    const scoreValue = scores[char];
     const scoreClass =
       scoreValue > 0
         ? 'score-positive'
         : scoreValue < 0
           ? 'score-negative'
-          : 'score-neutral'
-    const code = morseData[char].code
+          : 'score-neutral';
+    const code = morseData[char].code;
     return (
       <div
         key={char}
@@ -64,8 +64,8 @@ export function ReferenceModal({
           ))}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -99,5 +99,5 @@ export function ReferenceModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

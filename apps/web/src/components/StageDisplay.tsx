@@ -1,4 +1,4 @@
-import type { StageDisplayProps } from './componentProps'
+import type { StageDisplayProps } from './componentProps';
 
 /** Main output area for freestyle, listen, and character modes. */
 export function StageDisplay({
@@ -19,7 +19,7 @@ export function StageDisplay({
   statusText,
   target,
 }: StageDisplayProps) {
-  const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];
   return (
     <main className="stage">
       {isFreestyle ? (
@@ -55,12 +55,12 @@ export function StageDisplay({
                     ? 'word-letter done'
                     : index === practiceWordIndex
                       ? 'word-letter active'
-                      : 'word-letter'
+                      : 'word-letter';
                 return (
                   <span key={`${char}-${index}`} className={state}>
                     {char}
                   </span>
-                )
+                );
               })}
             </div>
           ) : (
@@ -86,5 +86,5 @@ export function StageDisplay({
         </>
       )}
     </main>
-  )
+  );
 }

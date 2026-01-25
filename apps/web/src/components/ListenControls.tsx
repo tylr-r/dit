@@ -1,12 +1,12 @@
-import type { Letter } from '@dit/core'
-import type { ListenControlsProps } from './componentProps'
+import type { Letter } from '@dit/core';
+import type { ListenControlsProps } from './componentProps';
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-]
+];
 
 /** Listen mode controls with optional on-screen keyboard. */
 export function ListenControls({
@@ -15,7 +15,7 @@ export function ListenControls({
   onSubmitAnswer,
   useCustomKeyboard,
 }: ListenControlsProps) {
-  const isIdle = listenStatus === 'idle'
+  const isIdle = listenStatus === 'idle';
   return (
     <div
       className={`listen-controls${
@@ -51,5 +51,5 @@ export function ListenControls({
         </div>
       ) : null}
     </div>
-  )
+  );
 }

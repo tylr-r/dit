@@ -3,9 +3,9 @@
  * Features a liquid/gel-style appearance with SVG displacement filters.
  */
 
-import type { SyntheticEvent } from 'react'
-import './MorseButton.css'
-import type { MorseButtonProps } from './componentProps'
+import type { SyntheticEvent } from 'react';
+import './MorseButton.css';
+import type { MorseButtonProps } from './componentProps';
 
 /** Tap/press input button for dot/dah entry. */
 export function MorseButton({
@@ -20,8 +20,8 @@ export function MorseButton({
   onPointerUp,
 }: MorseButtonProps) {
   const preventDefault = (event: SyntheticEvent) => {
-    event.preventDefault()
-  }
+    event.preventDefault();
+  };
 
   return (
     <div className="morse-button-wrap">
@@ -102,5 +102,5 @@ export function MorseButton({
         <span className="fluid-glass" aria-hidden="true" />
       </button>
     </div>
-  )
+  );
 }

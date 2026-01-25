@@ -1,4 +1,4 @@
-import type { SettingsPanelProps } from './componentProps'
+import type { SettingsPanelProps } from './componentProps';
 
 /** Settings dropdown content and mode-specific controls. */
 export function SettingsPanel({
@@ -195,5 +195,5 @@ export function SettingsPanel({
         )}
       </div>
     </div>
-  )
+  );
 }

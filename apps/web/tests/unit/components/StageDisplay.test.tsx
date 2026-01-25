@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { StageDisplay } from '../../../src/components/StageDisplay'
+import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { StageDisplay } from '../../../src/components/StageDisplay';
 
 describe('StageDisplay', () => {
   it('renders practice word progress with active letter', () => {
@@ -23,14 +23,14 @@ describe('StageDisplay', () => {
         statusText="Ready"
         target=".-"
       />,
-    )
+    );
 
-    const word = screen.getByLabelText('Word CAT')
-    expect(within(word).getByText('C')).toHaveClass('word-letter', 'done')
-    expect(within(word).getByText('A')).toHaveClass('word-letter', 'active')
-    expect(screen.getByTestId('pips')).toBeInTheDocument()
-    expect(screen.getByText('Ready')).toBeInTheDocument()
-  })
+    const word = screen.getByLabelText('Word CAT');
+    expect(within(word).getByText('C')).toHaveClass('word-letter', 'done');
+    expect(within(word).getByText('A')).toHaveClass('word-letter', 'active');
+    expect(screen.getByTestId('pips')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
+  });
 
   it('renders freestyle placeholder when no display is available', () => {
     render(
@@ -52,9 +52,9 @@ describe('StageDisplay', () => {
         statusText=""
         target=""
       />,
-    )
+    );
 
-    const display = screen.getByText('--')
-    expect(display).toHaveClass('letter', 'letter-placeholder')
-  })
-})
+    const display = screen.getByText('--');
+    expect(display).toHaveClass('letter', 'letter-placeholder');
+  });
+});

@@ -1,5 +1,5 @@
-import type { User } from '@firebase/auth'
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import type { User } from '@firebase/auth';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 type SettingsPanelProps = {
   isFreestyle: boolean
@@ -49,7 +49,7 @@ const ToggleRow = ({
       thumbColor={value ? '#0c1116' : '#f4f7f9'}
     />
   </View>
-)
+);
 
 /** Settings panel content for practice controls. */
 export function SettingsPanel({
@@ -76,13 +76,13 @@ export function SettingsPanel({
   onSignIn,
   onSignOut,
 }: SettingsPanelProps) {
-  const showPracticeControls = !isFreestyle && !isListen
-  const canShowWordsToggle = !isListen
-  const showHintControls = !isFreestyle && !isListen
+  const showPracticeControls = !isFreestyle && !isListen;
+  const canShowWordsToggle = !isListen;
+  const showHintControls = !isFreestyle && !isListen;
   const nextLevel =
-    levels[(levels.indexOf(maxLevel) + 1) % levels.length] ?? maxLevel
+    levels[(levels.indexOf(maxLevel) + 1) % levels.length] ?? maxLevel;
   const nextListenWpm =
-    listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1
+    listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1;
 
   return (
     <View style={styles.panel}>
@@ -208,7 +208,7 @@ export function SettingsPanel({
         )}
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -306,4 +306,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.85)',
   },
-})
+});

@@ -1,15 +1,15 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
-import { ReferenceModal } from '../../../src/components/ReferenceModal'
-import { MORSE_DATA, initializeScores } from '@dit/core'
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import { ReferenceModal } from '../../../src/components/ReferenceModal';
+import { MORSE_DATA, initializeScores } from '@dit/core';
 
 describe('ReferenceModal', () => {
   it('fires reset and close actions', async () => {
-    const onClose = vi.fn()
-    const onResetScores = vi.fn()
-    const scores = initializeScores()
-    const user = userEvent.setup()
+    const onClose = vi.fn();
+    const onResetScores = vi.fn();
+    const scores = initializeScores();
+    const user = userEvent.setup();
 
     render(
       <ReferenceModal
@@ -20,14 +20,14 @@ describe('ReferenceModal', () => {
         onResetScores={onResetScores}
         scores={scores}
       />,
-    )
+    );
 
-    expect(screen.getByLabelText('.-')).toBeInTheDocument()
+    expect(screen.getByLabelText('.-')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Reset scores' }))
-    expect(onResetScores).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Reset scores' }));
+    expect(onResetScores).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: 'Close' }))
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-})
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
