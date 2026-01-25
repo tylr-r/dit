@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 
 type AboutPanelProps = {
   onClose: () => void
@@ -27,14 +27,24 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
       <View style={styles.footer}>
         <Text style={styles.footerText}>© {currentYear} Tylr</Text>
         <Text style={styles.footerSeparator}>|</Text>
-        <Text style={styles.footerLink}>Privacy</Text>
+        <Text
+          style={styles.footerLink}
+          onPress={() => Linking.openURL('https://practicedit.com/privacy')}
+        >
+          Privacy
+        </Text>
         <Text style={styles.footerSeparator}>|</Text>
-        <Text style={styles.footerLink}>Terms</Text>
+        <Text
+          style={styles.footerLink}
+          onPress={() => Linking.openURL('https://practicedit.com/terms')}
+        >
+          Terms
+        </Text>
       </View>
       <Pressable
         onPress={onClose}
-        accessibilityRole='button'
-        accessibilityLabel='Close about'
+        accessibilityRole="button"
+        accessibilityLabel="Close about"
         style={styles.closeButton}
       >
         <Text style={styles.closeButtonText}>Close</Text>

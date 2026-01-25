@@ -43,7 +43,7 @@ export function ListenControls({
       <Pressable
         onPress={onReplay}
         accessibilityRole='button'
-        accessibilityLabel='Play listen prompt'
+        accessibilityLabel='Play morse letter sound'
         disabled={!isIdle}
         style={({ pressed }) => [
           styles.playButton,
@@ -53,7 +53,7 @@ export function ListenControls({
       >
         <Text style={styles.playButtonText}>Play</Text>
       </Pressable>
-      <View style={styles.keyboard} accessibilityRole='keyboard'>
+      <View style={styles.keyboard} accessibilityRole='keyboardkey'>
         {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
           <View key={`row-${rowIndex}`} style={styles.keyboardRow}>
             {row.map((key) => (
