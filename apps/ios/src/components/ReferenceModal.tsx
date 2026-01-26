@@ -21,6 +21,7 @@ type ReferenceModalProps = {
   onClose: () => void;
   onResetScores: () => void;
   onPlaySound?: (char: Letter) => void;
+  paddingVertical?: number;
 };
 
 const SCORE_INTENSITY_MAX = 15;
@@ -50,6 +51,7 @@ export function ReferenceModal({
   onClose,
   onResetScores,
   onPlaySound,
+  paddingVertical,
 }: ReferenceModalProps) {
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0);
@@ -132,7 +134,10 @@ export function ReferenceModal({
             bg.value = withTiming(0, { duration: 120 });
             onPlaySound?.(char);
           }}
-          style={{ padding: 0, borderRadius: 14 }}
+          style={{
+            borderRadius: 14,
+            paddingVertical: paddingVertical ?? 0,
+          }}
         >
           <View style={styles.cardHeader}>
             <Text style={styles.cardLetter}>{char}</Text>
@@ -155,7 +160,7 @@ export function ReferenceModal({
   return (
     <View style={styles.panel}>
       <BlurView
-        intensity={16}
+        intensity={24}
         tint="dark"
         style={StyleSheet.absoluteFillObject}
       />

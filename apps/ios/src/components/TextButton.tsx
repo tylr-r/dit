@@ -26,6 +26,7 @@ export type TextButtonProps = {
   accessibilityLabel?: string;
   /** Optional: accessibility role */
   accessibilityRole?: AccessibilityRole;
+  paddingVertical?: number;
 };
 
 /**
@@ -40,6 +41,7 @@ export function TextButton({
   textStyle,
   accessibilityLabel,
   accessibilityRole = 'button',
+  paddingVertical,
 }: TextButtonProps) {
   return (
     <GlassView
@@ -56,6 +58,7 @@ export function TextButton({
           styles.button,
           backgroundColor && { backgroundColor },
           pressed && styles.buttonPressed,
+          { paddingVertical: paddingVertical ?? 6 },
         ]}
       >
         <Text style={[styles.buttonText, color && { color }, textStyle]}>
@@ -71,7 +74,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   button: {
-    paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 10,
     borderWidth: 1,
@@ -87,5 +89,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.8)',
+    textAlign: 'center',
   },
 });

@@ -137,7 +137,12 @@ export function SettingsPanel({
           />
         </GlassContainer>
       </View>
-      <Animated.View style={[panelAnimStyle, { padding: 24, paddingTop: 56 }]}>
+      <Animated.View
+        style={[
+          panelAnimStyle,
+          { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 },
+        ]}
+      >
         {showHintControls ? (
           <>
             <ToggleRow
@@ -209,19 +214,17 @@ export function SettingsPanel({
             </Pressable>
           </View>
         ) : null}
+      </Animated.View>
+      <View style={{ padding: 24, paddingTop: 0 }}>
+        <View style={styles.divider} />
         <View style={styles.section}>
-          <View style={styles.divider} />
-          <Pressable
+          <TextButton
+            text="Letter Reference"
             onPress={onShowReference}
-            accessibilityRole="button"
             accessibilityLabel="Open reference"
-            style={({ pressed }) => [
-              styles.panelButton,
-              pressed && styles.panelButtonPressed,
-            ]}
-          >
-            <Text style={styles.panelButtonText}>Reference</Text>
-          </Pressable>
+            textStyle={styles.panelButtonText}
+            paddingVertical={8}
+          />
         </View>
         <View style={styles.section}>
           {user ? (
@@ -240,26 +243,19 @@ export function SettingsPanel({
               </Pressable>
             </View>
           ) : (
-            <Pressable
+            <TextButton
+              text="Sign in"
               onPress={onSignIn}
-              accessibilityRole="button"
               accessibilityLabel="Sign in with Google"
-              style={({ pressed }) => [
-                styles.panelButton,
-                pressed && styles.panelButtonPressed,
-                {
-                  backgroundColor: 'rgba(66, 133, 244, 0.2)',
-                  borderColor: '#4285F4',
-                },
-              ]}
-            >
-              <Text style={[styles.panelButtonText, { color: '#4285F4' }]}>
-                Sign in with Google
-              </Text>
-            </Pressable>
+              textStyle={{
+                ...styles.panelButtonText,
+                color: '#4285F4',
+              }}
+              paddingVertical={8}
+            />
           )}
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
