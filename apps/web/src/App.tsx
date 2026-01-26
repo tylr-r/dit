@@ -1190,19 +1190,16 @@ function MainApp() {
     dismissSettingsHint();
     setShowSettings((prev) => !prev);
   }, [dismissSettingsHint]);
-  interface IntroPointerDownEvent
-    extends React.PointerEvent<HTMLButtonElement> {}
-  interface IntroKeyDownEvent extends React.KeyboardEvent<HTMLButtonElement> {}
 
   const handleIntroPointerDown = useCallback(
-    (event: IntroPointerDownEvent) => {
+    (event: React.PointerEvent<HTMLButtonElement>) => {
       dismissMorseHint();
       handlePointerDown(event);
     },
     [dismissMorseHint, handlePointerDown],
   );
   const handleIntroKeyDown = useCallback(
-    (event: IntroKeyDownEvent) => {
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
       dismissMorseHint();
       handleKeyDown(event);
     },
