@@ -1,7 +1,17 @@
 import { Host, Picker } from '@expo/ui/swift-ui';
 import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers';
 import type { User } from '@firebase/auth';
+import { BlurView } from 'expo-blur';
+import { GlassContainer } from 'expo-glass-effect';
+import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { TextButton } from './TextButton';
 
 type SettingsPanelProps = {
   isFreestyle: boolean;
@@ -84,47 +94,83 @@ export function SettingsPanel({
   const nextListenWpm =
     listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1;
 
+  // Panel entrance/exit animation state
+  const panelVisible = useSharedValue(0);
+  const [exiting, setExiting] = React.useState(false);
+
+  // Animate panel in on mount
+  React.useEffect(() => {
+    panelVisible.value = withTiming(1, { duration: 180 });
+  }, [panelVisible]);
+
+  // Animate panel out on close
+  const handleClose = React.useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    panelVisible.value = withTiming(0, { duration: 160 }, (finished) => {
+      if (finished) scheduleOnRN(onClose);
+    });
+  }, [exiting, onClose, panelVisible]);
+
+  const panelAnimStyle = useAnimatedStyle(() => ({
+    opacity: panelVisible.value,
+    transform: [
+      { scale: 0.98 + 0.02 * panelVisible.value },
+      { translateY: 16 * (1 - panelVisible.value) },
+    ],
+  }));
+
   return (
     <View style={styles.panel}>
+      <BlurView
+        intensity={24}
+        tint="dark"
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close settings"
-          style={styles.closeButton}
-        >
-          <Text style={styles.closeButtonText}>Close</Text>
-        </Pressable>
+        <GlassContainer spacing={6} style={styles.actions}>
+          <TextButton
+            text="Close"
+            onPress={handleClose}
+            accessibilityLabel="Close settings"
+          />
+        </GlassContainer>
       </View>
-      <View style={styles.divider} />
-      {showHintControls ? (
-        <>
+      <Animated.View style={[panelAnimStyle, { padding: 24, paddingTop: 56 }]}>
+        {showHintControls ? (
+          <>
+            <ToggleRow
+              label="Show hints"
+              value={showHint}
+              onValueChange={onShowHintChange}
+            />
+            <ToggleRow
+              label="Show mnemonics"
+              value={showMnemonic}
+              onValueChange={onShowMnemonicChange}
+            />
+          </>
+        ) : null}
+        {isFreestyle && !isListen ? (
+          <View style={styles.section}>
+            <ToggleRow
+              label="Word mode"
+              value={freestyleWordMode}
+              onValueChange={onFreestyleWordModeChange}
+            />
+          </View>
+        ) : null}
+        {canShowWordsToggle ? (
           <ToggleRow
-            label="Show hints"
-            value={showHint}
-            onValueChange={onShowHintChange}
+            label="Practice Words"
+            value={practiceWordMode}
+            onValueChange={onPracticeWordModeChange}
           />
-          <ToggleRow
-            label="Show mnemonics"
-            value={showMnemonic}
-            onValueChange={onShowMnemonicChange}
-          />
-        </>
-      ) : null}
-      {isFreestyle && !isListen ? (
-        <View style={styles.section}>
-          <ToggleRow
-            label="Word mode"
-            value={freestyleWordMode}
-            onValueChange={onFreestyleWordModeChange}
-          />
-        </View>
-      ) : null}
-      {showPracticeControls ? (
-        <View style={styles.section}>
+        ) : null}
+        {showPracticeControls ? (
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Max level</Text>
+            <Text style={styles.rowLabel}>Max Difficulty</Text>
             <View
               style={{
                 alignItems: 'flex-end',
@@ -147,102 +193,114 @@ export function SettingsPanel({
               </Host>
             </View>
           </View>
-          {canShowWordsToggle ? (
-            <ToggleRow
-              label="Words"
-              value={practiceWordMode}
-              onValueChange={onPracticeWordModeChange}
-            />
-          ) : null}
-        </View>
-      ) : null}
-      {isListen ? (
-        <View style={styles.section}>
-          <Pressable
-            onPress={() => onListenWpmChange(nextListenWpm)}
-            accessibilityRole="button"
-            accessibilityLabel="Change listen speed"
-            style={styles.row}
-          >
-            <Text style={styles.rowLabel}>Listen speed</Text>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{listenWpm} WPM</Text>
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
-      <View style={styles.section}>
-        <Pressable
-          onPress={onShowReference}
-          accessibilityRole="button"
-          accessibilityLabel="Open reference"
-          style={({ pressed }) => [
-            styles.panelButton,
-            pressed && styles.panelButtonPressed,
-          ]}
-        >
-          <Text style={styles.panelButtonText}>Reference</Text>
-        </Pressable>
-      </View>
-      <View style={styles.section}>
-        {user ? (
-          <View style={styles.row}>
-            <Text
-              style={[
-                styles.rowLabel,
-                { fontSize: 12, flex: 1, marginRight: 8 },
-              ]}
-              numberOfLines={1}
+        ) : null}
+        {isListen ? (
+          <View style={styles.section}>
+            <Pressable
+              onPress={() => onListenWpmChange(nextListenWpm)}
+              accessibilityRole="button"
+              accessibilityLabel="Change listen speed"
+              style={styles.row}
             >
-              {user.email}
-            </Text>
-            <Pressable onPress={onSignOut} style={styles.pill}>
-              <Text style={styles.pillText}>Sign Out</Text>
+              <Text style={styles.rowLabel}>Listen speed</Text>
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{listenWpm} WPM</Text>
+              </View>
             </Pressable>
           </View>
-        ) : (
+        ) : null}
+        <View style={styles.section}>
+          <View style={styles.divider} />
           <Pressable
-            onPress={onSignIn}
+            onPress={onShowReference}
             accessibilityRole="button"
-            accessibilityLabel="Sign in with Google"
+            accessibilityLabel="Open reference"
             style={({ pressed }) => [
               styles.panelButton,
               pressed && styles.panelButtonPressed,
-              {
-                backgroundColor: 'rgba(66, 133, 244, 0.2)',
-                borderColor: '#4285F4',
-              },
             ]}
           >
-            <Text style={[styles.panelButtonText, { color: '#4285F4' }]}>
-              Sign in with Google
-            </Text>
+            <Text style={styles.panelButtonText}>Reference</Text>
           </Pressable>
-        )}
-      </View>
+        </View>
+        <View style={styles.section}>
+          {user ? (
+            <View style={styles.row}>
+              <Text
+                style={[
+                  styles.rowLabel,
+                  { fontSize: 12, flex: 1, marginRight: 8 },
+                ]}
+                numberOfLines={1}
+              >
+                {user.email}
+              </Text>
+              <Pressable onPress={onSignOut} style={styles.pill}>
+                <Text style={styles.pillText}>Sign Out</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={onSignIn}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in with Google"
+              style={({ pressed }) => [
+                styles.panelButton,
+                pressed && styles.panelButtonPressed,
+                {
+                  backgroundColor: 'rgba(66, 133, 244, 0.2)',
+                  borderColor: '#4285F4',
+                },
+              ]}
+            >
+              <Text style={[styles.panelButtonText, { color: '#4285F4' }]}>
+                Sign in with Google
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   panel: {
-    width: 280,
-    alignSelf: 'center',
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: 'rgba(12, 18, 24, 0.9)',
+    width: '100%',
+    maxWidth: 380,
+    maxHeight: 520,
+    borderRadius: 20,
+    paddingBottom: 4,
+    paddingTop: 3,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.95,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 10 },
+    alignSelf: 'center',
   },
   header: {
+    position: 'absolute',
+    padding: 16,
+    paddingBottom: 32,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    zIndex: 1,
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    experimental_backgroundImage:
+      'linear-gradient(0deg,transparent,rgba(0,0,0, 0.9),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   divider: {
     height: 1,
