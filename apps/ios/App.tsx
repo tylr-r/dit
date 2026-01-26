@@ -238,6 +238,9 @@ export default function App() {
   >('idle');
   const [listenReveal, setListenReveal] = useState<Letter | null>(null);
   const [scores, setScores] = useState(() => initializeScores());
+  // In listen mode, we keep the tonePlayer alive, looping, and muted/unmuted instead of loading/unloading or pausing between tones.
+  // This prevents any delay or cutoff at the start/end of Morse playback, ensuring instant and accurate sound for each symbol.
+  // See also: docs/NATIVE_IOS.md for more details.
   const tonePlayer = useMemo(
     () =>
       createAudioPlayer(TONE_SOURCE, {
@@ -295,6 +298,8 @@ export default function App() {
   }, [introHintStep, persistIntroHintStep]);
   const isFreestyle = mode === 'freestyle';
   const isListen = mode === 'listen';
+  // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
+  const isReferencePanelActive = showReference;
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
@@ -556,6 +561,17 @@ export default function App() {
       unloadTonePlayer();
     };
   }, [stopListenPlayback, unloadTonePlayer]);
+
+  // Keep the tone player alive (looping, muted/unmuted) when listen mode or reference panel is open
+  useEffect(() => {
+    if (isListen || isReferencePanelActive) {
+      // Prepare and start the tone player (muted, looping)
+      void prepareTonePlayer();
+      return;
+    }
+    // If neither is active, schedule unload
+    scheduleToneUnload();
+  }, [isListen, isReferencePanelActive, prepareTonePlayer, scheduleToneUnload]);
 
   useEffect(() => {
     if (mode === 'listen') {
@@ -1357,6 +1373,12 @@ export default function App() {
                     scores={scores}
                     onClose={() => setShowReference(false)}
                     onResetScores={handleResetScores}
+                    onPlaySound={async (char) => {
+                      const { playMorseTone } = await import(
+                        './src/utils/tone'
+                      );
+                      playMorseTone({ code: MORSE_DATA[char].code });
+                    }}
                   />
                 </View>
               </View>
@@ -1436,7 +1458,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d1017',
+    backgroundColor: '#191925',
     overflow: 'hidden',
   },
   safeArea: {

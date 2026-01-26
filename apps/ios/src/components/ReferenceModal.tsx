@@ -1,6 +1,14 @@
 import type { Letter, ScoreRecord } from '@dit/core';
 import { MORSE_DATA } from '@dit/core';
+import { BlurView } from 'expo-blur';
+import { GlassContainer, GlassView } from 'expo-glass-effect';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 type ReferenceModalProps = {
   letters: Letter[];
@@ -9,6 +17,7 @@ type ReferenceModalProps = {
   scores: ScoreRecord;
   onClose: () => void;
   onResetScores: () => void;
+  onPlaySound?: (char: Letter) => void;
 };
 
 const SCORE_INTENSITY_MAX = 15;
@@ -37,8 +46,9 @@ export function ReferenceModal({
   scores,
   onClose,
   onResetScores,
+  onPlaySound,
 }: ReferenceModalProps) {
-  const renderReferenceCard = (char: Letter) => {
+  function ReferenceCard({ char }: { char: Letter }) {
     const scoreValue = scores[char] ?? 0;
     const scoreTint = getScoreTint(scoreValue);
     const code = morseData[char].code;
@@ -49,56 +59,115 @@ export function ReferenceModal({
         ? styles.scoreNegative
         : styles.scoreNeutral;
 
+    // Reanimated touch feedback
+    const scale = useSharedValue(1);
+    const bg = useSharedValue(0);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+    }));
+
+    const overlayStyle = useAnimatedStyle(() => ({
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: bg.value
+        ? 'rgba(145, 145, 145, 0.33)'
+        : 'hsla(210, 33%, 15%, 0.35)',
+      borderRadius: 14,
+      ...(scoreTint ?? {}),
+    }));
+
     return (
-      <View key={char} style={[styles.card, scoreTint]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardLetter}>{char}</Text>
-          <Text style={[styles.cardScore, scoreStyle]}>
-            {formatScore(scoreValue)}
-          </Text>
-        </View>
-        <View style={styles.cardCode} accessibilityLabel={code}>
-          {code.split('').map((symbol, index) => (
-            <Text key={`${char}-${index}`} style={styles.cardSymbol}>
-              {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+      <Animated.View
+        style={[
+          styles.card,
+          animatedStyle,
+          { overflow: 'hidden', borderRadius: 14 },
+        ]}
+      >
+        <BlurView
+          intensity={26}
+          tint="dark"
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Animated.View style={overlayStyle} />
+        <View
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={`Play sound for ${char}`}
+          onTouchStart={() => {
+            scale.value = withSpring(0.97, { damping: 50, stiffness: 300 });
+            bg.value = withTiming(1, { duration: 120 });
+          }}
+          onTouchEnd={() => {
+            scale.value = withSpring(1, { damping: 50, stiffness: 300 });
+            bg.value = withTiming(0, { duration: 120 });
+            onPlaySound?.(char);
+          }}
+          style={{ padding: 0, borderRadius: 14 }}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardLetter}>{char}</Text>
+            <Text style={[styles.cardScore, scoreStyle]}>
+              {scoreValue === 0 ? '' : formatScore(scoreValue)}
             </Text>
-          ))}
+          </View>
+          <View style={styles.cardCode} accessibilityLabel={code}>
+            {code.split('').map((symbol, index) => (
+              <Text key={`${char}-${index}`} style={styles.cardSymbol}>
+                {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+              </Text>
+            ))}
+          </View>
         </View>
-      </View>
+      </Animated.View>
     );
-  };
+  }
 
   return (
-    <View style={styles.panel}>
+    <BlurView intensity={16} tint="dark" style={styles.panel}>
       <View style={styles.header}>
         <Text style={styles.title}>Reference</Text>
-        <View style={styles.actions}>
-          <Pressable
-            onPress={onResetScores}
-            accessibilityRole="button"
-            accessibilityLabel="Reset scores"
-            style={({ pressed }) => [
-              styles.actionButton,
-              styles.resetButton,
-              pressed && styles.actionButtonPressed,
-            ]}
+        <GlassContainer spacing={6} style={styles.actions}>
+          <GlassView
+            style={{ borderRadius: 12 }}
+            glassEffectStyle="regular"
+            tintColor="rgba(0,0,0,0.75)"
+            isInteractive
           >
-            <Text style={[styles.actionButtonText, styles.resetButtonText]}>
-              Reset
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close reference"
-            style={({ pressed }) => [
-              styles.actionButton,
-              pressed && styles.actionButtonPressed,
-            ]}
+            <Pressable
+              onPress={onResetScores}
+              accessibilityRole="button"
+              accessibilityLabel="Reset scores"
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.resetButton,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <Text style={[styles.actionButtonText, styles.resetButtonText]}>
+                Reset
+              </Text>
+            </Pressable>
+          </GlassView>
+          <GlassView
+            style={{ borderRadius: 12 }}
+            glassEffectStyle="regular"
+            tintColor="rgba(0,0,0,0.75)"
+            isInteractive
           >
-            <Text style={styles.actionButtonText}>Close</Text>
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close reference"
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && styles.actionButtonPressed,
+              ]}
+            >
+              <Text style={styles.actionButtonText}>Close</Text>
+            </Pressable>
+          </GlassView>
+        </GlassContainer>
       </View>
       <ScrollView
         style={styles.scrollArea}
@@ -117,9 +186,9 @@ export function ReferenceModal({
             <View key={`level-${level}`} style={{ width: '100%' }}>
               <Text
                 style={{
-                  color: '#38f2a2',
+                  color: 'hsl(154, 0%, 58%)',
                   fontWeight: '600',
-                  marginVertical: 6,
+                  marginVertical: 12,
                   marginLeft: 2,
                   letterSpacing: 1,
                   fontSize: 13,
@@ -127,15 +196,20 @@ export function ReferenceModal({
               >
                 Level {level}
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {levelLetters.map(renderReferenceCard)}
-              </View>
+              <GlassContainer
+                spacing={8}
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+              >
+                {levelLetters.map((char) => (
+                  <ReferenceCard key={char} char={char} />
+                ))}
+              </GlassContainer>
             </View>
           );
         })}
         <View style={styles.rowSpacer} />
       </ScrollView>
-    </View>
+    </BlurView>
   );
 }
 
@@ -145,20 +219,31 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     maxHeight: 520,
     borderRadius: 20,
-    padding: 16,
-    backgroundColor: 'rgba(12, 18, 24, 0.92)',
+    paddingBottom: 4,
+    paddingTop: 3,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.95,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 10 },
   },
   header: {
+    position: 'absolute',
+    padding: 16,
+    paddingBottom: 32,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    width: '100%',
+    zIndex: 1,
+    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    experimental_backgroundImage:
+      'linear-gradient(0deg,transparent,rgba(0,0,0, 0.9),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
   },
   title: {
     fontSize: 14,
@@ -169,7 +254,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   actionButton: {
     paddingVertical: 6,
@@ -199,7 +284,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingTop: 64,
+    paddingRight: 12,
     paddingBottom: 12,
+    paddingLeft: 16,
+    borderRadius: 20,
   },
   rowSpacer: {
     width: '100%',
@@ -207,7 +296,7 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     width: '100%',
-    height: 420,
+    height: '100%',
   },
   card: {
     width: '30%',
@@ -215,10 +304,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRadius: 14,
-    backgroundColor: 'rgba(8, 12, 16, 0.45)',
+    backgroundColor: 'hsla(209, 34%, 12%, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
-    marginBottom: 12,
+    // marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
