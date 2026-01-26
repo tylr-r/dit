@@ -1,14 +1,17 @@
 import type { Letter, ScoreRecord } from '@dit/core';
 import { MORSE_DATA } from '@dit/core';
 import { BlurView } from 'expo-blur';
-import { GlassContainer, GlassView } from 'expo-glass-effect';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { GlassContainer } from 'expo-glass-effect';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { TextButton } from './TextButton';
 
 type ReferenceModalProps = {
   letters: Letter[];
@@ -48,6 +51,32 @@ export function ReferenceModal({
   onResetScores,
   onPlaySound,
 }: ReferenceModalProps) {
+  // Panel entrance/exit animation state
+  const panelVisible = useSharedValue(0);
+  const [exiting, setExiting] = React.useState(false);
+
+  // Animate panel in on mount
+  React.useEffect(() => {
+    panelVisible.value = withTiming(1, { duration: 180 });
+  }, [panelVisible]);
+
+  // Animate panel out on close
+  const handleClose = React.useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    panelVisible.value = withTiming(0, { duration: 160 }, (finished) => {
+      if (finished) scheduleOnRN(onClose);
+    });
+  }, [exiting, onClose, panelVisible]);
+
+  // Only animate the main panel, not the header (so header/buttons keep glass effect)
+  const panelAnimStyle = useAnimatedStyle(() => ({
+    opacity: panelVisible.value,
+    transform: [
+      { scale: 0.98 + 0.02 * panelVisible.value },
+      { translateY: 16 * (1 - panelVisible.value) },
+    ],
+  }));
   function ReferenceCard({ char }: { char: Letter }) {
     const scoreValue = scores[char] ?? 0;
     const scoreTint = getScoreTint(scoreValue);
@@ -124,92 +153,72 @@ export function ReferenceModal({
   }
 
   return (
-    <BlurView intensity={16} tint="dark" style={styles.panel}>
+    <View style={styles.panel}>
+      <BlurView
+        intensity={16}
+        tint="dark"
+        style={StyleSheet.absoluteFillObject}
+      />
       <View style={styles.header}>
         <Text style={styles.title}>Reference</Text>
         <GlassContainer spacing={6} style={styles.actions}>
-          <GlassView
-            style={{ borderRadius: 12 }}
-            glassEffectStyle="regular"
-            tintColor="rgba(0,0,0,0.75)"
-            isInteractive
-          >
-            <Pressable
-              onPress={onResetScores}
-              accessibilityRole="button"
-              accessibilityLabel="Reset scores"
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.resetButton,
-                pressed && styles.actionButtonPressed,
-              ]}
-            >
-              <Text style={[styles.actionButtonText, styles.resetButtonText]}>
-                Reset
-              </Text>
-            </Pressable>
-          </GlassView>
-          <GlassView
-            style={{ borderRadius: 12 }}
-            glassEffectStyle="regular"
-            tintColor="rgba(0,0,0,0.75)"
-            isInteractive
-          >
-            <Pressable
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Close reference"
-              style={({ pressed }) => [
-                styles.actionButton,
-                pressed && styles.actionButtonPressed,
-              ]}
-            >
-              <Text style={styles.actionButtonText}>Close</Text>
-            </Pressable>
-          </GlassView>
+          <TextButton
+            text="Reset"
+            onPress={onResetScores}
+            color="rgba(255, 90, 96, 0.95)"
+            style={styles.resetButton}
+            accessibilityLabel="Reset scores"
+          />
+          <TextButton
+            text="Close"
+            onPress={handleClose}
+            accessibilityLabel="Close reference"
+          />
         </GlassContainer>
       </View>
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={styles.grid}
-        showsVerticalScrollIndicator={false}
-      >
-        {[1, 2, 3, 4].map((level) => {
-          let levelLetters = letters.filter(
-            (l) => MORSE_DATA[l].level === level,
-          );
-          if (level === 4) {
-            levelLetters = [...levelLetters, ...numbers];
-          }
-          if (levelLetters.length === 0) return null;
-          return (
-            <View key={`level-${level}`} style={{ width: '100%' }}>
-              <Text
-                style={{
-                  color: 'hsl(154, 0%, 58%)',
-                  fontWeight: '600',
-                  marginVertical: 12,
-                  marginLeft: 2,
-                  letterSpacing: 1,
-                  fontSize: 13,
-                }}
-              >
-                Level {level}
-              </Text>
-              <GlassContainer
-                spacing={8}
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-              >
-                {levelLetters.map((char) => (
-                  <ReferenceCard key={char} char={char} />
-                ))}
-              </GlassContainer>
-            </View>
-          );
-        })}
-        <View style={styles.rowSpacer} />
-      </ScrollView>
-    </BlurView>
+      <Animated.View style={panelAnimStyle}>
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+        >
+          {[1, 2, 3, 4].map((level) => {
+            let levelLetters = letters.filter(
+              (l) => MORSE_DATA[l].level === level,
+            );
+            if (level === 4) {
+              levelLetters = [...levelLetters, ...numbers];
+            }
+            if (levelLetters.length === 0) return null;
+            return (
+              <View key={`level-${level}`} style={{ width: '100%' }}>
+                <Text
+                  style={{
+                    color: 'hsl(154, 0%, 58%)',
+                    fontWeight: '600',
+                    marginVertical: 12,
+                    marginLeft: 2,
+                    letterSpacing: 1,
+                    fontSize: 13,
+                  }}
+                >
+                  Level {level}
+                </Text>
+                <GlassContainer
+                  spacing={8}
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+                >
+                  {levelLetters.map((char) => (
+                    <ReferenceCard key={char} char={char} />
+                  ))}
+                </GlassContainer>
+              </View>
+            );
+          })}
+          <View style={styles.rowSpacer} />
+        </ScrollView>
+      </Animated.View>
+    </View>
   );
 }
 
