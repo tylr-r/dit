@@ -1396,17 +1396,17 @@ export default function App() {
             ) : (
               <>
                 {isFreestyle ? (
-                  <Pressable
+                  <DitButton
                     onPress={handleFreestyleClear}
                     accessibilityRole="button"
                     accessibilityLabel="Clear freestyle word"
-                    style={({ pressed }) => [
-                      styles.clearButton,
-                      pressed && styles.clearButtonPressed,
-                    ]}
-                  >
-                    <Text style={styles.clearButtonText}>Clear</Text>
-                  </Pressable>
+                    style={{ marginBottom: 12 }}
+                    textStyle={{ fontSize: 14 }}
+                    radius={24}
+                    paddingHorizontal={12}
+                    paddingVertical={8}
+                    text="Clear"
+                  />
                 ) : null}
                 <View style={styles.morseButtonWrap}>
                   {showMorseHint ? (

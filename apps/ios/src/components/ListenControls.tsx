@@ -1,6 +1,6 @@
 import type { Letter } from '@dit/core';
 import { GlassContainer } from 'expo-glass-effect';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { DitButton } from './DitButton';
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
@@ -26,19 +26,20 @@ export function ListenControls({
 
   return (
     <View style={styles.container}>
-      <Pressable
-        onPress={onReplay}
+      <DitButton
         accessibilityRole="button"
         accessibilityLabel="Play morse letter sound"
-        disabled={!isIdle}
-        style={({ pressed }) => [
-          styles.playButton,
-          !isIdle && styles.playButtonDisabled,
-          pressed && isIdle && styles.playButtonPressed,
-        ]}
-      >
-        <Text style={styles.playButtonText}>Play</Text>
-      </Pressable>
+        onPress={onReplay}
+        style={{
+          marginBottom: 12,
+        }}
+        textStyle={{ fontSize: 18 }}
+        radius={24}
+        paddingHorizontal={18}
+        paddingVertical={12}
+        text="Play"
+        glassEffectStyle="clear"
+      />
       <View style={styles.keyboard} accessibilityRole="keyboardkey">
         {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
           <GlassContainer
@@ -71,31 +72,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: 18,
-  },
-  playButton: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  playButtonPressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-  },
-  playButtonDisabled: {
-    opacity: 0.4,
-  },
-  playButtonText: {
-    fontSize: 14,
-    letterSpacing: 3,
-    textTransform: 'uppercase',
-    color: '#f4f7f9',
   },
   keyboard: {
     width: '100%',

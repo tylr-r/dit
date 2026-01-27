@@ -40,6 +40,8 @@ export type ButtonProps = {
   accessibilityRole?: AccessibilityRole;
   paddingHorizontal?: number;
   paddingVertical?: number;
+  /** Vertical and Horizontal padding, this overrides paddingHorizontal and paddingVertical */
+  padding?: number;
   radius?: number;
   glassEffectStyle?: GlassStyle;
 };
@@ -63,6 +65,7 @@ export function DitButton({
   accessibilityRole = 'button',
   paddingHorizontal = 8,
   paddingVertical = 8,
+  padding,
   radius,
   glassEffectStyle = 'regular',
 }: ButtonProps) {
@@ -84,8 +87,7 @@ export function DitButton({
         { borderRadius },
         sizeStyle,
         backgroundColor && { backgroundColor },
-        { paddingHorizontal },
-        { paddingVertical },
+        padding ? { padding } : { paddingHorizontal, paddingVertical },
       ]}
     >
       <Pressable onPress={onPress}>
