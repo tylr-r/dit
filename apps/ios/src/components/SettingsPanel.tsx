@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { TextButton } from './TextButton';
+import { Button } from './DitButton';
 
 type SettingsPanelProps = {
   isFreestyle: boolean;
@@ -130,7 +130,7 @@ export function SettingsPanel({
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
         <GlassContainer spacing={6} style={styles.actions}>
-          <TextButton
+          <Button
             text="Close"
             onPress={handleClose}
             accessibilityLabel="Close settings"
@@ -218,7 +218,7 @@ export function SettingsPanel({
       <View style={{ padding: 24, paddingTop: 0 }}>
         <View style={styles.divider} />
         <View style={styles.section}>
-          <TextButton
+          <Button
             text="Letter Reference"
             onPress={onShowReference}
             accessibilityLabel="Open reference"
@@ -243,7 +243,7 @@ export function SettingsPanel({
               </Pressable>
             </View>
           ) : (
-            <TextButton
+            <Button
               text="Sign in"
               onPress={onSignIn}
               accessibilityLabel="Sign in with Google"

@@ -33,6 +33,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { AboutPanel } from './src/components/AboutPanel';
+import { Button } from './src/components/DitButton';
 import { ListenControls } from './src/components/ListenControls';
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher';
 import { MorseButton } from './src/components/MorseButton';
@@ -43,6 +44,7 @@ import { database } from './src/firebase';
 import { useAuth } from './src/hooks/useAuth';
 import { useFirebaseSync } from './src/hooks/useFirebaseSync';
 import { signInWithGoogle, signOut } from './src/services/auth';
+const SETTINGS_BUTTON_RADIUS = 42;
 
 const LEVELS = [1, 2, 3, 4] as const;
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
@@ -197,15 +199,6 @@ const DitLogo = () => (
       fill="white"
     />
     <Circle cx="403" cy="403" r="62" fill="white" />
-  </Svg>
-);
-
-const SettingsIcon = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24">
-    <Path
-      d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.14 7.14 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.22-1.12.52-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.66 8.86a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.63-.07.94s.02.63.07.94L2.71 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.52 1.63-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56Zm-7.14 2.56a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
-      fill="rgba(244, 247, 249, 0.9)"
-    />
   </Svg>
 );
 
@@ -1295,17 +1288,14 @@ export default function App() {
                     <View style={styles.settingsHintArrow} />
                   </View>
                 ) : null}
-                <Pressable
+                <Button
                   onPress={handleSettingsToggle}
-                  accessibilityRole="button"
                   accessibilityLabel="Settings"
-                  style={({ pressed }) => [
-                    styles.settingsButton,
-                    pressed && styles.settingsButtonPressed,
-                  ]}
-                >
-                  <SettingsIcon />
-                </Pressable>
+                  icon="gearshape"
+                  radius={SETTINGS_BUTTON_RADIUS}
+                  paddingHorizontal={4}
+                  iconSize={24}
+                />
               </View>
             </View>
           </View>
@@ -1483,24 +1473,6 @@ const styles = StyleSheet.create({
   },
   logoButton: {
     borderRadius: 16,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  settingsButtonPressed: {
-    transform: [{ scale: 0.97 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
