@@ -87,10 +87,15 @@ export function DitButton({
         { borderRadius },
         sizeStyle,
         backgroundColor && { backgroundColor },
-        padding ? { padding } : { paddingHorizontal, paddingVertical },
       ]}
     >
-      <Pressable onPress={onPress}>
+      <Pressable
+        style={[
+          { borderRadius },
+          padding ? { padding } : { paddingHorizontal, paddingVertical },
+        ]}
+        onPress={onPress}
+      >
         {children ? (
           children
         ) : icon ? (
