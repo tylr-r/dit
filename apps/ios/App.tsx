@@ -29,9 +29,9 @@ import {
 } from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { AboutPanel } from './src/components/AboutPanel';
 import { DitButton } from './src/components/DitButton';
 import { ListenControls } from './src/components/ListenControls';
@@ -201,6 +201,83 @@ const DitLogo = () => (
     <Circle cx="403" cy="403" r="62" fill="white" />
   </Svg>
 );
+
+const BackgroundGlow = () => {
+  const { width, height } = useWindowDimensions();
+
+  if (width === 0 || height === 0) {
+    return null;
+  }
+
+  const glowStops = [
+    {
+      id: 'bgGlow1',
+      cx: width * 0.25,
+      cy: height * 0.85,
+      rx: 700,
+      ry: 500,
+      color: { r: 168, g: 192, b: 255, a: 0.08 },
+      fade: 0.6,
+    },
+    {
+      id: 'bgGlow2',
+      cx: width * 0.75,
+      cy: height * 0.15,
+      rx: 600,
+      ry: 450,
+      color: { r: 196, g: 181, b: 253, a: 0.06 },
+      fade: 0.65,
+    },
+    {
+      id: 'bgGlow3',
+      cx: width * 0.5,
+      cy: height * 0.5,
+      rx: 500,
+      ry: 400,
+      color: { r: 245, g: 199, b: 247, a: 0.04 },
+      fade: 0.7,
+    },
+  ];
+
+  return (
+    <View pointerEvents="none" style={styles.backgroundGlow}>
+      <Svg width={width} height={height}>
+        <Defs>
+          {glowStops.map((glow) => (
+            <RadialGradient
+              key={glow.id}
+              id={glow.id}
+              cx={glow.cx}
+              cy={glow.cy}
+              r={1}
+              gradientUnits="userSpaceOnUse"
+              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${glow.rx} ${glow.ry}) translate(${-glow.cx} ${-glow.cy})`}
+            >
+              <Stop
+                offset="0%"
+                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
+                stopOpacity={glow.color.a}
+              />
+              <Stop
+                offset={`${glow.fade * 100}%`}
+                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
+                stopOpacity={0}
+              />
+              <Stop
+                offset="100%"
+                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
+                stopOpacity={0}
+              />
+            </RadialGradient>
+          ))}
+        </Defs>
+        {glowStops.map((glow) => (
+          <Rect key={`${glow.id}-rect`} width={width} height={height} fill={`url(#${glow.id})`} />
+        ))}
+      </Svg>
+    </View>
+  );
+};
 
 /** Primary app entry for Dit iOS. */
 export default function App() {
@@ -1246,6 +1323,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
+        <BackgroundGlow />
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <View style={styles.topBar}>
             <View style={styles.topBarSide}>
@@ -1448,8 +1526,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#191925',
+    backgroundColor: '#0a0c12',
     overflow: 'hidden',
+  },
+  backgroundGlow: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   safeArea: {
     flex: 1,
