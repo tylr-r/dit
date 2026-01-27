@@ -91,9 +91,6 @@ export function SettingsPanel({
   const showPracticeControls = !isFreestyle && !isListen;
   const canShowWordsToggle = !isListen;
   const showHintControls = !isFreestyle && !isListen;
-  const nextListenWpm =
-    listenWpm >= listenWpmMax ? listenWpmMin : listenWpm + 1;
-
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0);
   const [exiting, setExiting] = React.useState(false);
@@ -202,17 +199,40 @@ export function SettingsPanel({
         ) : null}
         {isListen ? (
           <View style={styles.section}>
-            <Pressable
-              onPress={() => onListenWpmChange(nextListenWpm)}
-              accessibilityRole="button"
-              accessibilityLabel="Change listen speed"
-              style={styles.row}
-            >
-              <Text style={styles.rowLabel}>Listen speed</Text>
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>{listenWpm} WPM</Text>
+            <View style={styles.row}>
+              <View style={styles.stepperInfo}>
+                <Text style={styles.rowLabel}>Listen speed</Text>
+                <Text style={styles.stepperValue}>{listenWpm} WPM</Text>
               </View>
-            </Pressable>
+              <View style={styles.stepperGroup} accessible accessibilityLabel="Listen speed">
+                <Pressable
+                  onPress={() => onListenWpmChange(listenWpm - 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease listen speed"
+                  disabled={listenWpm <= listenWpmMin}
+                  style={({ pressed }) => [
+                    styles.stepperButton,
+                    pressed && styles.stepperButtonPressed,
+                    listenWpm <= listenWpmMin && styles.stepperButtonDisabled,
+                  ]}
+                >
+                  <Text style={styles.stepperButtonText}>-</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => onListenWpmChange(listenWpm + 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase listen speed"
+                  disabled={listenWpm >= listenWpmMax}
+                  style={({ pressed }) => [
+                    styles.stepperButton,
+                    pressed && styles.stepperButtonPressed,
+                    listenWpm >= listenWpmMax && styles.stepperButtonDisabled,
+                  ]}
+                >
+                  <Text style={styles.stepperButtonText}>+</Text>
+                </Pressable>
+              </View>
+            </View>
           </View>
         ) : null}
       </Animated.View>
@@ -357,6 +377,41 @@ const styles = StyleSheet.create({
   },
   rowLabelDisabled: {
     color: 'rgba(244, 247, 249, 0.4)',
+  },
+  stepperInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  stepperValue: {
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: 'rgba(244, 247, 249, 0.7)',
+  },
+  stepperGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    overflow: 'hidden',
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  stepperButtonDisabled: {
+    opacity: 0.5,
+  },
+  stepperButtonText: {
+    fontSize: 16,
+    color: 'rgba(244, 247, 249, 0.9)',
   },
   pill: {
     paddingVertical: 6,
