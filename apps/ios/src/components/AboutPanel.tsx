@@ -1,8 +1,9 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import { DitButton } from './DitButton';
 
 type AboutPanelProps = {
-  onClose: () => void
-}
+  onClose: () => void;
+};
 
 /** About panel with usage guidance. */
 export function AboutPanel({ onClose }: AboutPanelProps) {
@@ -41,14 +42,15 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
           Terms
         </Text>
       </View>
-      <Pressable
+      <DitButton
+        text="Close"
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Close about"
         style={styles.closeButton}
-      >
-        <Text style={styles.closeButtonText}>Close</Text>
-      </Pressable>
+        paddingHorizontal={12}
+        paddingVertical={12}
+      />
     </View>
   );
 }
@@ -90,18 +92,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  closeButtonText: {
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.85)',
   },
   footer: {
     flexDirection: 'row',

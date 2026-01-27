@@ -29,9 +29,22 @@ import {
 } from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 import { AboutPanel } from './src/components/AboutPanel';
 import { DitButton } from './src/components/DitButton';
 import { ListenControls } from './src/components/ListenControls';
@@ -251,7 +264,9 @@ const BackgroundGlow = () => {
               cy={glow.cy}
               r={1}
               gradientUnits="userSpaceOnUse"
-              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${glow.rx} ${glow.ry}) translate(${-glow.cx} ${-glow.cy})`}
+              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${
+                glow.rx
+              } ${glow.ry}) translate(${-glow.cx} ${-glow.cy})`}
             >
               <Stop
                 offset="0%"
@@ -272,7 +287,12 @@ const BackgroundGlow = () => {
           ))}
         </Defs>
         {glowStops.map((glow) => (
-          <Rect key={`${glow.id}-rect`} width={width} height={height} fill={`url(#${glow.id})`} />
+          <Rect
+            key={`${glow.id}-rect`}
+            width={width}
+            height={height}
+            fill={`url(#${glow.id})`}
+          />
         ))}
       </Svg>
     </View>
@@ -1352,17 +1372,6 @@ export default function App() {
                     <Text style={styles.hintText}>
                       Add hints, change speed, and save progress in settings.
                     </Text>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="Dismiss settings tip"
-                      onPress={dismissSettingsHint}
-                      style={({ pressed }) => [
-                        styles.hintButton,
-                        pressed && styles.hintButtonPressed,
-                      ]}
-                    >
-                      <Text style={styles.hintButtonText}>Got it</Text>
-                    </Pressable>
                     <View style={styles.settingsHintArrow} />
                   </View>
                 ) : null}
@@ -1493,17 +1502,6 @@ export default function App() {
                         Tap the big Morse key to make a dit (short press) or dah
                         (long press).
                       </Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Dismiss Morse tip"
-                        onPress={dismissMorseHint}
-                        style={({ pressed }) => [
-                          styles.hintButton,
-                          pressed && styles.hintButtonPressed,
-                        ]}
-                      >
-                        <Text style={styles.hintButtonText}>Got it</Text>
-                      </Pressable>
                       <View style={styles.morseHintArrow} />
                     </View>
                   ) : null}
@@ -1596,7 +1594,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(12, 18, 24, 0.95)',
+    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
     alignItems: 'center',
     gap: 8,
     zIndex: 4,
@@ -1607,7 +1605,7 @@ const styles = StyleSheet.create({
     right: 22,
     width: 12,
     height: 12,
-    backgroundColor: 'rgba(12, 18, 24, 0.95)',
+    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
     borderLeftWidth: 1,
     borderTopWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
@@ -1626,9 +1624,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(12, 18, 24, 0.9)',
+    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   morseHintArrow: {
     position: 'absolute',
@@ -1636,7 +1634,7 @@ const styles = StyleSheet.create({
     left: '50%',
     width: 12,
     height: 12,
-    backgroundColor: 'rgba(12, 18, 24, 0.9)',
+    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
@@ -1647,23 +1645,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: 'rgba(244, 247, 249, 0.9)',
-  },
-  hintButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  hintButtonPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-  },
-  hintButtonText: {
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.85)',
   },
   clearButton: {
     alignSelf: 'center',

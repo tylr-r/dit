@@ -204,7 +204,11 @@ export function SettingsPanel({
                 <Text style={styles.rowLabel}>Listen speed</Text>
                 <Text style={styles.stepperValue}>{listenWpm} WPM</Text>
               </View>
-              <View style={styles.stepperGroup} accessible accessibilityLabel="Listen speed">
+              <View
+                style={styles.stepperGroup}
+                accessible
+                accessibilityLabel="Listen speed"
+              >
                 <Pressable
                   onPress={() => onListenWpmChange(listenWpm - 1)}
                   accessibilityRole="button"
@@ -258,9 +262,12 @@ export function SettingsPanel({
               >
                 {user.email}
               </Text>
-              <Pressable onPress={onSignOut} style={styles.pill}>
-                <Text style={styles.pillText}>Sign Out</Text>
-              </Pressable>
+              <DitButton
+                text="Sign Out"
+                onPress={onSignOut}
+                accessibilityLabel="Sign out"
+                padding={0}
+              />
             </View>
           ) : (
             <DitButton
@@ -310,7 +317,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     experimental_backgroundImage:
-      'linear-gradient(0deg,transparent,rgba(0,0,0, 0.9),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
+      'linear-gradient(0deg,transparent,rgba(0, 0, 0, 0.26),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
   },
   actions: {
     flexDirection: 'row',
@@ -412,19 +419,5 @@ const styles = StyleSheet.create({
   stepperButtonText: {
     fontSize: 16,
     color: 'rgba(244, 247, 249, 0.9)',
-  },
-  pill: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  pillText: {
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.85)',
   },
 });
