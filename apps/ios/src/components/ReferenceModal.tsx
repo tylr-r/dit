@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Button } from './DitButton';
+import { DitButton } from './DitButton';
 
 type ReferenceModalProps = {
   letters: Letter[];
@@ -167,14 +167,14 @@ export function ReferenceModal({
       <View style={styles.header}>
         <Text style={styles.title}>Reference</Text>
         <GlassContainer spacing={6} style={styles.actions}>
-          <Button
+          <DitButton
             text="Reset"
             onPress={onResetScores}
             color="rgba(255, 90, 96, 0.95)"
             style={styles.resetButton}
             accessibilityLabel="Reset scores"
           />
-          <Button
+          <DitButton
             text="Close"
             onPress={handleClose}
             accessibilityLabel="Close reference"

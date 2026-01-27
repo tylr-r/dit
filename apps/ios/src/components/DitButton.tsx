@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { GlassView } from 'expo-glass-effect';
+import { GlassStyle, GlassView } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import React from 'react';
 import {
@@ -38,15 +38,16 @@ export type ButtonProps = {
   accessibilityLabel?: string;
   /** Optional: accessibility role */
   accessibilityRole?: AccessibilityRole;
-  paddingVertical?: number;
   paddingHorizontal?: number;
+  paddingVertical?: number;
   radius?: number;
+  glassEffectStyle?: GlassStyle;
 };
 
 /**
  * Standard button that can render text or arbitrary children (icons).
  */
-export function Button({
+export function DitButton({
   text,
   children,
   icon,
@@ -60,55 +61,44 @@ export function Button({
   textStyle,
   accessibilityLabel,
   accessibilityRole = 'button',
-  paddingVertical,
-  paddingHorizontal,
+  paddingHorizontal = 8,
+  paddingVertical = 8,
   radius,
+  glassEffectStyle = 'regular',
 }: ButtonProps) {
   const borderRadius = radius ?? 10;
   const label = accessibilityLabel || text;
   const finalIconSize =
     iconSize ?? (size ? Math.max(10, Math.round(size * 0.55)) : 18);
-  const textFontSize = size ? Math.max(10, Math.round(size * 0.28)) : undefined;
-  const sizeStyle = size
-    ? { width: size, height: size, paddingHorizontal: 0, paddingVertical: 0 }
-    : null;
+  const sizeStyle = size ? { width: size, height: size } : null;
   return (
     <GlassView
-      style={[styles.glass, style, { borderRadius }, sizeStyle]}
-      glassEffectStyle="regular"
+      glassEffectStyle={glassEffectStyle}
       tintColor="rgba(0,0,0,0.75)"
       isInteractive
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={label}
+      style={[
+        styles.button,
+        style,
+        { borderRadius },
+        sizeStyle,
+        backgroundColor && { backgroundColor },
+        { paddingHorizontal },
+        { paddingVertical },
+      ]}
     >
-      <Pressable
-        onPress={onPress}
-        accessibilityRole={accessibilityRole}
-        accessibilityLabel={label}
-        style={({ pressed }) => [
-          styles.button,
-          backgroundColor && { backgroundColor },
-          pressed && styles.buttonPressed,
-          size
-            ? { paddingVertical: 0, paddingHorizontal: 0 }
-            : {
-                paddingVertical: paddingVertical ?? 6,
-                paddingHorizontal: paddingHorizontal ?? 10,
-              },
-          { borderRadius },
-        ]}
-      >
+      <Pressable onPress={onPress}>
         {children ? (
           children
         ) : icon ? (
           <SymbolView
             name={icon as any}
-            size={finalIconSize}
+            size={1}
             tintColor={
               iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
             }
-            style={[
-              styles.icon,
-              { width: finalIconSize, height: finalIconSize },
-            ]}
+            style={[{ width: finalIconSize, height: finalIconSize }]}
             fallback={
               <MaterialIcons
                 name={icon as any}
@@ -120,14 +110,7 @@ export function Button({
             }
           />
         ) : (
-          <Text
-            style={[
-              styles.buttonText,
-              color && { color },
-              textStyle,
-              textFontSize ? { fontSize: textFontSize } : null,
-            ]}
-          >
+          <Text style={[styles.buttonText, color && { color }, textStyle]}>
             {text}
           </Text>
         )}
@@ -137,22 +120,10 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  glass: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   button: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   buttonText: {
     fontSize: 11,
@@ -160,8 +131,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.8)',
     textAlign: 'center',
-  },
-  icon: {
-    marginHorizontal: 2,
   },
 });

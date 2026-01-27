@@ -33,7 +33,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { AboutPanel } from './src/components/AboutPanel';
-import { Button } from './src/components/DitButton';
+import { DitButton } from './src/components/DitButton';
 import { ListenControls } from './src/components/ListenControls';
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher';
 import { MorseButton } from './src/components/MorseButton';
@@ -1288,12 +1288,12 @@ export default function App() {
                     <View style={styles.settingsHintArrow} />
                   </View>
                 ) : null}
-                <Button
+                <DitButton
                   onPress={handleSettingsToggle}
                   accessibilityLabel="Settings"
                   icon="gearshape"
                   radius={SETTINGS_BUTTON_RADIUS}
-                  paddingHorizontal={4}
+                  paddingHorizontal={8}
                   iconSize={24}
                 />
               </View>

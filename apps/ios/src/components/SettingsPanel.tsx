@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Button } from './DitButton';
+import { DitButton } from './DitButton';
 
 type SettingsPanelProps = {
   isFreestyle: boolean;
@@ -130,10 +130,11 @@ export function SettingsPanel({
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
         <GlassContainer spacing={6} style={styles.actions}>
-          <Button
+          <DitButton
             text="Close"
             onPress={handleClose}
             accessibilityLabel="Close settings"
+            textStyle={{ fontSize: 11 }}
           />
         </GlassContainer>
       </View>
@@ -218,12 +219,11 @@ export function SettingsPanel({
       <View style={{ padding: 24, paddingTop: 0 }}>
         <View style={styles.divider} />
         <View style={styles.section}>
-          <Button
+          <DitButton
             text="Letter Reference"
             onPress={onShowReference}
             accessibilityLabel="Open reference"
             textStyle={styles.panelButtonText}
-            paddingVertical={8}
           />
         </View>
         <View style={styles.section}>
@@ -243,7 +243,7 @@ export function SettingsPanel({
               </Pressable>
             </View>
           ) : (
-            <Button
+            <DitButton
               text="Sign in"
               onPress={onSignIn}
               accessibilityLabel="Sign in with Google"
@@ -251,7 +251,6 @@ export function SettingsPanel({
                 ...styles.panelButtonText,
                 color: '#4285F4',
               }}
-              paddingVertical={8}
             />
           )}
         </View>

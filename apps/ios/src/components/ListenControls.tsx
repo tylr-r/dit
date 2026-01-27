@@ -1,10 +1,7 @@
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { Letter } from '@dit/core';
-
-const MAX_KEYS_PER_ROW = 10;
-const KEYBOARD_GAP = 6;
-const KEYBOARD_HORIZONTAL_PADDING = 12;
-const MIN_KEY_SIZE = 24;
+import { GlassContainer } from 'expo-glass-effect';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DitButton } from './DitButton';
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -14,10 +11,10 @@ const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
 ];
 
 type ListenControlsProps = {
-  listenStatus: 'idle' | 'success' | 'error'
-  onReplay: () => void
-  onSubmitAnswer: (value: Letter) => void
-}
+  listenStatus: 'idle' | 'success' | 'error';
+  onReplay: () => void;
+  onSubmitAnswer: (value: Letter) => void;
+};
 
 /** Listen mode controls with replay and an on-screen keyboard. */
 export function ListenControls({
@@ -26,24 +23,13 @@ export function ListenControls({
   onSubmitAnswer,
 }: ListenControlsProps) {
   const isIdle = listenStatus === 'idle';
-  const { width } = useWindowDimensions();
-  const keySize = Math.max(
-    MIN_KEY_SIZE,
-    Math.floor(
-      (width -
-        KEYBOARD_HORIZONTAL_PADDING * 2 -
-        KEYBOARD_GAP * (MAX_KEYS_PER_ROW - 1)) /
-        MAX_KEYS_PER_ROW,
-    ),
-  );
-  const keyRadius = Math.round(keySize / 2);
 
   return (
     <View style={styles.container}>
       <Pressable
         onPress={onReplay}
-        accessibilityRole='button'
-        accessibilityLabel='Play morse letter sound'
+        accessibilityRole="button"
+        accessibilityLabel="Play morse letter sound"
         disabled={!isIdle}
         style={({ pressed }) => [
           styles.playButton,
@@ -53,27 +39,27 @@ export function ListenControls({
       >
         <Text style={styles.playButtonText}>Play</Text>
       </Pressable>
-      <View style={styles.keyboard} accessibilityRole='keyboardkey'>
+      <View style={styles.keyboard} accessibilityRole="keyboardkey">
         {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} style={styles.keyboardRow}>
+          <GlassContainer
+            spacing={6}
+            key={`row-${rowIndex}`}
+            style={styles.keyboardRow}
+          >
             {row.map((key) => (
-              <Pressable
+              <DitButton
                 key={key}
-                onPress={() => onSubmitAnswer(key)}
-                accessibilityRole='button'
+                text={key}
+                onPress={isIdle ? () => onSubmitAnswer(key) : () => {}}
                 accessibilityLabel={`Type ${key}`}
-                disabled={!isIdle}
-                style={({ pressed }) => [
-                  styles.key,
-                  { width: keySize, height: keySize, borderRadius: keyRadius },
-                  !isIdle && styles.keyDisabled,
-                  pressed && isIdle && styles.keyPressed,
-                ]}
-              >
-                <Text style={styles.keyText}>{key}</Text>
-              </Pressable>
+                size={36}
+                radius={8}
+                textStyle={styles.keyText}
+                paddingHorizontal={2}
+                paddingVertical={2}
+              />
             ))}
-          </View>
+          </GlassContainer>
         ))}
       </View>
     </View>
@@ -113,36 +99,19 @@ const styles = StyleSheet.create({
   },
   keyboard: {
     width: '100%',
-    gap: 12,
+    gap: 4,
     alignItems: 'center',
-    paddingHorizontal: KEYBOARD_HORIZONTAL_PADDING,
   },
   keyboardRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: KEYBOARD_GAP,
-  },
-  key: {
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  keyPressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'flex-start',
+    gap: 4,
   },
   keyDisabled: {
     opacity: 0.4,
   },
   keyText: {
-    fontSize: 14,
+    fontSize: 18,
     letterSpacing: 1.5,
     color: '#f4f7f9',
   },
