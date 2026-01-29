@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextStyle,
+  View,
   ViewStyle,
 } from 'react-native';
 
@@ -99,23 +100,25 @@ export function DitButton({
         {children ? (
           children
         ) : icon ? (
-          <SymbolView
-            name={icon as any}
-            size={1}
-            tintColor={
-              iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
-            }
-            style={[{ width: finalIconSize, height: finalIconSize }]}
-            fallback={
-              <MaterialIcons
-                name={icon as any}
-                size={finalIconSize}
-                color={
-                  iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
-                }
-              />
-            }
-          />
+          <View style={{ width: finalIconSize, height: finalIconSize }}>
+            <SymbolView
+              name={icon as any}
+              size={1}
+              tintColor={
+                iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
+              }
+              style={[{ width: finalIconSize, height: finalIconSize }]}
+              fallback={
+                <MaterialIcons
+                  name={icon as any}
+                  size={finalIconSize}
+                  color={
+                    iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
+                  }
+                />
+              }
+            />
+          </View>
         ) : (
           <Text style={[styles.buttonText, color && { color }, textStyle]}>
             {text}

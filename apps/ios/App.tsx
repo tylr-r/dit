@@ -57,7 +57,6 @@ import { database } from './src/firebase';
 import { useAuth } from './src/hooks/useAuth';
 import { useFirebaseSync } from './src/hooks/useFirebaseSync';
 import { signInWithGoogle, signOut } from './src/services/auth';
-const SETTINGS_BUTTON_RADIUS = 42;
 
 const LEVELS = [1, 2, 3, 4] as const;
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
@@ -120,7 +119,7 @@ const initialConfig = (() => {
 })();
 
 const DitLogo = () => (
-  <Svg width={60} height={60} viewBox="0 0 806 806" opacity={0.5}>
+  <Svg width={54} height={54} viewBox="0 0 806 806" opacity={0.5}>
     <Path
       d="M92.1113 255.555C74.9852 291.601 63.9443 331.099 60.3145 372.72L4.51855 367.913C8.72293 319.533 21.5381 273.619 41.4258 231.712L92.1113 255.555Z"
       fill="white"
@@ -1357,9 +1356,7 @@ export default function App() {
                 accessibilityLabel="About Dit"
                 style={styles.logoButton}
               >
-                <View style={styles.logo}>
-                  <DitLogo />
-                </View>
+                <DitLogo />
               </Pressable>
             </View>
             <View style={styles.topBarCenter}>
@@ -1378,9 +1375,11 @@ export default function App() {
                 <DitButton
                   onPress={handleSettingsToggle}
                   accessibilityLabel="Settings"
-                  icon="gearshape"
-                  radius={SETTINGS_BUTTON_RADIUS}
-                  paddingHorizontal={8}
+                  icon="switch.2"
+                  radius={36}
+                  // paddingHorizontal={12}
+                  // paddingVertical={10}
+                  padding={12}
                   iconSize={24}
                 />
               </View>
@@ -1552,7 +1551,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoButton: {
-    borderRadius: 16,
+    borderRadius: 36,
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1665,13 +1664,5 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.85)',
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 10 },
   },
 });
