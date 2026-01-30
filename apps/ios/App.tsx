@@ -585,15 +585,6 @@ export default function App() {
         Math.round(1200 / resolvedWpm),
         LISTEN_MIN_UNIT_MS,
       );
-      const pattern: number[] = [];
-      for (let index = 0; index < code.length; index += 1) {
-        const symbol = code[index];
-        pattern.push(symbol === '.' ? unitMs : unitMs * 3);
-        if (index < code.length - 1) {
-          pattern.push(unitMs);
-        }
-      }
-      void triggerHaptics(pattern);
 
       let currentMs = 0;
       for (const symbol of code) {
@@ -629,7 +620,6 @@ export default function App() {
       startTonePlayback,
       stopListenPlayback,
       stopTonePlayback,
-      triggerHaptics,
     ],
   );
 
@@ -940,7 +930,6 @@ export default function App() {
       if (!isFreestyle && isErrorLocked()) {
         return;
       }
-      void triggerHaptics(symbol === '.' ? 12 : 28);
       clearTimer(errorTimeoutRef);
       clearTimer(successTimeoutRef);
       clearTimer(letterTimeoutRef);
@@ -1269,6 +1258,8 @@ export default function App() {
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
   const showMorseHint = introHintStep === 'morse' && !isListen;
   const showSettingsHint = introHintStep === 'settings' && !isListen;
+  const isMorseDisabled =
+    !isFreestyle && !isListen && isErrorLocked();
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -1516,6 +1507,7 @@ export default function App() {
                     </View>
                   ) : null}
                   <MorseButton
+                    disabled={isMorseDisabled}
                     isPressing={isPressing}
                     onPressIn={handleIntroPressIn}
                     onPressOut={handlePressOut}
