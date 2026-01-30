@@ -54,9 +54,9 @@ We have an existing web app that is stable.
 
 ## Audio Playback: Listen Mode Strategy
 
-**Why is the audio player kept alive and looping in listen mode?**
+**Why is the tone generated natively instead of JS timers?**
 
-To ensure instant and accurate Morse code playback in listen mode, the app keeps the tone audio player alive, looping, and muted/unmuted between tones, rather than loading/unloading or pausing. This prevents any delay or cutoff at the start/end of playback, which can occur if the player is reloaded or started from a stopped state. The player is only unloaded when leaving listen mode or backgrounding the app. See inline comments in `App.tsx` for implementation details.
+To guarantee reliable Morse timing and avoid partial or clipped tones, listen playback now uses the native tone generator with a prebuilt PCM buffer scheduled on `AVAudioPlayerNode`. This removes JS thread timing jitter and ensures sample-accurate playback. Manual press tones use a native oscillator with a short amplitude ramp to avoid clicks. The engine is prewarmed on app start and when entering listen/reference modes for instant response.
 
 ---
 

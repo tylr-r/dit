@@ -1,6 +1,5 @@
 import {
   applyScoreDelta,
-  AUDIO_VOLUME,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   formatWpm,
@@ -21,12 +20,6 @@ import {
 } from '@dit/core';
 import { triggerHaptics } from '@dit/dit-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  createAudioPlayer,
-  setAudioModeAsync,
-  setIsAudioActiveAsync,
-  type AudioPlayer,
-} from 'expo-audio';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -58,6 +51,13 @@ import { database } from './src/firebase';
 import { useAuth } from './src/hooks/useAuth';
 import { useFirebaseSync } from './src/hooks/useFirebaseSync';
 import { signInWithGoogle, signOut } from './src/services/auth';
+import {
+  playMorseTone,
+  prepareToneEngine,
+  startTone,
+  stopMorseTone,
+  stopTone,
+} from './src/utils/tone';
 
 const LEVELS = [1, 2, 3, 4] as const;
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
@@ -69,9 +69,8 @@ const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
 const LISTEN_WPM_MIN = WPM_RANGE.min;
 const LISTEN_WPM_MAX = WPM_RANGE.max;
 const LISTEN_MIN_UNIT_MS = 40;
+const REFERENCE_WPM = 20;
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
-const TONE_VOLUME = AUDIO_VOLUME;
-const TONE_SOURCE = require('./assets/audio/tone-640-5s.wav');
 const INTRO_HINTS_KEY = 'dit-intro-hint-step';
 const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed';
 
@@ -102,13 +101,6 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 };
 
 const now = () => Date.now();
-
-const waitForPlayerLoad = async (player: AudioPlayer) => {
-  const start = Date.now();
-  while (!player.isLoaded && Date.now() - start < 1500) {
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-};
 
 const initialConfig = (() => {
   const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1]);
@@ -328,18 +320,6 @@ export default function App() {
   >('idle');
   const [listenReveal, setListenReveal] = useState<Letter | null>(null);
   const [scores, setScores] = useState(() => initializeScores());
-  // In listen mode, we keep the tonePlayer alive, looping, and muted/unmuted instead of loading/unloading or pausing between tones.
-  // This prevents any delay or cutoff at the start/end of Morse playback, ensuring instant and accurate sound for each symbol.
-  // See also: docs/NATIVE_IOS.md for more details.
-  const tonePlayer = useMemo(
-    () =>
-      createAudioPlayer(TONE_SOURCE, {
-        keepAudioSessionActive: true,
-        updateInterval: 250,
-        downloadFirst: true,
-      }),
-    [],
-  );
   useEffect(() => {
     let isActive = true;
     const loadIntroHints = async () => {
@@ -443,13 +423,6 @@ export default function App() {
   const successTimeoutRef = useRef<TimeoutHandle | null>(null);
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null);
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null);
-  const listenPlaybackRef = useRef<{
-    token: number;
-    timeouts: TimeoutHandle[];
-  }>({ token: 0, timeouts: [] });
-  const toneUnloadTimeoutRef = useRef<TimeoutHandle | null>(null);
-  const toneReadyRef = useRef(false);
-  const toneLoadingRef = useRef<Promise<AudioPlayer> | null>(null);
 
   useEffect(() => {
     inputRef.current = input;
@@ -495,132 +468,30 @@ export default function App() {
     listenStatusRef.current = listenStatus;
   }, [listenStatus]);
 
-  const unloadTonePlayer = useCallback(() => {
-    if (!toneReadyRef.current) {
-      return;
-    }
-    tonePlayer.pause();
-    tonePlayer.remove();
-    toneReadyRef.current = false;
-    toneLoadingRef.current = null;
-  }, [tonePlayer]);
-
-  const scheduleToneUnload = useCallback(() => {
-    clearTimer(toneUnloadTimeoutRef);
-    toneUnloadTimeoutRef.current = setTimeout(() => {
-      unloadTonePlayer();
-    }, 4000);
-  }, [unloadTonePlayer]);
-
-  const prepareTonePlayer = useCallback(async () => {
-    if (toneReadyRef.current) {
-      return tonePlayer;
-    }
-    if (toneLoadingRef.current) {
-      return toneLoadingRef.current;
-    }
-    toneLoadingRef.current = (async () => {
-      try {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          allowsRecording: false,
-          shouldPlayInBackground: false,
-          interruptionMode: 'doNotMix',
-        });
-        await setIsAudioActiveAsync(true);
-        await waitForPlayerLoad(tonePlayer);
-        tonePlayer.loop = true;
-        tonePlayer.volume = Math.min(1, Math.max(0.4, TONE_VOLUME));
-        tonePlayer.muted = true;
-        tonePlayer.play();
-        toneReadyRef.current = true;
-        return tonePlayer;
-      } finally {
-        toneLoadingRef.current = null;
-      }
-    })();
-    return toneLoadingRef.current;
-  }, [tonePlayer]);
-
   const stopTonePlayback = useCallback(() => {
-    if (!toneReadyRef.current) {
-      return;
-    }
-    tonePlayer.muted = true;
-    scheduleToneUnload();
-  }, [scheduleToneUnload, tonePlayer]);
+    void stopTone();
+  }, [stopTone]);
 
-  const startTonePlayback = useCallback(async () => {
-    clearTimer(toneUnloadTimeoutRef);
-    const player = await prepareTonePlayer();
-    if (!player) {
-      return;
-    }
-    player.muted = false;
-    if (!player.playing) {
-      player.play();
-    }
-  }, [prepareTonePlayer]);
-
-  const clearListenPlaybackTimeouts = useCallback(() => {
-    listenPlaybackRef.current.timeouts.forEach((timeout) => {
-      clearTimeout(timeout);
-    });
-    listenPlaybackRef.current.timeouts = [];
-  }, []);
+  const startTonePlayback = useCallback(() => {
+    void startTone();
+  }, [startTone]);
 
   const stopListenPlayback = useCallback(() => {
-    listenPlaybackRef.current.token += 1;
-    clearListenPlaybackTimeouts();
+    void stopMorseTone();
     stopTonePlayback();
-  }, [clearListenPlaybackTimeouts, stopTonePlayback]);
+  }, [stopMorseTone, stopTonePlayback]);
 
   const playListenSequence = useCallback(
     (code: string, overrideWpm?: number) => {
       stopListenPlayback();
-      const token = listenPlaybackRef.current.token + 1;
-      listenPlaybackRef.current.token = token;
       const resolvedWpm = overrideWpm ?? listenWpm;
-      const unitMs = Math.max(
-        Math.round(1200 / resolvedWpm),
-        LISTEN_MIN_UNIT_MS,
-      );
-
-      let currentMs = 0;
-      for (const symbol of code) {
-        const duration = symbol === '.' ? unitMs : unitMs * 3;
-        listenPlaybackRef.current.timeouts.push(
-          setTimeout(() => {
-            if (listenPlaybackRef.current.token !== token) {
-              return;
-            }
-            startTonePlayback();
-          }, currentMs),
-          setTimeout(() => {
-            if (listenPlaybackRef.current.token !== token) {
-              return;
-            }
-            stopTonePlayback();
-          }, currentMs + duration),
-        );
-        currentMs += duration + unitMs;
-      }
-      listenPlaybackRef.current.timeouts.push(
-        setTimeout(() => {
-          if (listenPlaybackRef.current.token !== token) {
-            return;
-          }
-          clearListenPlaybackTimeouts();
-        }, currentMs),
-      );
+      void playMorseTone({
+        code,
+        wpm: resolvedWpm,
+        minUnitMs: LISTEN_MIN_UNIT_MS,
+      });
     },
-    [
-      clearListenPlaybackTimeouts,
-      listenWpm,
-      startTonePlayback,
-      stopListenPlayback,
-      stopTonePlayback,
-    ],
+    [listenWpm, stopListenPlayback],
   );
 
   const playListenSequenceRef = useRef(playListenSequence);
@@ -642,22 +513,23 @@ export default function App() {
       clearTimer(errorTimeoutRef);
       clearTimer(listenTimeoutRef);
       clearTimer(wordSpaceTimeoutRef);
-      clearTimer(toneUnloadTimeoutRef);
       stopListenPlayback();
-      unloadTonePlayer();
     };
-  }, [stopListenPlayback, unloadTonePlayer]);
+  }, [stopListenPlayback]);
 
-  // Keep the tone player alive (looping, muted/unmuted) when listen mode or reference panel is open
+  useEffect(() => {
+    void prepareToneEngine();
+    return () => {
+      void stopMorseTone();
+      void stopTone();
+    };
+  }, [prepareToneEngine, stopMorseTone, stopTone]);
+
   useEffect(() => {
     if (isListen || isReferencePanelActive) {
-      // Prepare and start the tone player (muted, looping)
-      void prepareTonePlayer();
-      return;
+      void prepareToneEngine();
     }
-    // If neither is active, schedule unload
-    scheduleToneUnload();
-  }, [isListen, isReferencePanelActive, prepareTonePlayer, scheduleToneUnload]);
+  }, [isListen, isReferencePanelActive, prepareToneEngine]);
 
   useEffect(() => {
     if (mode === 'listen') {
@@ -1451,11 +1323,12 @@ export default function App() {
                     scores={scores}
                     onClose={() => setShowReference(false)}
                     onResetScores={handleResetScores}
-                    onPlaySound={async (char) => {
-                      const { playMorseTone } = await import(
-                        './src/utils/tone'
-                      );
-                      playMorseTone({ code: MORSE_DATA[char].code });
+                    onPlaySound={(char) => {
+                      void playMorseTone({
+                        code: MORSE_DATA[char].code,
+                        wpm: REFERENCE_WPM,
+                        minUnitMs: LISTEN_MIN_UNIT_MS,
+                      });
                     }}
                   />
                 </View>
