@@ -60,6 +60,8 @@ import {
 } from './src/utils/tone';
 
 const LEVELS = [1, 2, 3, 4] as const;
+const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3;
+const DEFAULT_LISTEN_WPM = 14;
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS;
 const ERROR_LOCKOUT_MS = 1000;
@@ -103,7 +105,7 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 const now = () => Date.now();
 
 const initialConfig = (() => {
-  const availableLetters = getLettersForLevel(LEVELS[LEVELS.length - 1]);
+  const availableLetters = getLettersForLevel(DEFAULT_MAX_LEVEL);
   const practiceWord = getRandomWord(getWordsForLetters(availableLetters));
   return {
     letter: getRandomLetter(availableLetters),
@@ -302,7 +304,7 @@ export default function App() {
   const [showHint, setShowHint] = useState(true);
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse');
-  const [maxLevel, setMaxLevel] = useState(LEVELS[LEVELS.length - 1]);
+  const [maxLevel, setMaxLevel] = useState(DEFAULT_MAX_LEVEL);
   const [practiceWordMode, setPracticeWordMode] = useState(false);
   const [letter, setLetter] = useState<Letter>(initialConfig.letter);
   const [input, setInput] = useState('');
@@ -314,7 +316,7 @@ export default function App() {
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
   const [freestyleWordMode, setFreestyleWordMode] = useState(false);
   const [freestyleWord, setFreestyleWord] = useState('');
-  const [listenWpm, setListenWpm] = useState(20);
+  const [listenWpm, setListenWpm] = useState(DEFAULT_LISTEN_WPM);
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle');
@@ -356,9 +358,11 @@ export default function App() {
       stack?: string;
       [key: string]: unknown;
     }
-    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error: AsyncStorageError) => {
-      console.error('Failed to save intro hints', error);
-    });
+    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch(
+      (error: AsyncStorageError) => {
+        console.error('Failed to save intro hints', error);
+      },
+    );
   }, []);
   const dismissMorseHint = useCallback(() => {
     if (introHintStep !== 'morse') {
@@ -415,7 +419,7 @@ export default function App() {
   const freestyleWordModeRef = useRef(freestyleWordMode);
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null);
   const scoresRef = useRef(scores);
-  const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel);
+  const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel as 1 | 2 | 3 | 4);
   const modeRef = useRef(mode);
   const listenStatusRef = useRef(listenStatus);
   const errorLockoutUntilRef = useRef(0);
@@ -1130,8 +1134,7 @@ export default function App() {
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
   const showMorseHint = introHintStep === 'morse' && !isListen;
   const showSettingsHint = introHintStep === 'settings' && !isListen;
-  const isMorseDisabled =
-    !isFreestyle && !isListen && isErrorLocked();
+  const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked();
   const baseStatusText =
     status === 'success'
       ? 'Correct'
