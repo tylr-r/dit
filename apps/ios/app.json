@@ -4,18 +4,21 @@
     "slug": "dit-ios",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.icon",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
+    "plugins": [
+      "expo-dev-client"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
-      "icon": "./assets/icon.icon",
+      "icon": "./assets/icon.png",
       "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
@@ -40,6 +43,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9c22bdcd-1194-41db-888b-a330ad757594"
+      }
     }
   }
 }
