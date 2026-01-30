@@ -44,6 +44,8 @@ export type ButtonProps = {
   /** Vertical and Horizontal padding, this overrides paddingHorizontal and paddingVertical */
   padding?: number;
   radius?: number;
+  /** Force a perfectly circular button (requires explicit square size) */
+  isCircle?: boolean;
   glassEffectStyle?: GlassStyle;
 };
 
@@ -68,13 +70,51 @@ export function DitButton({
   paddingVertical = 8,
   padding,
   radius,
+  isCircle = false,
   glassEffectStyle = 'regular',
 }: ButtonProps) {
-  const borderRadius = radius ?? 10;
   const label = accessibilityLabel || text;
   const finalIconSize =
     iconSize ?? (size ? Math.max(10, Math.round(size * 0.55)) : 18);
-  const sizeStyle = size ? { width: size, height: size } : null;
+  const flattenedStyle = StyleSheet.flatten(style);
+  const hasBaseWidth = size != null || flattenedStyle?.width != null;
+  const hasBaseHeight = size != null || flattenedStyle?.height != null;
+  const resolvedPaddingHorizontal = padding ?? paddingHorizontal;
+  const resolvedPaddingVertical = padding ?? paddingVertical;
+  const isIconOnly = Boolean(icon && !text && !children);
+  const iconOnlySize =
+    isIconOnly && !hasBaseWidth && !hasBaseHeight && size == null
+      ? Math.max(
+          finalIconSize + resolvedPaddingHorizontal * 2,
+          finalIconSize + resolvedPaddingVertical * 2
+        )
+      : null;
+  const sizeStyle =
+    size != null
+      ? { width: size, height: size }
+      : iconOnlySize != null
+        ? { width: iconOnlySize, height: iconOnlySize }
+        : null;
+  const resolvedWidth = flattenedStyle?.width ?? size ?? iconOnlySize;
+  const resolvedHeight = flattenedStyle?.height ?? size ?? iconOnlySize;
+  const hasExplicitWidth = resolvedWidth != null;
+  const hasExplicitHeight = resolvedHeight != null;
+  const circleDiameter =
+    isCircle &&
+    (typeof resolvedWidth === 'number' || typeof resolvedHeight === 'number')
+      ? Math.min(
+          typeof resolvedWidth === 'number' ? resolvedWidth : Infinity,
+          typeof resolvedHeight === 'number' ? resolvedHeight : Infinity
+        )
+      : null;
+  const borderRadius = circleDiameter != null ? circleDiameter / 2 : radius ?? 10;
+  const pressableFillStyle =
+    hasExplicitWidth || hasExplicitHeight
+      ? {
+          ...(hasExplicitWidth ? { width: resolvedWidth } : null),
+          ...(hasExplicitHeight ? { height: resolvedHeight } : null),
+        }
+      : null;
   return (
     <GlassView
       glassEffectStyle={glassEffectStyle}
@@ -91,8 +131,16 @@ export function DitButton({
     >
       <Pressable
         style={[
+          styles.pressable,
+          pressableFillStyle,
+          { backgroundColor: 'red' },
           { borderRadius },
-          padding ? { padding } : { paddingHorizontal, paddingVertical },
+          padding
+            ? { padding }
+            : {
+                paddingHorizontal: resolvedPaddingHorizontal,
+                paddingVertical: resolvedPaddingVertical,
+              },
         ]}
         onPress={onPress}
       >
@@ -133,6 +181,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    flexGrow: 1,
+    flexShrink: 1,
   },
   buttonText: {
     fontSize: 11,

@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: 18,
+    marginBottom: 8,
   },
   keyboard: {
     width: '100%',
@@ -88,7 +89,6 @@ const styles = StyleSheet.create({
   },
   keyText: {
     fontSize: 18,
-    letterSpacing: 1.5,
     color: '#f4f7f9',
   },
 });
