@@ -3,12 +3,12 @@ import { accessibilityLabel, frame } from '@expo/ui/swift-ui/modifiers';
 import { GlassView } from 'expo-glass-effect';
 import { StyleSheet, View } from 'react-native';
 
-export type Mode = 'practice' | 'freestyle' | 'listen'
+export type Mode = 'practice' | 'freestyle' | 'listen';
 
 type ModeSwitcherProps = {
-  value: Mode
-  onChange: (value: Mode) => void
-}
+  value: Mode;
+  onChange: (value: Mode) => void;
+};
 
 const MODE_LABELS: Record<Mode, string> = {
   practice: 'Practice',
@@ -26,8 +26,8 @@ export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
   return (
     <GlassView
       style={styles.glass}
-      glassEffectStyle='regular'
-      tintColor='rgba(0, 0, 0, 0.5)'
+      glassEffectStyle="regular"
+      tintColor="rgba(0, 0, 0, 0.1)"
       isInteractive
     >
       <View style={styles.pickerWrap}>
@@ -36,14 +36,18 @@ export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
             options={MODE_ORDER.map((mode) => MODE_LABELS[mode])}
             selectedIndex={selectedIndex}
             label={MODE_LABELS[value]}
-            modifiers={[accessibilityLabel('Mode'), frame({ minWidth: MENU_MIN_WIDTH })]}
+            color="#00a3cc"
+            modifiers={[
+              accessibilityLabel('Mode'),
+              frame({ minWidth: MENU_MIN_WIDTH }),
+            ]}
             onOptionSelected={({ nativeEvent }) => {
               const nextMode = MODE_ORDER[nativeEvent.index];
               if (nextMode) {
                 onChange(nextMode);
               }
             }}
-            variant='menu'
+            variant="menu"
           />
         </Host>
       </View>

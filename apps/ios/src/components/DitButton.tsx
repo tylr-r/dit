@@ -78,7 +78,6 @@ export function DitButton({
   return (
     <GlassView
       glassEffectStyle={glassEffectStyle}
-      tintColor="rgba(0,0,0,0.75)"
       isInteractive
       accessibilityRole={accessibilityRole}
       accessibilityLabel={label}

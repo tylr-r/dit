@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   },
   keyboard: {
     width: '100%',
-    gap: 4,
+    gap: 8,
     alignItems: 'center',
   },
   keyboardRow: {

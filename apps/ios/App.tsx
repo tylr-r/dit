@@ -50,6 +50,7 @@ import { DitButton } from './src/components/DitButton';
 import { ListenControls } from './src/components/ListenControls';
 import { ModeSwitcher, type Mode } from './src/components/ModeSwitcher';
 import { MorseButton } from './src/components/MorseButton';
+import { MorseLiquidSurface } from './src/components/MorseLiquidSurface';
 import { ReferenceModal } from './src/components/ReferenceModal';
 import { SettingsPanel } from './src/components/SettingsPanel';
 import { StageDisplay, type StagePip } from './src/components/StageDisplay';
@@ -369,7 +370,13 @@ export default function App() {
   }, []);
   const persistIntroHintStep = useCallback((next: IntroHintStep) => {
     setIntroHintStep(next);
-    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error) => {
+    interface AsyncStorageError {
+      message?: string;
+      name?: string;
+      stack?: string;
+      [key: string]: unknown;
+    }
+    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error: AsyncStorageError) => {
       console.error('Failed to save intro hints', error);
     });
   }, []);
@@ -1342,6 +1349,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
+        <MorseLiquidSurface
+          speedMultiplier={0.35}
+          style={styles.liquidBackground}
+        />
         <BackgroundGlow />
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <View style={styles.topBar}>
@@ -1514,8 +1525,8 @@ export default function App() {
             )}
           </View>
         </SafeAreaView>
-        <StatusBar style="light" />
       </View>
+      <StatusBar style="light" />
     </SafeAreaProvider>
   );
 }
@@ -1528,6 +1539,11 @@ const styles = StyleSheet.create({
   },
   backgroundGlow: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  liquidBackground: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.3,
     zIndex: 0,
   },
   safeArea: {
