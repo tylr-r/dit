@@ -144,8 +144,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 60,
     marginBottom: 12,
     textAlign: 'center',
-    width: '100%',
-    marginLeft: 16,
+    paddingLeft: 8,
+    paddingTop: 8,
+    width: 'auto',
   },
   letterPlaceholder: {
     opacity: 0.4,

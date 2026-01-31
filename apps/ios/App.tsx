@@ -113,35 +113,38 @@ const BackgroundGlow = () => {
     return null;
   }
 
-  const glowStops = [
-    {
-      id: 'bgGlow1',
-      cx: width * 0.25,
-      cy: height * 0.85,
-      rx: 700,
-      ry: 500,
-      color: { r: 168, g: 192, b: 255, a: 0.08 },
-      fade: 0.6,
-    },
-    {
-      id: 'bgGlow2',
-      cx: width * 0.75,
-      cy: height * 0.15,
-      rx: 600,
-      ry: 450,
-      color: { r: 196, g: 181, b: 253, a: 0.06 },
-      fade: 0.65,
-    },
-    {
-      id: 'bgGlow3',
-      cx: width * 0.5,
-      cy: height * 0.5,
-      rx: 500,
-      ry: 400,
-      color: { r: 245, g: 199, b: 247, a: 0.04 },
-      fade: 0.7,
-    },
-  ];
+  const glowStops = useMemo(
+    () => [
+      {
+        id: 'bgGlow1',
+        cx: width * 0.25,
+        cy: height * 0.85,
+        rx: 700,
+        ry: 500,
+        color: { r: 168, g: 192, b: 255, a: 0.08 },
+        fade: 0.6,
+      },
+      {
+        id: 'bgGlow2',
+        cx: width * 0.75,
+        cy: height * 0.15,
+        rx: 600,
+        ry: 450,
+        color: { r: 196, g: 181, b: 253, a: 0.06 },
+        fade: 0.65,
+      },
+      {
+        id: 'bgGlow3',
+        cx: width * 0.5,
+        cy: height * 0.5,
+        rx: 500,
+        ry: 400,
+        color: { r: 245, g: 199, b: 247, a: 0.04 },
+        fade: 0.7,
+      },
+    ],
+    [width, height],
+  );
 
   return (
     <View pointerEvents="none" style={styles.backgroundGlow}>
@@ -1296,25 +1299,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: 'rgba(244, 247, 249, 0.9)',
-  },
-  clearButton: {
-    alignSelf: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    alignItems: 'center',
-  },
-  clearButtonPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  clearButtonText: {
-    fontSize: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.85)',
   },
 });
