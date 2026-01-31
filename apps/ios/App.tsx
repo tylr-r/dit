@@ -356,47 +356,29 @@ export default function App() {
 
   useEffect(() => {
     inputRef.current = input;
-  }, [input]);
-
-  useEffect(() => {
     freestyleInputRef.current = freestyleInput;
-  }, [freestyleInput]);
-
-  useEffect(() => {
     letterRef.current = letter;
-  }, [letter]);
-
-  useEffect(() => {
     practiceWordRef.current = practiceWord;
-  }, [practiceWord]);
-
-  useEffect(() => {
     practiceWordIndexRef.current = practiceWordIndex;
-  }, [practiceWordIndex]);
-
-  useEffect(() => {
     practiceWordModeRef.current = practiceWordMode;
-  }, [practiceWordMode]);
-
-  useEffect(() => {
     freestyleWordModeRef.current = freestyleWordMode;
-  }, [freestyleWordMode]);
-
-  useEffect(() => {
     scoresRef.current = scores;
-  }, [scores]);
-
-  useEffect(() => {
     maxLevelRef.current = maxLevel;
-  }, [maxLevel]);
-
-  useEffect(() => {
     modeRef.current = mode;
-  }, [mode]);
-
-  useEffect(() => {
     listenStatusRef.current = listenStatus;
-  }, [listenStatus]);
+  }, [
+    freestyleInput,
+    freestyleWordMode,
+    input,
+    letter,
+    listenStatus,
+    maxLevel,
+    mode,
+    practiceWord,
+    practiceWordIndex,
+    practiceWordMode,
+    scores,
+  ]);
 
   const stopTonePlayback = useCallback(() => {
     void stopTone();
@@ -494,6 +476,12 @@ export default function App() {
     setShowSettings(false);
     setShowAbout(false);
     setShowReference(true);
+  }, []);
+
+  const handleAboutToggle = useCallback(() => {
+    setShowSettings(false);
+    setShowReference(false);
+    setShowAbout((prev) => !prev);
   }, []);
 
   const handleSettingsToggle = useCallback(() => {
@@ -977,7 +965,7 @@ export default function App() {
   });
 
   const target = MORSE_DATA[letter].code;
-  const targetSymbols = target.split('');
+  const targetSymbols = useMemo(() => target.split(''), [target]);
   const hintVisible = !isFreestyle && !isListen && showHint;
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
   const showMorseHint = introHintStep === 'morse' && !isListen;
@@ -1014,10 +1002,14 @@ export default function App() {
       : isInputOnTrack
       ? input.length
       : 0;
-  const pips: StagePip[] = targetSymbols.map((symbol, index) => ({
-    type: symbol === '.' ? 'dot' : 'dah',
-    state: index < highlightCount ? 'hit' : 'expected',
-  }));
+  const pips = useMemo<StagePip[]>(
+    () =>
+      targetSymbols.map((symbol, index) => ({
+        type: symbol === '.' ? 'dot' : 'dah',
+        state: index < highlightCount ? 'hit' : 'expected',
+      })),
+    [highlightCount, targetSymbols],
+  );
   const isLetterResult = freestyleResult
     ? /^[A-Z0-9]$/.test(freestyleResult)
     : false;
@@ -1072,11 +1064,7 @@ export default function App() {
           <TopBar
             mode={mode}
             onModeChange={handleModeChange}
-            onPressAbout={() => {
-              setShowSettings(false);
-              setShowReference(false);
-              setShowAbout((prev) => !prev);
-            }}
+            onPressAbout={handleAboutToggle}
             onSettingsPress={handleSettingsToggle}
             showSettingsHint={showSettingsHint}
           />
