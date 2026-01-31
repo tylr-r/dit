@@ -22,12 +22,7 @@ import { triggerHaptics } from '@dit/dit-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { AboutModal } from './src/components/AboutModal';
@@ -328,6 +323,37 @@ export default function App() {
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null);
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null);
 
+  const setPracticeWordFromList = useCallback(
+    (words: string[], avoidWord?: string) => {
+      const nextWord = getRandomWord(words, avoidWord);
+      practiceWordRef.current = nextWord;
+      practiceWordIndexRef.current = 0;
+      practiceWordStartRef.current = null;
+      const nextLetter = nextWord[0] as Letter;
+      letterRef.current = nextLetter;
+      setPracticeWord(nextWord);
+      setPracticeWordIndex(0);
+      setLetter(nextLetter);
+    },
+    [],
+  );
+
+  const setNextLetterForLevel = useCallback(
+    (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
+      const nextLetter = nextLetters.includes(currentLetter)
+        ? currentLetter
+        : getRandomWeightedLetter(
+            nextLetters,
+            scoresRef.current,
+            currentLetter,
+          );
+      letterRef.current = nextLetter;
+      setLetter(nextLetter);
+      return nextLetter;
+    },
+    [],
+  );
+
   useEffect(() => {
     inputRef.current = input;
   }, [input]);
@@ -445,20 +471,9 @@ export default function App() {
       setLetter(nextLetter);
     }
     if (practiceWordModeRef.current) {
-      const nextWord = getRandomWord(
-        availablePracticeWords,
-        practiceWordRef.current,
-      );
-      practiceWordRef.current = nextWord;
-      practiceWordIndexRef.current = 0;
-      practiceWordStartRef.current = null;
-      setPracticeWord(nextWord);
-      setPracticeWordIndex(0);
-      const nextLetter = nextWord[0] as Letter;
-      letterRef.current = nextLetter;
-      setLetter(nextLetter);
+      setPracticeWordFromList(availablePracticeWords, practiceWordRef.current);
     }
-  }, [availableLetters, availablePracticeWords, mode]);
+  }, [availableLetters, availablePracticeWords, mode, setPracticeWordFromList]);
 
   const canScoreAttempt = useCallback(() => !showHint, [showHint]);
 
@@ -604,15 +619,7 @@ export default function App() {
           if (practiceWordModeRef.current) {
             const currentWord = practiceWordRef.current;
             if (!currentWord) {
-              const nextWord = getRandomWord(availablePracticeWords);
-              const nextLetter = nextWord[0] as Letter;
-              practiceWordStartRef.current = null;
-              practiceWordRef.current = nextWord;
-              practiceWordIndexRef.current = 0;
-              letterRef.current = nextLetter;
-              setPracticeWord(nextWord);
-              setPracticeWordIndex(0);
-              setLetter(nextLetter);
+              setPracticeWordFromList(availablePracticeWords);
               setStatus('idle');
               return;
             }
@@ -628,18 +635,7 @@ export default function App() {
                   setPracticeWpm(Math.round(nextWpm * 10) / 10);
                 }
               }
-              const nextWord = getRandomWord(
-                availablePracticeWords,
-                currentWord,
-              );
-              const nextLetter = nextWord[0] as Letter;
-              practiceWordStartRef.current = null;
-              practiceWordRef.current = nextWord;
-              practiceWordIndexRef.current = 0;
-              letterRef.current = nextLetter;
-              setPracticeWord(nextWord);
-              setPracticeWordIndex(0);
-              setLetter(nextLetter);
+              setPracticeWordFromList(availablePracticeWords, currentWord);
               setStatus('idle');
               return;
             }
@@ -680,6 +676,7 @@ export default function App() {
       availablePracticeWords,
       bumpScore,
       canScoreAttempt,
+      setPracticeWordFromList,
       startErrorLockout,
       submitFreestyleInput,
     ],
@@ -785,44 +782,26 @@ export default function App() {
       const nextLetters = getLettersForLevel(value);
       if (isListen) {
         resetListenState();
-        const currentLetter = letterRef.current;
-        const nextLetter = nextLetters.includes(currentLetter)
-          ? currentLetter
-          : getRandomWeightedLetter(
-              nextLetters,
-              scoresRef.current,
-              currentLetter,
-            );
-        letterRef.current = nextLetter;
-        setLetter(nextLetter);
+        const nextLetter = setNextLetterForLevel(nextLetters);
         playListenSequence(MORSE_DATA[nextLetter].code);
         return;
       }
       if (practiceWordModeRef.current) {
-        const nextWord = getRandomWord(
+        setPracticeWordFromList(
           getWordsForLetters(nextLetters),
           practiceWordRef.current,
         );
-        practiceWordRef.current = nextWord;
-        practiceWordIndexRef.current = 0;
-        const nextLetter = nextWord[0] as Letter;
-        letterRef.current = nextLetter;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextLetter);
         return;
       }
-      const nextLetter = nextLetters.includes(letterRef.current)
-        ? letterRef.current
-        : getRandomWeightedLetter(
-            nextLetters,
-            scoresRef.current,
-            letterRef.current,
-          );
-      letterRef.current = nextLetter;
-      setLetter(nextLetter);
+      setNextLetterForLevel(nextLetters);
     },
-    [isListen, playListenSequence, resetListenState],
+    [
+      isListen,
+      playListenSequence,
+      resetListenState,
+      setNextLetterForLevel,
+      setPracticeWordFromList,
+    ],
   );
 
   const handlePracticeWordModeChange = useCallback(
@@ -837,25 +816,17 @@ export default function App() {
       setInput('');
       setStatus('idle');
       if (value) {
-        const nextWord = getRandomWord(availablePracticeWords);
-        const nextLetter = nextWord[0] as Letter;
-        practiceWordRef.current = nextWord;
-        practiceWordIndexRef.current = 0;
-        letterRef.current = nextLetter;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextLetter);
+        setPracticeWordFromList(availablePracticeWords);
       } else {
-        const nextLetter = getRandomWeightedLetter(
-          availableLetters,
-          scoresRef.current,
-          letterRef.current,
-        );
-        letterRef.current = nextLetter;
-        setLetter(nextLetter);
+        setNextLetterForLevel(availableLetters);
       }
     },
-    [availableLetters, availablePracticeWords],
+    [
+      availableLetters,
+      availablePracticeWords,
+      setNextLetterForLevel,
+      setPracticeWordFromList,
+    ],
   );
 
   const handleListenWpmChange = useCallback(
@@ -894,131 +865,108 @@ export default function App() {
         return;
       }
       if (nextMode === 'listen') {
-        const nextLetter = availableLetters.includes(letterRef.current)
-          ? letterRef.current
-          : getRandomWeightedLetter(
-              availableLetters,
-              scoresRef.current,
-              letterRef.current,
-            );
-        letterRef.current = nextLetter;
-        setLetter(nextLetter);
+        const nextLetter = setNextLetterForLevel(availableLetters);
         playListenSequence(MORSE_DATA[nextLetter].code);
         return;
       }
       if (practiceWordModeRef.current) {
-        const nextWord = getRandomWord(
+        setPracticeWordFromList(
           availablePracticeWords,
           practiceWordRef.current,
         );
-        practiceWordStartRef.current = null;
-        practiceWordRef.current = nextWord;
-        practiceWordIndexRef.current = 0;
-        const nextLetter = nextWord[0] as Letter;
-        letterRef.current = nextLetter;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextLetter);
         return;
       }
-      const nextLetter = availableLetters.includes(letterRef.current)
-        ? letterRef.current
-        : getRandomWeightedLetter(
-            availableLetters,
-            scoresRef.current,
-            letterRef.current,
-          );
-      letterRef.current = nextLetter;
-      setLetter(nextLetter);
+      setNextLetterForLevel(availableLetters);
     },
     [
       availableLetters,
       availablePracticeWords,
       playListenSequence,
       resetListenState,
+      setNextLetterForLevel,
+      setPracticeWordFromList,
       stopListenPlayback,
     ],
   );
 
-  const applyRemoteProgress = useCallback((raw: unknown) => {
-    const progress = parseProgress(raw, {
-      listenWpmMin: LISTEN_WPM_MIN,
-      listenWpmMax: LISTEN_WPM_MAX,
-      levelMin: LEVELS[0],
-      levelMax: LEVELS[LEVELS.length - 1],
-    });
-    if (!progress) {
-      return;
-    }
-    const nextScores = progress.scores ?? scoresRef.current;
-    const resolvedMaxLevel =
-      typeof progress.maxLevel === 'number'
-        ? progress.maxLevel
-        : maxLevelRef.current;
+  const applyRemoteProgress = useCallback(
+    (raw: unknown) => {
+      const progress = parseProgress(raw, {
+        listenWpmMin: LISTEN_WPM_MIN,
+        listenWpmMax: LISTEN_WPM_MAX,
+        levelMin: LEVELS[0],
+        levelMax: LEVELS[LEVELS.length - 1],
+      });
+      if (!progress) {
+        return;
+      }
+      const resolvedMaxLevel =
+        typeof progress.maxLevel === 'number'
+          ? progress.maxLevel
+          : maxLevelRef.current;
 
-    if (progress.scores) {
-      scoresRef.current = progress.scores;
-      setScores(progress.scores);
-    }
-    if (typeof progress.showHint === 'boolean') {
-      setShowHint(progress.showHint);
-    }
-    if (typeof progress.showMnemonic === 'boolean') {
-      setShowMnemonic(progress.showMnemonic);
-    }
-    if (typeof progress.wordMode === 'boolean') {
-      if (freestyleWordModeRef.current !== progress.wordMode) {
-        freestyleWordModeRef.current = progress.wordMode;
-        clearTimer(wordSpaceTimeoutRef);
-        setFreestyleWordMode(progress.wordMode);
-        setFreestyleResult(null);
-        setFreestyleInput('');
-        setFreestyleWord('');
+      if (progress.scores) {
+        scoresRef.current = progress.scores;
+        setScores(progress.scores);
       }
-    }
-    if (typeof progress.listenWpm === 'number') {
-      setListenWpm(progress.listenWpm);
-      if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
-        playListenSequenceRef.current(
-          MORSE_DATA[letterRef.current].code,
-          progress.listenWpm,
+      if (typeof progress.showHint === 'boolean') {
+        setShowHint(progress.showHint);
+      }
+      if (typeof progress.showMnemonic === 'boolean') {
+        setShowMnemonic(progress.showMnemonic);
+      }
+      if (typeof progress.wordMode === 'boolean') {
+        if (freestyleWordModeRef.current !== progress.wordMode) {
+          freestyleWordModeRef.current = progress.wordMode;
+          clearTimer(wordSpaceTimeoutRef);
+          setFreestyleWordMode(progress.wordMode);
+          setFreestyleResult(null);
+          setFreestyleInput('');
+          setFreestyleWord('');
+        }
+      }
+      if (typeof progress.listenWpm === 'number') {
+        setListenWpm(progress.listenWpm);
+        if (
+          modeRef.current === 'listen' &&
+          listenStatusRef.current === 'idle'
+        ) {
+          playListenSequenceRef.current(
+            MORSE_DATA[letterRef.current].code,
+            progress.listenWpm,
+          );
+        }
+      }
+      if (typeof progress.maxLevel === 'number') {
+        maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number];
+        const nextLetters = getLettersForLevel(progress.maxLevel);
+        const nextLetter = setNextLetterForLevel(
+          nextLetters,
+          letterRef.current,
         );
+        setMaxLevel(progress.maxLevel as (typeof LEVELS)[number]);
+        if (
+          modeRef.current === 'listen' &&
+          listenStatusRef.current === 'idle'
+        ) {
+          playListenSequenceRef.current(MORSE_DATA[nextLetter].code);
+        }
       }
-    }
-    if (typeof progress.maxLevel === 'number') {
-      maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number];
-      const nextLetters = getLettersForLevel(progress.maxLevel);
-      const currentLetter = letterRef.current;
-      const nextLetter = nextLetters.includes(currentLetter)
-        ? currentLetter
-        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter);
-      letterRef.current = nextLetter;
-      setMaxLevel(progress.maxLevel as (typeof LEVELS)[number]);
-      setLetter(nextLetter);
-      if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
-        playListenSequenceRef.current(MORSE_DATA[nextLetter].code);
+      if (typeof progress.practiceWordMode === 'boolean') {
+        practiceWordModeRef.current = progress.practiceWordMode;
+        practiceWordStartRef.current = null;
+        setPracticeWordMode(progress.practiceWordMode);
+        if (!progress.practiceWordMode) {
+          setPracticeWpm(null);
+        }
+        if (progress.practiceWordMode) {
+          const nextLetters = getLettersForLevel(resolvedMaxLevel);
+          setPracticeWordFromList(getWordsForLetters(nextLetters));
+        }
       }
-    }
-    if (typeof progress.practiceWordMode === 'boolean') {
-      practiceWordModeRef.current = progress.practiceWordMode;
-      practiceWordStartRef.current = null;
-      setPracticeWordMode(progress.practiceWordMode);
-      if (!progress.practiceWordMode) {
-        setPracticeWpm(null);
-      }
-      if (progress.practiceWordMode) {
-        const nextLetters = getLettersForLevel(resolvedMaxLevel);
-        const nextWord = getRandomWord(getWordsForLetters(nextLetters));
-        practiceWordRef.current = nextWord;
-        practiceWordIndexRef.current = 0;
-        const nextLetter = nextWord[0] as Letter;
-        letterRef.current = nextLetter;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextLetter);
-      }
-    }
-  }, []);
+    },
+    [setNextLetterForLevel, setPracticeWordFromList],
+  );
 
   useFirebaseSync({
     database,
