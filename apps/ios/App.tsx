@@ -12,10 +12,10 @@ import {
   INTER_LETTER_UNITS,
   INTER_WORD_UNITS,
   MORSE_DATA,
-  parseProgress,
   UNIT_TIME_MS,
   WPM_RANGE,
   type Letter,
+  type Progress,
   type ProgressSnapshot,
 } from '@dit/core';
 import { triggerHaptics } from '@dit/dit-native';
@@ -38,6 +38,7 @@ import { TopBar } from './src/components/TopBar';
 import { database } from './src/firebase';
 import { useAuth } from './src/hooks/useAuth';
 import { useFirebaseSync } from './src/hooks/useFirebaseSync';
+import { useProgressPersistence } from './src/hooks/useProgressPersistence';
 import { signInWithGoogle, signOut } from './src/services/auth';
 import {
   playMorseTone,
@@ -869,17 +870,8 @@ export default function App() {
     ],
   );
 
-  const applyRemoteProgress = useCallback(
-    (raw: unknown) => {
-      const progress = parseProgress(raw, {
-        listenWpmMin: LISTEN_WPM_MIN,
-        listenWpmMax: LISTEN_WPM_MAX,
-        levelMin: LEVELS[0],
-        levelMax: LEVELS[LEVELS.length - 1],
-      });
-      if (!progress) {
-        return;
-      }
+  const applyParsedProgress = useCallback(
+    (progress: Progress) => {
       const resolvedMaxLevel =
         typeof progress.maxLevel === 'number'
           ? progress.maxLevel
@@ -947,14 +939,46 @@ export default function App() {
     },
     [setNextLetterForLevel, setPracticeWordFromList],
   );
+  const {
+    progressUpdatedAt,
+    onRemoteProgress,
+    pendingRemoteSyncTick,
+    consumePendingRemoteSync,
+  } = useProgressPersistence({
+    progressSnapshot,
+    progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
+    applyProgress: applyParsedProgress,
+    listenWpmMin: LISTEN_WPM_MIN,
+    listenWpmMax: LISTEN_WPM_MAX,
+    levelMin: LEVELS[0],
+    levelMax: LEVELS[LEVELS.length - 1],
+  });
 
-  useFirebaseSync({
+  const { remoteLoaded, saveNow } = useFirebaseSync({
     database,
     user,
-    onRemoteProgress: applyRemoteProgress,
+    onRemoteProgress,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
     progressSnapshot,
+    progressUpdatedAt,
   });
+
+  useEffect(() => {
+    if (!remoteLoaded || !user) {
+      return;
+    }
+    const payload = consumePendingRemoteSync();
+    if (!payload) {
+      return;
+    }
+    saveNow(payload, payload.updatedAt);
+  }, [
+    consumePendingRemoteSync,
+    pendingRemoteSyncTick,
+    remoteLoaded,
+    saveNow,
+    user,
+  ]);
 
   const target = MORSE_DATA[letter].code;
   const targetSymbols = useMemo(() => target.split(''), [target]);

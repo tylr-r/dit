@@ -22,6 +22,9 @@ export const createFirebaseProgressService = (
   adapter: FirebaseProgressAdapter,
 ) => ({
   load: (userId: string) => adapter.read(progressPathForUser(userId)),
-  save: (userId: string, snapshot: ProgressSnapshot) =>
-    adapter.write(progressPathForUser(userId), createProgressPayload(snapshot)),
+  save: (userId: string, snapshot: ProgressSnapshot, updatedAt?: number) =>
+    adapter.write(
+      progressPathForUser(userId),
+      createProgressPayload(snapshot, updatedAt),
+    ),
 })

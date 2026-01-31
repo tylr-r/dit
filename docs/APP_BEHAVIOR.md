@@ -59,8 +59,8 @@ This document captures the intended, shared behavior across web and iOS.
 
 ## Sync
 
-- Progress (scores, settings, listen speed, modes) syncs to Firebase when signed in.
-- Local state remains usable when signed out.
+- Progress (scores, settings, listen speed, modes) syncs to Firebase when signed in, and queues locally while offline.
+- Local state remains usable when signed out and is persisted on-device.
 
 ## Reference
 
