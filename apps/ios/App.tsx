@@ -678,14 +678,6 @@ export default function App() {
     setFreestyleWord('');
   }, []);
 
-  const handleFreestyleWordModeChange = useCallback(
-    (value: boolean) => {
-      setFreestyleWordMode(value);
-      handleFreestyleClear();
-    },
-    [handleFreestyleClear],
-  );
-
   const registerSymbol = useCallback(
     (symbol: '.' | '-') => {
       if (!isFreestyle && isErrorLocked()) {
@@ -1078,7 +1070,6 @@ export default function App() {
               levels={LEVELS}
               maxLevel={maxLevel}
               practiceWordMode={practiceWordMode}
-              freestyleWordMode={freestyleWordMode}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
@@ -1087,7 +1078,6 @@ export default function App() {
               onClose={() => setShowSettings(false)}
               onMaxLevelChange={handleMaxLevelChange}
               onPracticeWordModeChange={handlePracticeWordModeChange}
-              onFreestyleWordModeChange={handleFreestyleWordModeChange}
               onListenWpmChange={handleListenWpmChange}
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}

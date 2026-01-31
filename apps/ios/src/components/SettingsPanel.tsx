@@ -19,7 +19,6 @@ type SettingsPanelProps = {
   levels: readonly number[];
   maxLevel: number;
   practiceWordMode: boolean;
-  freestyleWordMode: boolean;
   listenWpm: number;
   listenWpmMin: number;
   listenWpmMax: number;
@@ -29,7 +28,6 @@ type SettingsPanelProps = {
   onClose: () => void;
   onMaxLevelChange: (value: number) => void;
   onPracticeWordModeChange: (value: boolean) => void;
-  onFreestyleWordModeChange: (value: boolean) => void;
   onListenWpmChange: (value: number) => void;
   onShowHintChange: (value: boolean) => void;
   onShowMnemonicChange: (value: boolean) => void;
@@ -70,7 +68,6 @@ export function SettingsPanel({
   levels,
   maxLevel = 3,
   practiceWordMode,
-  freestyleWordMode,
   listenWpm,
   listenWpmMin,
   listenWpmMax,
@@ -80,7 +77,6 @@ export function SettingsPanel({
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
-  onFreestyleWordModeChange,
   onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
@@ -154,15 +150,6 @@ export function SettingsPanel({
               onValueChange={onShowMnemonicChange}
             />
           </>
-        ) : null}
-        {isFreestyle && !isListen ? (
-          <View style={styles.section}>
-            <ToggleRow
-              label="Word mode"
-              value={freestyleWordMode}
-              onValueChange={onFreestyleWordModeChange}
-            />
-          </View>
         ) : null}
         {canShowWordsToggle ? (
           <ToggleRow
