@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { DitButton } from './DitButton';
-import { ModalShell } from './ModalShell';
+import { StyleSheet, Text, View } from 'react-native'
+import { DitButton } from './DitButton'
+import { ModalShell } from './ModalShell'
 
 type NuxModalProps = {
   step: 'welcome' | 'exercise' | 'result';
@@ -24,9 +24,9 @@ export function NuxModal({
   onFinish,
   onChoosePreset,
 }: NuxModalProps) {
-  const isWelcome = step === 'welcome';
-  const isResult = step === 'result';
-  const progressItems = Array.from({ length: total });
+  const isWelcome = step === 'welcome'
+  const isResult = step === 'result'
+  const progressItems = Array.from({ length: total })
 
   if (isWelcome) {
     return (
@@ -59,15 +59,15 @@ export function NuxModal({
           </View>
         </View>
       </ModalShell>
-    );
+    )
   }
 
   if (isResult) {
-    const resultTitle = result === 'fast' ? 'All set' : 'All set';
+    const resultTitle = result === 'fast' ? 'All set' : 'All set'
     const resultBody =
       result === 'fast'
         ? 'We set a faster start with hints off and a higher starting level.'
-        : 'We set a gentler start with hints on and level 1.';
+        : 'We set a gentler start with hints on and level 1.'
     return (
       <ModalShell onClose={onFinish} cardPressable allowBackdropDismiss={false}>
         <View style={styles.panel}>
@@ -104,7 +104,7 @@ export function NuxModal({
           </View>
         </View>
       </ModalShell>
-    );
+    )
   }
 
   return (
@@ -121,8 +121,8 @@ export function NuxModal({
           </Text>
           <View style={styles.progressRow}>
             {progressItems.map((_, itemIndex) => {
-              const isDone = itemIndex < index;
-              const isActive = itemIndex === index;
+              const isDone = itemIndex < index
+              const isActive = itemIndex === index
               return (
                 <View
                   key={`nux-dot-${itemIndex}`}
@@ -132,14 +132,14 @@ export function NuxModal({
                     isActive && styles.progressDotActive,
                   ]}
                 />
-              );
+              )
             })}
           </View>
           <Text style={styles.caption}>Use the big Morse key below.</Text>
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -230,4 +230,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(244, 247, 249, 0.6)',
   },
-});
+})

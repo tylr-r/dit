@@ -11,6 +11,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "*.ts", "*.tsx", "*.js"],
+  "include": ["src", "tests", "*.ts", "*.tsx", "*.js"],
   "exclude": ["node_modules", "dist", "build"]
 }

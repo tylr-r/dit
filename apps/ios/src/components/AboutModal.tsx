@@ -1,6 +1,6 @@
-import type { ComponentProps } from 'react';
-import { AboutPanel } from './AboutPanel';
-import { ModalShell } from './ModalShell';
+import type { ComponentProps } from 'react'
+import { AboutPanel } from './AboutPanel'
+import { ModalShell } from './ModalShell'
 
 type AboutModalProps = ComponentProps<typeof AboutPanel>;
 
@@ -10,5 +10,5 @@ export function AboutModal({ onClose }: AboutModalProps) {
     <ModalShell onClose={onClose} cardPressable>
       <AboutPanel onClose={onClose} />
     </ModalShell>
-  );
+  )
 }

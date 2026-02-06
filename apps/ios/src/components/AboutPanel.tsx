@@ -1,5 +1,5 @@
-import { Linking, StyleSheet, Text, View } from 'react-native';
-import { DitButton } from './DitButton';
+import { Linking, StyleSheet, Text, View } from 'react-native'
+import { DitButton } from './DitButton'
 
 type AboutPanelProps = {
   onClose: () => void;
@@ -7,7 +7,7 @@ type AboutPanelProps = {
 
 /** About panel with usage guidance. */
 export function AboutPanel({ onClose }: AboutPanelProps) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear()
 
   return (
     <View style={styles.panel}>
@@ -52,7 +52,7 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
         paddingVertical={12}
       />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -115,4 +115,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-});
+})

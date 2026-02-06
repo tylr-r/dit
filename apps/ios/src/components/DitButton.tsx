@@ -1,7 +1,7 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { GlassStyle, GlassView } from 'expo-glass-effect';
-import { SymbolView } from 'expo-symbols';
-import React from 'react';
+import { MaterialIcons } from '@expo/vector-icons'
+import { GlassStyle, GlassView } from 'expo-glass-effect'
+import { SymbolView } from 'expo-symbols'
+import React from 'react'
 import {
   AccessibilityRole,
   Pressable,
@@ -10,7 +10,7 @@ import {
   TextStyle,
   View,
   ViewStyle,
-} from 'react-native';
+} from 'react-native'
 
 export type ButtonProps = {
   /** Optional button label text */
@@ -73,15 +73,15 @@ export function DitButton({
   isCircle = false,
   glassEffectStyle = 'regular',
 }: ButtonProps) {
-  const label = accessibilityLabel || text;
+  const label = accessibilityLabel || text
   const finalIconSize =
-    iconSize ?? (size ? Math.max(10, Math.round(size * 0.55)) : 18);
-  const flattenedStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
-  const hasExplicitWidth = size != null || flattenedStyle?.width != null;
-  const hasExplicitHeight = size != null || flattenedStyle?.height != null;
-  const resolvedPaddingHorizontal = padding ?? paddingHorizontal;
-  const resolvedPaddingVertical = padding ?? paddingVertical;
-  const isIconOnly = Boolean(icon && !text && !children);
+    iconSize ?? (size ? Math.max(10, Math.round(size * 0.55)) : 18)
+  const flattenedStyle = StyleSheet.flatten(style) as ViewStyle | undefined
+  const hasExplicitWidth = size != null || flattenedStyle?.width != null
+  const hasExplicitHeight = size != null || flattenedStyle?.height != null
+  const resolvedPaddingHorizontal = padding ?? paddingHorizontal
+  const resolvedPaddingVertical = padding ?? paddingVertical
+  const isIconOnly = Boolean(icon && !text && !children)
   const iconOnlySize = getIconOnlySize({
     isIconOnly,
     hasExplicitWidth,
@@ -89,31 +89,31 @@ export function DitButton({
     iconSize: finalIconSize,
     paddingHorizontal: resolvedPaddingHorizontal,
     paddingVertical: resolvedPaddingVertical,
-  });
-  const sizeStyle = getSizeStyle(size, iconOnlySize);
-  const resolvedWidth = flattenedStyle?.width ?? size ?? iconOnlySize;
-  const resolvedHeight = flattenedStyle?.height ?? size ?? iconOnlySize;
+  })
+  const sizeStyle = getSizeStyle(size, iconOnlySize)
+  const resolvedWidth = flattenedStyle?.width ?? size ?? iconOnlySize
+  const resolvedHeight = flattenedStyle?.height ?? size ?? iconOnlySize
   const circleDiameter = getCircleDiameter(
     isCircle,
     resolvedWidth,
     resolvedHeight,
-  );
+  )
   const borderRadius =
-    circleDiameter != null ? circleDiameter / 2 : radius ?? 10;
+    circleDiameter != null ? circleDiameter / 2 : radius ?? 10
   const pressableFillStyle = getPressableFillStyle(
     resolvedWidth,
     resolvedHeight,
-  );
+  )
   const paddingStyle = getPaddingStyle(
     padding,
     resolvedPaddingHorizontal,
     resolvedPaddingVertical,
-  );
+  )
   const iconTintColor =
-    iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)';
-  let content: React.ReactNode;
+    iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
+  let content: React.ReactNode
   if (children) {
-    content = children;
+    content = children
   } else if (icon) {
     content = (
       <View style={{ width: finalIconSize, height: finalIconSize }}>
@@ -131,13 +131,13 @@ export function DitButton({
           }
         />
       </View>
-    );
+    )
   } else {
     content = (
       <Text style={[styles.buttonText, color && { color }, textStyle]}>
         {text}
       </Text>
-    );
+    )
   }
   return (
     <GlassView
@@ -165,7 +165,7 @@ export function DitButton({
         {content}
       </Pressable>
     </GlassView>
-  );
+  )
 }
 
 type SizeValue = ViewStyle['width'];
@@ -188,26 +188,26 @@ const getIconOnlySize = ({
   paddingVertical,
 }: IconOnlySizeOptions) => {
   if (!isIconOnly || hasExplicitWidth || hasExplicitHeight) {
-    return null;
+    return null
   }
 
   return Math.max(
     iconSize + paddingHorizontal * 2,
     iconSize + paddingVertical * 2,
-  );
-};
+  )
+}
 
 const getSizeStyle = (size?: number, iconOnlySize?: number | null) => {
   if (size != null) {
-    return { width: size, height: size };
+    return { width: size, height: size }
   }
 
   if (iconOnlySize != null) {
-    return { width: iconOnlySize, height: iconOnlySize };
+    return { width: iconOnlySize, height: iconOnlySize }
   }
 
-  return null;
-};
+  return null
+}
 
 const getCircleDiameter = (
   isCircle: boolean,
@@ -215,29 +215,29 @@ const getCircleDiameter = (
   height?: SizeValue,
 ) => {
   if (!isCircle) {
-    return null;
+    return null
   }
 
-  const numericWidth = typeof width === 'number' ? width : null;
-  const numericHeight = typeof height === 'number' ? height : null;
+  const numericWidth = typeof width === 'number' ? width : null
+  const numericHeight = typeof height === 'number' ? height : null
 
   if (numericWidth == null && numericHeight == null) {
-    return null;
+    return null
   }
 
-  return Math.min(numericWidth ?? Infinity, numericHeight ?? Infinity);
-};
+  return Math.min(numericWidth ?? Infinity, numericHeight ?? Infinity)
+}
 
 const getPressableFillStyle = (width?: SizeValue, height?: SizeValue) => {
   if (width == null && height == null) {
-    return null;
+    return null
   }
 
   return {
     ...(width != null ? { width } : null),
     ...(height != null ? { height } : null),
-  };
-};
+  }
+}
 
 const getPaddingStyle = (
   padding: number | undefined,
@@ -249,7 +249,7 @@ const getPaddingStyle = (
     : {
         paddingHorizontal,
         paddingVertical,
-      };
+      }
 
 const styles = StyleSheet.create({
   button: {
@@ -268,4 +268,4 @@ const styles = StyleSheet.create({
     color: 'rgba(244, 247, 249, 0.8)',
     textAlign: 'center',
   },
-});
+})

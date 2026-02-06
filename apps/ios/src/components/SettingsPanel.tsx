@@ -1,17 +1,17 @@
-import { Host, Picker } from '@expo/ui/swift-ui';
-import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers';
-import type { User } from '@firebase/auth';
-import { BlurView } from 'expo-blur';
-import { GlassContainer } from 'expo-glass-effect';
-import React from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Host, Picker } from '@expo/ui/swift-ui'
+import { accessibilityLabel } from '@expo/ui/swift-ui/modifiers'
+import type { User } from '@firebase/auth'
+import { BlurView } from 'expo-blur'
+import { GlassContainer } from 'expo-glass-effect'
+import React from 'react'
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
-import { DitButton } from './DitButton';
+} from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
+import { DitButton } from './DitButton'
 
 type SettingsPanelProps = {
   isFreestyle: boolean;
@@ -59,7 +59,7 @@ const ToggleRow = ({
       thumbColor={value ? '#0c1116' : '#f4f7f9'}
     />
   </View>
-);
+)
 
 /** Settings panel content for practice controls. */
 export function SettingsPanel({
@@ -84,26 +84,26 @@ export function SettingsPanel({
   onSignIn,
   onSignOut,
 }: SettingsPanelProps) {
-  const showPracticeControls = !isFreestyle && !isListen;
-  const canShowWordsToggle = !isListen;
-  const showHintControls = !isFreestyle && !isListen;
+  const showPracticeControls = !isFreestyle && !isListen
+  const canShowWordsToggle = !isListen
+  const showHintControls = !isFreestyle && !isListen
   // Panel entrance/exit animation state
-  const panelVisible = useSharedValue(0);
-  const [exiting, setExiting] = React.useState(false);
+  const panelVisible = useSharedValue(0)
+  const [exiting, setExiting] = React.useState(false)
 
   // Animate panel in on mount
   React.useEffect(() => {
-    panelVisible.value = withTiming(1, { duration: 180 });
-  }, [panelVisible]);
+    panelVisible.value = withTiming(1, { duration: 180 })
+  }, [panelVisible])
 
   // Animate panel out on close
   const handleClose = React.useCallback(() => {
-    if (exiting) return;
-    setExiting(true);
+    if (exiting) return
+    setExiting(true)
     panelVisible.value = withTiming(0, { duration: 160 }, (finished) => {
-      if (finished) scheduleOnRN(onClose);
-    });
-  }, [exiting, onClose, panelVisible]);
+      if (finished) scheduleOnRN(onClose)
+    })
+  }, [exiting, onClose, panelVisible])
 
   const panelAnimStyle = useAnimatedStyle(() => ({
     opacity: panelVisible.value,
@@ -111,7 +111,7 @@ export function SettingsPanel({
       { scale: 0.98 + 0.02 * panelVisible.value },
       { translateY: 16 * (1 - panelVisible.value) },
     ],
-  }));
+  }))
 
   return (
     <View style={styles.panel}>
@@ -174,8 +174,8 @@ export function SettingsPanel({
                   selectedIndex={levels.indexOf(maxLevel)}
                   label={`Level ${maxLevel}`}
                   onOptionSelected={({ nativeEvent }) => {
-                    const newLevel = levels[nativeEvent.index];
-                    if (newLevel !== undefined) onMaxLevelChange(newLevel);
+                    const newLevel = levels[nativeEvent.index]
+                    if (newLevel !== undefined) onMaxLevelChange(newLevel)
                   }}
                   variant="menu"
                   modifiers={[accessibilityLabel('Max level')]}
@@ -270,7 +270,7 @@ export function SettingsPanel({
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -407,4 +407,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(244, 247, 249, 0.9)',
   },
-});
+})

@@ -1,5 +1,5 @@
-import React from 'react';
-import Svg, { Circle, Path } from 'react-native-svg';
+import React from 'react'
+import Svg, { Circle, Path } from 'react-native-svg'
 
 /**
  * DitLogo – Main logo SVG for Dit iOS app.
@@ -99,6 +99,6 @@ const DitLogo = () => (
     />
     <Circle cx="403" cy="403" r="62" fill="white" />
   </Svg>
-);
+)
 
-export default DitLogo;
+export default DitLogo

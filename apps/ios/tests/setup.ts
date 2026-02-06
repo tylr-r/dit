@@ -1,9 +1,9 @@
-import { afterEach, vi } from 'vitest';
+import { afterEach, vi } from 'vitest'
 
 // Cleanup after each test
 afterEach(() => {
-  vi.clearAllMocks();
-});
+  vi.clearAllMocks()
+})
 
 // Mock AsyncStorage
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -13,4 +13,4 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     removeItem: vi.fn(),
     clear: vi.fn(),
   },
-}));
+}))

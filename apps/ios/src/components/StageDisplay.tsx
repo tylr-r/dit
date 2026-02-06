@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native'
 
 export type StagePip = {
   type: 'dot' | 'dah';
@@ -19,15 +19,15 @@ type StageDisplayProps = {
 };
 
 const getFreestyleLetterStyle = (value: string) => {
-  const length = Math.max(1, value.length);
-  const fontSize = Math.max(48, 140 - (length - 1) * 18);
-  const letterSpacing = Math.max(2, 10 - (length - 1) * 2);
+  const length = Math.max(1, value.length)
+  const fontSize = Math.max(48, 140 - (length - 1) * 18)
+  const letterSpacing = Math.max(2, 10 - (length - 1) * 2)
   return {
     fontSize,
     lineHeight: fontSize,
     letterSpacing,
-  };
-};
+  }
+}
 
 /** Main output area for practice, freestyle, and listen states. */
 export function StageDisplay({
@@ -42,8 +42,8 @@ export function StageDisplay({
   practiceWordIndex = 0,
   isFreestyle = false,
 }: StageDisplayProps) {
-  const displayLetter = letter || '?';
-  const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter);
+  const displayLetter = letter || '?'
+  const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter)
 
   if (isFreestyle) {
     return (
@@ -62,10 +62,10 @@ export function StageDisplay({
         <View style={[styles.progress, styles.progressHidden]} />
         <Text style={styles.statusText}>{statusText}</Text>
       </View>
-    );
+    )
   }
 
-  const wordCharacters = practiceWord ? practiceWord.split('') : ['?'];
+  const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
 
   return (
     <View style={styles.stage}>
@@ -77,8 +77,8 @@ export function StageDisplay({
           }
         >
           {wordCharacters.map((char, index) => {
-            const isDone = index < practiceWordIndex;
-            const isActive = index === practiceWordIndex;
+            const isDone = index < practiceWordIndex
+            const isActive = index === practiceWordIndex
             return (
               <Text
                 key={`${char}-${index}`}
@@ -90,7 +90,7 @@ export function StageDisplay({
               >
                 {char}
               </Text>
-            );
+            )
           })}
         </View>
       ) : (
@@ -122,7 +122,7 @@ export function StageDisplay({
         <Text style={styles.wpmText}>{practiceWpmText}</Text>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -223,4 +223,4 @@ const styles = StyleSheet.create({
     color: 'rgba(141, 152, 165, 0.9)',
     textTransform: 'uppercase',
   },
-});
+})

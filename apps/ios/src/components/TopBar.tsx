@@ -1,8 +1,8 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { DitButton } from './DitButton';
-import DitLogo from './DitLogo';
-import { ModeSwitcher, type Mode } from './ModeSwitcher';
+import React from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { DitButton } from './DitButton'
+import DitLogo from './DitLogo'
+import { ModeSwitcher, type Mode } from './ModeSwitcher'
 
 type TopBarProps = {
   mode: Mode;
@@ -56,7 +56,7 @@ export function TopBar({
         </View>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -116,4 +116,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: 'rgba(244, 247, 249, 0.9)',
   },
-});
+})

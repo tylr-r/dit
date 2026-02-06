@@ -1,6 +1,6 @@
-import { GlassView } from 'expo-glass-effect';
-import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { GlassView } from 'expo-glass-effect'
+import React from 'react'
+import { Pressable, StyleSheet } from 'react-native'
 
 type MorseButtonProps = {
   disabled?: boolean;
@@ -27,7 +27,7 @@ export function MorseButton({
       style={styles.morsePressable}
     >
       {({ pressed }) => {
-        const isActive = !disabled && (pressed || isPressing);
+        const isActive = !disabled && (pressed || isPressing)
         return (
           <GlassView
             glassEffectStyle="clear"
@@ -38,10 +38,10 @@ export function MorseButton({
               { borderRadius: 48 },
             ]}
           ></GlassView>
-        );
+        )
       }}
     </Pressable>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -63,4 +63,4 @@ const styles = StyleSheet.create({
   morseWrapDisabled: {
     opacity: 0.6,
   },
-});
+})

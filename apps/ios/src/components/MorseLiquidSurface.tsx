@@ -1,18 +1,18 @@
-import { Canvas, RoundedRect, Shader, Skia } from '@shopify/react-native-skia';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, RoundedRect, Shader, Skia } from '@shopify/react-native-skia'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   StyleProp,
   StyleSheet,
   View,
   type ViewStyle,
-} from 'react-native';
+} from 'react-native'
 import {
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
   withTiming,
-} from 'react-native-reanimated';
+} from 'react-native-reanimated'
 
 type LayoutSize = {
   width: number;
@@ -84,104 +84,104 @@ const SWIRL_SHADER_SOURCE = `
 
     return half4(col, 1.0);
   }
-`;
+`
 
-const SWIRL_RUNTIME_EFFECT = Skia.RuntimeEffect.Make(SWIRL_SHADER_SOURCE);
+const SWIRL_RUNTIME_EFFECT = Skia.RuntimeEffect.Make(SWIRL_SHADER_SOURCE)
 
 const useLayoutSize = () => {
-  const [layout, setLayout] = useState<LayoutSize>({ width: 0, height: 0 });
+  const [layout, setLayout] = useState<LayoutSize>({ width: 0, height: 0 })
 
   const onLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
+    const { width, height } = event.nativeEvent.layout
     if (__DEV__) {
-      console.info('[MorseLiquidSurface] layout', { width, height });
+      console.info('[MorseLiquidSurface] layout', { width, height })
     }
     if (width !== layout.width || height !== layout.height) {
-      setLayout({ width, height });
+      setLayout({ width, height })
     }
-  };
+  }
 
-  return { layout, onLayout };
-};
+  return { layout, onLayout }
+}
 
 /** Liquid shader layer for Morse UI surfaces or full-screen backgrounds. */
 export function MorseLiquidSurface({
   speedMultiplier = 1,
   style,
 }: MorseLiquidSurfaceProps) {
-  const { layout, onLayout } = useLayoutSize();
-  const hasLoggedRenderReady = useRef(false);
-  const hasLoggedWaiting = useRef(false);
+  const { layout, onLayout } = useLayoutSize()
+  const hasLoggedRenderReady = useRef(false)
+  const hasLoggedWaiting = useRef(false)
 
   useEffect(() => {
     if (!__DEV__) {
-      return;
+      return
     }
     if (hasLoggedWaiting.current) {
-      return;
+      return
     }
     if (layout.width === 0 || layout.height === 0) {
-      console.info('[MorseLiquidSurface] waiting for layout');
-      hasLoggedWaiting.current = true;
+      console.info('[MorseLiquidSurface] waiting for layout')
+      hasLoggedWaiting.current = true
     }
-  }, [layout.height, layout.width]);
-  const radius = 0;
+  }, [layout.height, layout.width])
+  const radius = 0
   const surfaceRect = useMemo(() => {
     if (layout.width === 0 || layout.height === 0) {
-      return null;
+      return null
     }
-    return Skia.XYWHRect(0, 0, layout.width, layout.height);
-  }, [layout.width, layout.height]);
+    return Skia.XYWHRect(0, 0, layout.width, layout.height)
+  }, [layout.width, layout.height])
 
   const surfaceRRect = surfaceRect
     ? Skia.RRectXY(surfaceRect, radius, radius)
-    : null;
-  const time = useSharedValue(0);
+    : null
+  const time = useSharedValue(0)
 
-  const speed = useSharedValue(speedMultiplier);
+  const speed = useSharedValue(speedMultiplier)
   useEffect(() => {
-    speed.value = withTiming(speedMultiplier, { duration: 100 });
-  }, [speedMultiplier, speed]);
+    speed.value = withTiming(speedMultiplier, { duration: 100 })
+  }, [speedMultiplier, speed])
 
-  const speedValue = useDerivedValue(() => speed.value, [speed]);
+  const speedValue = useDerivedValue(() => speed.value, [speed])
 
   useFrameCallback((frameInfo) => {
     if (frameInfo.timeSincePreviousFrame === null) {
-      return;
+      return
     }
     time.value =
       (time.value +
         (frameInfo.timeSincePreviousFrame / 1000) * speedValue.value) %
-      10;
-  });
+      10
+  })
 
   const uniforms = useDerivedValue(() => {
-    const width = Math.max(layout.width, 1);
-    const height = Math.max(layout.height, 1);
+    const width = Math.max(layout.width, 1)
+    const height = Math.max(layout.height, 1)
     return {
       iTime: time.value,
       iResolution: [width, height],
-    };
-  }, [layout.width, layout.height]);
+    }
+  }, [layout.width, layout.height])
 
   useEffect(() => {
     if (!__DEV__) {
-      return;
+      return
     }
     if (layout.width === 0 || layout.height === 0) {
-      return;
+      return
     }
     if (hasLoggedRenderReady.current) {
-      return;
+      return
     }
-    hasLoggedRenderReady.current = true;
+    hasLoggedRenderReady.current = true
     console.info('[MorseLiquidSurface] render-ready', {
       width: layout.width,
       height: layout.height,
       radius,
       runtimeEffect: Boolean(SWIRL_RUNTIME_EFFECT),
-    });
-  }, [layout.height, layout.width, radius]);
+    })
+  }, [layout.height, layout.width, radius])
 
   if (!surfaceRect || !surfaceRRect || !SWIRL_RUNTIME_EFFECT) {
     return (
@@ -190,7 +190,7 @@ export function MorseLiquidSurface({
         onLayout={onLayout}
         pointerEvents="none"
       />
-    );
+    )
   }
 
   return (
@@ -208,7 +208,7 @@ export function MorseLiquidSurface({
         </RoundedRect>
       </Canvas>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -216,4 +216,4 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-});
+})

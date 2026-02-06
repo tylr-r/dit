@@ -37,7 +37,7 @@ export default [
       '@typescript-eslint': tseslint,
     },
     rules: {
-      semi: ['error', 'always'],
+      semi: ['error', 'never'],
       // Use the TypeScript version of no-unused-vars
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': ['error'],

@@ -1,6 +1,6 @@
-import type { ComponentProps } from 'react';
-import { ModalShell } from './ModalShell';
-import { ReferenceModal } from './ReferenceModal';
+import type { ComponentProps } from 'react'
+import { ModalShell } from './ModalShell'
+import { ReferenceModal } from './ReferenceModal'
 
 type ReferenceModalSheetProps = ComponentProps<typeof ReferenceModal>;
 
@@ -10,5 +10,5 @@ export function ReferenceModalSheet(props: ReferenceModalSheetProps) {
     <ModalShell onClose={props.onClose}>
       <ReferenceModal {...props} />
     </ModalShell>
-  );
+  )
 }

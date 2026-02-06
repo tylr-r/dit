@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react'
+import React from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 
-const noop = () => {};
+const noop = () => {}
 
 type ModalShellProps = {
   children: ReactNode;
@@ -35,7 +35,7 @@ export function ModalShell({
         )}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -58,4 +58,4 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     alignItems: 'center',
   },
-});
+})

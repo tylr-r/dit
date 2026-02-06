@@ -1,17 +1,17 @@
-import type { Letter, ScoreRecord } from '@dit/core';
-import { MORSE_DATA } from '@dit/core';
-import { BlurView } from 'expo-blur';
-import { GlassContainer } from 'expo-glass-effect';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Letter, ScoreRecord } from '@dit/core'
+import { MORSE_DATA } from '@dit/core'
+import { BlurView } from 'expo-blur'
+import { GlassContainer } from 'expo-glass-effect'
+import React from 'react'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
-import { DitButton } from './DitButton';
+} from 'react-native-reanimated'
+import { scheduleOnRN } from 'react-native-worklets'
+import { DitButton } from './DitButton'
 
 type ReferenceModalProps = {
   letters: Letter[];
@@ -24,23 +24,23 @@ type ReferenceModalProps = {
   paddingVertical?: number;
 };
 
-const SCORE_INTENSITY_MAX = 15;
+const SCORE_INTENSITY_MAX = 15
 
-const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`);
+const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
 
 const getScoreTint = (scoreValue: number) => {
   if (scoreValue === 0) {
-    return null;
+    return null
   }
-  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX;
-  const intensity = Math.min(Math.max(normalized, 0.2), 1);
-  const alpha = 0.35 * intensity;
+  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
+  const intensity = Math.min(Math.max(normalized, 0.2), 1)
+  const alpha = 0.35 * intensity
   const tint =
     scoreValue > 0
       ? `rgba(56, 242, 162, ${alpha})`
-      : `rgba(255, 90, 96, ${alpha})`;
-  return { borderColor: tint };
-};
+      : `rgba(255, 90, 96, ${alpha})`
+  return { borderColor: tint }
+}
 
 /** Modal panel with the Morse reference grid and scores. */
 export function ReferenceModal({
@@ -54,22 +54,22 @@ export function ReferenceModal({
   paddingVertical,
 }: ReferenceModalProps) {
   // Panel entrance/exit animation state
-  const panelVisible = useSharedValue(0);
-  const [exiting, setExiting] = React.useState(false);
+  const panelVisible = useSharedValue(0)
+  const [exiting, setExiting] = React.useState(false)
 
   // Animate panel in on mount
   React.useEffect(() => {
-    panelVisible.value = withTiming(1, { duration: 180 });
-  }, [panelVisible]);
+    panelVisible.value = withTiming(1, { duration: 180 })
+  }, [panelVisible])
 
   // Animate panel out on close
   const handleClose = React.useCallback(() => {
-    if (exiting) return;
-    setExiting(true);
+    if (exiting) return
+    setExiting(true)
     panelVisible.value = withTiming(0, { duration: 160 }, (finished) => {
-      if (finished) scheduleOnRN(onClose);
-    });
-  }, [exiting, onClose, panelVisible]);
+      if (finished) scheduleOnRN(onClose)
+    })
+  }, [exiting, onClose, panelVisible])
 
   // Only animate the main panel, not the header (so header/buttons keep glass effect)
   const panelAnimStyle = useAnimatedStyle(() => ({
@@ -78,25 +78,25 @@ export function ReferenceModal({
       { scale: 0.98 + 0.02 * panelVisible.value },
       { translateY: 16 * (1 - panelVisible.value) },
     ],
-  }));
+  }))
   function ReferenceCard({ char }: { char: Letter }) {
-    const scoreValue = scores[char] ?? 0;
-    const scoreTint = getScoreTint(scoreValue);
-    const code = morseData[char].code;
+    const scoreValue = scores[char] ?? 0
+    const scoreTint = getScoreTint(scoreValue)
+    const code = morseData[char].code
     const scoreStyle =
       scoreValue > 0
         ? styles.scorePositive
         : scoreValue < 0
         ? styles.scoreNegative
-        : styles.scoreNeutral;
+        : styles.scoreNeutral
 
     // Reanimated touch feedback
-    const scale = useSharedValue(1);
-    const bg = useSharedValue(0);
+    const scale = useSharedValue(1)
+    const bg = useSharedValue(0)
 
     const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ scale: scale.value }],
-    }));
+    }))
 
     const overlayStyle = useAnimatedStyle(() => ({
       ...StyleSheet.absoluteFillObject,
@@ -105,7 +105,7 @@ export function ReferenceModal({
         : 'hsla(210, 33%, 15%, 0.35)',
       borderRadius: 14,
       ...(scoreTint ?? {}),
-    }));
+    }))
 
     return (
       <Animated.View
@@ -126,13 +126,13 @@ export function ReferenceModal({
           accessibilityRole="button"
           accessibilityLabel={`Play sound for ${char}`}
           onTouchStart={() => {
-            scale.value = withSpring(0.97, { damping: 50, stiffness: 300 });
-            bg.value = withTiming(1, { duration: 120 });
+            scale.value = withSpring(0.97, { damping: 50, stiffness: 300 })
+            bg.value = withTiming(1, { duration: 120 })
           }}
           onTouchEnd={() => {
-            scale.value = withSpring(1, { damping: 50, stiffness: 300 });
-            bg.value = withTiming(0, { duration: 120 });
-            onPlaySound?.(char);
+            scale.value = withSpring(1, { damping: 50, stiffness: 300 })
+            bg.value = withTiming(0, { duration: 120 })
+            onPlaySound?.(char)
           }}
           style={{
             borderRadius: 14,
@@ -154,7 +154,7 @@ export function ReferenceModal({
           </View>
         </View>
       </Animated.View>
-    );
+    )
   }
 
   return (
@@ -190,11 +190,11 @@ export function ReferenceModal({
           {[1, 2, 3, 4].map((level) => {
             let levelLetters = letters.filter(
               (l) => MORSE_DATA[l].level === level,
-            );
+            )
             if (level === 4) {
-              levelLetters = [...levelLetters, ...numbers];
+              levelLetters = [...levelLetters, ...numbers]
             }
-            if (levelLetters.length === 0) return null;
+            if (levelLetters.length === 0) return null
             return (
               <View key={`level-${level}`} style={{ width: '100%' }}>
                 <Text
@@ -218,13 +218,13 @@ export function ReferenceModal({
                   ))}
                 </GlassContainer>
               </View>
-            );
+            )
           })}
           <View style={styles.rowSpacer} />
         </ScrollView>
       </Animated.View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -359,4 +359,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: 'rgba(141, 152, 165, 0.9)',
   },
-});
+})

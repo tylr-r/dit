@@ -1,9 +1,6 @@
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
-import type { PluginOption } from 'vitest/node_modules/vite';
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [react() as unknown as PluginOption],
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },
@@ -23,4 +20,4 @@ export default defineConfig({
       ],
     },
   },
-});
+})
