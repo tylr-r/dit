@@ -1,3 +1,13 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import './App.css';
+import { Footer } from './components/Footer';
+import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
+import { ListenControls } from './components/ListenControls';
+import { MorseButton } from './components/MorseButton';
+import { Page404 } from './components/Page404';
+import { ReferenceModal } from './components/ReferenceModal';
+import { SettingsPanel } from './components/SettingsPanel';
+import { StageDisplay } from './components/StageDisplay';
 import {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
@@ -5,7 +15,7 @@ import {
   DEBOUNCE_DELAY,
   INTER_LETTER_UNITS,
   INTER_WORD_UNITS,
-  MORSE_DATA,
+  MORSE_CODE,
   UNIT_TIME_MS,
   WPM_RANGE,
   applyScoreDelta,
@@ -17,21 +27,12 @@ import {
   getWordsForLetters,
   initializeScores,
   parseProgress,
+  useFirebaseSync,
   type Letter,
+  type ProgressSnapshot,
 } from '@dit/core';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import './App.css';
-import { Footer } from './components/Footer';
-import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
-import { ListenControls } from './components/ListenControls';
-import { MorseButton } from './components/MorseButton';
-import { Page404 } from './components/Page404';
-import { ReferenceModal } from './components/ReferenceModal';
-import { SettingsPanel } from './components/SettingsPanel';
-import { StageDisplay } from './components/StageDisplay';
-import { auth, database, googleProvider } from './firebase';
+import { firebaseService } from './firebase';
 import { useAudio } from './hooks/useAudio';
-import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { useMorseInput } from './hooks/useMorseInput';
 import {
   readStoredBoolean,
@@ -40,8 +41,9 @@ import {
   useProgress,
 } from './hooks/useProgress';
 import { vibrate } from './platform/haptics';
-import { readStorageItem, writeStorageItem } from './platform/storage';
-const LETTERS = Object.keys(MORSE_DATA) as Letter[];
+import { readStorageItem } from './platform/storage';
+
+const LETTERS = Object.keys(MORSE_CODE) as Letter[];
 const LEVELS = [1, 2, 3, 4] as const;
 const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter));
 const REFERENCE_NUMBERS: Letter[] = [
@@ -58,8 +60,7 @@ const REFERENCE_NUMBERS: Letter[] = [
 ];
 const DOT_THRESHOLD_MS = DASH_THRESHOLD;
 const UNIT_MS = UNIT_TIME_MS;
-const LISTEN_WPM_MIN = WPM_RANGE.min;
-const LISTEN_WPM_MAX = WPM_RANGE.max;
+const [LISTEN_WPM_MIN, LISTEN_WPM_MAX] = WPM_RANGE;
 const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS;
 const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS;
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
@@ -77,8 +78,6 @@ const STORAGE_KEYS = {
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
-  introHintStep: 'morse-intro-hint-step',
-  legacyIntroHintsDismissed: 'morse-intro-hints-dismissed',
 };
 
 const clearTimer = (ref: { current: number | null }) => {
@@ -116,7 +115,9 @@ function MainApp() {
       false,
     );
     const availableLetters = getLettersForLevel(maxLevel);
-    const practiceWord = getRandomWord(getWordsForLetters(availableLetters));
+    const practiceWord = getRandomWord(
+      getWordsForLetters(availableLetters),
+    );
     const letter = practiceWordMode
       ? (practiceWord[0] as Letter)
       : getRandomLetter(availableLetters);
@@ -138,20 +139,6 @@ function MainApp() {
   const [showMnemonic, setShowMnemonic] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showMnemonic, false),
   );
-  const [introHintStep, setIntroHintStep] = useState<
-    'morse' | 'settings' | 'done'
-  >(() => {
-    const stored = readStorageItem(STORAGE_KEYS.introHintStep);
-    if (stored === 'morse' || stored === 'settings' || stored === 'done') {
-      return stored;
-    }
-    const legacy = readStorageItem(STORAGE_KEYS.legacyIntroHintsDismissed);
-    if (legacy === 'true') {
-      writeStorageItem(STORAGE_KEYS.introHintStep, 'done');
-      return 'done';
-    }
-    return 'morse';
-  });
   const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
       return 'practice';
@@ -223,7 +210,7 @@ function MainApp() {
     () => getWordsForLetters(availableLetters),
     [availableLetters],
   );
-  const progressSnapshot = useMemo(
+  const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
       listenWpm,
       maxLevel,
@@ -531,7 +518,7 @@ function MainApp() {
           ? letter
           : getRandomWeightedLetter(availableLetters, scores);
         setLetter(nextLetter);
-        void playListenSequence(MORSE_DATA[nextLetter].code);
+        void playListenSequence(MORSE_CODE[nextLetter].code);
         return;
       }
       if (practiceWordModeRef.current) {
@@ -569,8 +556,8 @@ function MainApp() {
       value === 'freestyle'
         ? 'freestyle'
         : value === 'listen'
-        ? 'listen'
-        : 'practice';
+          ? 'listen'
+          : 'practice';
     applyModeChange(nextMode);
   };
 
@@ -652,7 +639,7 @@ function MainApp() {
         : getRandomWeightedLetter(nextLetters, scores);
       setLetter(nextLetter);
       if (isListen) {
-        void playListenSequence(MORSE_DATA[nextLetter].code);
+        void playListenSequence(MORSE_CODE[nextLetter].code);
       }
     },
     [
@@ -733,13 +720,13 @@ function MainApp() {
   }, []);
 
   const { authReady, handleSignIn, handleSignOut, user } = useFirebaseSync({
-    auth,
-    database,
-    googleProvider,
+    firebaseService,
     onRemoteProgress: applyRemoteProgress,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
     progressSnapshot,
+    signInMethod: 'popup',
     trackEvent,
+    isOnline: () => navigator.onLine,
   });
 
   const scheduleWordSpace = useCallback(() => {
@@ -766,7 +753,7 @@ function MainApp() {
         setFreestyleResult('No input');
         return;
       }
-      const match = Object.entries(MORSE_DATA).find(
+      const match = Object.entries(MORSE_CODE).find(
         ([, data]) => data.code === value,
       );
       const result = match ? match[0] : 'No match';
@@ -796,7 +783,7 @@ function MainApp() {
         }
         clearTimer(errorTimeoutRef);
         clearTimer(successTimeoutRef);
-        const target = MORSE_DATA[letterRef.current].code;
+        const target = MORSE_CODE[letterRef.current].code;
         const isCorrect = attempt === target;
         if (isCorrect) {
           if (canScoreAttempt()) {
@@ -831,10 +818,7 @@ function MainApp() {
                   setPracticeWpm(Math.round(nextWpm * 10) / 10);
                 }
               }
-              const nextWord = getRandomWord(
-                availablePracticeWords,
-                currentWord,
-              );
+              const nextWord = getRandomWord(availablePracticeWords, currentWord);
               const nextLetter = nextWord[0] as Letter;
               practiceWordStartRef.current = null;
               practiceWordRef.current = nextWord;
@@ -859,11 +843,7 @@ function MainApp() {
           setStatus('success');
           successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
-              getRandomWeightedLetter(
-                availableLetters,
-                scoresRef.current,
-                current,
-              ),
+              getRandomWeightedLetter(availableLetters, scoresRef.current, current),
             );
             setShowHintOnce(false);
             setStatus('idle');
@@ -967,7 +947,7 @@ function MainApp() {
           setListenStatus('idle');
           setListenReveal(null);
           setLetter(nextLetter);
-          void playListenSequence(MORSE_DATA[nextLetter].code);
+          void playListenSequence(MORSE_CODE[nextLetter].code);
         },
         isCorrect ? 650 : ERROR_LOCKOUT_MS,
       );
@@ -993,7 +973,7 @@ function MainApp() {
     if (useCustomKeyboard) {
       triggerHaptics(12);
     }
-    void playListenSequence(MORSE_DATA[letter].code);
+    void playListenSequence(MORSE_CODE[letter].code);
   }, [
     letter,
     listenStatus,
@@ -1167,44 +1147,6 @@ function MainApp() {
     onPressStart: handlePressStart,
     onSymbol: registerSymbol,
   });
-  const persistIntroHintStep = useCallback(
-    (next: 'morse' | 'settings' | 'done') => {
-      setIntroHintStep(next);
-      writeStorageItem(STORAGE_KEYS.introHintStep, next);
-    },
-    [],
-  );
-  const dismissMorseHint = useCallback(() => {
-    if (introHintStep !== 'morse') {
-      return;
-    }
-    persistIntroHintStep('settings');
-  }, [introHintStep, persistIntroHintStep]);
-  const dismissSettingsHint = useCallback(() => {
-    if (introHintStep !== 'settings') {
-      return;
-    }
-    persistIntroHintStep('done');
-  }, [introHintStep, persistIntroHintStep]);
-  const handleSettingsToggle = useCallback(() => {
-    dismissSettingsHint();
-    setShowSettings((prev) => !prev);
-  }, [dismissSettingsHint]);
-
-  const handleIntroPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
-      dismissMorseHint();
-      handlePointerDown(event);
-    },
-    [dismissMorseHint, handlePointerDown],
-  );
-  const handleIntroKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      dismissMorseHint();
-      handleKeyDown(event);
-    },
-    [dismissMorseHint, handleKeyDown],
-  );
 
   useEffect(() => {
     if (!isListen) {
@@ -1240,18 +1182,16 @@ function MainApp() {
 
   const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce);
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
-  const showMorseHint = introHintStep === 'morse' && !isListen;
-  const showSettingsHint = introHintStep === 'settings' && !isListen;
-  const target = MORSE_DATA[letter].code;
-  const mnemonic = MORSE_DATA[letter].mnemonic;
+  const target = MORSE_CODE[letter].code;
+  const mnemonic = MORSE_CODE[letter].mnemonic;
   const baseStatusText =
     status === 'success'
       ? 'Correct'
       : status === 'error'
-      ? 'Missed. Start over.'
-      : mnemonicVisible
-      ? mnemonic
-      : ' ';
+        ? 'Missed. Start over.'
+        : mnemonicVisible
+          ? mnemonic
+          : ' ';
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -1274,8 +1214,8 @@ function MainApp() {
     status === 'success'
       ? targetSymbols.length
       : isInputOnTrack
-      ? input.length
-      : 0;
+        ? input.length
+        : 0;
   const pips = targetSymbols.map((symbol, index) => {
     const isHit = index < highlightCount;
     return (
@@ -1297,17 +1237,17 @@ function MainApp() {
         : `Result ${freestyleResult}`
       : freestyleResult
     : freestyleInput
-    ? `Input ${freestyleInput}`
-    : freestyleWordMode && freestyleWord
-    ? `Word ${freestyleWord}`
-    : 'Tap and pause';
+      ? `Input ${freestyleInput}`
+      : freestyleWordMode && freestyleWord
+        ? `Word ${freestyleWord}`
+        : 'Tap and pause';
   const freestyleDisplay = freestyleWordMode
     ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
     : freestyleResult
-    ? isLetterResult
-      ? freestyleResult
-      : '?'
-    : '';
+      ? isLetterResult
+        ? freestyleResult
+        : '?'
+      : '';
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
     : Boolean(freestyleResult);
@@ -1315,14 +1255,14 @@ function MainApp() {
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
-      ? 'Incorrect'
-      : 'Listen and type the character';
+        ? 'Incorrect'
+        : 'Listen and type the character';
   const listenDisplay = listenReveal ?? '?';
   const listenDisplayClass = `letter ${
     listenReveal ? '' : 'letter-placeholder'
   }`;
   const listenFocused = isListen && useCustomKeyboard;
-  const userLabel = user ? user.displayName ?? user.email ?? 'Signed in' : '';
+  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : '';
   const userInitial = user
     ? userLabel
       ? userLabel[0].toUpperCase()
@@ -1359,23 +1299,10 @@ function MainApp() {
           <option value="listen">Listen</option>
         </select>
         <div className="settings">
-          {showSettingsHint ? (
-            <div className="intro-hint intro-hint-settings" role="status">
-              <p>Hints live in settings.</p>
-              <button
-                type="button"
-                className="intro-hint-dismiss"
-                onClick={dismissSettingsHint}
-              >
-                Got it
-              </button>
-              <span className="intro-hint-arrow" aria-hidden="true" />
-            </div>
-          ) : null}
           <button
             type="button"
             className="settings-button"
-            onClick={handleSettingsToggle}
+            onClick={() => setShowSettings((prev) => !prev)}
             aria-expanded={showSettings}
             aria-controls="settings-panel"
             aria-label="Settings"
@@ -1470,41 +1397,23 @@ function MainApp() {
             useCustomKeyboard={useCustomKeyboard}
           />
         ) : (
-          <>
-            {showMorseHint ? (
-              <div className="intro-hint intro-hint-morse" role="status">
-                <p>
-                  Tap the big Morse key to make a dit (short press) or dah (long
-                  press).
-                </p>
-                <button
-                  type="button"
-                  className="intro-hint-dismiss"
-                  onClick={dismissMorseHint}
-                >
-                  Got it
-                </button>
-                <span className="intro-hint-arrow" aria-hidden="true" />
-              </div>
-            ) : null}
-            <MorseButton
-              buttonRef={morseButtonRef}
-              isPressing={isPressing}
-              onPointerDown={handleIntroPointerDown}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-              onPointerLeave={handlePointerCancel}
-              onKeyDown={handleIntroKeyDown}
-              onKeyUp={handleKeyUp}
-              onBlur={handlePointerCancel}
-            />
-          </>
+          <MorseButton
+            buttonRef={morseButtonRef}
+            isPressing={isPressing}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
+            onBlur={handlePointerCancel}
+          />
         )}
       </div>
       {showReference ? (
         <ReferenceModal
           letters={REFERENCE_LETTERS}
-          morseData={MORSE_DATA}
+          morseData={MORSE_CODE}
           numbers={REFERENCE_NUMBERS}
           onClose={() => setShowReference(false)}
           onResetScores={handleResetScores}

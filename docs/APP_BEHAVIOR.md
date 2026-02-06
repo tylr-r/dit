@@ -34,14 +34,6 @@ This document captures the intended, shared behavior across web and iOS.
 - Incorrect: score -1, reveal correct letter, then move on.
 - Replay plays the current letter again.
 
-## First-run personalization (iOS)
-
-- On first launch, show a welcome modal that offers a quick personalization exercise or a skip option.
-- The exercise uses a short set of level 1 letters and measures completion speed.
-- Slow result: hints on, listen WPM 10, max level 1.
-- Fast result: hints off, listen WPM 20, max level 4.
-- Skipping keeps the current defaults.
-
 ## Settings
 
 - Show hints
@@ -67,8 +59,8 @@ This document captures the intended, shared behavior across web and iOS.
 
 ## Sync
 
-- Progress (scores, settings, listen speed, modes) syncs to Firebase when signed in, and queues locally while offline.
-- Local state remains usable when signed out and is persisted on-device.
+- Progress (scores, settings, listen speed, modes) syncs to Firebase when signed in.
+- Local state remains usable when signed out.
 
 ## Reference
 

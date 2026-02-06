@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy --config ../../firebase.json",
     "test:unit": "vitest",
     "test:unit:run": "vitest run",
     "test:types": "tsc -b --pretty false",

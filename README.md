@@ -20,18 +20,20 @@ Morse code practice across web and iOS. Tap for dot, hold for dah.
 
 ## Architecture
 
-- Turborepo monorepo with shared look and feel and logic
-- UI intent:
-  - Similar look and feel across versions
-  - Web ships custom React components
-  - iOS looks like web version but prefers Expo UI/SwiftUI components when available
+- Turborepo monorepo with shared Morse logic in `packages/core`
+- Web app in `apps/web` (Vite + React)
+- iOS app in `apps/ios` (Expo + React Native)
+- Native bridge in `modules/dit-native` (audio, haptics, glass view)
+- Firebase Auth + Realtime Database for sync
+- UI intent: web ships custom React components; iOS prefers Expo UI/SwiftUI components when available, with React Native fallbacks as needed
 
 ## Repo layout
 
-- `apps/web`: React Web application (Vite)
-- `apps/ios`: Native iOS application (Expo/React Native)
-- `packages/core`: Shared business logic and types
-- `docs/`: Project documentation, style guides, and architectural decisions
+- `apps/web` — web client, unit tests in `apps/web/tests/unit`, e2e tests in `apps/web/tests/e2e`
+- `apps/ios` — iOS app, assets in `apps/ios/assets`, native code in `apps/ios/ios` and `apps/ios/native`
+- `packages/core` — shared Morse logic + types
+- `modules/dit-native` — Expo native module
+- `scripts` — repo tooling helpers
 
 ## Running locally
 
@@ -71,4 +73,5 @@ pnpm run test:types
 
 ## Environment
 
-- Root `.env` for config
+- Root `.env` for shared config
+- `apps/ios/.env` for Expo-specific config

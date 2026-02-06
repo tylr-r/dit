@@ -233,4 +233,4 @@ export const PRACTICE_WORDS = [
   'QTH',
   'QSL',
   'RST',
-] as const
+] as const;

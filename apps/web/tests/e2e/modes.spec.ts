@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { MORSE_DATA, type Letter } from '@dit/core';
+import { MORSE_CODE, type Letter } from '@dit/core';
 
 const DOT_PRESS_MS = 80;
 const DASH_PRESS_MS = 360;
@@ -69,7 +69,7 @@ test('practice mode accepts a correct answer', async ({ page }) => {
   await focusMorseButton(page);
 
   const letter = await readPracticeLetter(page);
-  const code = MORSE_DATA[letter].code;
+  const code = MORSE_CODE[letter].code;
 
   await sendMorse(page, code);
 
@@ -81,7 +81,7 @@ test('practice mode flags an incorrect answer', async ({ page }) => {
   await focusMorseButton(page);
 
   const letter = await readPracticeLetter(page);
-  const code = MORSE_DATA[letter].code;
+  const code = MORSE_CODE[letter].code;
   const wrongSymbol = code.startsWith('.') ? '-' : '.';
 
   await sendMorse(page, wrongSymbol);
@@ -95,7 +95,7 @@ test('freestyle mode decodes morse input', async ({ page }) => {
   await page.getByLabel('Mode').selectOption('freestyle');
   await focusMorseButton(page);
 
-  await sendMorse(page, MORSE_DATA.A.code);
+  await sendMorse(page, MORSE_CODE.A.code);
 
   await expect(page.locator('main.stage .letter')).toHaveText('A');
 });

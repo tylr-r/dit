@@ -5,8 +5,7 @@ import type {
   ReactNode,
   RefObject,
 } from 'react';
-import type { User } from 'firebase/auth';
-import type { Letter } from '@dit/core';
+import type { FirebaseUser, Letter } from '@dit/core';
 
 export interface ListenControlsProps {
   listenStatus: 'idle' | 'success' | 'error'
@@ -67,7 +66,7 @@ export interface SettingsPanelProps {
   showHint: boolean
   showMnemonic: boolean
   soundCheckStatus: 'idle' | 'playing'
-  user: User | null
+  user: FirebaseUser | null
   userLabel: string
   userInitial: string
   authReady: boolean
