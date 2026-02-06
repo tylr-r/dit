@@ -2,10 +2,13 @@ import type { ReactNode } from 'react';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+const noop = () => {};
+
 type ModalShellProps = {
   children: ReactNode;
   onClose: () => void;
   cardPressable?: boolean;
+  allowBackdropDismiss?: boolean;
 };
 
 /** Shared modal wrapper with backdrop and centered card layout. */
@@ -13,13 +16,18 @@ export function ModalShell({
   children,
   onClose,
   cardPressable = false,
+  allowBackdropDismiss = true,
 }: ModalShellProps) {
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      <Pressable onPress={onClose} style={styles.backdrop} />
+      {allowBackdropDismiss ? (
+        <Pressable onPress={onClose} style={styles.backdrop} />
+      ) : (
+        <View style={styles.backdrop} />
+      )}
       <View style={styles.center} pointerEvents="box-none">
         {cardPressable ? (
-          <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable style={styles.card} onPress={noop}>
             {children}
           </Pressable>
         ) : (

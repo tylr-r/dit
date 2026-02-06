@@ -31,6 +31,7 @@ import { ListenControls } from './src/components/ListenControls';
 import { type Mode } from './src/components/ModeSwitcher';
 import { MorseButton } from './src/components/MorseButton';
 import { MorseLiquidSurface } from './src/components/MorseLiquidSurface';
+import { NuxModal } from './src/components/NuxModal';
 import { ReferenceModalSheet } from './src/components/ReferenceModalSheet';
 import { SettingsModal } from './src/components/SettingsModal';
 import { StageDisplay, type StagePip } from './src/components/StageDisplay';
@@ -64,8 +65,25 @@ const REFERENCE_WPM = 20;
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
 const INTRO_HINTS_KEY = 'dit-intro-hint-step';
 const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed';
+const NUX_STATUS_KEY = 'dit-nux-status';
+const LOCAL_PROGRESS_KEY = 'dit-progress';
+const NUX_LETTERS: Letter[] = ['E', 'T', 'I', 'M', 'A', 'N'];
+const NUX_FAST_THRESHOLD_MS = 1600;
+const NUX_FAST_DEFAULTS = {
+  showHint: false,
+  listenWpm: 20,
+  maxLevel: 4,
+} as const;
+const NUX_SLOW_DEFAULTS = {
+  showHint: true,
+  listenWpm: 10,
+  maxLevel: 1,
+} as const;
 
 type IntroHintStep = 'morse' | 'settings' | 'done';
+type NuxStatus = 'pending' | 'completed' | 'skipped';
+type NuxStep = 'welcome' | 'exercise' | 'result';
+type NuxResult = 'fast' | 'slow' | null;
 const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
   (letter) => /^[A-Z]$/.test(letter),
 );
@@ -200,6 +218,11 @@ export default function App() {
   const [showHint, setShowHint] = useState(true);
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse');
+  const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending');
+  const [nuxStep, setNuxStep] = useState<NuxStep>('welcome');
+  const [nuxIndex, setNuxIndex] = useState(0);
+  const [nuxReady, setNuxReady] = useState(false);
+  const [nuxResult, setNuxResult] = useState<NuxResult>(null);
   const [maxLevel, setMaxLevel] = useState(DEFAULT_MAX_LEVEL);
   const [practiceWordMode, setPracticeWordMode] = useState(false);
   const [letter, setLetter] = useState<Letter>(initialConfig.letter);
@@ -218,6 +241,8 @@ export default function App() {
   >('idle');
   const [listenReveal, setListenReveal] = useState<Letter | null>(null);
   const [scores, setScores] = useState(() => initializeScores());
+  const nuxTimingsRef = useRef<number[]>([]);
+  const nuxAttemptStartRef = useRef<number | null>(null);
   useEffect(() => {
     let isActive = true;
     const loadIntroHints = async () => {
@@ -246,6 +271,42 @@ export default function App() {
       isActive = false;
     };
   }, []);
+  useEffect(() => {
+    let isActive = true;
+    const loadNuxStatus = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(NUX_STATUS_KEY);
+        if (!isActive) {
+          return;
+        }
+        if (stored === 'completed' || stored === 'skipped') {
+          setNuxStatus(stored);
+          return;
+        }
+        const progressStored = await AsyncStorage.getItem(LOCAL_PROGRESS_KEY);
+        if (!isActive) {
+          return;
+        }
+        if (progressStored) {
+          setNuxStatus('skipped');
+          void AsyncStorage.setItem(NUX_STATUS_KEY, 'skipped');
+          return;
+        }
+        setNuxStatus('pending');
+      } catch (error) {
+        console.error('Failed to load NUX status', error);
+        setNuxStatus('pending');
+      } finally {
+        if (isActive) {
+          setNuxReady(true);
+        }
+      }
+    };
+    void loadNuxStatus();
+    return () => {
+      isActive = false;
+    };
+  }, []);
   const persistIntroHintStep = useCallback((next: IntroHintStep) => {
     setIntroHintStep(next);
     interface AsyncStorageError {
@@ -259,6 +320,12 @@ export default function App() {
         console.error('Failed to save intro hints', error);
       },
     );
+  }, []);
+  const persistNuxStatus = useCallback((next: NuxStatus) => {
+    setNuxStatus(next);
+    void AsyncStorage.setItem(NUX_STATUS_KEY, next).catch((error) => {
+      console.error('Failed to save NUX status', error);
+    });
   }, []);
   const dismissMorseHint = useCallback(() => {
     if (introHintStep !== 'morse') {
@@ -274,6 +341,7 @@ export default function App() {
   }, [introHintStep, persistIntroHintStep]);
   const isFreestyle = mode === 'freestyle';
   const isListen = mode === 'listen';
+  const isNuxActive = nuxReady && nuxStatus === 'pending';
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
   const isReferencePanelActive = showReference;
   const availableLetters = useMemo(
@@ -323,6 +391,7 @@ export default function App() {
   const successTimeoutRef = useRef<TimeoutHandle | null>(null);
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null);
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const completeNuxRef = useRef<() => void>(() => {});
 
   const setPracticeWordFromList = useCallback(
     (words: string[], avoidWord?: string) => {
@@ -458,7 +527,19 @@ export default function App() {
     }
   }, [availableLetters, availablePracticeWords, mode, setPracticeWordFromList]);
 
-  const canScoreAttempt = useCallback(() => !showHint, [showHint]);
+  useEffect(() => {
+    if (!isNuxActive) {
+      return;
+    }
+    setShowSettings(false);
+    setShowAbout(false);
+    setShowReference(false);
+  }, [isNuxActive]);
+
+  const canScoreAttempt = useCallback(
+    () => !showHint && !isNuxActive,
+    [isNuxActive, showHint],
+  );
 
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => applyScoreDelta(prev, targetLetter, delta));
@@ -495,6 +576,49 @@ export default function App() {
   const handleResetScores = useCallback(() => {
     setScores(initializeScores());
   }, []);
+
+  const handleNuxSkip = useCallback(() => {
+    persistNuxStatus('skipped');
+    persistIntroHintStep('done');
+    setNuxStep('welcome');
+    setNuxIndex(0);
+    setNuxResult(null);
+  }, [persistIntroHintStep, persistNuxStatus]);
+
+  const handleNuxStart = useCallback(() => {
+    setNuxStep('exercise');
+    setNuxIndex(0);
+    setNuxResult(null);
+    nuxTimingsRef.current = [];
+    nuxAttemptStartRef.current = null;
+    setShowSettings(false);
+    setShowAbout(false);
+    setShowReference(false);
+    setShowHint(true);
+    setShowMnemonic(false);
+    setMode('practice');
+    setPracticeWordMode(false);
+    practiceWordModeRef.current = false;
+    setPracticeWpm(null);
+    practiceWordStartRef.current = null;
+    clearTimer(letterTimeoutRef);
+    clearTimer(successTimeoutRef);
+    clearTimer(errorTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef);
+    setInput('');
+    setStatus('idle');
+    const firstLetter = NUX_LETTERS[0];
+    letterRef.current = firstLetter;
+    setLetter(firstLetter);
+  }, []);
+
+  const handleNuxFinish = useCallback(() => {
+    persistNuxStatus('completed');
+    persistIntroHintStep('done');
+    setNuxStep('welcome');
+    setNuxIndex(0);
+    setNuxResult(null);
+  }, [persistIntroHintStep, persistNuxStatus]);
 
   const scheduleWordSpace = useCallback(() => {
     clearTimer(wordSpaceTimeoutRef);
@@ -601,6 +725,34 @@ export default function App() {
         const target = MORSE_DATA[letterRef.current].code;
         const isCorrect = attempt === target;
         if (isCorrect) {
+          if (isNuxActive && nuxStep === 'exercise') {
+            const startedAt = nuxAttemptStartRef.current;
+            if (startedAt !== null) {
+              nuxTimingsRef.current.push(now() - startedAt);
+            }
+            nuxAttemptStartRef.current = null;
+            setInput('');
+            clearTimer(errorTimeoutRef);
+            clearTimer(successTimeoutRef);
+            if (nuxIndex + 1 >= NUX_LETTERS.length) {
+              setStatus('success');
+              successTimeoutRef.current = setTimeout(() => {
+                setStatus('idle');
+                completeNuxRef.current();
+              }, 350);
+              return;
+            }
+            const nextIndex = nuxIndex + 1;
+            setStatus('success');
+            successTimeoutRef.current = setTimeout(() => {
+              const nextLetter = NUX_LETTERS[nextIndex];
+              setNuxIndex(nextIndex);
+              letterRef.current = nextLetter;
+              setLetter(nextLetter);
+              setStatus('idle');
+            }, 350);
+            return;
+          }
           if (canScoreAttempt()) {
             bumpScore(letterRef.current, 1);
           }
@@ -655,6 +807,7 @@ export default function App() {
         }
         setStatus('error');
         setInput('');
+        nuxAttemptStartRef.current = null;
         errorTimeoutRef.current = setTimeout(() => {
           setStatus('idle');
         }, ERROR_LOCKOUT_MS);
@@ -665,6 +818,9 @@ export default function App() {
       availablePracticeWords,
       bumpScore,
       canScoreAttempt,
+      isNuxActive,
+      nuxIndex,
+      nuxStep,
       setPracticeWordFromList,
       startErrorLockout,
       submitFreestyleInput,
@@ -708,10 +864,15 @@ export default function App() {
       }
 
       setStatus('idle');
+      if (isNuxActive && nuxStep === 'exercise') {
+        if (nuxAttemptStartRef.current === null) {
+          nuxAttemptStartRef.current = now();
+        }
+      }
       setInput((prev) => prev + symbol);
       scheduleLetterReset('practice');
     },
-    [isErrorLocked, isFreestyle, scheduleLetterReset],
+    [isErrorLocked, isFreestyle, isNuxActive, nuxStep, scheduleLetterReset],
   );
 
   const handlePressIn = useCallback(() => {
@@ -730,9 +891,11 @@ export default function App() {
     startTonePlayback();
   }, [isErrorLocked, isFreestyle, isListen, startTonePlayback]);
   const handleIntroPressIn = useCallback(() => {
-    dismissMorseHint();
+    if (!isNuxActive) {
+      dismissMorseHint();
+    }
     handlePressIn();
-  }, [dismissMorseHint, handlePressIn]);
+  }, [dismissMorseHint, handlePressIn, isNuxActive]);
 
   const handlePressOut = useCallback(() => {
     setIsPressing(false);
@@ -784,6 +947,56 @@ export default function App() {
       setPracticeWordFromList,
     ],
   );
+
+  const applyNuxDefaults = useCallback(
+    (defaults: typeof NUX_FAST_DEFAULTS | typeof NUX_SLOW_DEFAULTS) => {
+      setShowHint(defaults.showHint);
+      setShowMnemonic(false);
+      setListenWpm(defaults.listenWpm);
+      setPracticeWordMode(false);
+      practiceWordModeRef.current = false;
+      setPracticeWpm(null);
+      clearTimer(letterTimeoutRef);
+      clearTimer(successTimeoutRef);
+      clearTimer(errorTimeoutRef);
+      practiceWordStartRef.current = null;
+      const nextLetters = getLettersForLevel(defaults.maxLevel);
+      maxLevelRef.current = defaults.maxLevel as (typeof LEVELS)[number];
+      setMaxLevel(defaults.maxLevel as (typeof LEVELS)[number]);
+      setNextLetterForLevel(nextLetters);
+      setInput('');
+      setStatus('idle');
+    },
+    [setNextLetterForLevel],
+  );
+
+  const handleNuxPresetSelect = useCallback(
+    (preset: 'beginner' | 'advanced') => {
+      const defaults =
+        preset === 'advanced' ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS;
+      applyNuxDefaults(defaults);
+      setNuxResult(preset === 'advanced' ? 'fast' : 'slow');
+      handleNuxFinish();
+    },
+    [applyNuxDefaults, handleNuxFinish],
+  );
+
+  const completeNux = useCallback(() => {
+    const timings = nuxTimingsRef.current;
+    const averageMs =
+      timings.length === 0
+        ? NUX_FAST_THRESHOLD_MS + 1
+        : timings.reduce((sum, value) => sum + value, 0) / timings.length;
+    const isFast = averageMs <= NUX_FAST_THRESHOLD_MS;
+    const defaults = isFast ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS;
+    applyNuxDefaults(defaults);
+    setNuxResult(isFast ? 'fast' : 'slow');
+    setNuxStep('result');
+  }, [applyNuxDefaults]);
+
+  useEffect(() => {
+    completeNuxRef.current = completeNux;
+  }, [completeNux]);
 
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
@@ -982,10 +1195,14 @@ export default function App() {
 
   const target = MORSE_DATA[letter].code;
   const targetSymbols = useMemo(() => target.split(''), [target]);
-  const hintVisible = !isFreestyle && !isListen && showHint;
+  const hintVisible =
+    !isFreestyle &&
+    !isListen &&
+    (showHint || (isNuxActive && nuxStep === 'exercise'));
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
-  const showMorseHint = introHintStep === 'morse' && !isListen;
-  const showSettingsHint = introHintStep === 'settings' && !isListen;
+  const showMorseHint = introHintStep === 'morse' && !isListen && !isNuxActive;
+  const showSettingsHint =
+    introHintStep === 'settings' && !isListen && !isNuxActive;
   const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked();
   const baseStatusText =
     status === 'success'
@@ -1126,6 +1343,18 @@ export default function App() {
                   minUnitMs: LISTEN_MIN_UNIT_MS,
                 });
               }}
+            />
+          ) : null}
+          {isNuxActive ? (
+            <NuxModal
+              step={nuxStep}
+              index={nuxIndex}
+              total={NUX_LETTERS.length}
+              result={nuxResult}
+              onStart={handleNuxStart}
+              onSkip={handleNuxSkip}
+              onFinish={handleNuxFinish}
+              onChoosePreset={handleNuxPresetSelect}
             />
           ) : null}
           <StageDisplay
