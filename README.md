@@ -75,3 +75,4 @@ pnpm run test:types
 
 - Root `.env` for shared config
 - `apps/ios/.env` for Expo-specific config
+- `apps/ios/GoogleService-Info.plist` for Firebase iOS config (local only, copy from `apps/ios/GoogleService-Info.example.plist`)

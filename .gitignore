@@ -38,3 +38,4 @@ apps/web/test-results/
 **/.expo/
 /ios/
 /app.json
+apps/ios/GoogleService-Info.plist
