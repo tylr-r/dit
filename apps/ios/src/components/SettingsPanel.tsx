@@ -4,7 +4,15 @@ import type { User } from '@firebase/auth'
 import { BlurView } from 'expo-blur'
 import { GlassContainer } from 'expo-glass-effect'
 import React from 'react'
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -19,6 +27,8 @@ type SettingsPanelProps = {
   levels: readonly number[];
   maxLevel: number;
   practiceWordMode: boolean;
+  practiceAutoPlay: boolean;
+  practiceLearnMode: boolean;
   listenWpm: number;
   listenWpmMin: number;
   listenWpmMax: number;
@@ -28,9 +38,12 @@ type SettingsPanelProps = {
   onClose: () => void;
   onMaxLevelChange: (value: number) => void;
   onPracticeWordModeChange: (value: boolean) => void;
+  onPracticeAutoPlayChange: (value: boolean) => void;
+  onPracticeLearnModeChange: (value: boolean) => void;
   onListenWpmChange: (value: number) => void;
   onShowHintChange: (value: boolean) => void;
   onShowMnemonicChange: (value: boolean) => void;
+  onUseRecommended: () => void;
   onShowReference: () => void;
   onSignIn: () => Promise<unknown>;
   onSignOut: () => Promise<unknown>;
@@ -68,6 +81,8 @@ export function SettingsPanel({
   levels,
   maxLevel = 3,
   practiceWordMode,
+  practiceAutoPlay,
+  practiceLearnMode,
   listenWpm,
   listenWpmMin,
   listenWpmMax,
@@ -77,16 +92,23 @@ export function SettingsPanel({
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
+  onPracticeAutoPlayChange,
+  onPracticeLearnModeChange,
   onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
+  onUseRecommended,
   onShowReference,
   onSignIn,
   onSignOut,
 }: SettingsPanelProps) {
+  const { height: windowHeight } = useWindowDimensions()
+  const panelMaxHeight = Math.round(windowHeight * 0.9)
+  const scrollMaxHeight = Math.max(140, panelMaxHeight - 260)
   const showPracticeControls = !isFreestyle && !isListen
   const canShowWordsToggle = !isListen
   const showHintControls = !isFreestyle && !isListen
+  const [helperExpanded, setHelperExpanded] = React.useState(false)
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0)
   const [exiting, setExiting] = React.useState(false)
@@ -114,7 +136,7 @@ export function SettingsPanel({
   }))
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, { maxHeight: panelMaxHeight }]}>
       <BlurView
         intensity={24}
         tint="dark"
@@ -131,104 +153,160 @@ export function SettingsPanel({
           />
         </GlassContainer>
       </View>
-      <Animated.View
-        style={[
-          panelAnimStyle,
-          { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 },
-        ]}
-      >
-        {showHintControls ? (
-          <>
+      <Animated.View style={panelAnimStyle}>
+        <ScrollView
+          style={[styles.scroll, { maxHeight: scrollMaxHeight }]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {canShowWordsToggle ? (
             <ToggleRow
-              label="Show hints"
-              value={showHint}
-              onValueChange={onShowHintChange}
+              label={isFreestyle ? 'Word mode' : 'Practice Words'}
+              value={practiceWordMode}
+              onValueChange={onPracticeWordModeChange}
             />
+          ) : null}
+          {showPracticeControls ? (
             <ToggleRow
-              label="Show mnemonics"
-              value={showMnemonic}
-              onValueChange={onShowMnemonicChange}
+              label="Auto-play sound"
+              value={practiceAutoPlay}
+              onValueChange={onPracticeAutoPlayChange}
             />
-          </>
-        ) : null}
-        {canShowWordsToggle ? (
-          <ToggleRow
-            label={isFreestyle ? 'Word mode' : 'Practice Words'}
-            value={practiceWordMode}
-            onValueChange={onPracticeWordModeChange}
-          />
-        ) : null}
-        {showPracticeControls ? (
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Max Difficulty</Text>
-            <View
-              style={{
-                alignItems: 'flex-end',
-                alignSelf: 'flex-end',
-                marginRight: -10,
-              }}
-            >
-              <Host matchContents>
-                <Picker
-                  options={levels.map((level) => `Level ${level}`)}
-                  selectedIndex={levels.indexOf(maxLevel)}
-                  label={`Level ${maxLevel}`}
-                  onOptionSelected={({ nativeEvent }) => {
-                    const newLevel = levels[nativeEvent.index]
-                    if (newLevel !== undefined) onMaxLevelChange(newLevel)
-                  }}
-                  variant="menu"
-                  modifiers={[accessibilityLabel('Max level')]}
-                />
-              </Host>
-            </View>
-          </View>
-        ) : null}
-        {isListen ? (
-          <View style={styles.section}>
+          ) : null}
+          {showPracticeControls ? (
+            <>
+              <ToggleRow
+                label="Learn mode"
+                value={practiceLearnMode}
+                disabled={practiceWordMode}
+                onValueChange={onPracticeLearnModeChange}
+              />
+              <Text style={styles.helperText}>
+                Cycles through characters in order of most common instead of
+                random selection.
+              </Text>
+            </>
+          ) : null}
+          {showPracticeControls ? (
             <View style={styles.row}>
-              <View style={styles.stepperInfo}>
-                <Text style={styles.rowLabel}>Listen speed</Text>
-                <Text style={styles.stepperValue}>{listenWpm} WPM</Text>
-              </View>
+              <Text style={styles.rowLabel}>Max Difficulty</Text>
               <View
-                style={styles.stepperGroup}
-                accessible
-                accessibilityLabel="Listen speed"
+                style={{
+                  alignItems: 'flex-end',
+                  alignSelf: 'flex-end',
+                  marginRight: -10,
+                }}
               >
-                <Pressable
-                  onPress={() => onListenWpmChange(listenWpm - 1)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Decrease listen speed"
-                  disabled={listenWpm <= listenWpmMin}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    pressed && styles.stepperButtonPressed,
-                    listenWpm <= listenWpmMin && styles.stepperButtonDisabled,
-                  ]}
-                >
-                  <Text style={styles.stepperButtonText}>-</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => onListenWpmChange(listenWpm + 1)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Increase listen speed"
-                  disabled={listenWpm >= listenWpmMax}
-                  style={({ pressed }) => [
-                    styles.stepperButton,
-                    pressed && styles.stepperButtonPressed,
-                    listenWpm >= listenWpmMax && styles.stepperButtonDisabled,
-                  ]}
-                >
-                  <Text style={styles.stepperButtonText}>+</Text>
-                </Pressable>
+                <Host matchContents>
+                  <Picker
+                    options={levels.map((level) => `Level ${level}`)}
+                    selectedIndex={levels.indexOf(maxLevel)}
+                    label={`Level ${maxLevel}`}
+                    onOptionSelected={({ nativeEvent }) => {
+                      const newLevel = levels[nativeEvent.index]
+                      if (newLevel !== undefined) onMaxLevelChange(newLevel)
+                    }}
+                    variant="menu"
+                    modifiers={[accessibilityLabel('Max level')]}
+                    color="white"
+                  />
+                </Host>
               </View>
             </View>
-          </View>
-        ) : null}
+          ) : null}
+          {isListen ? (
+            <View style={styles.section}>
+              <View style={styles.row}>
+                <View style={styles.stepperInfo}>
+                  <Text style={styles.rowLabel}>Listen speed</Text>
+                  <Text style={styles.stepperValue}>{listenWpm} WPM</Text>
+                </View>
+                <View
+                  style={styles.stepperGroup}
+                  accessible
+                  accessibilityLabel="Listen speed"
+                >
+                  <Pressable
+                    onPress={() => onListenWpmChange(listenWpm - 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease listen speed"
+                    disabled={listenWpm <= listenWpmMin}
+                    style={({ pressed }) => [
+                      styles.stepperButton,
+                      pressed && styles.stepperButtonPressed,
+                      listenWpm <= listenWpmMin && styles.stepperButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.stepperButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onListenWpmChange(listenWpm + 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase listen speed"
+                    disabled={listenWpm >= listenWpmMax}
+                    style={({ pressed }) => [
+                      styles.stepperButton,
+                      pressed && styles.stepperButtonPressed,
+                      listenWpm >= listenWpmMax && styles.stepperButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.stepperButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ) : null}
+          {showHintControls ? (
+            <>
+              <View style={styles.divider} />
+              <Pressable
+                onPress={() => setHelperExpanded((prev) => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle helper options"
+                style={({ pressed }) => [
+                  styles.helperTrigger,
+                  pressed && styles.helperTriggerPressed,
+                ]}
+              >
+                <Text style={styles.helperTriggerTitle}>Helpers</Text>
+                <Text style={styles.helperTriggerChevron}>
+                  {helperExpanded ? '▾' : '▸'}
+                </Text>
+              </Pressable>
+              {helperExpanded ? (
+                <>
+                  <ToggleRow
+                    label="Show hints"
+                    value={showHint}
+                    onValueChange={onShowHintChange}
+                  />
+                  <Text style={styles.helperText}>Not recommended</Text>
+                  <ToggleRow
+                    label="Show mnemonics"
+                    value={showMnemonic}
+                    onValueChange={onShowMnemonicChange}
+                  />
+                  <Text style={styles.helperText}>Not recommended</Text>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </ScrollView>
       </Animated.View>
-      <View style={{ padding: 24, paddingTop: 0 }}>
+      <View style={styles.footer}>
         <View style={styles.divider} />
+        <View style={styles.section}>
+          <DitButton
+            text="Use recommended settings"
+            onPress={onUseRecommended}
+            accessibilityLabel="Use recommended settings"
+            textStyle={{
+              ...styles.panelButtonText,
+              ...styles.resetButtonText,
+            }}
+          />
+        </View>
         <View style={styles.section}>
           <DitButton
             text="Letter Reference"
@@ -261,10 +339,7 @@ export function SettingsPanel({
               text="Sign in"
               onPress={onSignIn}
               accessibilityLabel="Sign in with Google"
-              textStyle={{
-                ...styles.panelButtonText,
-                color: '#4285F4',
-              }}
+              textStyle={styles.panelButtonText}
             />
           )}
         </View>
@@ -277,7 +352,6 @@ const styles = StyleSheet.create({
   panel: {
     width: '100%',
     maxWidth: 380,
-    maxHeight: 520,
     borderRadius: 20,
     paddingBottom: 4,
     paddingTop: 3,
@@ -310,6 +384,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  scroll: {
+    width: '100%',
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 56,
+    paddingBottom: 8,
+  },
+  footer: {
+    padding: 24,
+    paddingTop: 0,
   },
   divider: {
     height: 1,
@@ -359,6 +445,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(244, 247, 249, 0.9)',
   },
+  resetButtonText: {
+    color: '#38f2a2',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,6 +460,31 @@ const styles = StyleSheet.create({
   },
   rowLabelDisabled: {
     color: 'rgba(244, 247, 249, 0.4)',
+  },
+  helperText: {
+    marginTop: -2,
+    marginBottom: 4,
+    fontSize: 11,
+    lineHeight: 16,
+    color: 'rgba(244, 247, 249, 0.62)',
+  },
+  helperTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  helperTriggerPressed: {
+    opacity: 0.8,
+  },
+  helperTriggerTitle: {
+    fontSize: 14,
+    color: 'rgba(244, 247, 249, 0.9)',
+  },
+  helperTriggerChevron: {
+    fontSize: 36,
+    marginRight: 4,
+    color: 'rgba(244, 247, 249, 0.7)',
   },
   stepperInfo: {
     flex: 1,

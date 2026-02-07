@@ -82,7 +82,7 @@ const NUX_FAST_DEFAULTS = {
   maxLevel: 4,
 } as const
 const NUX_SLOW_DEFAULTS = {
-  showHint: true,
+  showHint: false,
   listenWpm: 10,
   maxLevel: 1,
 } as const
@@ -117,6 +117,17 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 }
 
 const now = () => Date.now()
+
+const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
+  if (letters.length === 0) {
+    return current
+  }
+  const currentIndex = letters.indexOf(current)
+  if (currentIndex < 0) {
+    return letters[0]
+  }
+  return letters[(currentIndex + 1) % letters.length]
+}
 
 const initialConfig = (() => {
   const availableLetters = getLettersForLevel(DEFAULT_MAX_LEVEL)
@@ -222,8 +233,10 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [mode, setMode] = useState<Mode>('practice')
-  const [showHint, setShowHint] = useState(true)
+  const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
+  const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
+  const [practiceLearnMode, setPracticeLearnMode] = useState(true)
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
   const [nuxStep, setNuxStep] = useState<NuxStep>('welcome')
@@ -388,6 +401,7 @@ export default function App() {
   const practiceWordRef = useRef(practiceWord)
   const practiceWordIndexRef = useRef(practiceWordIndex)
   const practiceWordModeRef = useRef(practiceWordMode)
+  const practiceLearnModeRef = useRef(practiceLearnMode)
   const practiceWordStartRef = useRef<number | null>(null)
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null)
@@ -420,8 +434,13 @@ export default function App() {
 
   const setNextLetterForLevel = useCallback(
     (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
+      if (nextLetters.length === 0) {
+        return currentLetter
+      }
       const nextLetter = nextLetters.includes(currentLetter)
         ? currentLetter
+        : practiceLearnModeRef.current
+        ? nextLetters[0]
         : getRandomWeightedLetter(
             nextLetters,
             scoresRef.current,
@@ -441,6 +460,7 @@ export default function App() {
     practiceWordRef.current = practiceWord
     practiceWordIndexRef.current = practiceWordIndex
     practiceWordModeRef.current = practiceWordMode
+    practiceLearnModeRef.current = practiceLearnMode
     freestyleWordModeRef.current = freestyleWordMode
     scoresRef.current = scores
     maxLevelRef.current = maxLevel
@@ -457,6 +477,7 @@ export default function App() {
     practiceWord,
     practiceWordIndex,
     practiceWordMode,
+    practiceLearnMode,
     scores,
   ])
 
@@ -535,7 +556,9 @@ export default function App() {
       return
     }
     if (!availableLetters.includes(letterRef.current)) {
-      const nextLetter = getRandomLetter(availableLetters)
+      const nextLetter = practiceLearnModeRef.current
+        ? availableLetters[0]
+        : getRandomLetter(availableLetters)
       letterRef.current = nextLetter
       setLetter(nextLetter)
     }
@@ -611,7 +634,7 @@ export default function App() {
     setShowSettings(false)
     setShowAbout(false)
     setShowReference(false)
-    setShowHint(true)
+    setShowHint(false)
     setShowMnemonic(false)
     setMode('practice')
     setPracticeWordMode(false)
@@ -730,6 +753,37 @@ export default function App() {
     playListenSequence(MORSE_DATA[letterRef.current].code)
   }, [listenStatus, playListenSequence, triggerHaptics])
 
+  const handlePracticeReplay = useCallback(() => {
+    if (isFreestyle || isListen) {
+      return
+    }
+    clearTimer(letterTimeoutRef)
+    clearTimer(successTimeoutRef)
+    clearTimer(errorTimeoutRef)
+    setInput('')
+    setStatus('idle')
+    nuxAttemptStartRef.current = null
+    stopListenPlayback()
+    void triggerHaptics(12)
+    void playMorseTone({
+      code: MORSE_DATA[letterRef.current].code,
+      wpm: listenWpm,
+      minUnitMs: LISTEN_MIN_UNIT_MS,
+    })
+  }, [isFreestyle, isListen, listenWpm, stopListenPlayback, triggerHaptics])
+
+  useEffect(() => {
+    if (mode !== 'practice' || !practiceAutoPlay) {
+      return
+    }
+    stopListenPlayback()
+    void playMorseTone({
+      code: MORSE_DATA[letter].code,
+      wpm: listenWpm,
+      minUnitMs: LISTEN_MIN_UNIT_MS,
+    })
+  }, [letter, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
+
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
       clearTimer(letterTimeoutRef)
@@ -812,13 +866,15 @@ export default function App() {
           }
           setStatus('success')
           successTimeoutRef.current = setTimeout(() => {
-            setLetter((current) =>
-              getRandomWeightedLetter(
-                availableLetters,
-                scoresRef.current,
-                current,
-              ),
-            )
+            const nextLetter = practiceLearnModeRef.current
+              ? getNextOrderedLetter(availableLetters, letterRef.current)
+              : getRandomWeightedLetter(
+                  availableLetters,
+                  scoresRef.current,
+                  letterRef.current,
+                )
+            letterRef.current = nextLetter
+            setLetter(nextLetter)
             setStatus('idle')
           }, 650)
           return
@@ -1063,6 +1119,101 @@ export default function App() {
     },
     [isListen, listenStatus, playListenSequence],
   )
+
+  const handlePracticeLearnModeChange = useCallback(
+    (value: boolean) => {
+      if (isFreestyle || isListen) {
+        return
+      }
+      setPracticeLearnMode(value)
+      practiceLearnModeRef.current = value
+      if (practiceWordModeRef.current || !value) {
+        return
+      }
+      const firstLetter = availableLetters[0]
+      if (!firstLetter) {
+        return
+      }
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      setInput('')
+      setStatus('idle')
+      letterRef.current = firstLetter
+      setLetter(firstLetter)
+    },
+    [availableLetters, isFreestyle, isListen],
+  )
+
+  const handleUseRecommended = useCallback(() => {
+    const preferredMaxLevel = DEFAULT_MAX_LEVEL
+    const preferredListenWpm = DEFAULT_LISTEN_WPM
+    const preferredShowHint = false
+    const preferredShowMnemonic = false
+    const preferredPracticeLearnMode = true
+    const preferredPracticeAutoPlay = true
+
+    const isAlreadyRecommended =
+      showHint === preferredShowHint &&
+      showMnemonic === preferredShowMnemonic &&
+      practiceLearnMode === preferredPracticeLearnMode &&
+      practiceAutoPlay === preferredPracticeAutoPlay &&
+      listenWpm === preferredListenWpm &&
+      maxLevel === preferredMaxLevel
+
+    if (isAlreadyRecommended) {
+      return
+    }
+
+    const nextLetters = getLettersForLevel(preferredMaxLevel)
+
+    setShowHint(preferredShowHint)
+    setShowMnemonic(preferredShowMnemonic)
+    setPracticeAutoPlay(preferredPracticeAutoPlay)
+    setPracticeLearnMode(preferredPracticeLearnMode)
+    practiceLearnModeRef.current = preferredPracticeLearnMode
+
+    setListenWpm(preferredListenWpm)
+    setMaxLevel(preferredMaxLevel)
+    maxLevelRef.current = preferredMaxLevel as 1 | 2 | 3 | 4
+
+    setPracticeWpm(null)
+    practiceWordStartRef.current = null
+    clearTimer(wordSpaceTimeoutRef)
+    clearTimer(letterTimeoutRef)
+    clearTimer(successTimeoutRef)
+    clearTimer(errorTimeoutRef)
+    setInput('')
+    setStatus('idle')
+    setFreestyleInput('')
+    setFreestyleResult(null)
+    setFreestyleWord('')
+
+    if (modeRef.current === 'listen') {
+      resetListenState()
+      const nextLetter = setNextLetterForLevel(nextLetters)
+      playListenSequence(MORSE_DATA[nextLetter].code, preferredListenWpm)
+      return
+    }
+
+    if (practiceWordModeRef.current) {
+      setPracticeWordFromList(getWordsForLetters(nextLetters), practiceWordRef.current)
+      return
+    }
+
+    setNextLetterForLevel(nextLetters)
+  }, [
+    maxLevel,
+    playListenSequence,
+    practiceAutoPlay,
+    practiceLearnMode,
+    resetListenState,
+    setNextLetterForLevel,
+    setPracticeWordFromList,
+    showHint,
+    showMnemonic,
+    listenWpm,
+  ])
 
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
@@ -1341,6 +1492,8 @@ export default function App() {
               levels={LEVELS}
               maxLevel={maxLevel}
               practiceWordMode={isFreestyle ? freestyleWordMode : practiceWordMode}
+              practiceAutoPlay={practiceAutoPlay}
+              practiceLearnMode={practiceLearnMode}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
@@ -1349,9 +1502,12 @@ export default function App() {
               onClose={() => setShowSettings(false)}
               onMaxLevelChange={handleMaxLevelChange}
               onPracticeWordModeChange={handlePracticeWordModeChange}
+              onPracticeAutoPlayChange={setPracticeAutoPlay}
+              onPracticeLearnModeChange={handlePracticeLearnModeChange}
               onListenWpmChange={handleListenWpmChange}
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}
+              onUseRecommended={handleUseRecommended}
               onShowReference={handleShowReference}
               user={user}
               onSignIn={signInWithGoogle}
@@ -1425,6 +1581,19 @@ export default function App() {
                     text="Clear"
                   />
                 ) : null}
+                {!isFreestyle ? (
+                  <DitButton
+                    onPress={handlePracticeReplay}
+                    accessibilityRole="button"
+                    accessibilityLabel="Play target character"
+                    style={styles.practicePlayButton}
+                    textStyle={styles.practicePlayButtonText}
+                    radius={24}
+                    paddingHorizontal={18}
+                    paddingVertical={8}
+                    text="Play"
+                  />
+                ) : null}
                 <View style={styles.morseButtonWrap}>
                   {showMorseHint ? (
                     <View style={styles.morseHint}>
@@ -1482,6 +1651,14 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: 12,
+  },
+  practicePlayButton: {
+    marginBottom: 8,
+  },
+  practicePlayButtonText: {
+    fontSize: 13,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   morseHint: {
     width: '100%',
