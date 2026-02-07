@@ -88,6 +88,8 @@ describe('morse utils', () => {
         showMnemonic: false,
         wordMode: true,
         practiceWordMode: true,
+        practiceIfrMode: false,
+        practiceReviewMisses: true,
         scores: { A: 3, Z: 1 },
       },
       { listenWpmMin: 10, listenWpmMax: 30 },
@@ -96,6 +98,8 @@ describe('morse utils', () => {
     expect(progress?.listenWpm).toBe(30)
     expect(progress?.maxLevel).toBe(4)
     expect(progress?.showHint).toBe(true)
+    expect(progress?.practiceIfrMode).toBe(false)
+    expect(progress?.practiceReviewMisses).toBe(true)
     expect(progress?.scores?.A).toBe(3)
     expect(progress?.scores?.Z).toBe(1)
   })

@@ -147,6 +147,12 @@ export const parseProgress = (
   if (typeof record.practiceWordMode === 'boolean') {
     progress.practiceWordMode = record.practiceWordMode
   }
+  if (typeof record.practiceIfrMode === 'boolean') {
+    progress.practiceIfrMode = record.practiceIfrMode
+  }
+  if (typeof record.practiceReviewMisses === 'boolean') {
+    progress.practiceReviewMisses = record.practiceReviewMisses
+  }
   if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
     progress.maxLevel = clamp(record.maxLevel, levelMin, levelMax)
   }

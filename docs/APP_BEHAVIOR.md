@@ -24,7 +24,7 @@ This document captures the intended, shared behavior across web and iOS.
 - A target character is shown with its Morse pattern.
 - Input must match the target exactly.
 - Correct: score +1, brief success state, next target (or next word letter).
-- Incorrect: score -1, error state, input clears, same target stays.
+- Incorrect: score -1 and input clears. With IFR mode on, the app advances immediately and queues misses for delayed review; with IFR mode off, the same target stays.
 - Optional hints and mnemonics which are activated in the settings panel.
 - Word mode shows a full word, highlights progress, and computes WPM on completion.
 - Character algorithm prioritizes less proficient characters ahead of well-known ones.
@@ -49,6 +49,8 @@ This document captures the intended, shared behavior across web and iOS.
 - Show mnemonics
 - Max level (letter set size)
 - Words (practice word mode)
+- IFR mode (immediate flow recovery)
+- Review misses later
 - Listen speed (WPM) formula: Tdit(ms) = 1200 / WPM
 - Reference chart modal
 - Sound check

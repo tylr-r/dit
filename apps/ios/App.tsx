@@ -52,6 +52,12 @@ import {
   getListenUnitMs,
   type ListenWavePlayback,
 } from './src/utils/listenWave'
+import {
+  enqueueReviewLetter,
+  filterReviewQueue,
+  pullDueReviewLetter,
+  type PracticeReviewItem,
+} from './src/utils/practiceReviewQueue'
 
 const LEVELS = [1, 2, 3, 4] as const
 const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3
@@ -62,6 +68,7 @@ const ERROR_LOCKOUT_MS = 1000
 const LISTEN_REVEAL_EXTRA_MS = 1000
 const LISTEN_REVEAL_FADE_OUT_MS = 320
 const LISTEN_POST_REVEAL_PAUSE_MS = 220
+const PRACTICE_NEXT_LETTER_DELAY_MS = 1000
 const PRACTICE_WORD_UNITS = 5
 const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
@@ -74,6 +81,10 @@ const INTRO_HINTS_KEY = 'dit-intro-hint-step'
 const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
 const NUX_STATUS_KEY = 'dit-nux-status'
 const LOCAL_PROGRESS_KEY = 'dit-progress'
+const DEFAULT_PRACTICE_IFR_MODE = true
+const DEFAULT_PRACTICE_REVIEW_MISSES = true
+const PRACTICE_REVIEW_DELAY_STEPS = 3
+const PRACTICE_REVIEW_MAX_SIZE = 24
 const NUX_LETTERS: Letter[] = ['E', 'T', 'I', 'M', 'A', 'N']
 const NUX_FAST_THRESHOLD_MS = 1600
 const NUX_FAST_DEFAULTS = {
@@ -237,6 +248,12 @@ export default function App() {
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
+  const [practiceIfrMode, setPracticeIfrMode] = useState(
+    DEFAULT_PRACTICE_IFR_MODE,
+  )
+  const [practiceReviewMisses, setPracticeReviewMisses] = useState(
+    DEFAULT_PRACTICE_REVIEW_MISSES,
+  )
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
   const [nuxStep, setNuxStep] = useState<NuxStep>('welcome')
@@ -379,6 +396,8 @@ export default function App() {
       listenWpm,
       maxLevel,
       practiceWordMode,
+      practiceIfrMode,
+      practiceReviewMisses,
       scores,
       showHint,
       showMnemonic,
@@ -388,6 +407,8 @@ export default function App() {
       freestyleWordMode,
       listenWpm,
       maxLevel,
+      practiceIfrMode,
+      practiceReviewMisses,
       practiceWordMode,
       scores,
       showHint,
@@ -402,7 +423,10 @@ export default function App() {
   const practiceWordIndexRef = useRef(practiceWordIndex)
   const practiceWordModeRef = useRef(practiceWordMode)
   const practiceLearnModeRef = useRef(practiceLearnMode)
+  const practiceIfrModeRef = useRef(practiceIfrMode)
+  const practiceReviewMissesRef = useRef(practiceReviewMisses)
   const practiceWordStartRef = useRef<number | null>(null)
+  const practiceReviewQueueRef = useRef<PracticeReviewItem[]>([])
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null)
   const scoresRef = useRef(scores)
@@ -453,6 +477,62 @@ export default function App() {
     [],
   )
 
+  const setNextPracticeLetter = useCallback(
+    (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
+      if (nextLetters.length === 0) {
+        return currentLetter
+      }
+      if (practiceIfrModeRef.current && practiceReviewMissesRef.current) {
+        const { nextQueue, reviewLetter } = pullDueReviewLetter(
+          practiceReviewQueueRef.current,
+        )
+        practiceReviewQueueRef.current = nextQueue
+        if (reviewLetter && nextLetters.includes(reviewLetter)) {
+          letterRef.current = reviewLetter
+          setLetter(reviewLetter)
+          return reviewLetter
+        }
+      }
+      const nextLetter = practiceLearnModeRef.current
+        ? getNextOrderedLetter(nextLetters, currentLetter)
+        : getRandomWeightedLetter(
+            nextLetters,
+            scoresRef.current,
+            currentLetter,
+          )
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
+      return nextLetter
+    },
+    [],
+  )
+
+  const advancePracticeWordTarget = useCallback(() => {
+    const currentWord = practiceWordRef.current
+    if (!currentWord) {
+      setPracticeWordFromList(availablePracticeWords)
+      return
+    }
+    const nextIndex = practiceWordIndexRef.current + 1
+    if (nextIndex >= currentWord.length) {
+      const startTime = practiceWordStartRef.current
+      if (startTime && currentWord.length > 0) {
+        const elapsedMs = now() - startTime
+        if (elapsedMs > 0) {
+          const nextWpm = (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
+          setPracticeWpm(Math.round(nextWpm * 10) / 10)
+        }
+      }
+      setPracticeWordFromList(availablePracticeWords, currentWord)
+      return
+    }
+    const nextLetter = currentWord[nextIndex] as Letter
+    practiceWordIndexRef.current = nextIndex
+    letterRef.current = nextLetter
+    setPracticeWordIndex(nextIndex)
+    setLetter(nextLetter)
+  }, [availablePracticeWords, setPracticeWordFromList])
+
   useEffect(() => {
     inputRef.current = input
     freestyleInputRef.current = freestyleInput
@@ -461,6 +541,8 @@ export default function App() {
     practiceWordIndexRef.current = practiceWordIndex
     practiceWordModeRef.current = practiceWordMode
     practiceLearnModeRef.current = practiceLearnMode
+    practiceIfrModeRef.current = practiceIfrMode
+    practiceReviewMissesRef.current = practiceReviewMisses
     freestyleWordModeRef.current = freestyleWordMode
     scoresRef.current = scores
     maxLevelRef.current = maxLevel
@@ -478,6 +560,8 @@ export default function App() {
     practiceWordIndex,
     practiceWordMode,
     practiceLearnMode,
+    practiceIfrMode,
+    practiceReviewMisses,
     scores,
   ])
 
@@ -555,6 +639,10 @@ export default function App() {
     if (mode === 'listen') {
       return
     }
+    practiceReviewQueueRef.current = filterReviewQueue(
+      practiceReviewQueueRef.current,
+      availableLetters,
+    )
     if (!availableLetters.includes(letterRef.current)) {
       const nextLetter = practiceLearnModeRef.current
         ? availableLetters[0]
@@ -636,6 +724,11 @@ export default function App() {
     setShowReference(false)
     setShowHint(false)
     setShowMnemonic(false)
+    setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
+    practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
+    setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
+    practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
+    practiceReviewQueueRef.current = []
     setMode('practice')
     setPracticeWordMode(false)
     practiceWordModeRef.current = false
@@ -798,8 +891,13 @@ export default function App() {
         }
         clearTimer(errorTimeoutRef)
         clearTimer(successTimeoutRef)
-        const target = MORSE_DATA[letterRef.current].code
+        const targetLetter = letterRef.current
+        const target = MORSE_DATA[targetLetter].code
         const isCorrect = attempt === target
+        const ifrEnabled =
+          practiceIfrModeRef.current &&
+          !isNuxActive &&
+          modeRef.current === 'practice'
         if (isCorrect) {
           if (isNuxActive && nuxStep === 'exercise') {
             const startedAt = nuxAttemptStartRef.current
@@ -830,76 +928,66 @@ export default function App() {
             return
           }
           if (canScoreAttempt()) {
-            bumpScore(letterRef.current, 1)
+            bumpScore(targetLetter, 1)
           }
           setInput('')
           if (practiceWordModeRef.current) {
-            const currentWord = practiceWordRef.current
-            if (!currentWord) {
-              setPracticeWordFromList(availablePracticeWords)
-              setStatus('idle')
-              return
-            }
-            const nextIndex = practiceWordIndexRef.current + 1
-            if (nextIndex >= currentWord.length) {
-              const startTime = practiceWordStartRef.current
-              if (startTime && currentWord.length > 0) {
-                const elapsedMs = now() - startTime
-                if (elapsedMs > 0) {
-                  const nextWpm =
-                    (currentWord.length / PRACTICE_WORD_UNITS) *
-                    (60000 / elapsedMs)
-                  setPracticeWpm(Math.round(nextWpm * 10) / 10)
-                }
-              }
-              setPracticeWordFromList(availablePracticeWords, currentWord)
-              setStatus('idle')
-              return
-            }
-            const nextLetter = currentWord[nextIndex] as Letter
-            practiceWordIndexRef.current = nextIndex
-            letterRef.current = nextLetter
-            setPracticeWordIndex(nextIndex)
-            setLetter(nextLetter)
+            advancePracticeWordTarget()
             setStatus('idle')
             return
           }
           setStatus('success')
           successTimeoutRef.current = setTimeout(() => {
-            const nextLetter = practiceLearnModeRef.current
-              ? getNextOrderedLetter(availableLetters, letterRef.current)
-              : getRandomWeightedLetter(
-                  availableLetters,
-                  scoresRef.current,
-                  letterRef.current,
-                )
-            letterRef.current = nextLetter
-            setLetter(nextLetter)
+            setNextPracticeLetter(availableLetters, targetLetter)
             setStatus('idle')
-          }, 650)
+          }, PRACTICE_NEXT_LETTER_DELAY_MS)
+          return
+        }
+        if (canScoreAttempt()) {
+          bumpScore(targetLetter, -1)
+        }
+        setInput('')
+        nuxAttemptStartRef.current = null
+        if (ifrEnabled) {
+          if (practiceReviewMissesRef.current) {
+            practiceReviewQueueRef.current = enqueueReviewLetter(
+              practiceReviewQueueRef.current,
+              targetLetter,
+              PRACTICE_REVIEW_DELAY_STEPS,
+              PRACTICE_REVIEW_MAX_SIZE,
+            )
+          }
+          const isPracticeWordMode = practiceWordModeRef.current
+          if (!isPracticeWordMode) {
+            errorLockoutUntilRef.current = now() + PRACTICE_NEXT_LETTER_DELAY_MS
+          }
+          setStatus('error')
+          errorTimeoutRef.current = setTimeout(() => {
+            if (isPracticeWordMode) {
+              advancePracticeWordTarget()
+            } else {
+              setNextPracticeLetter(availableLetters, targetLetter)
+            }
+            setStatus('idle')
+          }, PRACTICE_NEXT_LETTER_DELAY_MS)
           return
         }
         startErrorLockout()
-        if (canScoreAttempt()) {
-          bumpScore(letterRef.current, -1)
-        }
         setStatus('error')
-        setInput('')
-        nuxAttemptStartRef.current = null
         errorTimeoutRef.current = setTimeout(() => {
           setStatus('idle')
         }, ERROR_LOCKOUT_MS)
       }, INTER_CHAR_GAP_MS)
     },
     [
+      advancePracticeWordTarget,
       availableLetters,
-      availablePracticeWords,
       bumpScore,
       canScoreAttempt,
       isNuxActive,
       nuxIndex,
       nuxStep,
-      setPracticeWordFromList,
+      setNextPracticeLetter,
       startErrorLockout,
       submitFreestyleInput,
     ],
@@ -1002,6 +1090,10 @@ export default function App() {
       clearTimer(errorTimeoutRef)
       practiceWordStartRef.current = null
       const nextLetters = getLettersForLevel(value)
+      practiceReviewQueueRef.current = filterReviewQueue(
+        practiceReviewQueueRef.current,
+        nextLetters,
+      )
       if (isListen) {
         resetListenState()
         const nextLetter = setNextLetterForLevel(nextLetters)
@@ -1030,6 +1122,11 @@ export default function App() {
     (defaults: typeof NUX_FAST_DEFAULTS | typeof NUX_SLOW_DEFAULTS) => {
       setShowHint(defaults.showHint)
       setShowMnemonic(false)
+      setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
+      practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
+      setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
+      practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
+      practiceReviewQueueRef.current = []
       setListenWpm(defaults.listenWpm)
       setPracticeWordMode(false)
       practiceWordModeRef.current = false
@@ -1145,6 +1242,38 @@ export default function App() {
     [availableLetters, isFreestyle, isListen],
   )
 
+  const handlePracticeIfrModeChange = useCallback(
+    (value: boolean) => {
+      if (isFreestyle || isListen) {
+        return
+      }
+      setPracticeIfrMode(value)
+      practiceIfrModeRef.current = value
+      if (!value) {
+        practiceReviewQueueRef.current = []
+      } else {
+        errorLockoutUntilRef.current = 0
+      }
+      clearTimer(errorTimeoutRef)
+      setStatus('idle')
+    },
+    [isFreestyle, isListen],
+  )
+
+  const handlePracticeReviewMissesChange = useCallback(
+    (value: boolean) => {
+      if (isFreestyle || isListen) {
+        return
+      }
+      setPracticeReviewMisses(value)
+      practiceReviewMissesRef.current = value
+      if (!value) {
+        practiceReviewQueueRef.current = []
+      }
+    },
+    [isFreestyle, isListen],
+  )
+
   const handleUseRecommended = useCallback(() => {
     const preferredMaxLevel = DEFAULT_MAX_LEVEL
     const preferredListenWpm = DEFAULT_LISTEN_WPM
@@ -1152,12 +1281,16 @@ export default function App() {
     const preferredShowMnemonic = false
     const preferredPracticeLearnMode = true
     const preferredPracticeAutoPlay = true
+    const preferredPracticeIfrMode = DEFAULT_PRACTICE_IFR_MODE
+    const preferredPracticeReviewMisses = DEFAULT_PRACTICE_REVIEW_MISSES
 
     const isAlreadyRecommended =
       showHint === preferredShowHint &&
       showMnemonic === preferredShowMnemonic &&
       practiceLearnMode === preferredPracticeLearnMode &&
       practiceAutoPlay === preferredPracticeAutoPlay &&
+      practiceIfrMode === preferredPracticeIfrMode &&
+      practiceReviewMisses === preferredPracticeReviewMisses &&
       listenWpm === preferredListenWpm &&
       maxLevel === preferredMaxLevel
 
@@ -1172,6 +1305,11 @@ export default function App() {
     setPracticeAutoPlay(preferredPracticeAutoPlay)
     setPracticeLearnMode(preferredPracticeLearnMode)
     practiceLearnModeRef.current = preferredPracticeLearnMode
+    setPracticeIfrMode(preferredPracticeIfrMode)
+    practiceIfrModeRef.current = preferredPracticeIfrMode
+    setPracticeReviewMisses(preferredPracticeReviewMisses)
+    practiceReviewMissesRef.current = preferredPracticeReviewMisses
+    practiceReviewQueueRef.current = []
 
     setListenWpm(preferredListenWpm)
     setMaxLevel(preferredMaxLevel)
@@ -1206,7 +1344,9 @@ export default function App() {
     maxLevel,
     playListenSequence,
     practiceAutoPlay,
+    practiceIfrMode,
     practiceLearnMode,
+    practiceReviewMisses,
     resetListenState,
     setNextLetterForLevel,
     setPracticeWordFromList,
@@ -1281,6 +1421,22 @@ export default function App() {
       if (typeof progress.showMnemonic === 'boolean') {
         setShowMnemonic(progress.showMnemonic)
       }
+      if (typeof progress.practiceIfrMode === 'boolean') {
+        practiceIfrModeRef.current = progress.practiceIfrMode
+        setPracticeIfrMode(progress.practiceIfrMode)
+        if (!progress.practiceIfrMode) {
+          practiceReviewQueueRef.current = []
+        } else {
+          errorLockoutUntilRef.current = 0
+        }
+      }
+      if (typeof progress.practiceReviewMisses === 'boolean') {
+        practiceReviewMissesRef.current = progress.practiceReviewMisses
+        setPracticeReviewMisses(progress.practiceReviewMisses)
+        if (!progress.practiceReviewMisses) {
+          practiceReviewQueueRef.current = []
+        }
+      }
       if (typeof progress.wordMode === 'boolean') {
         if (freestyleWordModeRef.current !== progress.wordMode) {
           freestyleWordModeRef.current = progress.wordMode
@@ -1306,6 +1462,10 @@ export default function App() {
       if (typeof progress.maxLevel === 'number') {
         maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number]
         const nextLetters = getLettersForLevel(progress.maxLevel)
+        practiceReviewQueueRef.current = filterReviewQueue(
+          practiceReviewQueueRef.current,
+          nextLetters,
+        )
         const nextLetter = setNextLetterForLevel(
           nextLetters,
           letterRef.current,
@@ -1384,12 +1544,15 @@ export default function App() {
   const showMorseHint = introHintStep === 'morse' && !isListen && !isNuxActive
   const showSettingsHint =
     introHintStep === 'settings' && !isListen && !isNuxActive
+  const ifrActive = !isFreestyle && !isListen && !isNuxActive && practiceIfrMode
   const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked()
   const baseStatusText =
     status === 'success'
       ? 'Correct'
       : status === 'error'
-      ? 'Missed. Start over.'
+      ? ifrActive
+        ? 'Missed. Keep going.'
+        : 'Missed. Start over.'
       : mnemonicVisible
       ? MORSE_DATA[letter].mnemonic
       : ' '
@@ -1494,6 +1657,8 @@ export default function App() {
               practiceWordMode={isFreestyle ? freestyleWordMode : practiceWordMode}
               practiceAutoPlay={practiceAutoPlay}
               practiceLearnMode={practiceLearnMode}
+              practiceIfrMode={practiceIfrMode}
+              practiceReviewMisses={practiceReviewMisses}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
@@ -1504,6 +1669,8 @@ export default function App() {
               onPracticeWordModeChange={handlePracticeWordModeChange}
               onPracticeAutoPlayChange={setPracticeAutoPlay}
               onPracticeLearnModeChange={handlePracticeLearnModeChange}
+              onPracticeIfrModeChange={handlePracticeIfrModeChange}
+              onPracticeReviewMissesChange={handlePracticeReviewMissesChange}
               onListenWpmChange={handleListenWpmChange}
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}

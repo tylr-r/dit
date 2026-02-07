@@ -49,6 +49,9 @@ const mergeProgressSnapshot = (
   listenWpm: progress.listenWpm ?? base.listenWpm,
   maxLevel: progress.maxLevel ?? base.maxLevel,
   practiceWordMode: progress.practiceWordMode ?? base.practiceWordMode,
+  practiceIfrMode: progress.practiceIfrMode ?? base.practiceIfrMode,
+  practiceReviewMisses:
+    progress.practiceReviewMisses ?? base.practiceReviewMisses,
   scores: progress.scores ?? base.scores,
   showHint: progress.showHint ?? base.showHint,
   showMnemonic: progress.showMnemonic ?? base.showMnemonic,

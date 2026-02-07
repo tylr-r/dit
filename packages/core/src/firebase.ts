@@ -14,5 +14,8 @@ export type FirebaseSyncService = {
   signIn: (method?: FirebaseSignInMethod) => Promise<FirebaseSignInMethod>;
   signOut: () => Promise<void>;
   getProgress: (userId: string) => Promise<unknown | null>;
-  setProgress: (userId: string, progress: ProgressSnapshot) => Promise<void>;
+  setProgress: (
+    userId: string,
+    progress: ProgressSnapshot & { updatedAt: number },
+  ) => Promise<void>;
 };

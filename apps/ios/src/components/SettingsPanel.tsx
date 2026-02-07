@@ -29,6 +29,8 @@ type SettingsPanelProps = {
   practiceWordMode: boolean;
   practiceAutoPlay: boolean;
   practiceLearnMode: boolean;
+  practiceIfrMode: boolean;
+  practiceReviewMisses: boolean;
   listenWpm: number;
   listenWpmMin: number;
   listenWpmMax: number;
@@ -40,6 +42,8 @@ type SettingsPanelProps = {
   onPracticeWordModeChange: (value: boolean) => void;
   onPracticeAutoPlayChange: (value: boolean) => void;
   onPracticeLearnModeChange: (value: boolean) => void;
+  onPracticeIfrModeChange: (value: boolean) => void;
+  onPracticeReviewMissesChange: (value: boolean) => void;
   onListenWpmChange: (value: number) => void;
   onShowHintChange: (value: boolean) => void;
   onShowMnemonicChange: (value: boolean) => void;
@@ -83,6 +87,8 @@ export function SettingsPanel({
   practiceWordMode,
   practiceAutoPlay,
   practiceLearnMode,
+  practiceIfrMode,
+  practiceReviewMisses,
   listenWpm,
   listenWpmMin,
   listenWpmMax,
@@ -94,6 +100,8 @@ export function SettingsPanel({
   onPracticeWordModeChange,
   onPracticeAutoPlayChange,
   onPracticeLearnModeChange,
+  onPracticeIfrModeChange,
+  onPracticeReviewMissesChange,
   onListenWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
@@ -185,6 +193,23 @@ export function SettingsPanel({
               <Text style={styles.helperText}>
                 Cycles through characters in order of most common instead of
                 random selection.
+              </Text>
+              <ToggleRow
+                label="IFR mode"
+                value={practiceIfrMode}
+                onValueChange={onPracticeIfrModeChange}
+              />
+              <Text style={styles.helperText}>
+                On misses, immediately continue to the next symbol.
+              </Text>
+              <ToggleRow
+                label="Review misses later"
+                value={practiceReviewMisses}
+                disabled={!practiceIfrMode}
+                onValueChange={onPracticeReviewMissesChange}
+              />
+              <Text style={styles.helperText}>
+                Replays missed symbols after a short delay.
               </Text>
             </>
           ) : null}
