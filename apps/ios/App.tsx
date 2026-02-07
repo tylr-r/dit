@@ -48,6 +48,10 @@ import {
   stopMorseTone,
   stopTone,
 } from './src/utils/tone'
+import {
+  getListenUnitMs,
+  type ListenWavePlayback,
+} from './src/utils/listenWave'
 
 const LEVELS = [1, 2, 3, 4] as const
 const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3
@@ -55,6 +59,9 @@ const DEFAULT_LISTEN_WPM = 14
 const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
 const ERROR_LOCKOUT_MS = 1000
+const LISTEN_REVEAL_EXTRA_MS = 1000
+const LISTEN_REVEAL_FADE_OUT_MS = 320
+const LISTEN_POST_REVEAL_PAUSE_MS = 220
 const PRACTICE_WORD_UNITS = 5
 const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
@@ -240,6 +247,8 @@ export default function App() {
     'idle' | 'success' | 'error'
   >('idle')
   const [listenReveal, setListenReveal] = useState<Letter | null>(null)
+  const [listenWavePlayback, setListenWavePlayback] =
+    useState<ListenWavePlayback | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
   const nuxTimingsRef = useRef<number[]>([])
   const nuxAttemptStartRef = useRef<number | null>(null)
@@ -386,6 +395,7 @@ export default function App() {
   const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel as 1 | 2 | 3 | 4)
   const modeRef = useRef(mode)
   const listenStatusRef = useRef(listenStatus)
+  const listenWaveSequenceRef = useRef(0)
   const errorLockoutUntilRef = useRef(0)
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
   const successTimeoutRef = useRef<TimeoutHandle | null>(null)
@@ -467,6 +477,13 @@ export default function App() {
     (code: string, overrideWpm?: number) => {
       stopListenPlayback()
       const resolvedWpm = overrideWpm ?? listenWpm
+      const unitMs = getListenUnitMs(resolvedWpm, LISTEN_MIN_UNIT_MS)
+      listenWaveSequenceRef.current += 1
+      setListenWavePlayback({
+        sequence: listenWaveSequenceRef.current,
+        code,
+        unitMs,
+      })
       void playMorseTone({
         code,
         wpm: resolvedWpm,
@@ -681,12 +698,17 @@ export default function App() {
             letterRef.current,
           )
           letterRef.current = nextLetter
-          setListenStatus('idle')
           setListenReveal(null)
           setLetter(nextLetter)
-          playListenSequence(MORSE_DATA[nextLetter].code)
+          listenTimeoutRef.current = setTimeout(() => {
+            if (modeRef.current !== 'listen') {
+              return
+            }
+            setListenStatus('idle')
+            playListenSequence(MORSE_DATA[nextLetter].code)
+          }, LISTEN_REVEAL_FADE_OUT_MS + LISTEN_POST_REVEAL_PAUSE_MS)
         },
-        isCorrect ? 650 : ERROR_LOCKOUT_MS,
+        (isCorrect ? 650 : ERROR_LOCKOUT_MS) + LISTEN_REVEAL_EXTRA_MS,
       )
     },
     [
@@ -1269,7 +1291,7 @@ export default function App() {
       ? 'Correct'
       : listenStatus === 'error'
       ? 'Incorrect'
-      : 'Listen and type the character'
+      : 'Type what you hear'
   const listenDisplay = listenReveal ?? '?'
   const statusText = isFreestyle
     ? freestyleStatus
@@ -1363,6 +1385,9 @@ export default function App() {
             pips={stagePips}
             hintVisible={hintVisible}
             letterPlaceholder={letterPlaceholder}
+            isListen={isListen}
+            listenStatus={listenStatus}
+            listenWavePlayback={listenWavePlayback}
             practiceWpmText={practiceWpmText}
             practiceWordMode={showPracticeWord}
             practiceWord={showPracticeWord ? practiceWord : null}

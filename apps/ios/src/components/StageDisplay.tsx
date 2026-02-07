@@ -1,4 +1,16 @@
+import { useEffect } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated'
+import type { ListenWavePlayback } from '../utils/listenWave'
+import { ListenSineWave } from './ListenSineWave'
 
 export type StagePip = {
   type: 'dot' | 'dah';
@@ -11,6 +23,9 @@ type StageDisplayProps = {
   pips: StagePip[];
   hintVisible?: boolean;
   letterPlaceholder?: boolean;
+  isListen?: boolean;
+  listenStatus?: 'idle' | 'success' | 'error';
+  listenWavePlayback?: ListenWavePlayback | null;
   practiceWpmText?: string | null;
   practiceWordMode?: boolean;
   practiceWord?: string | null;
@@ -36,6 +51,9 @@ export function StageDisplay({
   pips,
   hintVisible = true,
   letterPlaceholder = false,
+  isListen = false,
+  listenStatus = 'idle',
+  listenWavePlayback = null,
   practiceWpmText = null,
   practiceWordMode = false,
   practiceWord = null,
@@ -44,6 +62,54 @@ export function StageDisplay({
 }: StageDisplayProps) {
   const displayLetter = letter || '?'
   const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter)
+  const listenWaveOpacity = useSharedValue(letterPlaceholder ? 1 : 0.3)
+  const listenTintProgress = useSharedValue(0)
+
+  useEffect(() => {
+    if (!isListen) {
+      listenWaveOpacity.value = 1
+      return
+    }
+    listenWaveOpacity.value = withTiming(letterPlaceholder ? 1 : 0.3, {
+      duration: 320,
+      easing: Easing.inOut(Easing.cubic),
+    })
+  }, [isListen, letterPlaceholder, listenWaveOpacity])
+
+  useEffect(() => {
+    if (!isListen || listenStatus === 'idle') {
+      listenTintProgress.value = withTiming(0, {
+        duration: 220,
+        easing: Easing.in(Easing.quad),
+      })
+      return
+    }
+    listenTintProgress.value = 0
+    listenTintProgress.value = withTiming(1, {
+      duration: 460,
+      easing: Easing.out(Easing.cubic),
+    })
+  }, [isListen, listenStatus, listenTintProgress])
+
+  const listenWaveAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: listenWaveOpacity.value,
+  }))
+
+  const listenSuccessTintStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      listenTintProgress.value,
+      [0, 1],
+      ['#f4f7f9', '#38f2a2'],
+    ),
+  }))
+
+  const listenErrorTintStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      listenTintProgress.value,
+      [0, 1],
+      ['#f4f7f9', '#ff6b6b'],
+    ),
+  }))
 
   if (isFreestyle) {
     return (
@@ -93,6 +159,34 @@ export function StageDisplay({
             )
           })}
         </View>
+      ) : isListen ? (
+        <View style={styles.listenVisual}>
+          <Animated.View
+            style={[styles.listenWaveWrap, listenWaveAnimatedStyle]}
+            accessibilityRole="image"
+            accessibilityLabel="Morse waveform"
+          >
+            <ListenSineWave
+              playback={listenWavePlayback}
+              tintStatus={listenStatus}
+            />
+          </Animated.View>
+          {!letterPlaceholder ? (
+            <Animated.Text
+              entering={FadeIn.duration(120).easing(Easing.out(Easing.cubic))}
+              exiting={FadeOut.duration(240).easing(Easing.in(Easing.quad))}
+              style={[
+                styles.letter,
+                styles.listenOverlayLetter,
+                listenStatus === 'success' && listenSuccessTintStyle,
+                listenStatus === 'error' && listenErrorTintStyle,
+              ]}
+              accessibilityRole="header"
+            >
+              {letter}
+            </Animated.Text>
+          ) : null}
+        </View>
       ) : (
         <Text
           style={[styles.letter, letterPlaceholder && styles.letterPlaceholder]}
@@ -117,7 +211,24 @@ export function StageDisplay({
       ) : (
         <View style={[styles.progress, styles.progressHidden]} />
       )}
-      <Text style={styles.statusText}>{statusText}</Text>
+      <View style={styles.statusTextWrap}>
+        {isListen ? (
+          <Animated.Text
+            key={`listen-status-${listenStatus}-${statusText}`}
+            entering={FadeIn.duration(100).easing(Easing.out(Easing.cubic))}
+            exiting={FadeOut.duration(100).easing(Easing.in(Easing.quad))}
+            style={[
+              styles.statusText,
+              listenStatus === 'success' && listenSuccessTintStyle,
+              listenStatus === 'error' && listenErrorTintStyle,
+            ]}
+          >
+            {statusText}
+          </Animated.Text>
+        ) : (
+          <Text style={styles.statusText}>{statusText}</Text>
+        )}
+      </View>
       {practiceWpmText ? (
         <Text style={styles.wpmText}>{practiceWpmText}</Text>
       ) : null}
@@ -128,6 +239,7 @@ export function StageDisplay({
 const styles = StyleSheet.create({
   stage: {
     flex: 1,
+    width: '100%',
     minHeight: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -147,6 +259,25 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
     paddingTop: 8,
     width: 'auto',
+  },
+  listenWaveWrap: {
+    alignSelf: 'stretch',
+    width: '100%',
+    height: 162,
+  },
+  listenVisual: {
+    width: '100%',
+    minHeight: 162,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  listenOverlayLetter: {
+    position: 'absolute',
+    marginBottom: 0,
+    paddingLeft: 0,
+    paddingTop: 0,
+    width: '100%',
   },
   letterPlaceholder: {
     opacity: 0.4,
@@ -206,10 +337,13 @@ const styles = StyleSheet.create({
   pipHit: {
     opacity: 1,
   },
+  statusTextWrap: {
+    minHeight: 18,
+    justifyContent: 'center',
+  },
   statusText: {
     fontSize: 14,
     lineHeight: 16,
-    minHeight: 18,
     letterSpacing: 2,
     color: 'rgba(141, 152, 165, 0.9)',
     textTransform: 'uppercase',
