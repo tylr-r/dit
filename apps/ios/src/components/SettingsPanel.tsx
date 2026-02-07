@@ -153,7 +153,7 @@ export function SettingsPanel({
         ) : null}
         {canShowWordsToggle ? (
           <ToggleRow
-            label="Practice Words"
+            label={isFreestyle ? 'Word mode' : 'Practice Words'}
             value={practiceWordMode}
             onValueChange={onPracticeWordModeChange}
           />

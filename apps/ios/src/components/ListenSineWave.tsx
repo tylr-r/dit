@@ -18,6 +18,7 @@ type ListenWaveTintStatus = 'idle' | 'success' | 'error'
 type ListenSineWaveProps = {
   playback: ListenWavePlayback | null;
   tintStatus?: ListenWaveTintStatus;
+  liveActive?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -137,6 +138,7 @@ const createPath = (
 export function ListenSineWave({
   playback,
   tintStatus = 'idle',
+  liveActive = false,
   style,
 }: ListenSineWaveProps) {
   const width = useSharedValue(0)
@@ -144,6 +146,7 @@ export function ListenSineWave({
   const phase = useSharedValue(0)
   const energy = useSharedValue(IDLE_ENERGY)
   const tintOpacity = useSharedValue(0)
+  const liveLevel = useSharedValue(0)
   const elapsedMs = useSharedValue(0)
   const code = useSharedValue('')
   const unitMs = useSharedValue(40)
@@ -171,6 +174,13 @@ export function ListenSineWave({
     })
   }, [tintOpacity, tintStatus])
 
+  useEffect(() => {
+    liveLevel.value = withTiming(liveActive ? 1 : 0, {
+      duration: liveActive ? 90 : 140,
+      easing: liveActive ? Easing.out(Easing.cubic) : Easing.in(Easing.quad),
+    })
+  }, [liveActive, liveLevel])
+
   useFrameCallback((frameInfo) => {
     const deltaMs = frameInfo.timeSincePreviousFrame
     if (deltaMs === null) {
@@ -183,8 +193,9 @@ export function ListenSineWave({
       unitMs.value,
       elapsedMs.value,
     )
+    const effectiveToneLevel = Math.max(toneLevel, liveLevel.value)
     const targetEnergy =
-      IDLE_ENERGY + toneLevel * (ACTIVE_ENERGY - IDLE_ENERGY)
+      IDLE_ENERGY + effectiveToneLevel * (ACTIVE_ENERGY - IDLE_ENERGY)
     const attackBlend = 1 - Math.exp(-deltaMs / 62)
     const decayBlend = 1 - Math.exp(-deltaMs / 190)
     const blend = targetEnergy > energy.value ? attackBlend : decayBlend

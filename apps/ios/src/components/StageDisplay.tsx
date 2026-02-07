@@ -26,6 +26,7 @@ type StageDisplayProps = {
   isListen?: boolean;
   listenStatus?: 'idle' | 'success' | 'error';
   listenWavePlayback?: ListenWavePlayback | null;
+  freestyleToneActive?: boolean;
   practiceWpmText?: string | null;
   practiceWordMode?: boolean;
   practiceWord?: string | null;
@@ -54,6 +55,7 @@ export function StageDisplay({
   isListen = false,
   listenStatus = 'idle',
   listenWavePlayback = null,
+  freestyleToneActive = false,
   practiceWpmText = null,
   practiceWordMode = false,
   practiceWord = null,
@@ -62,19 +64,25 @@ export function StageDisplay({
 }: StageDisplayProps) {
   const displayLetter = letter || '?'
   const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter)
-  const listenWaveOpacity = useSharedValue(letterPlaceholder ? 1 : 0.3)
+  const freestylePatternVisible = /^[.-]+$/.test(letter)
+  const showFreestyleOverlayLetter =
+    Boolean(letter) && letter !== '?' && !freestylePatternVisible
+  const shouldDimWave =
+    (isListen && !letterPlaceholder) ||
+    (isFreestyle && showFreestyleOverlayLetter)
+  const listenWaveOpacity = useSharedValue(shouldDimWave ? 0.3 : 1)
   const listenTintProgress = useSharedValue(0)
 
   useEffect(() => {
-    if (!isListen) {
+    if (!isListen && !isFreestyle) {
       listenWaveOpacity.value = 1
       return
     }
-    listenWaveOpacity.value = withTiming(letterPlaceholder ? 1 : 0.3, {
+    listenWaveOpacity.value = withTiming(shouldDimWave ? 0.3 : 1, {
       duration: 320,
       easing: Easing.inOut(Easing.cubic),
     })
-  }, [isListen, letterPlaceholder, listenWaveOpacity])
+  }, [isFreestyle, isListen, listenWaveOpacity, shouldDimWave])
 
   useEffect(() => {
     if (!isListen || listenStatus === 'idle') {
@@ -114,19 +122,34 @@ export function StageDisplay({
   if (isFreestyle) {
     return (
       <View style={styles.stage}>
-        <Text
-          style={[
-            styles.letter,
-            styles.freestyleLetter,
-            !letter && styles.letterPlaceholder,
-            freestyleLetterStyle,
-          ]}
-          accessibilityRole="header"
-        >
-          {displayLetter}
-        </Text>
+        <View style={styles.listenVisual}>
+          <Animated.View
+            style={[styles.listenWaveWrap, listenWaveAnimatedStyle]}
+            accessibilityRole="image"
+            accessibilityLabel="Morse waveform"
+          >
+            <ListenSineWave playback={null} liveActive={freestyleToneActive} />
+          </Animated.View>
+          {showFreestyleOverlayLetter ? (
+            <Animated.Text
+              entering={FadeIn.duration(120).easing(Easing.out(Easing.cubic))}
+              exiting={FadeOut.duration(240).easing(Easing.in(Easing.quad))}
+              style={[
+                styles.letter,
+                styles.listenOverlayLetter,
+                styles.freestyleLetter,
+                freestyleLetterStyle,
+              ]}
+              accessibilityRole="header"
+            >
+              {letter}
+            </Animated.Text>
+          ) : null}
+        </View>
         <View style={[styles.progress, styles.progressHidden]} />
-        <Text style={styles.statusText}>{statusText}</Text>
+        <View style={styles.statusTextWrap}>
+          <Text style={styles.statusText}>{statusText}</Text>
+        </View>
       </View>
     )
   }

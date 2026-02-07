@@ -1022,6 +1022,12 @@ export default function App() {
 
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
+      if (isFreestyle) {
+        setFreestyleWordMode(value)
+        freestyleWordModeRef.current = value
+        handleFreestyleClear()
+        return
+      }
       setPracticeWordMode(value)
       practiceWordModeRef.current = value
       practiceWordStartRef.current = null
@@ -1040,6 +1046,8 @@ export default function App() {
     [
       availableLetters,
       availablePracticeWords,
+      handleFreestyleClear,
+      isFreestyle,
       setNextLetterForLevel,
       setPracticeWordFromList,
     ],
@@ -1272,13 +1280,13 @@ export default function App() {
     ? isLetterResult
       ? freestyleWordMode
         ? `Added ${freestyleResult}`
-        : `Result ${freestyleResult}`
+        : ' '
       : freestyleResult
     : freestyleInput
     ? `Input ${freestyleInput}`
     : freestyleWordMode && freestyleWord
     ? `Word ${freestyleWord}`
-    : 'Tap and pause'
+    : 'Tap to dit or dah'
   const freestyleDisplay = freestyleWordMode
     ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
     : freestyleResult
@@ -1332,7 +1340,7 @@ export default function App() {
               isListen={isListen}
               levels={LEVELS}
               maxLevel={maxLevel}
-              practiceWordMode={practiceWordMode}
+              practiceWordMode={isFreestyle ? freestyleWordMode : practiceWordMode}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
@@ -1388,6 +1396,7 @@ export default function App() {
             isListen={isListen}
             listenStatus={listenStatus}
             listenWavePlayback={listenWavePlayback}
+            freestyleToneActive={isPressing}
             practiceWpmText={practiceWpmText}
             practiceWordMode={showPracticeWord}
             practiceWord={showPracticeWord ? practiceWord : null}
