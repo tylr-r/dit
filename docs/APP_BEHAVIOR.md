@@ -10,6 +10,15 @@ This document captures the intended, shared behavior across web and iOS.
 
 ## Modes
 
+### NUX (New User Experience)
+
+- On first launch, a welcome modal offers a quick personalization exercise.
+- The exercise presents a small set of easy letters for the user to match as fast as they can using the Morse key.
+- Based on response speed, the app suggests a preset: beginner (hints on, level 1) or advanced (hints off, higher starting level).
+- The user can accept the suggested preset, choose the other, or skip entirely.
+- NUX status (`pending`, `completed`, `skipped`) is persisted via AsyncStorage so it only runs once.
+- Settings chosen during NUX can always be changed later.
+
 ### Practice
 
 - A target character is shown with its Morse pattern.

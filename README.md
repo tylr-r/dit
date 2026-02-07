@@ -1,14 +1,15 @@
 # Dit
 
-Morse code practice across web and iOS. Tap for dot, hold for dah.
+Dit is a Morse code practice app for web and iOS. It offers various modes to help users learn and practice Morse code, providing instant feedback and tracking progress. The app is built using a monorepo architecture with shared logic and native modules for audio and haptic feedback.
 
 ## Principles
 
-- One thing per mode
-- Instant feedback
-- Works on phone or keyboard
-- Reference chart built in
-- Tracks what you know (and what you don't)
+- **Convenient daily practice** — Easy to use and accessible for consistent learning
+- **Auditory reflex over decoding** — Build direct sound-to-character recognition rather than analytical translation
+- **Koch method foundation** — Start at manageable speeds with Farnsworth spacing and high-frequency characters
+- **Variable speed training** — Gradually increase effective speed through adjustable Farnsworth spacing
+- **Early meaningful words** — Learn high-frequency characters first to form words quickly
+- **Self-paced progression** — Carousel structure removes rigid linear requirements
 
 ## Modes
 
@@ -49,10 +50,16 @@ Web app:
 pnpm --filter @dit/web dev
 ```
 
-iOS app (Expo):
+iOS app simulator:
 
 ```bash
-pnpm --filter @dit/ios dev
+pnpm --filter @dit/ios ios
+```
+
+iOS app on physical device:
+
+```bash
+pnpm --filter @dit/ios ios --device
 ```
 
 Run all dev servers via Turbo:
@@ -71,8 +78,23 @@ pnpm run test:e2e
 pnpm run test:types
 ```
 
+## Deploy
+
+```bash
+pnpm run deploy        # builds web app and deploys to Firebase
+```
+
 ## Environment
 
 - Root `.env` for shared config
 - `apps/ios/.env` for Expo-specific config
 - `apps/ios/GoogleService-Info.plist` for Firebase iOS config (local only, copy from `apps/ios/GoogleService-Info.example.plist`)
+
+## Docs
+
+See `docs/` for detailed references:
+
+- [APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md) — intended behavior across platforms
+- [STYLE_GUIDE.md](docs/STYLE_GUIDE.md) — code style and naming conventions
+- [NATIVE_IOS.md](docs/NATIVE_IOS.md) — iOS native module details
+- [PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) — learning methodology
