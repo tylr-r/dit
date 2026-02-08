@@ -7,6 +7,7 @@ import {
   EFFECTIVE_WPM_RANGE,
   formatWpm,
   getLettersForLevel,
+  getRandomLatencyAwareLetter,
   getRandomLetter,
   getRandomWeightedLetter,
   getRandomWord,
@@ -18,6 +19,7 @@ import {
   UNIT_TIME_MS,
   WPM_RANGE,
   type Letter,
+  type ListenTtrRecord,
   type Progress,
   type ProgressSnapshot,
 } from '@dit/core'
@@ -78,6 +80,7 @@ const ERROR_LOCKOUT_MS = 1000
 const LISTEN_REVEAL_EXTRA_MS = 1000
 const LISTEN_REVEAL_FADE_OUT_MS = 320
 const LISTEN_POST_REVEAL_PAUSE_MS = 220
+const LISTEN_RECOGNITION_DISPLAY_MS = 2600
 const PRACTICE_NEXT_LETTER_DELAY_MS = 1000
 const PRACTICE_WORD_UNITS = 5
 const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS
@@ -87,6 +90,13 @@ const LISTEN_WPM_MAX = WPM_RANGE.max
 const LISTEN_EFFECTIVE_WPM_MIN = EFFECTIVE_WPM_RANGE.min
 const LISTEN_EFFECTIVE_WPM_MAX = EFFECTIVE_WPM_RANGE.max
 const LISTEN_MIN_UNIT_MS = 40
+const LISTEN_TTR_EMA_ALPHA = 0.25
+const LISTEN_TTR_MAX_MS = 10000
+const LISTEN_TTR_MAX_SAMPLES = 300
+const LISTEN_OVERLEARN_THRESHOLD_MS = 1200
+const LISTEN_OVERLEARN_STRONG_THRESHOLD_MS = 2200
+const LISTEN_OVERLEARN_MAX_QUEUE_SIZE = 24
+const LISTEN_MAX_CONSECUTIVE_SAME = 3
 const REFERENCE_WPM = 20
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
 const INTRO_HINTS_KEY = 'dit-intro-hint-step'
@@ -121,6 +131,10 @@ type IntroHintStep = 'morse' | 'settings' | 'done';
 type NuxStatus = 'pending' | 'completed' | 'skipped';
 type NuxStep = 'welcome' | 'exercise' | 'result';
 type NuxResult = 'fast' | 'slow' | null;
+type ListenPromptTiming = {
+  targetLetter: Letter
+  expectedEndAt: number
+}
 const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
   (letter) => /^[A-Z]$/.test(letter),
 )
@@ -182,6 +196,124 @@ const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
     return letters[0]
   }
   return letters[(currentIndex + 1) % letters.length]
+}
+
+const clampListenTtrMs = (value: number) =>
+  Math.max(0, Math.min(LISTEN_TTR_MAX_MS, Math.round(value)))
+
+const applyListenTtrSample = (
+  current: ListenTtrRecord,
+  letter: Letter,
+  sampleMs: number,
+  sampleWeight: number = 1,
+) => {
+  if (!Number.isFinite(sampleMs) || sampleWeight <= 0) {
+    return current
+  }
+  const normalizedSampleMs = clampListenTtrMs(sampleMs)
+  const normalizedWeight = Math.max(1, Math.round(sampleWeight))
+  const existing = current[letter]
+  if (!existing) {
+    return {
+      ...current,
+      [letter]: {
+        averageMs: normalizedSampleMs,
+        samples: normalizedWeight,
+      },
+    }
+  }
+  const alpha = Math.min(0.85, LISTEN_TTR_EMA_ALPHA * normalizedWeight)
+  const averageMs = clampListenTtrMs(
+    existing.averageMs * (1 - alpha) + normalizedSampleMs * alpha,
+  )
+  const samples = Math.min(
+    LISTEN_TTR_MAX_SAMPLES,
+    existing.samples + normalizedWeight,
+  )
+  return {
+    ...current,
+    [letter]: {
+      averageMs,
+      samples,
+    },
+  }
+}
+
+const getListenOverlearnRepeats = (averageMs: number) => {
+  if (averageMs >= LISTEN_OVERLEARN_STRONG_THRESHOLD_MS) {
+    return 2
+  }
+  if (averageMs >= LISTEN_OVERLEARN_THRESHOLD_MS) {
+    return 1
+  }
+  return 0
+}
+
+const enqueueListenOverlearnLetters = (
+  queue: Letter[],
+  letter: Letter,
+  repeats: number,
+  maxSize: number,
+) => {
+  if (repeats <= 0 || queue.length >= maxSize) {
+    return queue
+  }
+  const nextQueue = [...queue]
+  for (
+    let count = 0;
+    count < repeats && nextQueue.length < maxSize;
+    count += 1
+  ) {
+    nextQueue.push(letter)
+  }
+  return nextQueue
+}
+
+const pullNextListenOverlearnLetter = (
+  queue: Letter[],
+  availableLetters: Letter[],
+  previousLetter: Letter,
+) => {
+  if (queue.length === 0) {
+    return {
+      nextQueue: queue,
+      reviewLetter: null as Letter | null,
+    }
+  }
+  const allowed = new Set(availableLetters)
+  const filteredQueue = queue.filter((letter) => allowed.has(letter))
+  if (filteredQueue.length === 0) {
+    return {
+      nextQueue: filteredQueue,
+      reviewLetter: null as Letter | null,
+    }
+  }
+  const nextIndex = filteredQueue.findIndex((letter) => letter !== previousLetter)
+  const resolvedIndex = nextIndex >= 0 ? nextIndex : 0
+  const reviewLetter = filteredQueue[resolvedIndex]
+  return {
+    nextQueue: filteredQueue.filter((_, index) => index !== resolvedIndex),
+    reviewLetter,
+  }
+}
+
+const getListenPlaybackDurationMs = (
+  code: string,
+  unitMs: number,
+  interCharacterGapMs: number,
+) => {
+  const symbols = code.split('').filter((symbol) => symbol === '.' || symbol === '-')
+  if (symbols.length === 0) {
+    return 0
+  }
+  let elapsedMs = 0
+  for (let index = 0; index < symbols.length; index += 1) {
+    elapsedMs += symbols[index] === '.' ? unitMs : unitMs * 3
+    if (index < symbols.length - 1) {
+      elapsedMs += unitMs
+    }
+  }
+  return elapsedMs + interCharacterGapMs
 }
 
 const initialConfig = (() => {
@@ -332,6 +464,11 @@ export default function App() {
   const [listenWavePlayback, setListenWavePlayback] =
     useState<ListenWavePlayback | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
+  const [listenTtr, setListenTtr] = useState<ListenTtrRecord>({})
+  const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
+  const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(
+    null,
+  )
   const nuxTimingsRef = useRef<number[]>([])
   const nuxAttemptStartRef = useRef<number | null>(null)
   useEffect(() => {
@@ -449,6 +586,7 @@ export default function App() {
       listenEffectiveWpm,
       listenAutoTightening,
       listenAutoTighteningCorrectCount,
+      listenTtr,
       maxLevel,
       practiceWordMode,
       practiceIfrMode,
@@ -463,6 +601,7 @@ export default function App() {
       listenAutoTightening,
       listenAutoTighteningCorrectCount,
       listenEffectiveWpm,
+      listenTtr,
       listenWpm,
       maxLevel,
       practiceIfrMode,
@@ -488,6 +627,7 @@ export default function App() {
   const freestyleWordModeRef = useRef(freestyleWordMode)
   const wordSpaceTimeoutRef = useRef<TimeoutHandle | null>(null)
   const scoresRef = useRef(scores)
+  const listenTtrRef = useRef(listenTtr)
   const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel as 1 | 2 | 3 | 4)
   const modeRef = useRef(mode)
   const listenWpmRef = useRef(listenWpm)
@@ -497,12 +637,17 @@ export default function App() {
     listenAutoTighteningCorrectCount,
   )
   const listenStatusRef = useRef(listenStatus)
+  const listenOverlearnQueueRef = useRef<Letter[]>([])
+  const listenPromptTimingRef = useRef<ListenPromptTiming | null>(null)
+  const listenConsecutiveLetterRef = useRef<Letter | null>(letter)
+  const listenConsecutiveCountRef = useRef(1)
   const listenWaveSequenceRef = useRef(0)
   const errorLockoutUntilRef = useRef(0)
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
   const successTimeoutRef = useRef<TimeoutHandle | null>(null)
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const listenRecognitionTimeoutRef = useRef<TimeoutHandle | null>(null)
   const completeNuxRef = useRef<() => void>(() => {})
 
   const setPracticeWordFromList = useCallback(
@@ -571,6 +716,65 @@ export default function App() {
     [],
   )
 
+  const setNextListenLetter = useCallback(
+    (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
+      if (nextLetters.length === 0) {
+        return currentLetter
+      }
+      let { nextQueue, reviewLetter } = pullNextListenOverlearnLetter(
+        listenOverlearnQueueRef.current,
+        nextLetters,
+        currentLetter,
+      )
+      const hasReachedConsecutiveCap =
+        listenConsecutiveLetterRef.current === currentLetter &&
+        listenConsecutiveCountRef.current >= LISTEN_MAX_CONSECUTIVE_SAME
+      let nextLetter =
+        reviewLetter ??
+        getRandomLatencyAwareLetter(
+          nextLetters,
+          scoresRef.current,
+          listenTtrRef.current,
+          currentLetter,
+        )
+      if (
+        hasReachedConsecutiveCap &&
+        nextLetter === currentLetter &&
+        nextLetters.length > 1
+      ) {
+        if (reviewLetter === currentLetter) {
+          nextQueue = enqueueListenOverlearnLetters(
+            nextQueue,
+            currentLetter,
+            1,
+            LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
+          )
+        }
+        const alternatives = nextLetters.filter((letter) => letter !== currentLetter)
+        nextLetter = getRandomLatencyAwareLetter(
+          alternatives,
+          scoresRef.current,
+          listenTtrRef.current,
+        )
+      }
+      listenOverlearnQueueRef.current = nextQueue
+      if (nextLetter === currentLetter) {
+        const nextCount =
+          listenConsecutiveLetterRef.current === currentLetter
+            ? listenConsecutiveCountRef.current + 1
+            : 2
+        listenConsecutiveCountRef.current = nextCount
+      } else {
+        listenConsecutiveCountRef.current = 1
+      }
+      listenConsecutiveLetterRef.current = nextLetter
+      letterRef.current = nextLetter
+      setLetter(nextLetter)
+      return nextLetter
+    },
+    [],
+  )
+
   const advancePracticeWordTarget = useCallback(() => {
     const currentWord = practiceWordRef.current
     if (!currentWord) {
@@ -609,6 +813,7 @@ export default function App() {
     practiceReviewMissesRef.current = practiceReviewMisses
     freestyleWordModeRef.current = freestyleWordMode
     scoresRef.current = scores
+    listenTtrRef.current = listenTtr
     maxLevelRef.current = maxLevel
     modeRef.current = mode
     listenWpmRef.current = listenWpm
@@ -636,6 +841,7 @@ export default function App() {
     practiceIfrMode,
     practiceReviewMisses,
     scores,
+    listenTtr,
   ])
 
   const stopTonePlayback = useCallback(() => {
@@ -674,6 +880,17 @@ export default function App() {
         resolvedEffectiveWpm,
         LISTEN_MIN_UNIT_MS,
       )
+      const expectedEndAt =
+        now() +
+        getListenPlaybackDurationMs(
+          code,
+          timing.unitMs,
+          timing.interCharacterGapMs,
+        )
+      listenPromptTimingRef.current = {
+        targetLetter: letterRef.current,
+        expectedEndAt,
+      }
       listenWaveSequenceRef.current += 1
       setListenWavePlayback({
         sequence: listenWaveSequenceRef.current,
@@ -699,6 +916,12 @@ export default function App() {
 
   const resetListenState = useCallback(() => {
     clearTimer(listenTimeoutRef)
+    clearTimer(listenRecognitionTimeoutRef)
+    listenPromptTimingRef.current = null
+    listenOverlearnQueueRef.current = []
+    listenConsecutiveLetterRef.current = letterRef.current
+    listenConsecutiveCountRef.current = 1
+    setListenRecognitionText(null)
     setListenStatus('idle')
     setListenReveal(null)
   }, [])
@@ -709,6 +932,7 @@ export default function App() {
       clearTimer(successTimeoutRef)
       clearTimer(errorTimeoutRef)
       clearTimer(listenTimeoutRef)
+      clearTimer(listenRecognitionTimeoutRef)
       clearTimer(wordSpaceTimeoutRef)
       stopListenPlayback()
     }
@@ -822,6 +1046,7 @@ export default function App() {
     setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
     practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
     practiceReviewQueueRef.current = []
+    listenOverlearnQueueRef.current = []
     setMode('practice')
     setPracticeWordMode(false)
     practiceWordModeRef.current = false
@@ -892,14 +1117,52 @@ export default function App() {
       if (!/^[A-Z0-9]$/.test(value)) {
         return
       }
+      setListenHasSubmittedAnswer(true)
       void triggerHaptics(10)
       clearTimer(listenTimeoutRef)
+      const targetLetter = letterRef.current
+      const responseAt = now()
+      const promptTiming = listenPromptTimingRef.current
+      const ttrMs =
+        promptTiming && promptTiming.targetLetter === targetLetter
+          ? Math.max(0, responseAt - promptTiming.expectedEndAt)
+          : null
+      listenPromptTimingRef.current = null
       stopListenPlayback()
-      const isCorrect = value === letterRef.current
+      const isCorrect = value === targetLetter
       let nextEffectiveWpm = listenEffectiveWpmRef.current
       setListenStatus(isCorrect ? 'success' : 'error')
-      setListenReveal(letterRef.current)
-      bumpScore(letterRef.current, isCorrect ? 1 : -1)
+      setListenReveal(targetLetter)
+      bumpScore(targetLetter, isCorrect ? 1 : -1)
+      if (ttrMs !== null) {
+        const recognitionText = `${(ttrMs / 1000).toFixed(1)}s`
+        setListenRecognitionText(recognitionText)
+        clearTimer(listenRecognitionTimeoutRef)
+        listenRecognitionTimeoutRef.current = setTimeout(() => {
+          setListenRecognitionText(null)
+        }, LISTEN_RECOGNITION_DISPLAY_MS)
+        const nextListenTtr = applyListenTtrSample(
+          listenTtrRef.current,
+          targetLetter,
+          ttrMs,
+        )
+        if (nextListenTtr !== listenTtrRef.current) {
+          listenTtrRef.current = nextListenTtr
+          setListenTtr(nextListenTtr)
+          const nextEntry = nextListenTtr[targetLetter]
+          if (!isCorrect && nextEntry) {
+            const repeats = getListenOverlearnRepeats(nextEntry.averageMs)
+            if (repeats > 0) {
+              listenOverlearnQueueRef.current = enqueueListenOverlearnLetters(
+                listenOverlearnQueueRef.current,
+                targetLetter,
+                repeats,
+                LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
+              )
+            }
+          }
+        }
+      }
       if (isCorrect && listenAutoTighteningRef.current) {
         const nextCorrectCount =
           listenAutoTighteningCorrectCountRef.current + 1
@@ -917,14 +1180,8 @@ export default function App() {
       }
       listenTimeoutRef.current = setTimeout(
         () => {
-          const nextLetter = getRandomWeightedLetter(
-            availableLetters,
-            scoresRef.current,
-            letterRef.current,
-          )
-          letterRef.current = nextLetter
+          const nextLetter = setNextListenLetter(availableLetters, targetLetter)
           setListenReveal(null)
-          setLetter(nextLetter)
           listenTimeoutRef.current = setTimeout(() => {
             if (modeRef.current !== 'listen') {
               return
@@ -944,6 +1201,7 @@ export default function App() {
       bumpScore,
       listenStatus,
       playListenSequence,
+      setNextListenLetter,
       stopListenPlayback,
       triggerHaptics,
     ],
@@ -1241,7 +1499,7 @@ export default function App() {
       )
       if (isListen) {
         resetListenState()
-        const nextLetter = setNextLetterForLevel(nextLetters)
+        const nextLetter = setNextListenLetter(nextLetters)
         playListenSequence(MORSE_DATA[nextLetter].code)
         return
       }
@@ -1258,6 +1516,7 @@ export default function App() {
       isListen,
       playListenSequence,
       resetListenState,
+      setNextListenLetter,
       setNextLetterForLevel,
       setPracticeWordFromList,
     ],
@@ -1536,7 +1795,7 @@ export default function App() {
 
     if (modeRef.current === 'listen') {
       resetListenState()
-      const nextLetter = setNextLetterForLevel(nextLetters)
+      const nextLetter = setNextListenLetter(nextLetters)
       playListenSequence(MORSE_DATA[nextLetter].code, {
         characterWpm: preferredListenWpm,
         effectiveWpm: preferredListenEffectiveWpm,
@@ -1558,6 +1817,7 @@ export default function App() {
     practiceLearnMode,
     practiceReviewMisses,
     resetListenState,
+    setNextListenLetter,
     setNextLetterForLevel,
     setPracticeWordFromList,
     showHint,
@@ -1593,7 +1853,8 @@ export default function App() {
         return
       }
       if (nextMode === 'listen') {
-        const nextLetter = setNextLetterForLevel(availableLetters)
+        setListenHasSubmittedAnswer(false)
+        const nextLetter = setNextListenLetter(availableLetters)
         playListenSequence(MORSE_DATA[nextLetter].code)
         return
       }
@@ -1611,6 +1872,7 @@ export default function App() {
       availablePracticeWords,
       playListenSequence,
       resetListenState,
+      setNextListenLetter,
       setNextLetterForLevel,
       setPracticeWordFromList,
       stopListenPlayback,
@@ -1627,6 +1889,10 @@ export default function App() {
       if (progress.scores) {
         scoresRef.current = progress.scores
         setScores(progress.scores)
+      }
+      if (progress.listenTtr) {
+        listenTtrRef.current = progress.listenTtr
+        setListenTtr(progress.listenTtr)
       }
       if (typeof progress.showHint === 'boolean') {
         setShowHint(progress.showHint)
@@ -1733,10 +1999,10 @@ export default function App() {
           practiceReviewQueueRef.current,
           nextLetters,
         )
-        const nextLetter = setNextLetterForLevel(
-          nextLetters,
-          letterRef.current,
-        )
+        const nextLetter =
+          modeRef.current === 'listen'
+            ? setNextListenLetter(nextLetters, letterRef.current)
+            : setNextLetterForLevel(nextLetters, letterRef.current)
         setMaxLevel(progress.maxLevel as (typeof LEVELS)[number])
         if (
           modeRef.current === 'listen' &&
@@ -1758,7 +2024,7 @@ export default function App() {
         }
       }
     },
-    [setNextLetterForLevel, setPracticeWordFromList],
+    [setNextLetterForLevel, setNextListenLetter, setPracticeWordFromList],
   )
   const {
     progressUpdatedAt,
@@ -1840,6 +2106,10 @@ export default function App() {
     !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
       : null
+  const listenTtrText =
+    isListen && listenRecognitionText
+      ? listenRecognitionText
+      : null
   const isInputOnTrack =
     !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
@@ -1882,6 +2152,8 @@ export default function App() {
       ? 'Correct'
       : listenStatus === 'error'
       ? 'Incorrect'
+      : listenHasSubmittedAnswer
+      ? ' '
       : 'Type what you hear'
   const listenDisplay = listenReveal ?? '?'
   const statusText = isFreestyle
@@ -1998,6 +2270,7 @@ export default function App() {
             listenWavePlayback={listenWavePlayback}
             freestyleToneActive={isPressing}
             practiceWpmText={practiceWpmText}
+            listenTtrText={listenTtrText}
             practiceWordMode={showPracticeWord}
             practiceWord={showPracticeWord ? practiceWord : null}
             practiceWordIndex={practiceWordIndex}

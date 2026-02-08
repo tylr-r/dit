@@ -55,6 +55,7 @@ const mergeProgressSnapshot = (
   listenAutoTighteningCorrectCount:
     progress.listenAutoTighteningCorrectCount ??
     base.listenAutoTighteningCorrectCount,
+  listenTtr: progress.listenTtr ?? base.listenTtr,
   maxLevel: progress.maxLevel ?? base.maxLevel,
   practiceWordMode: progress.practiceWordMode ?? base.practiceWordMode,
   practiceIfrMode: progress.practiceIfrMode ?? base.practiceIfrMode,

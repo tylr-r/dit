@@ -28,6 +28,7 @@ type StageDisplayProps = {
   listenWavePlayback?: ListenWavePlayback | null;
   freestyleToneActive?: boolean;
   practiceWpmText?: string | null;
+  listenTtrText?: string | null;
   practiceWordMode?: boolean;
   practiceWord?: string | null;
   practiceWordIndex?: number;
@@ -57,6 +58,7 @@ export function StageDisplay({
   listenWavePlayback = null,
   freestyleToneActive = false,
   practiceWpmText = null,
+  listenTtrText = null,
   practiceWordMode = false,
   practiceWord = null,
   practiceWordIndex = 0,
@@ -198,12 +200,7 @@ export function StageDisplay({
             <Animated.Text
               entering={FadeIn.duration(120).easing(Easing.out(Easing.cubic))}
               exiting={FadeOut.duration(240).easing(Easing.in(Easing.quad))}
-              style={[
-                styles.letter,
-                styles.listenOverlayLetter,
-                listenStatus === 'success' && listenSuccessTintStyle,
-                listenStatus === 'error' && listenErrorTintStyle,
-              ]}
+              style={[styles.letter, styles.listenOverlayLetter]}
               accessibilityRole="header"
             >
               {letter}
@@ -252,9 +249,20 @@ export function StageDisplay({
           <Text style={styles.statusText}>{statusText}</Text>
         )}
       </View>
-      {practiceWpmText ? (
-        <Text style={styles.wpmText}>{practiceWpmText}</Text>
-      ) : null}
+      <View style={styles.metricSlot}>
+        {practiceWpmText ? (
+          <Text style={styles.wpmText}>{practiceWpmText}</Text>
+        ) : listenTtrText ? (
+          <Animated.Text
+            key={`listen-recognition-${listenTtrText}`}
+            entering={FadeIn.duration(120).easing(Easing.out(Easing.cubic))}
+            exiting={FadeOut.duration(420).easing(Easing.in(Easing.quad))}
+            style={styles.wpmText}
+          >
+            {listenTtrText}
+          </Animated.Text>
+        ) : null}
+      </View>
     </View>
   )
 }
@@ -362,6 +370,10 @@ const styles = StyleSheet.create({
   },
   statusTextWrap: {
     minHeight: 18,
+    justifyContent: 'center',
+  },
+  metricSlot: {
+    minHeight: 16,
     justifyContent: 'center',
   },
   statusText: {

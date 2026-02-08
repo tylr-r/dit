@@ -6,6 +6,7 @@ export {
   formatWpm,
   getLettersForLevel,
   getRandomLetter,
+  getRandomLatencyAwareLetter,
   getRandomWeightedLetter,
   getRandomWord,
   getWordsForLetters,
@@ -34,6 +35,8 @@ export {
 } from './constants'
 export type { Letter } from './data/morse'
 export type {
+  ListenTtrEntry,
+  ListenTtrRecord,
   ParseProgressOptions,
   Progress,
   ProgressSnapshot,

@@ -1,6 +1,11 @@
 import { MORSE_DATA, type Letter } from '../data/morse'
 import { PRACTICE_WORDS } from '../data/practiceWords'
-import type { ParseProgressOptions, Progress, ScoreRecord } from '../types'
+import type {
+  ListenTtrRecord,
+  ParseProgressOptions,
+  Progress,
+  ScoreRecord,
+} from '../types'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 
@@ -91,6 +96,45 @@ export const getRandomWeightedLetter = (
   return letters[letters.length - 1]
 }
 
+export const getRandomLatencyAwareLetter = (
+  letters: Letter[],
+  scores: ScoreRecord,
+  listenTtr: ListenTtrRecord = {},
+  previous?: Letter,
+): Letter => {
+  if (letters.length === 0) {
+    return LETTERS[0]
+  }
+  if (letters.length === 1) {
+    return letters[0]
+  }
+  const maxScore = Math.max(...letters.map((item) => scores[item] ?? 0))
+  const baseline = 3
+  const weights = letters.map((item) => {
+    const scoreWeakness = Math.max(maxScore - (scores[item] ?? 0), 0)
+    const ttrEntry = listenTtr[item]
+    // Keep latency influence intentionally light and only after enough data.
+    const latencyWeakness =
+      ttrEntry && ttrEntry.samples >= 5
+        ? Math.min(2, Math.max(0, Math.round((ttrEntry.averageMs - 1000) / 700)))
+        : 0
+    return baseline + scoreWeakness + latencyWeakness
+  })
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+  let roll = Math.random() * totalWeight
+  for (let index = 0; index < letters.length; index += 1) {
+    roll -= weights[index]
+    if (roll <= 0) {
+      const picked = letters[index]
+      if (picked === previous) {
+        return letters[(index + 1) % letters.length]
+      }
+      return picked
+    }
+  }
+  return letters[letters.length - 1]
+}
+
 export const initializeScores = (): ScoreRecord =>
   LETTERS.reduce(
     (acc, letter) => {
@@ -124,6 +168,38 @@ export const parseFirebaseScores = (value: unknown) => {
     }
   })
   return hasScore ? next : null
+}
+
+const parseListenTtr = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const next: ListenTtrRecord = {}
+  let hasEntry = false
+  LETTERS.forEach((letter) => {
+    const entry = record[letter]
+    if (!entry || typeof entry !== 'object') {
+      return
+    }
+    const entryRecord = entry as Record<string, unknown>
+    const averageMs = entryRecord.averageMs
+    const samples = entryRecord.samples
+    if (
+      typeof averageMs !== 'number' ||
+      !Number.isFinite(averageMs) ||
+      typeof samples !== 'number' ||
+      !Number.isFinite(samples)
+    ) {
+      return
+    }
+    next[letter] = {
+      averageMs: Math.max(0, Math.round(averageMs)),
+      samples: Math.max(1, Math.round(samples)),
+    }
+    hasEntry = true
+  })
+  return hasEntry ? next : null
 }
 
 export const parseProgress = (
@@ -201,6 +277,10 @@ export const parseProgress = (
   const scores = parseFirebaseScores(record.scores)
   if (scores) {
     progress.scores = scores
+  }
+  const listenTtr = parseListenTtr(record.listenTtr)
+  if (listenTtr) {
+    progress.listenTtr = listenTtr
   }
   return progress
 }

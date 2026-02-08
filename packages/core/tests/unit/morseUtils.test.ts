@@ -6,6 +6,7 @@ import {
   clamp,
   formatWpm,
   getLettersForLevel,
+  getRandomLatencyAwareLetter,
   getRandomWeightedLetter,
   initializeScores,
   parseFirebaseScores,
@@ -67,6 +68,20 @@ describe('morse utils', () => {
     expect(result).toBe('B')
   })
 
+  it('uses latency as a light tie-breaker after enough samples', () => {
+    const scores = initializeScores()
+    vi.spyOn(Math, 'random').mockReturnValue(0.7)
+    const result = getRandomLatencyAwareLetter(
+      ['B', 'A'],
+      scores,
+      {
+        A: { averageMs: 2200, samples: 6 },
+        B: { averageMs: 200, samples: 6 },
+      },
+    )
+    expect(result).toBe('A')
+  })
+
   it('parses firebase scores and ignores invalid entries', () => {
     const parsed = parseFirebaseScores({ A: 2, B: 'nope' })
     expect(parsed).not.toBeNull()
@@ -93,6 +108,10 @@ describe('morse utils', () => {
         practiceWordMode: true,
         practiceIfrMode: false,
         practiceReviewMisses: true,
+        listenTtr: {
+          A: { averageMs: 1234.6, samples: 4.2 },
+          B: { averageMs: -100, samples: 0 },
+        },
         scores: { A: 3, Z: 1 },
       },
       {
@@ -111,6 +130,8 @@ describe('morse utils', () => {
     expect(progress?.showHint).toBe(true)
     expect(progress?.practiceIfrMode).toBe(false)
     expect(progress?.practiceReviewMisses).toBe(true)
+    expect(progress?.listenTtr?.A).toEqual({ averageMs: 1235, samples: 4 })
+    expect(progress?.listenTtr?.B).toEqual({ averageMs: 0, samples: 1 })
     expect(progress?.scores?.A).toBe(3)
     expect(progress?.scores?.Z).toBe(1)
   })

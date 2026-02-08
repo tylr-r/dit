@@ -2,11 +2,19 @@ import type { Letter } from './data/morse'
 
 export type ScoreRecord = Record<Letter, number>
 
+export type ListenTtrEntry = {
+  averageMs: number
+  samples: number
+}
+
+export type ListenTtrRecord = Partial<Record<Letter, ListenTtrEntry>>
+
 export type Progress = {
   listenWpm?: number
   listenEffectiveWpm?: number
   listenAutoTightening?: boolean
   listenAutoTighteningCorrectCount?: number
+  listenTtr?: ListenTtrRecord
   maxLevel?: number
   showMnemonic?: boolean
   practiceWordMode?: boolean
@@ -22,6 +30,7 @@ export type ProgressSnapshot = {
   listenEffectiveWpm?: number
   listenAutoTightening?: boolean
   listenAutoTighteningCorrectCount?: number
+  listenTtr?: ListenTtrRecord
   maxLevel: number
   practiceWordMode: boolean
   practiceIfrMode?: boolean
