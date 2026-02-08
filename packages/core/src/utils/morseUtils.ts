@@ -128,7 +128,14 @@ export const parseFirebaseScores = (value: unknown) => {
 
 export const parseProgress = (
   value: unknown,
-  { listenWpmMin, listenWpmMax, levelMin = 1, levelMax = 4 }: ParseProgressOptions,
+  {
+    listenWpmMin,
+    listenWpmMax,
+    listenEffectiveWpmMin = listenWpmMin,
+    listenEffectiveWpmMax = listenWpmMax,
+    levelMin = 1,
+    levelMax = 4,
+  }: ParseProgressOptions,
 ): Progress | null => {
   if (!value || typeof value !== 'object') {
     return null
@@ -161,6 +168,35 @@ export const parseProgress = (
     Number.isFinite(record.listenWpm)
   ) {
     progress.listenWpm = clamp(record.listenWpm, listenWpmMin, listenWpmMax)
+  }
+  if (
+    typeof record.listenEffectiveWpm === 'number' &&
+    Number.isFinite(record.listenEffectiveWpm)
+  ) {
+    progress.listenEffectiveWpm = clamp(
+      record.listenEffectiveWpm,
+      listenEffectiveWpmMin,
+      listenEffectiveWpmMax,
+    )
+  }
+  if (
+    typeof progress.listenWpm === 'number' &&
+    typeof progress.listenEffectiveWpm === 'number' &&
+    progress.listenEffectiveWpm > progress.listenWpm
+  ) {
+    progress.listenEffectiveWpm = progress.listenWpm
+  }
+  if (typeof record.listenAutoTightening === 'boolean') {
+    progress.listenAutoTightening = record.listenAutoTightening
+  }
+  if (
+    typeof record.listenAutoTighteningCorrectCount === 'number' &&
+    Number.isFinite(record.listenAutoTighteningCorrectCount)
+  ) {
+    progress.listenAutoTighteningCorrectCount = Math.max(
+      0,
+      Math.round(record.listenAutoTighteningCorrectCount),
+    )
   }
   const scores = parseFirebaseScores(record.scores)
   if (scores) {

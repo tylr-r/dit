@@ -83,6 +83,9 @@ describe('morse utils', () => {
     const progress = parseProgress(
       {
         listenWpm: 100,
+        listenEffectiveWpm: 2,
+        listenAutoTightening: true,
+        listenAutoTighteningCorrectCount: 7.6,
         maxLevel: 9,
         showHint: true,
         showMnemonic: false,
@@ -92,10 +95,18 @@ describe('morse utils', () => {
         practiceReviewMisses: true,
         scores: { A: 3, Z: 1 },
       },
-      { listenWpmMin: 10, listenWpmMax: 30 },
+      {
+        listenWpmMin: 10,
+        listenWpmMax: 30,
+        listenEffectiveWpmMin: 6,
+        listenEffectiveWpmMax: 30,
+      },
     )
     expect(progress).not.toBeNull()
     expect(progress?.listenWpm).toBe(30)
+    expect(progress?.listenEffectiveWpm).toBe(6)
+    expect(progress?.listenAutoTightening).toBe(true)
+    expect(progress?.listenAutoTighteningCorrectCount).toBe(8)
     expect(progress?.maxLevel).toBe(4)
     expect(progress?.showHint).toBe(true)
     expect(progress?.practiceIfrMode).toBe(false)

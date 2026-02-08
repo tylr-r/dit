@@ -2,6 +2,9 @@ import {
   applyScoreDelta,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
+  DEFAULT_CHARACTER_WPM,
+  DEFAULT_EFFECTIVE_WPM,
+  EFFECTIVE_WPM_RANGE,
   formatWpm,
   getLettersForLevel,
   getRandomLetter,
@@ -49,7 +52,7 @@ import {
   stopTone,
 } from './src/utils/tone'
 import {
-  getListenUnitMs,
+  getListenTiming,
   type ListenWavePlayback,
 } from './src/utils/listenWave'
 import {
@@ -61,7 +64,14 @@ import {
 
 const LEVELS = [1, 2, 3, 4] as const
 const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3
-const DEFAULT_LISTEN_WPM = 14
+const DEFAULT_LISTEN_WPM = DEFAULT_CHARACTER_WPM
+const DEFAULT_LISTEN_EFFECTIVE_WPM = DEFAULT_EFFECTIVE_WPM
+const DEFAULT_LISTEN_AUTO_TIGHTENING = true
+const DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT = 0
+const LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS = {
+  medium: 12,
+  tight: 24,
+} as const
 const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
 const ERROR_LOCKOUT_MS = 1000
@@ -74,6 +84,8 @@ const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const LISTEN_WPM_MIN = WPM_RANGE.min
 const LISTEN_WPM_MAX = WPM_RANGE.max
+const LISTEN_EFFECTIVE_WPM_MIN = EFFECTIVE_WPM_RANGE.min
+const LISTEN_EFFECTIVE_WPM_MAX = EFFECTIVE_WPM_RANGE.max
 const LISTEN_MIN_UNIT_MS = 40
 const REFERENCE_WPM = 20
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
@@ -89,12 +101,19 @@ const NUX_LETTERS: Letter[] = ['E', 'T', 'I', 'M', 'A', 'N']
 const NUX_FAST_THRESHOLD_MS = 1600
 const NUX_FAST_DEFAULTS = {
   showHint: false,
-  listenWpm: 20,
+  listenWpm: DEFAULT_LISTEN_WPM,
+  listenEffectiveWpm: DEFAULT_LISTEN_WPM,
+  listenAutoTightening: false,
+  listenAutoTighteningCorrectCount:
+    LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight,
   maxLevel: 4,
 } as const
 const NUX_SLOW_DEFAULTS = {
   showHint: false,
-  listenWpm: 10,
+  listenWpm: DEFAULT_LISTEN_WPM,
+  listenEffectiveWpm: DEFAULT_LISTEN_EFFECTIVE_WPM,
+  listenAutoTightening: DEFAULT_LISTEN_AUTO_TIGHTENING,
+  listenAutoTighteningCorrectCount: DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
   maxLevel: 1,
 } as const
 
@@ -128,6 +147,31 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 }
 
 const now = () => Date.now()
+
+const clampListenWpm = (value: number) =>
+  Math.max(LISTEN_WPM_MIN, Math.min(LISTEN_WPM_MAX, Math.round(value)))
+
+const clampListenEffectiveWpm = (value: number) =>
+  Math.max(
+    LISTEN_EFFECTIVE_WPM_MIN,
+    Math.min(LISTEN_EFFECTIVE_WPM_MAX, Math.round(value)),
+  )
+
+const getListenAutoTighteningStage = (correctCount: number) => {
+  if (correctCount >= LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight) {
+    return 2
+  }
+  if (correctCount >= LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.medium) {
+    return 1
+  }
+  return 0
+}
+
+const getAutoEffectiveWpm = (characterWpm: number, correctCount: number) => {
+  const stage = getListenAutoTighteningStage(correctCount)
+  const targetGap = stage === 0 ? 4 : stage === 1 ? 2 : 0
+  return clampListenEffectiveWpm(Math.min(characterWpm, characterWpm - targetGap))
+}
 
 const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
   if (letters.length === 0) {
@@ -273,6 +317,14 @@ export default function App() {
   const [freestyleWordMode, setFreestyleWordMode] = useState(false)
   const [freestyleWord, setFreestyleWord] = useState('')
   const [listenWpm, setListenWpm] = useState(DEFAULT_LISTEN_WPM)
+  const [listenEffectiveWpm, setListenEffectiveWpm] = useState(
+    DEFAULT_LISTEN_EFFECTIVE_WPM,
+  )
+  const [listenAutoTightening, setListenAutoTightening] = useState(
+    DEFAULT_LISTEN_AUTO_TIGHTENING,
+  )
+  const [listenAutoTighteningCorrectCount, setListenAutoTighteningCorrectCount] =
+    useState(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle')
@@ -394,6 +446,9 @@ export default function App() {
   const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
       listenWpm,
+      listenEffectiveWpm,
+      listenAutoTightening,
+      listenAutoTighteningCorrectCount,
       maxLevel,
       practiceWordMode,
       practiceIfrMode,
@@ -405,6 +460,9 @@ export default function App() {
     }),
     [
       freestyleWordMode,
+      listenAutoTightening,
+      listenAutoTighteningCorrectCount,
+      listenEffectiveWpm,
       listenWpm,
       maxLevel,
       practiceIfrMode,
@@ -432,6 +490,12 @@ export default function App() {
   const scoresRef = useRef(scores)
   const maxLevelRef = useRef<1 | 2 | 3 | 4>(maxLevel as 1 | 2 | 3 | 4)
   const modeRef = useRef(mode)
+  const listenWpmRef = useRef(listenWpm)
+  const listenEffectiveWpmRef = useRef(listenEffectiveWpm)
+  const listenAutoTighteningRef = useRef(listenAutoTightening)
+  const listenAutoTighteningCorrectCountRef = useRef(
+    listenAutoTighteningCorrectCount,
+  )
   const listenStatusRef = useRef(listenStatus)
   const listenWaveSequenceRef = useRef(0)
   const errorLockoutUntilRef = useRef(0)
@@ -547,13 +611,22 @@ export default function App() {
     scoresRef.current = scores
     maxLevelRef.current = maxLevel
     modeRef.current = mode
+    listenWpmRef.current = listenWpm
+    listenEffectiveWpmRef.current = listenEffectiveWpm
+    listenAutoTighteningRef.current = listenAutoTightening
+    listenAutoTighteningCorrectCountRef.current =
+      listenAutoTighteningCorrectCount
     listenStatusRef.current = listenStatus
   }, [
     freestyleInput,
     freestyleWordMode,
     input,
     letter,
+    listenAutoTightening,
+    listenAutoTighteningCorrectCount,
+    listenEffectiveWpm,
     listenStatus,
+    listenWpm,
     maxLevel,
     mode,
     practiceWord,
@@ -579,23 +652,43 @@ export default function App() {
   }, [stopMorseTone, stopTonePlayback])
 
   const playListenSequence = useCallback(
-    (code: string, overrideWpm?: number) => {
+    (
+      code: string,
+      overrides?: {
+        characterWpm?: number;
+        effectiveWpm?: number;
+      },
+    ) => {
       stopListenPlayback()
-      const resolvedWpm = overrideWpm ?? listenWpm
-      const unitMs = getListenUnitMs(resolvedWpm, LISTEN_MIN_UNIT_MS)
+      const resolvedCharacterWpm = clampListenWpm(
+        overrides?.characterWpm ?? listenWpmRef.current,
+      )
+      const resolvedEffectiveWpm = clampListenEffectiveWpm(
+        Math.min(
+          overrides?.effectiveWpm ?? listenEffectiveWpmRef.current,
+          resolvedCharacterWpm,
+        ),
+      )
+      const timing = getListenTiming(
+        resolvedCharacterWpm,
+        resolvedEffectiveWpm,
+        LISTEN_MIN_UNIT_MS,
+      )
       listenWaveSequenceRef.current += 1
       setListenWavePlayback({
         sequence: listenWaveSequenceRef.current,
         code,
-        unitMs,
+        unitMs: timing.unitMs,
+        interCharacterGapMs: timing.interCharacterGapMs,
       })
       void playMorseTone({
         code,
-        wpm: resolvedWpm,
+        characterWpm: resolvedCharacterWpm,
+        effectiveWpm: resolvedEffectiveWpm,
         minUnitMs: LISTEN_MIN_UNIT_MS,
       })
     },
-    [listenWpm, stopListenPlayback],
+    [stopListenPlayback],
   )
 
   const playListenSequenceRef = useRef(playListenSequence)
@@ -803,9 +896,25 @@ export default function App() {
       clearTimer(listenTimeoutRef)
       stopListenPlayback()
       const isCorrect = value === letterRef.current
+      let nextEffectiveWpm = listenEffectiveWpmRef.current
       setListenStatus(isCorrect ? 'success' : 'error')
       setListenReveal(letterRef.current)
       bumpScore(letterRef.current, isCorrect ? 1 : -1)
+      if (isCorrect && listenAutoTighteningRef.current) {
+        const nextCorrectCount =
+          listenAutoTighteningCorrectCountRef.current + 1
+        listenAutoTighteningCorrectCountRef.current = nextCorrectCount
+        setListenAutoTighteningCorrectCount(nextCorrectCount)
+        const autoEffectiveWpm = getAutoEffectiveWpm(
+          listenWpmRef.current,
+          nextCorrectCount,
+        )
+        if (autoEffectiveWpm !== listenEffectiveWpmRef.current) {
+          listenEffectiveWpmRef.current = autoEffectiveWpm
+          nextEffectiveWpm = autoEffectiveWpm
+          setListenEffectiveWpm(autoEffectiveWpm)
+        }
+      }
       listenTimeoutRef.current = setTimeout(
         () => {
           const nextLetter = getRandomWeightedLetter(
@@ -821,7 +930,10 @@ export default function App() {
               return
             }
             setListenStatus('idle')
-            playListenSequence(MORSE_DATA[nextLetter].code)
+            playListenSequence(MORSE_DATA[nextLetter].code, {
+              characterWpm: listenWpmRef.current,
+              effectiveWpm: nextEffectiveWpm,
+            })
           }, LISTEN_REVEAL_FADE_OUT_MS + LISTEN_POST_REVEAL_PAUSE_MS)
         },
         (isCorrect ? 650 : ERROR_LOCKOUT_MS) + LISTEN_REVEAL_EXTRA_MS,
@@ -860,10 +972,18 @@ export default function App() {
     void triggerHaptics(12)
     void playMorseTone({
       code: MORSE_DATA[letterRef.current].code,
-      wpm: listenWpm,
+      characterWpm: listenWpm,
+      effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
-  }, [isFreestyle, isListen, listenWpm, stopListenPlayback, triggerHaptics])
+  }, [
+    isFreestyle,
+    isListen,
+    listenEffectiveWpm,
+    listenWpm,
+    stopListenPlayback,
+    triggerHaptics,
+  ])
 
   useEffect(() => {
     if (mode !== 'practice' || !practiceAutoPlay) {
@@ -872,10 +992,18 @@ export default function App() {
     stopListenPlayback()
     void playMorseTone({
       code: MORSE_DATA[letter].code,
-      wpm: listenWpm,
+      characterWpm: listenWpm,
+      effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
-  }, [letter, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
+  }, [
+    letter,
+    listenEffectiveWpm,
+    listenWpm,
+    mode,
+    practiceAutoPlay,
+    stopListenPlayback,
+  ])
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
@@ -1054,8 +1182,17 @@ export default function App() {
     setIsPressing(true)
     pressStartRef.current = now()
     clearTimer(letterTimeoutRef)
+    if (!isFreestyle) {
+      void stopMorseTone()
+    }
     startTonePlayback()
-  }, [isErrorLocked, isFreestyle, isListen, startTonePlayback])
+  }, [
+    isErrorLocked,
+    isFreestyle,
+    isListen,
+    startTonePlayback,
+    stopMorseTone,
+  ])
   const handleIntroPressIn = useCallback(() => {
     if (!isNuxActive) {
       dismissMorseHint()
@@ -1066,6 +1203,9 @@ export default function App() {
   const handlePressOut = useCallback(() => {
     setIsPressing(false)
     stopTonePlayback()
+    if (!isListen) {
+      void stopMorseTone()
+    }
     if (isListen) {
       pressStartRef.current = null
       return
@@ -1078,7 +1218,12 @@ export default function App() {
     const duration = now() - start
     const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-'
     registerSymbol(symbol)
-  }, [isListen, registerSymbol, stopTonePlayback])
+  }, [
+    isListen,
+    registerSymbol,
+    stopMorseTone,
+    stopTonePlayback,
+  ])
 
   const handleMaxLevelChange = useCallback(
     (value: number) => {
@@ -1128,6 +1273,16 @@ export default function App() {
       practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
       practiceReviewQueueRef.current = []
       setListenWpm(defaults.listenWpm)
+      listenWpmRef.current = defaults.listenWpm
+      setListenEffectiveWpm(defaults.listenEffectiveWpm)
+      listenEffectiveWpmRef.current = defaults.listenEffectiveWpm
+      setListenAutoTightening(defaults.listenAutoTightening)
+      listenAutoTighteningRef.current = defaults.listenAutoTightening
+      setListenAutoTighteningCorrectCount(
+        defaults.listenAutoTighteningCorrectCount,
+      )
+      listenAutoTighteningCorrectCountRef.current =
+        defaults.listenAutoTighteningCorrectCount
       setPracticeWordMode(false)
       practiceWordModeRef.current = false
       setPracticeWpm(null)
@@ -1208,11 +1363,45 @@ export default function App() {
 
   const handleListenWpmChange = useCallback(
     (value: number) => {
-      setListenWpm(value)
+      const nextCharacterWpm = clampListenWpm(value)
+      const nextEffectiveWpm = clampListenEffectiveWpm(
+        Math.min(listenEffectiveWpmRef.current, nextCharacterWpm),
+      )
+      setListenWpm(nextCharacterWpm)
+      listenWpmRef.current = nextCharacterWpm
+      if (nextEffectiveWpm !== listenEffectiveWpmRef.current) {
+        setListenEffectiveWpm(nextEffectiveWpm)
+        listenEffectiveWpmRef.current = nextEffectiveWpm
+      }
+      setListenAutoTightening(false)
+      listenAutoTighteningRef.current = false
       if (!isListen || listenStatus !== 'idle') {
         return
       }
-      playListenSequence(MORSE_DATA[letterRef.current].code, value)
+      playListenSequence(MORSE_DATA[letterRef.current].code, {
+        characterWpm: nextCharacterWpm,
+        effectiveWpm: nextEffectiveWpm,
+      })
+    },
+    [isListen, listenStatus, playListenSequence],
+  )
+
+  const handleListenEffectiveWpmChange = useCallback(
+    (value: number) => {
+      const nextEffectiveWpm = clampListenEffectiveWpm(
+        Math.min(value, listenWpmRef.current),
+      )
+      setListenEffectiveWpm(nextEffectiveWpm)
+      listenEffectiveWpmRef.current = nextEffectiveWpm
+      setListenAutoTightening(false)
+      listenAutoTighteningRef.current = false
+      if (!isListen || listenStatus !== 'idle') {
+        return
+      }
+      playListenSequence(MORSE_DATA[letterRef.current].code, {
+        characterWpm: listenWpmRef.current,
+        effectiveWpm: nextEffectiveWpm,
+      })
     },
     [isListen, listenStatus, playListenSequence],
   )
@@ -1277,6 +1466,10 @@ export default function App() {
   const handleUseRecommended = useCallback(() => {
     const preferredMaxLevel = DEFAULT_MAX_LEVEL
     const preferredListenWpm = DEFAULT_LISTEN_WPM
+    const preferredListenEffectiveWpm = DEFAULT_LISTEN_EFFECTIVE_WPM
+    const preferredListenAutoTightening = DEFAULT_LISTEN_AUTO_TIGHTENING
+    const preferredListenAutoTighteningCorrectCount =
+      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
     const preferredShowHint = false
     const preferredShowMnemonic = false
     const preferredPracticeLearnMode = true
@@ -1292,6 +1485,10 @@ export default function App() {
       practiceIfrMode === preferredPracticeIfrMode &&
       practiceReviewMisses === preferredPracticeReviewMisses &&
       listenWpm === preferredListenWpm &&
+      listenEffectiveWpm === preferredListenEffectiveWpm &&
+      listenAutoTightening === preferredListenAutoTightening &&
+      listenAutoTighteningCorrectCount ===
+        preferredListenAutoTighteningCorrectCount &&
       maxLevel === preferredMaxLevel
 
     if (isAlreadyRecommended) {
@@ -1312,6 +1509,16 @@ export default function App() {
     practiceReviewQueueRef.current = []
 
     setListenWpm(preferredListenWpm)
+    listenWpmRef.current = preferredListenWpm
+    setListenEffectiveWpm(preferredListenEffectiveWpm)
+    listenEffectiveWpmRef.current = preferredListenEffectiveWpm
+    setListenAutoTightening(preferredListenAutoTightening)
+    listenAutoTighteningRef.current = preferredListenAutoTightening
+    setListenAutoTighteningCorrectCount(
+      preferredListenAutoTighteningCorrectCount,
+    )
+    listenAutoTighteningCorrectCountRef.current =
+      preferredListenAutoTighteningCorrectCount
     setMaxLevel(preferredMaxLevel)
     maxLevelRef.current = preferredMaxLevel as 1 | 2 | 3 | 4
 
@@ -1330,7 +1537,10 @@ export default function App() {
     if (modeRef.current === 'listen') {
       resetListenState()
       const nextLetter = setNextLetterForLevel(nextLetters)
-      playListenSequence(MORSE_DATA[nextLetter].code, preferredListenWpm)
+      playListenSequence(MORSE_DATA[nextLetter].code, {
+        characterWpm: preferredListenWpm,
+        effectiveWpm: preferredListenEffectiveWpm,
+      })
       return
     }
 
@@ -1353,6 +1563,9 @@ export default function App() {
     showHint,
     showMnemonic,
     listenWpm,
+    listenAutoTightening,
+    listenAutoTighteningCorrectCount,
+    listenEffectiveWpm,
   ])
 
   const handleModeChange = useCallback(
@@ -1447,16 +1660,70 @@ export default function App() {
           setFreestyleWord('')
         }
       }
+      let resolvedListenWpm = listenWpmRef.current
+      let resolvedListenEffectiveWpm = listenEffectiveWpmRef.current
+      let hasListenSpeedUpdate = false
       if (typeof progress.listenWpm === 'number') {
-        setListenWpm(progress.listenWpm)
-        if (
-          modeRef.current === 'listen' &&
-          listenStatusRef.current === 'idle'
-        ) {
-          playListenSequenceRef.current(
-            MORSE_DATA[letterRef.current].code,
-            progress.listenWpm,
-          )
+        resolvedListenWpm = clampListenWpm(progress.listenWpm)
+        setListenWpm(resolvedListenWpm)
+        listenWpmRef.current = resolvedListenWpm
+        hasListenSpeedUpdate = true
+      }
+      if (typeof progress.listenEffectiveWpm === 'number') {
+        resolvedListenEffectiveWpm = clampListenEffectiveWpm(
+          Math.min(progress.listenEffectiveWpm, resolvedListenWpm),
+        )
+        setListenEffectiveWpm(resolvedListenEffectiveWpm)
+        listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
+        hasListenSpeedUpdate = true
+      } else if (resolvedListenEffectiveWpm > resolvedListenWpm) {
+        resolvedListenEffectiveWpm = clampListenEffectiveWpm(resolvedListenWpm)
+        setListenEffectiveWpm(resolvedListenEffectiveWpm)
+        listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
+        hasListenSpeedUpdate = true
+      }
+      if (typeof progress.listenAutoTightening === 'boolean') {
+        setListenAutoTightening(progress.listenAutoTightening)
+        listenAutoTighteningRef.current = progress.listenAutoTightening
+      }
+      if (typeof progress.listenAutoTighteningCorrectCount === 'number') {
+        const nextCorrectCount = Math.max(
+          0,
+          Math.round(progress.listenAutoTighteningCorrectCount),
+        )
+        setListenAutoTighteningCorrectCount(nextCorrectCount)
+        listenAutoTighteningCorrectCountRef.current = nextCorrectCount
+      }
+      if (
+        hasListenSpeedUpdate &&
+        modeRef.current === 'listen' &&
+        listenStatusRef.current === 'idle'
+      ) {
+        playListenSequenceRef.current(MORSE_DATA[letterRef.current].code, {
+          characterWpm: resolvedListenWpm,
+          effectiveWpm: resolvedListenEffectiveWpm,
+        })
+      }
+      if (listenAutoTighteningRef.current) {
+        const autoEffectiveWpm = getAutoEffectiveWpm(
+          resolvedListenWpm,
+          listenAutoTighteningCorrectCountRef.current,
+        )
+        if (autoEffectiveWpm !== listenEffectiveWpmRef.current) {
+          setListenEffectiveWpm(autoEffectiveWpm)
+          listenEffectiveWpmRef.current = autoEffectiveWpm
+          if (
+            modeRef.current === 'listen' &&
+            listenStatusRef.current === 'idle'
+          ) {
+            playListenSequenceRef.current(
+              MORSE_DATA[letterRef.current].code,
+              {
+                characterWpm: resolvedListenWpm,
+                effectiveWpm: autoEffectiveWpm,
+              },
+            )
+          }
         }
       }
       if (typeof progress.maxLevel === 'number') {
@@ -1504,6 +1771,8 @@ export default function App() {
     applyProgress: applyParsedProgress,
     listenWpmMin: LISTEN_WPM_MIN,
     listenWpmMax: LISTEN_WPM_MAX,
+    listenEffectiveWpmMin: LISTEN_EFFECTIVE_WPM_MIN,
+    listenEffectiveWpmMax: LISTEN_EFFECTIVE_WPM_MAX,
     levelMin: LEVELS[0],
     levelMax: LEVELS[LEVELS.length - 1],
   })
@@ -1659,9 +1928,15 @@ export default function App() {
               practiceLearnMode={practiceLearnMode}
               practiceIfrMode={practiceIfrMode}
               practiceReviewMisses={practiceReviewMisses}
-              listenWpm={listenWpm}
-              listenWpmMin={LISTEN_WPM_MIN}
-              listenWpmMax={LISTEN_WPM_MAX}
+              listenCharacterWpm={listenWpm}
+              listenCharacterWpmMin={LISTEN_WPM_MIN}
+              listenCharacterWpmMax={LISTEN_WPM_MAX}
+              listenEffectiveWpm={listenEffectiveWpm}
+              listenEffectiveWpmMin={LISTEN_EFFECTIVE_WPM_MIN}
+              listenEffectiveWpmMax={Math.min(
+                LISTEN_EFFECTIVE_WPM_MAX,
+                listenWpm,
+              )}
               showHint={showHint}
               showMnemonic={showMnemonic}
               onClose={() => setShowSettings(false)}
@@ -1671,7 +1946,8 @@ export default function App() {
               onPracticeLearnModeChange={handlePracticeLearnModeChange}
               onPracticeIfrModeChange={handlePracticeIfrModeChange}
               onPracticeReviewMissesChange={handlePracticeReviewMissesChange}
-              onListenWpmChange={handleListenWpmChange}
+              onListenCharacterWpmChange={handleListenWpmChange}
+              onListenEffectiveWpmChange={handleListenEffectiveWpmChange}
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}
               onUseRecommended={handleUseRecommended}
@@ -1692,7 +1968,8 @@ export default function App() {
               onPlaySound={(char) => {
                 void playMorseTone({
                   code: MORSE_DATA[char].code,
-                  wpm: REFERENCE_WPM,
+                  characterWpm: REFERENCE_WPM,
+                  effectiveWpm: REFERENCE_WPM,
                   minUnitMs: LISTEN_MIN_UNIT_MS,
                 })
               }}

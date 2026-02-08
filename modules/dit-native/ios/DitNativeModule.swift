@@ -13,10 +13,15 @@ private final class ToneGenerator {
   private var frequency: Double = 440
   private var currentAmplitude: Float = 0
   private var targetAmplitude: Float = 0
+  private var rampTargetAmplitude: Float = 0
+  private var rampStep: Float = 0
+  private var rampSamplesRemaining: Int = 0
   private var sampleRate: Double = 44_100
   private var format: AVAudioFormat?
   private var stateLock = os_unfair_lock_s()
-  private let rampDurationSeconds: Double = 0.004
+  private let attackRampDurationSeconds: Double = 0.004
+  private let releaseRampDurationSeconds: Double = 0.002
+  private let preferredIOBufferDurationSeconds: TimeInterval = 0.0029
 
   private func withLock<T>(_ body: () -> T) -> T {
     os_unfair_lock_lock(&stateLock)
@@ -28,6 +33,8 @@ private final class ToneGenerator {
     let session = AVAudioSession.sharedInstance()
     do {
       try session.setCategory(.playback, options: [.mixWithOthers])
+      // Keep realtime key-up/key-down sidetone control tighter by requesting a small I/O buffer.
+      try session.setPreferredIOBufferDuration(preferredIOBufferDurationSeconds)
       try session.setActive(true)
     } catch {
       // No-op: fall back to system audio behavior.
@@ -52,25 +59,50 @@ private final class ToneGenerator {
       guard let self else { return noErr }
       let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
       let (frequency, targetAmplitude) = self.withLock {
-        (self.frequency, self.targetAmplitude)
+        (
+          self.frequency,
+          self.targetAmplitude
+        )
       }
       let phaseIncrement = Float(2.0 * Double.pi * frequency / self.sampleRate)
-      let rampSamples = max(1, Int(self.sampleRate * self.rampDurationSeconds))
+      let attackRampSamples = max(
+        1,
+        Int(self.sampleRate * self.attackRampDurationSeconds)
+      )
+      let releaseRampSamples = max(
+        1,
+        Int(self.sampleRate * self.releaseRampDurationSeconds)
+      )
       for frame in 0..<Int(frameCount) {
-        if self.currentAmplitude != targetAmplitude {
+        if targetAmplitude != self.rampTargetAmplitude {
           let diff = targetAmplitude - self.currentAmplitude
-          let step = diff / Float(rampSamples)
-          if abs(diff) <= abs(step) {
-            self.currentAmplitude = targetAmplitude
+          if diff == 0 {
+            self.rampTargetAmplitude = targetAmplitude
+            self.rampStep = 0
+            self.rampSamplesRemaining = 0
           } else {
-            self.currentAmplitude += step
+            let rampSamples = diff > 0 ? attackRampSamples : releaseRampSamples
+            self.rampTargetAmplitude = targetAmplitude
+            self.rampSamplesRemaining = rampSamples
+            self.rampStep = diff / Float(rampSamples)
           }
+        }
+
+        if self.rampSamplesRemaining > 0 {
+          self.currentAmplitude += self.rampStep
+          self.rampSamplesRemaining -= 1
+          if self.rampSamplesRemaining == 0 {
+            self.currentAmplitude = self.rampTargetAmplitude
+          }
+        } else {
+          self.currentAmplitude = self.rampTargetAmplitude
         }
         let sample = sin(self.phase) * self.currentAmplitude
         self.phase += phaseIncrement
         if self.phase >= Float(2.0 * Double.pi) {
           self.phase -= Float(2.0 * Double.pi)
         }
+
         for buffer in ablPointer {
           let pointer = buffer.mData?.assumingMemoryBound(to: Float.self)
           pointer?[frame] = sample
@@ -138,8 +170,14 @@ private final class ToneGenerator {
     return true
   }
 
-  func playMorseSequence(code: String, unitMs: Double, frequency: Double, volume: Double) -> Bool {
-    guard frequency > 0, unitMs > 0 else {
+  func playMorseSequence(
+    code: String,
+    characterUnitMs: Double,
+    effectiveUnitMs: Double,
+    frequency: Double,
+    volume: Double
+  ) -> Bool {
+    guard frequency > 0, characterUnitMs > 0, effectiveUnitMs > 0 else {
       return false
     }
     if !setupIfNeeded() {
@@ -153,17 +191,50 @@ private final class ToneGenerator {
     guard let format else {
       return false
     }
-    let unitFrames = max(1, Int((unitMs / 1000) * sampleRate))
+    let characterUnitFrames = max(1, Int((characterUnitMs / 1000) * sampleRate))
+    let effectiveUnitFrames = max(1, Int((effectiveUnitMs / 1000) * sampleRate))
+    let interCharacterGapFrames = max(characterUnitFrames * 3, effectiveUnitFrames * 3)
+    let interWordGapFrames = max(characterUnitFrames * 7, effectiveUnitFrames * 7)
     var totalFrames = 0
     var segments: [(isTone: Bool, frames: Int)] = []
-    for symbol in code {
-      if symbol != "." && symbol != "-" {
+    let tokens = code.split(separator: " ", omittingEmptySubsequences: true)
+    let filteredTokens = tokens.filter { token in
+      token == "/" || token.contains { $0 == "." || $0 == "-" }
+    }
+    for tokenIndex in 0..<filteredTokens.count {
+      let token = filteredTokens[tokenIndex]
+      if token == "/" {
+        segments.append((false, interWordGapFrames))
+        totalFrames += interWordGapFrames
         continue
       }
-      let duration = symbol == "." ? unitFrames : unitFrames * 3
-      segments.append((true, duration))
-      segments.append((false, unitFrames))
-      totalFrames += duration + unitFrames
+
+      let symbols = Array(token).filter { $0 == "." || $0 == "-" }
+      for symbolIndex in 0..<symbols.count {
+        let symbol = symbols[symbolIndex]
+        let duration = symbol == "." ? characterUnitFrames : characterUnitFrames * 3
+        segments.append((true, duration))
+        totalFrames += duration
+
+        if symbolIndex < symbols.count - 1 {
+          segments.append((false, characterUnitFrames))
+          totalFrames += characterUnitFrames
+        }
+      }
+
+      let hasNextToken = tokenIndex < filteredTokens.count - 1
+      if hasNextToken {
+        let nextToken = filteredTokens[tokenIndex + 1]
+        let gapFrames = nextToken == "/" ? interWordGapFrames : interCharacterGapFrames
+        segments.append((false, gapFrames))
+        totalFrames += gapFrames
+      }
+    }
+
+    // For single-letter listen playback, keep a trailing effective gap so spacing affects cadence.
+    if !filteredTokens.isEmpty {
+      segments.append((false, interCharacterGapFrames))
+      totalFrames += interCharacterGapFrames
     }
     if totalFrames == 0 {
       return false
@@ -292,10 +363,11 @@ public final class DitNativeModule: Module {
       return self.toneGenerator.start(frequency: 640, volume: 0)
     }
 
-    AsyncFunction("playMorseSequence") { (code: String, unitMs: Double, frequency: Double, volume: Double) -> Bool in
+    AsyncFunction("playMorseSequence") { (code: String, characterUnitMs: Double, effectiveUnitMs: Double, frequency: Double, volume: Double) -> Bool in
       return self.toneGenerator.playMorseSequence(
         code: code,
-        unitMs: unitMs,
+        characterUnitMs: characterUnitMs,
+        effectiveUnitMs: effectiveUnitMs,
         frequency: frequency,
         volume: volume
       )

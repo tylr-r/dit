@@ -62,9 +62,10 @@ const LINE_SPECS = [
 ] as const
 
 const getToneLevelAtElapsedMsWorklet = (
-  code: string,
+  symbolsCode: string,
   unitMs: number,
   elapsedMs: number,
+  interCharacterGapMs: number,
 ) => {
   'worklet'
 
@@ -72,23 +73,27 @@ const getToneLevelAtElapsedMsWorklet = (
     return 0
   }
 
-  let cursorMs = 0
-  for (let index = 0; index < code.length; index += 1) {
-    const symbol = code[index]
-    if (symbol !== '.' && symbol !== '-') {
-      continue
-    }
+  if (symbolsCode.length === 0) {
+    return 0
+  }
 
+  let cursorMs = 0
+  for (let symbolIndex = 0; symbolIndex < symbolsCode.length; symbolIndex += 1) {
+    const symbol = symbolsCode[symbolIndex]
     const toneMs = symbol === '.' ? unitMs : unitMs * 3
     if (elapsedMs < cursorMs + toneMs) {
       return symbol === '.' ? 0.72 : 1
     }
     cursorMs += toneMs
 
-    if (elapsedMs < cursorMs + unitMs) {
+    if (symbolIndex < symbolsCode.length - 1) {
+      if (elapsedMs < cursorMs + unitMs) {
+        return 0
+      }
+      cursorMs += unitMs
+    } else if (elapsedMs < cursorMs + interCharacterGapMs) {
       return 0
     }
-    cursorMs += unitMs
   }
 
   return 0
@@ -148,20 +153,32 @@ export function ListenSineWave({
   const tintOpacity = useSharedValue(0)
   const liveLevel = useSharedValue(0)
   const elapsedMs = useSharedValue(0)
-  const code = useSharedValue('')
+  const symbolsCode = useSharedValue('')
   const unitMs = useSharedValue(40)
+  const interCharacterGapMs = useSharedValue(120)
 
   useEffect(() => {
     if (!playback) {
-      code.value = ''
+      symbolsCode.value = ''
       unitMs.value = 40
+      interCharacterGapMs.value = 120
       elapsedMs.value = 0
       return
     }
-    code.value = playback.code
+    symbolsCode.value = playback.code
+      .split('')
+      .filter((symbol) => symbol === '.' || symbol === '-')
+      .join('')
     unitMs.value = playback.unitMs
+    interCharacterGapMs.value = playback.interCharacterGapMs
     elapsedMs.value = 0
-  }, [playback, code, elapsedMs, unitMs])
+  }, [
+    playback,
+    symbolsCode,
+    elapsedMs,
+    interCharacterGapMs,
+    unitMs,
+  ])
 
   useEffect(() => {
     const targetOpacity = tintStatus === 'idle' ? 0 : 0.7
@@ -189,9 +206,10 @@ export function ListenSineWave({
 
     elapsedMs.value += deltaMs
     const toneLevel = getToneLevelAtElapsedMsWorklet(
-      code.value,
+      symbolsCode.value,
       unitMs.value,
       elapsedMs.value,
+      interCharacterGapMs.value,
     )
     const effectiveToneLevel = Math.max(toneLevel, liveLevel.value)
     const targetEnergy =

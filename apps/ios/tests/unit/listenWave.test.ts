@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getListenTiming,
   getListenToneLevelAtElapsedMs,
   getListenUnitMs,
 } from '../../src/utils/listenWave'
@@ -11,12 +12,39 @@ describe('listenWave utils', () => {
     expect(getListenUnitMs(100, 40)).toBe(40)
   })
 
+  it('computes widened character gaps from effective wpm', () => {
+    const timing = getListenTiming(12, 8, 40)
+    expect(timing.unitMs).toBe(100)
+    expect(timing.interCharacterGapMs).toBe(450)
+  })
+
   it('returns expected tone levels for dot and dash segments', () => {
     const unitMs = 100
-    const dotLevel = getListenToneLevelAtElapsedMs('.-', unitMs, 20)
-    const firstGapLevel = getListenToneLevelAtElapsedMs('.-', unitMs, 120)
-    const dashLevel = getListenToneLevelAtElapsedMs('.-', unitMs, 230)
-    const tailGapLevel = getListenToneLevelAtElapsedMs('.-', unitMs, 520)
+    const interCharacterGapMs = 450
+    const dotLevel = getListenToneLevelAtElapsedMs(
+      '.-',
+      unitMs,
+      20,
+      interCharacterGapMs,
+    )
+    const firstGapLevel = getListenToneLevelAtElapsedMs(
+      '.-',
+      unitMs,
+      120,
+      interCharacterGapMs,
+    )
+    const dashLevel = getListenToneLevelAtElapsedMs(
+      '.-',
+      unitMs,
+      230,
+      interCharacterGapMs,
+    )
+    const tailGapLevel = getListenToneLevelAtElapsedMs(
+      '.-',
+      unitMs,
+      780,
+      interCharacterGapMs,
+    )
 
     expect(dotLevel).toBeCloseTo(0.72)
     expect(firstGapLevel).toBe(0)

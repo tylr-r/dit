@@ -15,6 +15,8 @@ type UseProgressPersistenceOptions = {
   applyProgress: (progress: Progress) => void
   listenWpmMin: number
   listenWpmMax: number
+  listenEffectiveWpmMin: number
+  listenEffectiveWpmMax: number
   levelMin: number
   levelMax: number
 }
@@ -47,6 +49,12 @@ const mergeProgressSnapshot = (
   base: ProgressSnapshot,
 ): ProgressSnapshot => ({
   listenWpm: progress.listenWpm ?? base.listenWpm,
+  listenEffectiveWpm: progress.listenEffectiveWpm ?? base.listenEffectiveWpm,
+  listenAutoTightening:
+    progress.listenAutoTightening ?? base.listenAutoTightening,
+  listenAutoTighteningCorrectCount:
+    progress.listenAutoTighteningCorrectCount ??
+    base.listenAutoTighteningCorrectCount,
   maxLevel: progress.maxLevel ?? base.maxLevel,
   practiceWordMode: progress.practiceWordMode ?? base.practiceWordMode,
   practiceIfrMode: progress.practiceIfrMode ?? base.practiceIfrMode,
@@ -71,6 +79,8 @@ export const useProgressPersistence = ({
   applyProgress,
   listenWpmMin,
   listenWpmMax,
+  listenEffectiveWpmMin,
+  listenEffectiveWpmMax,
   levelMin,
   levelMax,
 }: UseProgressPersistenceOptions): UseProgressPersistenceResult => {
@@ -98,6 +108,8 @@ export const useProgressPersistence = ({
       const progress = parseProgress(raw, {
         listenWpmMin,
         listenWpmMax,
+        listenEffectiveWpmMin,
+        listenEffectiveWpmMax,
         levelMin,
         levelMax,
       })
@@ -109,7 +121,14 @@ export const useProgressPersistence = ({
         updatedAt: extractUpdatedAt(raw),
       }
     },
-    [levelMax, levelMin, listenWpmMax, listenWpmMin],
+    [
+      levelMax,
+      levelMin,
+      listenEffectiveWpmMax,
+      listenEffectiveWpmMin,
+      listenWpmMax,
+      listenWpmMin,
+    ],
   )
 
   const onRemoteProgress = useCallback(

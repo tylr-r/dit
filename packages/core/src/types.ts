@@ -4,6 +4,9 @@ export type ScoreRecord = Record<Letter, number>
 
 export type Progress = {
   listenWpm?: number
+  listenEffectiveWpm?: number
+  listenAutoTightening?: boolean
+  listenAutoTighteningCorrectCount?: number
   maxLevel?: number
   showMnemonic?: boolean
   practiceWordMode?: boolean
@@ -16,6 +19,9 @@ export type Progress = {
 
 export type ProgressSnapshot = {
   listenWpm: number
+  listenEffectiveWpm?: number
+  listenAutoTightening?: boolean
+  listenAutoTighteningCorrectCount?: number
   maxLevel: number
   practiceWordMode: boolean
   practiceIfrMode?: boolean
@@ -29,6 +35,8 @@ export type ProgressSnapshot = {
 export type ParseProgressOptions = {
   listenWpmMin: number
   listenWpmMax: number
+  listenEffectiveWpmMin?: number
+  listenEffectiveWpmMax?: number
   levelMin?: number
   levelMax?: number
 }

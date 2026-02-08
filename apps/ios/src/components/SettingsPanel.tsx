@@ -31,9 +31,12 @@ type SettingsPanelProps = {
   practiceLearnMode: boolean;
   practiceIfrMode: boolean;
   practiceReviewMisses: boolean;
-  listenWpm: number;
-  listenWpmMin: number;
-  listenWpmMax: number;
+  listenCharacterWpm: number;
+  listenCharacterWpmMin: number;
+  listenCharacterWpmMax: number;
+  listenEffectiveWpm: number;
+  listenEffectiveWpmMin: number;
+  listenEffectiveWpmMax: number;
   showHint: boolean;
   showMnemonic: boolean;
   user: User | null;
@@ -44,7 +47,8 @@ type SettingsPanelProps = {
   onPracticeLearnModeChange: (value: boolean) => void;
   onPracticeIfrModeChange: (value: boolean) => void;
   onPracticeReviewMissesChange: (value: boolean) => void;
-  onListenWpmChange: (value: number) => void;
+  onListenCharacterWpmChange: (value: number) => void;
+  onListenEffectiveWpmChange: (value: number) => void;
   onShowHintChange: (value: boolean) => void;
   onShowMnemonicChange: (value: boolean) => void;
   onUseRecommended: () => void;
@@ -89,9 +93,12 @@ export function SettingsPanel({
   practiceLearnMode,
   practiceIfrMode,
   practiceReviewMisses,
-  listenWpm,
-  listenWpmMin,
-  listenWpmMax,
+  listenCharacterWpm,
+  listenCharacterWpmMin,
+  listenCharacterWpmMax,
+  listenEffectiveWpm,
+  listenEffectiveWpmMin,
+  listenEffectiveWpmMax,
   showHint,
   showMnemonic,
   user,
@@ -102,7 +109,8 @@ export function SettingsPanel({
   onPracticeLearnModeChange,
   onPracticeIfrModeChange,
   onPracticeReviewMissesChange,
-  onListenWpmChange,
+  onListenCharacterWpmChange,
+  onListenEffectiveWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
   onUseRecommended,
@@ -244,42 +252,99 @@ export function SettingsPanel({
             <View style={styles.section}>
               <View style={styles.row}>
                 <View style={styles.stepperInfo}>
-                  <Text style={styles.rowLabel}>Listen speed</Text>
-                  <Text style={styles.stepperValue}>{listenWpm} WPM</Text>
+                  <Text style={styles.rowLabel}>Character speed</Text>
+                  <Text style={styles.stepperValue}>
+                    {listenCharacterWpm} WPM
+                  </Text>
                 </View>
                 <View
                   style={styles.stepperGroup}
                   accessible
-                  accessibilityLabel="Listen speed"
+                  accessibilityLabel="Listen character speed"
                 >
                   <Pressable
-                    onPress={() => onListenWpmChange(listenWpm - 1)}
+                    onPress={() =>
+                      onListenCharacterWpmChange(listenCharacterWpm - 1)
+                    }
                     accessibilityRole="button"
-                    accessibilityLabel="Decrease listen speed"
-                    disabled={listenWpm <= listenWpmMin}
+                    accessibilityLabel="Decrease character speed"
+                    disabled={listenCharacterWpm <= listenCharacterWpmMin}
                     style={({ pressed }) => [
                       styles.stepperButton,
                       pressed && styles.stepperButtonPressed,
-                      listenWpm <= listenWpmMin && styles.stepperButtonDisabled,
+                      listenCharacterWpm <= listenCharacterWpmMin &&
+                        styles.stepperButtonDisabled,
                     ]}
                   >
                     <Text style={styles.stepperButtonText}>-</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => onListenWpmChange(listenWpm + 1)}
+                    onPress={() =>
+                      onListenCharacterWpmChange(listenCharacterWpm + 1)
+                    }
                     accessibilityRole="button"
-                    accessibilityLabel="Increase listen speed"
-                    disabled={listenWpm >= listenWpmMax}
+                    accessibilityLabel="Increase character speed"
+                    disabled={listenCharacterWpm >= listenCharacterWpmMax}
                     style={({ pressed }) => [
                       styles.stepperButton,
                       pressed && styles.stepperButtonPressed,
-                      listenWpm >= listenWpmMax && styles.stepperButtonDisabled,
+                      listenCharacterWpm >= listenCharacterWpmMax &&
+                        styles.stepperButtonDisabled,
                     ]}
                   >
                     <Text style={styles.stepperButtonText}>+</Text>
                   </Pressable>
                 </View>
               </View>
+              <View style={styles.row}>
+                <View style={styles.stepperInfo}>
+                  <Text style={styles.rowLabel}>Effective speed</Text>
+                  <Text style={styles.stepperValue}>
+                    {listenEffectiveWpm} WPM
+                  </Text>
+                </View>
+                <View
+                  style={styles.stepperGroup}
+                  accessible
+                  accessibilityLabel="Listen effective speed"
+                >
+                  <Pressable
+                    onPress={() =>
+                      onListenEffectiveWpmChange(listenEffectiveWpm - 1)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease effective speed"
+                    disabled={listenEffectiveWpm <= listenEffectiveWpmMin}
+                    style={({ pressed }) => [
+                      styles.stepperButton,
+                      pressed && styles.stepperButtonPressed,
+                      listenEffectiveWpm <= listenEffectiveWpmMin &&
+                        styles.stepperButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.stepperButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      onListenEffectiveWpmChange(listenEffectiveWpm + 1)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase effective speed"
+                    disabled={listenEffectiveWpm >= listenEffectiveWpmMax}
+                    style={({ pressed }) => [
+                      styles.stepperButton,
+                      pressed && styles.stepperButtonPressed,
+                      listenEffectiveWpm >= listenEffectiveWpmMax &&
+                        styles.stepperButtonDisabled,
+                    ]}
+                  >
+                    <Text style={styles.stepperButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text style={styles.helperText}>
+                Effective speed widens or tightens spacing between characters.
+              </Text>
             </View>
           ) : null}
           {showHintControls ? (
