@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import { ModalShell } from './ModalShell'
 
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 12,
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
     paddingTop: 80,
   },
   topBlocker: {
@@ -156,19 +157,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 180,
-    backgroundColor: 'rgba(6, 10, 14, 0.35)',
+    backgroundColor: colors.surface.backdropSoft,
   },
   exerciseCard: {
     width: '100%',
     maxWidth: 360,
   },
   panel: {
-    borderRadius: 20,
+    borderRadius: radii.lg,
     padding: 20,
-    backgroundColor: 'rgba(12, 18, 24, 0.92)',
+    backgroundColor: colors.surface.panelStrong,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
+    borderColor: colors.border.subtle,
+    shadowColor: colors.shadow.base,
     shadowOpacity: 0.35,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
@@ -178,19 +179,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: '#f4f7f9',
-    marginBottom: 12,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   body: {
     fontSize: 14,
     lineHeight: 20,
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
     marginBottom: 10,
   },
   bodySecondary: {
     fontSize: 13,
     lineHeight: 18,
-    color: 'rgba(244, 247, 249, 0.7)',
+    color: colors.text.primary70,
     marginBottom: 16,
   },
   actions: {
@@ -206,28 +207,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.7)',
+    color: colors.text.primary70,
     marginBottom: 10,
   },
   progressRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   progressDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(244, 247, 249, 0.2)',
+    backgroundColor: colors.text.primary20,
   },
   progressDotActive: {
-    backgroundColor: 'rgba(76, 201, 255, 0.9)',
+    backgroundColor: colors.text.primary80,
   },
   progressDotDone: {
-    backgroundColor: 'rgba(56, 242, 162, 0.9)',
+    backgroundColor: colors.feedback.success,
   },
   caption: {
     fontSize: 12,
-    color: 'rgba(244, 247, 249, 0.6)',
+    color: colors.text.primary60,
   },
 })

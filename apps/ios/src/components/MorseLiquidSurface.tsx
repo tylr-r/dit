@@ -13,6 +13,7 @@ import {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated'
+import { shader as shaderTokens } from '../design/tokens'
 
 type LayoutSize = {
   width: number;
@@ -23,6 +24,9 @@ type MorseLiquidSurfaceProps = {
   speedMultiplier?: number;
   style?: StyleProp<ViewStyle>;
 };
+
+const SHADER_HUE = shaderTokens.liquidHue
+const SHADER_CYCLE_SECONDS = shaderTokens.liquidCycleSeconds
 
 const SWIRL_SHADER_SOURCE = `
   uniform float iTime;
@@ -52,7 +56,7 @@ const SWIRL_SHADER_SOURCE = `
   half4 main(vec2 fragCoord) {
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    float t = iTime * (2.0 * PI / 10.0);
+    float t = iTime * (2.0 * PI / ${SHADER_CYCLE_SECONDS.toFixed(1)});
 
     uv += vec2(0.15 * cos(t), 0.15 * sin(t));
     uv *= rotate2d(0.8);
@@ -77,9 +81,9 @@ const SWIRL_SHADER_SOURCE = `
     float fade = smoothstep(0.15, 0.35, maxChannel);
     col *= fade;
 
-    // Set hue to 192deg (0.533)
+    // Set hue to ~228deg
     vec3 hsv = rgb2hsv(col);
-    hsv.x = 0.633;
+    hsv.x = ${SHADER_HUE.toFixed(3)};
     col = hsv2rgb(hsv);
 
     return half4(col, 1.0);
@@ -152,7 +156,7 @@ export function MorseLiquidSurface({
     time.value =
       (time.value +
         (frameInfo.timeSincePreviousFrame / 1000) * speedValue.value) %
-      10
+      SHADER_CYCLE_SECONDS
   })
 
   const uniforms = useDerivedValue(() => {

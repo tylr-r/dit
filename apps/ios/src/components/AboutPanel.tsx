@@ -1,4 +1,5 @@
 import { Linking, StyleSheet, Text, View } from 'react-native'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
 type AboutPanelProps = {
@@ -57,12 +58,12 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
 
 const styles = StyleSheet.create({
   panel: {
-    borderRadius: 20,
+    borderRadius: radii.lg,
     padding: 20,
-    backgroundColor: 'rgba(12, 18, 24, 0.92)',
+    backgroundColor: colors.surface.panelStrong,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
+    borderColor: colors.border.subtle,
+    shadowColor: colors.shadow.base,
     shadowOpacity: 0.35,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
@@ -71,23 +72,23 @@ const styles = StyleSheet.create({
     fontSize: 22,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: '#f4f7f9',
-    marginBottom: 12,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   body: {
     fontSize: 14,
     lineHeight: 20,
-    color: 'rgba(244, 247, 249, 0.9)',
-    marginBottom: 12,
+    color: colors.text.primary90,
+    marginBottom: spacing.md,
   },
   bodySecondary: {
     fontSize: 13,
     lineHeight: 19,
-    color: 'rgba(244, 247, 249, 0.75)',
-    marginBottom: 12,
+    color: colors.text.primary70,
+    marginBottom: spacing.md,
   },
   emphasis: {
-    color: '#f4f7f9',
+    color: colors.text.primary,
     fontWeight: '600',
   },
   closeButton: {
@@ -99,19 +100,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   footerText: {
     fontSize: 12,
-    color: 'rgba(244, 247, 249, 0.6)',
+    color: colors.text.primary60,
   },
   footerSeparator: {
     fontSize: 12,
-    color: 'rgba(244, 247, 249, 0.4)',
+    color: colors.text.primary40,
   },
   footerLink: {
     fontSize: 12,
-    color: 'rgba(244, 247, 249, 0.7)',
+    color: colors.text.primary70,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },

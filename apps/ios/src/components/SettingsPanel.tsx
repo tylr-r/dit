@@ -19,6 +19,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+import { normalizeColorForNative } from '../design/color'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
 type SettingsPanelProps = {
@@ -76,8 +78,13 @@ const ToggleRow = ({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: '#38f2a2' }}
-      thumbColor={value ? '#0c1116' : '#f4f7f9'}
+      trackColor={{
+        false: colors.controls.switchTrackOff,
+        true: colors.feedback.success,
+      }}
+      thumbColor={
+        value ? colors.controls.switchThumbOn : colors.text.primary
+      }
     />
   </View>
 )
@@ -119,6 +126,7 @@ export function SettingsPanel({
   onSignOut,
 }: SettingsPanelProps) {
   const { height: windowHeight } = useWindowDimensions()
+  const pickerColor = normalizeColorForNative(colors.text.primary)
   const panelMaxHeight = Math.round(windowHeight * 0.9)
   const scrollMaxHeight = Math.max(140, panelMaxHeight - 260)
   const showPracticeControls = !isFreestyle && !isListen
@@ -242,7 +250,7 @@ export function SettingsPanel({
                     }}
                     variant="menu"
                     modifiers={[accessibilityLabel('Max level')]}
-                    color="white"
+                    color={pickerColor}
                   />
                 </Host>
               </View>
@@ -442,14 +450,14 @@ const styles = StyleSheet.create({
   panel: {
     width: '100%',
     maxWidth: 380,
-    borderRadius: 20,
+    borderRadius: radii.lg,
     paddingBottom: 4,
     paddingTop: 3,
     overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.surface.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000000',
+    borderColor: colors.border.subtle,
+    shadowColor: colors.shadow.base,
     shadowOpacity: 0.95,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 10 },
@@ -457,10 +465,10 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    padding: 16,
+    padding: spacing.lg,
     paddingBottom: 32,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
     width: '100%',
     zIndex: 1,
     display: 'flex',
@@ -468,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     experimental_backgroundImage:
-      'linear-gradient(0deg,transparent,rgba(0, 0, 0, 0.26),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
+      colors.surface.headerGradient,
   },
   actions: {
     flexDirection: 'row',
@@ -479,64 +487,64 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
     paddingTop: 56,
-    paddingBottom: 8,
+    paddingBottom: spacing.sm,
   },
   footer: {
-    padding: 24,
+    padding: spacing.xl,
     paddingTop: 0,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    marginBottom: 12,
+    backgroundColor: colors.border.subtle,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 14,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: '#f4f7f9',
+    color: colors.text.primary,
   },
   closeButton: {
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.input,
   },
   closeButtonText: {
     fontSize: 12,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.8)',
+    color: colors.text.primary80,
   },
   section: {
-    marginTop: 12,
+    marginTop: spacing.md,
     gap: 10,
   },
   panelButton: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.input,
     alignItems: 'center',
   },
   panelButtonPressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: colors.surface.inputPressed,
   },
   panelButtonText: {
     fontSize: 12,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
   },
   resetButtonText: {
-    color: '#38f2a2',
+    color: colors.feedback.success,
   },
   row: {
     flexDirection: 'row',
@@ -546,17 +554,17 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 14,
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
   },
   rowLabelDisabled: {
-    color: 'rgba(244, 247, 249, 0.4)',
+    color: colors.text.primary40,
   },
   helperText: {
     marginTop: -2,
     marginBottom: 4,
     fontSize: 11,
     lineHeight: 16,
-    color: 'rgba(244, 247, 249, 0.62)',
+    color: colors.text.primary60,
   },
   helperTrigger: {
     flexDirection: 'row',
@@ -569,12 +577,12 @@ const styles = StyleSheet.create({
   },
   helperTriggerTitle: {
     fontSize: 14,
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
   },
   helperTriggerChevron: {
     fontSize: 36,
     marginRight: 4,
-    color: 'rgba(244, 247, 249, 0.7)',
+    color: colors.text.primary70,
   },
   stepperInfo: {
     flex: 1,
@@ -584,15 +592,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.7)',
+    color: colors.text.primary70,
   },
   stepperGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.input,
     overflow: 'hidden',
   },
   stepperButton: {
@@ -602,13 +610,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperButtonPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: colors.surface.inputPressed,
   },
   stepperButtonDisabled: {
     opacity: 0.5,
   },
   stepperButtonText: {
     fontSize: 16,
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
   },
 })

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
+import { colors, spacing } from '../design/tokens'
 
 const noop = () => {}
 
@@ -45,13 +46,13 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 10, 14, 0.72)',
+    backgroundColor: colors.surface.backdrop,
   },
   center: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xl,
   },
   card: {
     width: '100%',

@@ -11,6 +11,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native'
+import { normalizeColorForNative } from '../design/color'
+import { colors, radii } from '../design/tokens'
 
 export type ButtonProps = {
   /** Optional button label text */
@@ -99,7 +101,7 @@ export function DitButton({
     resolvedHeight,
   )
   const borderRadius =
-    circleDiameter != null ? circleDiameter / 2 : radius ?? 10
+    circleDiameter != null ? circleDiameter / 2 : radius ?? radii.sm
   const pressableFillStyle = getPressableFillStyle(
     resolvedWidth,
     resolvedHeight,
@@ -109,8 +111,9 @@ export function DitButton({
     resolvedPaddingHorizontal,
     resolvedPaddingVertical,
   )
-  const iconTintColor =
-    iconColor ?? (color as string) ?? 'rgba(244, 247, 249, 0.9)'
+  const iconTintColor = normalizeColorForNative(
+    iconColor ?? (color as string) ?? colors.text.primary90,
+  )
   let content: React.ReactNode
   if (children) {
     content = children
@@ -265,7 +268,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.8)',
+    color: colors.text.primary80,
     textAlign: 'center',
   },
 })

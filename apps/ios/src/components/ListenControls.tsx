@@ -1,6 +1,7 @@
 import type { Letter } from '@dit/core'
 import { GlassContainer } from 'expo-glass-effect'
 import { StyleSheet, View } from 'react-native'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
@@ -31,7 +32,7 @@ export function ListenControls({
         accessibilityLabel="Play morse letter sound"
         onPress={onReplay}
         style={{
-          marginBottom: 12,
+          marginBottom: spacing.md,
         }}
         textStyle={{ fontSize: 18 }}
         radius={24}
@@ -54,7 +55,7 @@ export function ListenControls({
                 onPress={isIdle ? () => onSubmitAnswer(key) : () => {}}
                 accessibilityLabel={`Type ${key}`}
                 size={36}
-                radius={8}
+                radius={radii.sm}
                 textStyle={styles.keyText}
                 paddingHorizontal={2}
                 paddingVertical={2}
@@ -72,23 +73,23 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     gap: 18,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   keyboard: {
     width: '100%',
-    gap: 8,
+    gap: spacing.sm,
     alignItems: 'center',
   },
   keyboardRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 4,
+    gap: spacing.xs,
   },
   keyDisabled: {
     opacity: 0.4,
   },
   keyText: {
     fontSize: 18,
-    color: '#f4f7f9',
+    color: colors.text.primary,
   },
 })

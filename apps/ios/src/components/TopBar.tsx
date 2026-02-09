@@ -1,5 +1,6 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import DitLogo from './DitLogo'
 import { ModeSwitcher, type Mode } from './ModeSwitcher'
@@ -64,8 +65,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
   topBarSide: {
     width: 60,
@@ -77,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoButton: {
-    borderRadius: 36,
+    borderRadius: radii.iconCircle,
   },
   settingsButtonWrap: {
     position: 'relative',
@@ -89,13 +90,13 @@ const styles = StyleSheet.create({
     right: -8,
     width: 190,
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.panelStrong,
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     zIndex: 4,
   },
   settingsHintArrow: {
@@ -104,16 +105,16 @@ const styles = StyleSheet.create({
     right: 22,
     width: 12,
     height: 12,
-    backgroundColor: 'hsla(210, 33%, 14%, 0.90)',
+    backgroundColor: colors.surface.panelStrong,
     borderLeftWidth: 1,
     borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: colors.border.subtle,
     transform: [{ rotate: '45deg' }],
   },
   hintText: {
     textAlign: 'center',
     fontSize: 13,
     lineHeight: 18,
-    color: 'rgba(244, 247, 249, 0.9)',
+    color: colors.text.primary90,
   },
 })

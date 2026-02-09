@@ -11,6 +11,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+import { hslaFromHsl } from '../design/color'
+import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
 type ReferenceModalProps = {
@@ -37,8 +39,8 @@ const getScoreTint = (scoreValue: number) => {
   const alpha = 0.35 * intensity
   const tint =
     scoreValue > 0
-      ? `rgba(56, 242, 162, ${alpha})`
-      : `rgba(255, 90, 96, ${alpha})`
+      ? hslaFromHsl(colors.feedback.successHsl, alpha)
+      : hslaFromHsl(colors.feedback.errorHsl, alpha)
   return { borderColor: tint }
 }
 
@@ -101,9 +103,9 @@ export function ReferenceModal({
     const overlayStyle = useAnimatedStyle(() => ({
       ...StyleSheet.absoluteFillObject,
       backgroundColor: bg.value
-        ? 'rgba(145, 145, 145, 0.33)'
-        : 'hsla(210, 33%, 15%, 0.35)',
-      borderRadius: 14,
+        ? colors.surface.inputPressed
+        : colors.surface.input,
+      borderRadius: radii.md,
       ...(scoreTint ?? {}),
     }))
 
@@ -112,7 +114,7 @@ export function ReferenceModal({
         style={[
           styles.card,
           animatedStyle,
-          { overflow: 'hidden', borderRadius: 14 },
+          { overflow: 'hidden', borderRadius: radii.md },
         ]}
       >
         <BlurView
@@ -135,7 +137,7 @@ export function ReferenceModal({
             onPlaySound?.(char)
           }}
           style={{
-            borderRadius: 14,
+            borderRadius: radii.md,
             paddingVertical: paddingVertical ?? 0,
           }}
         >
@@ -166,11 +168,11 @@ export function ReferenceModal({
       />
       <View style={styles.header}>
         <Text style={styles.title}>Reference</Text>
-        <GlassContainer spacing={6} style={styles.actions}>
+        <GlassContainer spacing={spacing.sm} style={styles.actions}>
           <DitButton
             text="Reset"
             onPress={onResetScores}
-            color="rgba(255, 90, 96, 0.95)"
+            color={colors.feedback.error}
             style={styles.resetButton}
             accessibilityLabel="Reset scores"
           />
@@ -196,23 +198,11 @@ export function ReferenceModal({
             }
             if (levelLetters.length === 0) return null
             return (
-              <View key={`level-${level}`} style={{ width: '100%' }}>
-                <Text
-                  style={{
-                    color: 'hsl(154, 0%, 58%)',
-                    fontWeight: '600',
-                    marginVertical: 12,
-                    marginLeft: 2,
-                    letterSpacing: 1,
-                    fontSize: 13,
-                  }}
-                >
+              <View key={`level-${level}`} style={styles.levelSection}>
+                <Text style={styles.levelSectionTitle}>
                   Level {level}
                 </Text>
-                <GlassContainer
-                  spacing={8}
-                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-                >
+                <GlassContainer spacing={spacing.sm} style={styles.levelCards}>
                   {levelLetters.map((char) => (
                     <ReferenceCard key={char} char={char} />
                   ))}
@@ -232,24 +222,24 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 380,
     maxHeight: 520,
-    borderRadius: 20,
+    borderRadius: radii.lg,
     paddingBottom: 4,
     paddingTop: 3,
     overflow: 'hidden',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: colors.surface.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000000',
+    borderColor: colors.border.subtle,
+    shadowColor: colors.shadow.base,
     shadowOpacity: 0.95,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 10 },
   },
   header: {
     position: 'absolute',
-    padding: 16,
+    padding: spacing.lg,
     paddingBottom: 32,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
     width: '100%',
     zIndex: 1,
     display: 'flex',
@@ -257,13 +247,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     experimental_backgroundImage:
-      'linear-gradient(0deg,transparent,rgba(0,0,0, 0.9),rgba(0,0,0, 0.9),rgba(0,0,0, 0.9))',
+      colors.surface.headerGradient,
   },
   title: {
     fontSize: 14,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: '#f4f7f9',
+    color: colors.text.primary,
   },
   actions: {
     flexDirection: 'row',
@@ -273,40 +263,40 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.input,
   },
   actionButtonPressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: colors.surface.inputPressed,
   },
   actionButtonText: {
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.8)',
+    color: colors.text.primary80,
   },
   resetButton: {
-    borderColor: 'rgba(255, 90, 96, 0.4)',
+    borderColor: colors.border.error,
   },
   resetButtonText: {
-    color: 'rgba(255, 90, 96, 0.95)',
+    color: colors.feedback.error,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingTop: 64,
-    paddingRight: 12,
-    paddingBottom: 12,
-    paddingLeft: 16,
-    borderRadius: 20,
+    paddingRight: spacing.md,
+    paddingBottom: spacing.md,
+    paddingLeft: spacing.lg,
+    borderRadius: radii.lg,
   },
   rowSpacer: {
     width: '100%',
-    height: 8,
+    height: spacing.sm,
   },
   scrollArea: {
     width: '100%',
@@ -316,11 +306,11 @@ const styles = StyleSheet.create({
     width: '30%',
     minWidth: 86,
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 14,
-    backgroundColor: 'hsla(209, 34%, 12%, 0.45)',
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.border.subtle,
     // marginBottom: 12,
   },
   cardHeader: {
@@ -333,7 +323,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: '#f4f7f9',
+    color: colors.text.primary,
   },
   cardScore: {
     fontSize: 12,
@@ -341,13 +331,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   scorePositive: {
-    color: '#38f2a2',
+    color: colors.feedback.success,
   },
   scoreNegative: {
-    color: '#ff5a60',
+    color: colors.feedback.error,
   },
   scoreNeutral: {
-    color: 'rgba(141, 152, 165, 0.8)',
+    color: colors.text.primary60,
   },
   cardCode: {
     flexDirection: 'row',
@@ -357,6 +347,22 @@ const styles = StyleSheet.create({
   cardSymbol: {
     fontSize: 14,
     letterSpacing: 1,
-    color: 'rgba(141, 152, 165, 0.9)',
+    color: colors.text.primary60,
+  },
+  levelSection: {
+    width: '100%',
+  },
+  levelSectionTitle: {
+    color: colors.text.primary60,
+    fontWeight: '600',
+    marginVertical: spacing.md,
+    marginLeft: 2,
+    letterSpacing: 1,
+    fontSize: 13,
+  },
+  levelCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
 })

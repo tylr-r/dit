@@ -9,6 +9,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated'
+import { colors, radii, spacing } from '../design/tokens'
 import type { ListenWavePlayback } from '../utils/listenWave'
 import { ListenSineWave } from './ListenSineWave'
 
@@ -109,7 +110,7 @@ export function StageDisplay({
     color: interpolateColor(
       listenTintProgress.value,
       [0, 1],
-      ['#f4f7f9', '#38f2a2'],
+      [colors.text.primary, colors.feedback.success],
     ),
   }))
 
@@ -117,7 +118,7 @@ export function StageDisplay({
     color: interpolateColor(
       listenTintProgress.value,
       [0, 1],
-      ['#f4f7f9', '#ff6b6b'],
+      [colors.text.primary, colors.feedback.error],
     ),
   }))
 
@@ -281,11 +282,11 @@ const styles = StyleSheet.create({
     letterSpacing: 10,
     fontWeight: '500',
     textTransform: 'uppercase',
-    color: '#f4f7f9',
-    textShadowColor: 'rgba(0, 0, 0, 0.55)',
+    color: colors.text.primary,
+    textShadowColor: colors.shadow.text,
     textShadowOffset: { width: 0, height: 20 },
     textShadowRadius: 60,
-    marginBottom: 12,
+    marginBottom: spacing.md,
     textAlign: 'center',
     paddingLeft: 8,
     paddingTop: 8,
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     minHeight: 162,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   listenOverlayLetter: {
     position: 'absolute',
@@ -319,36 +320,36 @@ const styles = StyleSheet.create({
   wordDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     marginBottom: 20,
   },
   wordLetter: {
     fontSize: 36,
     letterSpacing: 4,
     textTransform: 'uppercase',
-    color: 'rgba(244, 247, 249, 0.4)',
+    color: colors.text.primary40,
   },
   wordLetterDone: {
-    color: 'rgba(244, 247, 249, 0.85)',
+    color: colors.text.primary80,
   },
   wordLetterActive: {
-    color: '#f4f7f9',
+    color: colors.text.primary,
   },
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 22,
-    marginBottom: 12,
+    marginBottom: spacing.md,
     width: '100%',
   },
   progressHidden: {
     opacity: 0,
   },
   pip: {
-    borderRadius: 999,
-    backgroundColor: '#4cc9ff',
-    shadowColor: 'rgba(76, 201, 255, 0.3)',
+    borderRadius: radii.pill,
+    backgroundColor: colors.text.primary80,
+    shadowColor: colors.text.primary80,
     shadowOpacity: 1,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 16,
     letterSpacing: 2,
-    color: 'rgba(141, 152, 165, 0.9)',
+    color: colors.text.primary60,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     minHeight: 16,
     letterSpacing: 3,
-    color: 'rgba(141, 152, 165, 0.9)',
+    color: colors.text.primary60,
     textTransform: 'uppercase',
   },
 })

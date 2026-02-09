@@ -9,6 +9,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import Svg, { Path } from 'react-native-svg'
+import { hslaFromHsl } from '../design/color'
+import { colors } from '../design/tokens'
 import {
   type ListenWavePlayback,
 } from '../utils/listenWave'
@@ -32,28 +34,28 @@ const ACTIVE_PHASE_SPEED_BONUS = 2.4
 const WAVE_CYCLES = 1.85
 const LOWER_BAND_OFFSET_SCALE = 0
 const UPPER_BAND_OFFSET_SCALE = 0
-const SUCCESS_COLOR = '#38f2a2'
-const ERROR_COLOR = '#ff6b6b'
+const SUCCESS_COLOR = colors.feedback.success
+const ERROR_COLOR = colors.feedback.error
 const TINT_FADE_IN_MS = 420
 const TINT_FADE_OUT_MS = 280
 
 const LINE_SPECS = [
   {
-    stroke: 'rgba(56, 242, 162, 0.34)',
+    stroke: hslaFromHsl(colors.feedback.successHsl, 0.35),
     strokeWidth: 1.9,
     phaseOffset: -0.9,
     amplitudeScale: 0.74,
     laneOffsetScale: -0.03,
   },
   {
-    stroke: 'rgba(76, 201, 255, 0.92)',
+    stroke: colors.accent.wave,
     strokeWidth: 2.8,
     phaseOffset: 0,
     amplitudeScale: 1,
     laneOffsetScale: 0,
   },
   {
-    stroke: 'rgba(244, 247, 249, 0.38)',
+    stroke: colors.text.primary40,
     strokeWidth: 1.9,
     phaseOffset: 0.9,
     amplitudeScale: 0.74,
