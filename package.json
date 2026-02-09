@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.29.2",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "expo-module-scripts": "^5.0.8",
-    "turbo": "^2.7.6"
+    "turbo": "^2.8.3"
   }
 }
