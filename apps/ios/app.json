@@ -12,14 +12,16 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "plugins": [
-      "expo-dev-client"
-    ],
+    "plugins": ["expo-dev-client"],
     "ios": {
       "userInterfaceStyle": "dark",
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
-      "icon": "./assets/icon.png",
+      "icon": {
+        "dark": "./assets/images/icon-dark.png",
+        "light": "./assets/images/icon-light.png",
+        "tinted": "./assets/images/icon.png"
+      },
       "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
