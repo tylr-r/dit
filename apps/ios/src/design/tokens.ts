@@ -13,9 +13,13 @@ export type HslTriplet = {
 }
 
 export const hues = {
+  // primary: warm orange (≈24° hue) used for brand accent and primary UI elements
   primary: 24,
+  // liquid: vivid blue (≈207° hue) used for liquid shaders and gradients
   liquid: 207,
+  // success: green (≈154° hue) used for success/confirmation states
   success: 154,
+  // error: red (0° hue) used for error/alert states
   error: 0,
 } as const
 
@@ -26,6 +30,7 @@ const feedbackHsl = {
 
 export const colors = {
   text: {
+    // blue hue with low saturation and high lightness for good contrast on dark backgrounds
     primary: hsl(hues.primary, 29, 97),
     primary90: hsla(hues.primary, 29, 97, 0.9),
     primary80: hsla(hues.primary, 29, 97, 0.8),
@@ -35,6 +40,7 @@ export const colors = {
     primary20: hsla(hues.primary, 29, 97, 0.2),
   },
   accent: {
+    // vivid orange
     wave: hsl(hues.primary, 100, 65),
   },
   border: {
@@ -47,10 +53,14 @@ export const colors = {
     ),
   },
   surface: {
-    backdrop: hsla(hues.primary, 40, 4, 0.72),
-    backdropSoft: hsla(hues.primary, 40, 4, 0.35),
+    solidBackdrop: hsla(hues.liquid, 40, 4, 1),
+    // black with 72% opacity for a strong translucent backdrop from the primary hue
+    backdrop: hsla(hues.liquid, 40, 4, 0.72),
+    // softer backdrop with the same hue for layering and depth
+    backdropSoft: hsla(hues.liquid, 40, 4, 0.35),
+    // pure black with varying opacity for versatile panels, cards, and inputs
     panel: hsla(0, 0, 0, 0.4),
-    panelStrong: hsla(hues.primary, 33, 7, 0.92),
+    panelStrong: hsla(hues.liquid, 33, 7, 0.92),
     input: hsla(0, 0, 100, 0.06),
     inputPressed: hsla(0, 0, 100, 0.12),
     card: hsla(209, 34, 12, 0.45),

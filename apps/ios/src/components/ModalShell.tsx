@@ -6,11 +6,11 @@ import { colors, spacing } from '../design/tokens'
 const noop = () => {}
 
 type ModalShellProps = {
-  children: ReactNode;
-  onClose: () => void;
-  cardPressable?: boolean;
-  allowBackdropDismiss?: boolean;
-};
+  children: ReactNode
+  onClose: () => void
+  cardPressable?: boolean
+  allowBackdropDismiss?: boolean
+}
 
 /** Shared modal wrapper with backdrop and centered card layout. */
 export function ModalShell({

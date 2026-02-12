@@ -16,6 +16,7 @@
       "expo-dev-client"
     ],
     "ios": {
+      "userInterfaceStyle": "dark",
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
       "icon": "./assets/icon.png",
