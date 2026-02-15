@@ -263,11 +263,7 @@ export function SettingsModal({
           settleSheet(releasedValue, gestureState.vy)
         },
       }),
-    [
-      hiddenOffset,
-      settleSheet,
-      sheetTranslateY,
-    ],
+    [hiddenOffset, settleSheet, sheetTranslateY],
   )
 
   React.useEffect(() => {
@@ -445,7 +441,7 @@ export function SettingsModal({
                       <View style={styles.separator} />
                       <View style={styles.row}>
                         <View style={styles.stepperInfo}>
-                          <Text style={styles.rowLabel}>Character speed</Text>
+                          <Text style={styles.rowLabel}>Letter speed</Text>
                           <Text style={styles.stepperValue}>
                             {listenCharacterWpm} WPM
                           </Text>
@@ -493,10 +489,14 @@ export function SettingsModal({
                           </Pressable>
                         </View>
                       </View>
+                      <Text style={styles.helperText}>
+                        How fast each letter sounds. Higher = faster dits and
+                        dahs.
+                      </Text>
                       <View style={styles.separator} />
                       <View style={styles.row}>
                         <View style={styles.stepperInfo}>
-                          <Text style={styles.rowLabel}>Effective speed</Text>
+                          <Text style={styles.rowLabel}>Spacing</Text>
                           <Text style={styles.stepperValue}>
                             {listenEffectiveWpm} WPM
                           </Text>
@@ -545,8 +545,7 @@ export function SettingsModal({
                         </View>
                       </View>
                       <Text style={styles.helperText}>
-                        Effective speed widens or tightens spacing between
-                        characters.
+                        Pause between letters. Lower = longer pause to think.
                       </Text>
                     </>
                   ) : null}
