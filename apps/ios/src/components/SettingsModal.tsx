@@ -176,6 +176,7 @@ export function SettingsModal({
   const showPracticeControls = !isFreestyle && !isListen
   const canShowWordsToggle = !isListen
   const showHintControls = !isFreestyle && !isListen
+  const hasControlsBeforePlaybackSpeed = canShowWordsToggle || showPracticeControls
   const maxLevelIndex = levels.indexOf(maxLevel)
   const canDecreaseMaxLevel = maxLevelIndex > 0
   const canIncreaseMaxLevel = maxLevelIndex < levels.length - 1
@@ -436,119 +437,116 @@ export function SettingsModal({
                       </View>
                     </>
                   ) : null}
-                  {isListen ? (
-                    <>
+                  <>
+                    {hasControlsBeforePlaybackSpeed ? (
                       <View style={styles.separator} />
-                      <View style={styles.row}>
-                        <View style={styles.stepperInfo}>
-                          <Text style={styles.rowLabel}>Letter speed</Text>
-                          <Text style={styles.stepperValue}>
-                            {listenCharacterWpm} WPM
-                          </Text>
-                        </View>
-                        <View
-                          style={styles.stepperGroup}
-                          accessible
-                          accessibilityLabel="Listen character speed"
-                        >
-                          <Pressable
-                            onPress={() =>
-                              onListenCharacterWpmChange(listenCharacterWpm - 1)
-                            }
-                            accessibilityRole="button"
-                            accessibilityLabel="Decrease character speed"
-                            disabled={
-                              listenCharacterWpm <= listenCharacterWpmMin
-                            }
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              listenCharacterWpm <= listenCharacterWpmMin &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>-</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() =>
-                              onListenCharacterWpmChange(listenCharacterWpm + 1)
-                            }
-                            accessibilityRole="button"
-                            accessibilityLabel="Increase character speed"
-                            disabled={
-                              listenCharacterWpm >= listenCharacterWpmMax
-                            }
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              listenCharacterWpm >= listenCharacterWpmMax &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>+</Text>
-                          </Pressable>
-                        </View>
+                    ) : null}
+                    <View style={styles.row}>
+                      <View style={styles.stepperInfo}>
+                        <Text style={styles.rowLabel}>Playback letter speed</Text>
+                        <Text style={styles.stepperValue}>
+                          {listenCharacterWpm} WPM
+                        </Text>
                       </View>
-                      <Text style={styles.helperText}>
-                        How fast each letter sounds. Higher = faster dits and
-                        dahs.
-                      </Text>
-                      <View style={styles.separator} />
-                      <View style={styles.row}>
-                        <View style={styles.stepperInfo}>
-                          <Text style={styles.rowLabel}>Spacing</Text>
-                          <Text style={styles.stepperValue}>
-                            {listenEffectiveWpm} WPM
-                          </Text>
-                        </View>
-                        <View
-                          style={styles.stepperGroup}
-                          accessible
-                          accessibilityLabel="Listen effective speed"
+                      <View
+                        style={styles.stepperGroup}
+                        accessible
+                        accessibilityLabel="Playback character speed"
+                      >
+                        <Pressable
+                          onPress={() =>
+                            onListenCharacterWpmChange(listenCharacterWpm - 1)
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease playback character speed"
+                          disabled={listenCharacterWpm <= listenCharacterWpmMin}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            listenCharacterWpm <= listenCharacterWpmMin &&
+                              styles.stepperButtonDisabled,
+                          ]}
                         >
-                          <Pressable
-                            onPress={() =>
-                              onListenEffectiveWpmChange(listenEffectiveWpm - 1)
-                            }
-                            accessibilityRole="button"
-                            accessibilityLabel="Decrease effective speed"
-                            disabled={
-                              listenEffectiveWpm <= listenEffectiveWpmMin
-                            }
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              listenEffectiveWpm <= listenEffectiveWpmMin &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>-</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() =>
-                              onListenEffectiveWpmChange(listenEffectiveWpm + 1)
-                            }
-                            accessibilityRole="button"
-                            accessibilityLabel="Increase effective speed"
-                            disabled={
-                              listenEffectiveWpm >= listenEffectiveWpmMax
-                            }
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              listenEffectiveWpm >= listenEffectiveWpmMax &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>+</Text>
-                          </Pressable>
-                        </View>
+                          <Text style={styles.stepperButtonText}>-</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() =>
+                            onListenCharacterWpmChange(listenCharacterWpm + 1)
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase playback character speed"
+                          disabled={listenCharacterWpm >= listenCharacterWpmMax}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            listenCharacterWpm >= listenCharacterWpmMax &&
+                              styles.stepperButtonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.stepperButtonText}>+</Text>
+                        </Pressable>
                       </View>
-                      <Text style={styles.helperText}>
-                        Pause between letters. Lower = longer pause to think.
-                      </Text>
-                    </>
-                  ) : null}
+                    </View>
+                    <Text style={styles.helperText}>
+                      Playback speed used whenever the app plays Morse for you.
+                      Higher = faster dits and dahs.
+                    </Text>
+                    <View style={styles.separator} />
+                    <View style={styles.row}>
+                      <View style={styles.stepperInfo}>
+                        <Text style={styles.rowLabel}>Playback spacing</Text>
+                        <Text style={styles.stepperValue}>
+                          {listenEffectiveWpm} WPM
+                        </Text>
+                      </View>
+                      <View
+                        style={styles.stepperGroup}
+                        accessible
+                        accessibilityLabel="Playback spacing speed"
+                      >
+                        <Pressable
+                          onPress={() =>
+                            onListenEffectiveWpmChange(listenEffectiveWpm - 1)
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease playback spacing speed"
+                          disabled={listenEffectiveWpm <= listenEffectiveWpmMin}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            listenEffectiveWpm <= listenEffectiveWpmMin &&
+                              styles.stepperButtonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.stepperButtonText}>-</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() =>
+                            onListenEffectiveWpmChange(listenEffectiveWpm + 1)
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase playback spacing speed"
+                          disabled={listenEffectiveWpm >= listenEffectiveWpmMax}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            listenEffectiveWpm >= listenEffectiveWpmMax &&
+                              styles.stepperButtonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.stepperButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <Text style={styles.helperText}>
+                      Gap between letters during playback. Lower = longer pause
+                      to think.
+                    </Text>
+                    <Text style={styles.helperText}>
+                      Applies to playback across modes. Morse key tap timing
+                      (dit vs dah) does not change.
+                    </Text>
+                  </>
                 </SettingsGroup>
 
                 {showHintControls ? (

@@ -1,3 +1,5 @@
+import { getListenUnitMs as getListenUnitMsFromWpm } from './listenSpeed'
+
 export type ListenWavePlayback = {
   sequence: number
   code: string
@@ -9,7 +11,7 @@ const DOT_ENERGY = 0.72
 const DASH_ENERGY = 1
 
 export const getListenUnitMs = (wpm: number, minUnitMs: number) =>
-  Math.max(Math.round(1200 / wpm), minUnitMs)
+  getListenUnitMsFromWpm(wpm, minUnitMs)
 
 export const getListenTiming = (
   characterWpm: number,

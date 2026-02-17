@@ -58,6 +58,11 @@ import {
   type ListenWavePlayback,
 } from './src/utils/listenWave'
 import {
+  getAutoEffectiveWpm,
+  LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS,
+  normalizeListenSpeeds,
+} from './src/utils/listenSpeed'
+import {
   enqueueReviewLetter,
   filterReviewQueue,
   pullDueReviewLetter,
@@ -70,10 +75,6 @@ const DEFAULT_LISTEN_WPM = DEFAULT_CHARACTER_WPM
 const DEFAULT_LISTEN_EFFECTIVE_WPM = DEFAULT_EFFECTIVE_WPM
 const DEFAULT_LISTEN_AUTO_TIGHTENING = true
 const DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT = 0
-const LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS = {
-  medium: 12,
-  tight: 24,
-} as const
 const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
 const ERROR_LOCKOUT_MS = 1000
@@ -161,31 +162,6 @@ const clearTimer = (ref: { current: TimeoutHandle | null }) => {
 }
 
 const now = () => Date.now()
-
-const clampListenWpm = (value: number) =>
-  Math.max(LISTEN_WPM_MIN, Math.min(LISTEN_WPM_MAX, Math.round(value)))
-
-const clampListenEffectiveWpm = (value: number) =>
-  Math.max(
-    LISTEN_EFFECTIVE_WPM_MIN,
-    Math.min(LISTEN_EFFECTIVE_WPM_MAX, Math.round(value)),
-  )
-
-const getListenAutoTighteningStage = (correctCount: number) => {
-  if (correctCount >= LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight) {
-    return 2
-  }
-  if (correctCount >= LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.medium) {
-    return 1
-  }
-  return 0
-}
-
-const getAutoEffectiveWpm = (characterWpm: number, correctCount: number) => {
-  const stage = getListenAutoTighteningStage(correctCount)
-  const targetGap = stage === 0 ? 4 : stage === 1 ? 2 : 0
-  return clampListenEffectiveWpm(Math.min(characterWpm, characterWpm - targetGap))
-}
 
 const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
   if (letters.length === 0) {
@@ -866,15 +842,12 @@ export default function App() {
       },
     ) => {
       stopListenPlayback()
-      const resolvedCharacterWpm = clampListenWpm(
+      const normalizedListenSpeeds = normalizeListenSpeeds(
         overrides?.characterWpm ?? listenWpmRef.current,
+        overrides?.effectiveWpm ?? listenEffectiveWpmRef.current,
       )
-      const resolvedEffectiveWpm = clampListenEffectiveWpm(
-        Math.min(
-          overrides?.effectiveWpm ?? listenEffectiveWpmRef.current,
-          resolvedCharacterWpm,
-        ),
-      )
+      const resolvedCharacterWpm = normalizedListenSpeeds.characterWpm
+      const resolvedEffectiveWpm = normalizedListenSpeeds.effectiveWpm
       const timing = getListenTiming(
         resolvedCharacterWpm,
         resolvedEffectiveWpm,
@@ -1622,10 +1595,12 @@ export default function App() {
 
   const handleListenWpmChange = useCallback(
     (value: number) => {
-      const nextCharacterWpm = clampListenWpm(value)
-      const nextEffectiveWpm = clampListenEffectiveWpm(
-        Math.min(listenEffectiveWpmRef.current, nextCharacterWpm),
+      const normalizedListenSpeeds = normalizeListenSpeeds(
+        value,
+        listenEffectiveWpmRef.current,
       )
+      const nextCharacterWpm = normalizedListenSpeeds.characterWpm
+      const nextEffectiveWpm = normalizedListenSpeeds.effectiveWpm
       setListenWpm(nextCharacterWpm)
       listenWpmRef.current = nextCharacterWpm
       if (nextEffectiveWpm !== listenEffectiveWpmRef.current) {
@@ -1647,9 +1622,11 @@ export default function App() {
 
   const handleListenEffectiveWpmChange = useCallback(
     (value: number) => {
-      const nextEffectiveWpm = clampListenEffectiveWpm(
-        Math.min(value, listenWpmRef.current),
+      const normalizedListenSpeeds = normalizeListenSpeeds(
+        listenWpmRef.current,
+        value,
       )
+      const nextEffectiveWpm = normalizedListenSpeeds.effectiveWpm
       setListenEffectiveWpm(nextEffectiveWpm)
       listenEffectiveWpmRef.current = nextEffectiveWpm
       setListenAutoTightening(false)
@@ -1929,24 +1906,33 @@ export default function App() {
       let resolvedListenWpm = listenWpmRef.current
       let resolvedListenEffectiveWpm = listenEffectiveWpmRef.current
       let hasListenSpeedUpdate = false
-      if (typeof progress.listenWpm === 'number') {
-        resolvedListenWpm = clampListenWpm(progress.listenWpm)
-        setListenWpm(resolvedListenWpm)
-        listenWpmRef.current = resolvedListenWpm
-        hasListenSpeedUpdate = true
-      }
-      if (typeof progress.listenEffectiveWpm === 'number') {
-        resolvedListenEffectiveWpm = clampListenEffectiveWpm(
-          Math.min(progress.listenEffectiveWpm, resolvedListenWpm),
+      const incomingListenWpm =
+        typeof progress.listenWpm === 'number' ? progress.listenWpm : null
+      const incomingListenEffectiveWpm =
+        typeof progress.listenEffectiveWpm === 'number'
+          ? progress.listenEffectiveWpm
+          : null
+      if (
+        incomingListenWpm !== null ||
+        incomingListenEffectiveWpm !== null ||
+        resolvedListenEffectiveWpm > resolvedListenWpm
+      ) {
+        const normalizedListenSpeeds = normalizeListenSpeeds(
+          incomingListenWpm ?? resolvedListenWpm,
+          incomingListenEffectiveWpm ?? resolvedListenEffectiveWpm,
         )
-        setListenEffectiveWpm(resolvedListenEffectiveWpm)
-        listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
-        hasListenSpeedUpdate = true
-      } else if (resolvedListenEffectiveWpm > resolvedListenWpm) {
-        resolvedListenEffectiveWpm = clampListenEffectiveWpm(resolvedListenWpm)
-        setListenEffectiveWpm(resolvedListenEffectiveWpm)
-        listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
-        hasListenSpeedUpdate = true
+        resolvedListenWpm = normalizedListenSpeeds.characterWpm
+        resolvedListenEffectiveWpm = normalizedListenSpeeds.effectiveWpm
+        if (resolvedListenWpm !== listenWpmRef.current) {
+          setListenWpm(resolvedListenWpm)
+          listenWpmRef.current = resolvedListenWpm
+          hasListenSpeedUpdate = true
+        }
+        if (resolvedListenEffectiveWpm !== listenEffectiveWpmRef.current) {
+          setListenEffectiveWpm(resolvedListenEffectiveWpm)
+          listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
+          hasListenSpeedUpdate = true
+        }
       }
       if (typeof progress.listenAutoTightening === 'boolean') {
         setListenAutoTightening(progress.listenAutoTightening)

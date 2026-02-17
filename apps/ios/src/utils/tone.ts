@@ -1,5 +1,6 @@
 import { AUDIO_FREQUENCY, AUDIO_VOLUME } from '@dit/core'
 import { requireNativeModule } from 'expo-modules-core'
+import { getListenUnitMs } from './listenSpeed'
 
 const DitNative = requireNativeModule('DitNative')
 
@@ -38,15 +39,12 @@ export async function playMorseTone({
   frequency?: number
   volume?: number
 }) {
-  const characterUnitMs = Math.max(Math.round(1200 / characterWpm), minUnitMs)
+  const characterUnitMs = getListenUnitMs(characterWpm, minUnitMs)
   const resolvedEffectiveWpm = Math.min(
     characterWpm,
     effectiveWpm ?? characterWpm,
   )
-  const effectiveUnitMs = Math.max(
-    Math.round(1200 / resolvedEffectiveWpm),
-    minUnitMs,
-  )
+  const effectiveUnitMs = getListenUnitMs(resolvedEffectiveWpm, minUnitMs)
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   return DitNative.playMorseSequence(
     code,
