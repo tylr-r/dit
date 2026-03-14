@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.turbo
+.firebase
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+plans
+
+*.env
+*.env.*
+*.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+
+# Expo
+**/.expo/
+/ios/
+/app.json
+
+# Include the local iOS Firebase plist in EAS uploads.
+!apps/ios/GoogleService-Info.plist
