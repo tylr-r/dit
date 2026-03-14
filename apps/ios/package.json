@@ -9,6 +9,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "app-store:build": "bash ./scripts/build-app-store.sh",
+    "app-store:upload": "bash ./scripts/upload-app-store.sh",
     "lint": "eslint . --ext .ts,.tsx && tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"

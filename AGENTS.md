@@ -3,6 +3,7 @@
 - Prefer `pnpm` when installing dependencies.
 - Ask for confirmation before adding new production dependencies.
 - Run `pnpm run lint` before running a build or making a commit. No need to run it if for every code change, just before making a git commit.
+- Do not run build scripts yourself. Give the exact build command to the user and ask them to run it so we do not waste chat tokens or context on build output.
 
 ## Build, Test, and Development Commands
 

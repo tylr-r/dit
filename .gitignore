@@ -39,3 +39,4 @@ apps/web/test-results/
 /ios/
 /app.json
 apps/ios/GoogleService-Info.plist
+apps/ios/build/
