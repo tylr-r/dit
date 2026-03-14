@@ -3,7 +3,7 @@ import { MORSE_DATA } from '@dit/core'
 import { BlurView } from 'expo-blur'
 import { GlassContainer } from 'expo-glass-effect'
 import React from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -29,6 +29,30 @@ type ReferenceModalProps = {
 const SCORE_INTENSITY_MAX = 15
 
 const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
+
+const getCodeAccessibilityText = (code: string) =>
+  code
+    .split('')
+    .map((symbol) => {
+      if (symbol === '.') {
+        return 'dit'
+      }
+      if (symbol === '-') {
+        return 'dah'
+      }
+      return symbol
+    })
+    .join(' ')
+
+const getScoreAccessibilityText = (scoreValue: number) => {
+  if (scoreValue > 0) {
+    return `score plus ${scoreValue}`
+  }
+  if (scoreValue < 0) {
+    return `score minus ${Math.abs(scoreValue)}`
+  }
+  return 'score zero'
+}
 
 const getScoreTint = (scoreValue: number) => {
   if (scoreValue === 0) {
@@ -85,6 +109,7 @@ export function ReferenceModal({
     const scoreValue = scores[char] ?? 0
     const scoreTint = getScoreTint(scoreValue)
     const code = morseData[char].code
+    const canPlaySound = typeof onPlaySound === 'function'
     const scoreStyle =
       scoreValue > 0
         ? styles.scorePositive
@@ -123,17 +148,23 @@ export function ReferenceModal({
           style={StyleSheet.absoluteFillObject}
         />
         <Animated.View style={overlayStyle} />
-        <View
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={`Play sound for ${char}`}
-          onTouchStart={() => {
+        <Pressable
+          accessibilityRole={canPlaySound ? 'button' : undefined}
+          accessibilityLabel={`${char}, ${getCodeAccessibilityText(code)}, ${getScoreAccessibilityText(scoreValue)}`}
+          accessibilityHint={
+            canPlaySound ? `Plays the Morse sound for ${char}` : undefined
+          }
+          accessibilityState={{ disabled: !canPlaySound }}
+          disabled={!canPlaySound}
+          onPressIn={() => {
             scale.value = withSpring(0.97, { damping: 50, stiffness: 300 })
             bg.value = withTiming(1, { duration: 120 })
           }}
-          onTouchEnd={() => {
+          onPressOut={() => {
             scale.value = withSpring(1, { damping: 50, stiffness: 300 })
             bg.value = withTiming(0, { duration: 120 })
+          }}
+          onPress={() => {
             onPlaySound?.(char)
           }}
           style={{
@@ -154,7 +185,7 @@ export function ReferenceModal({
               </Text>
             ))}
           </View>
-        </View>
+        </Pressable>
       </Animated.View>
     )
   }

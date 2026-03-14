@@ -65,6 +65,7 @@ type ToggleRowProps = {
 type ActionRowProps = {
   text: string
   accessibilityLabel: string
+  accessibilityHint?: string
   onPress: () => void
   destructive?: boolean
   disabled?: boolean
@@ -95,6 +96,8 @@ const ToggleRow = ({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       trackColor={{
         false: colors.controls.switchTrackOff,
         true: colors.feedback.success,
@@ -107,6 +110,7 @@ const ToggleRow = ({
 const ActionRow = ({
   text,
   accessibilityLabel,
+  accessibilityHint,
   onPress,
   destructive = false,
   disabled = false,
@@ -116,6 +120,7 @@ const ActionRow = ({
     disabled={disabled}
     accessibilityRole="button"
     accessibilityLabel={accessibilityLabel}
+    accessibilityHint={accessibilityHint}
     style={({ pressed }) => [
       styles.row,
       disabled && styles.rowDisabled,
@@ -309,12 +314,22 @@ export function SettingsModal({
   })
 
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
+    <View
+      style={styles.overlay}
+      pointerEvents="box-none"
+      accessibilityViewIsModal
+    >
       <Animated.View
         pointerEvents="none"
         style={[styles.backdrop, { opacity: backdropOpacity }]}
       />
-      <Pressable onPress={requestClose} style={styles.backdropTouchTarget} />
+      <Pressable
+        onPress={requestClose}
+        style={styles.backdropTouchTarget}
+        accessibilityRole="button"
+        accessibilityLabel="Close settings"
+        accessibilityHint="Dismisses the settings panel"
+      />
       <View style={styles.sheetContainer} pointerEvents="box-none">
         <Animated.View
           style={[
@@ -409,11 +424,7 @@ export function SettingsModal({
                             Level {maxLevel}
                           </Text>
                         </View>
-                        <View
-                          style={styles.stepperGroup}
-                          accessible
-                          accessibilityLabel="Max level"
-                        >
+                        <View style={styles.stepperGroup} accessible={false}>
                           <Pressable
                             onPress={() => {
                               const newLevel = levels[maxLevelIndex - 1]
@@ -423,6 +434,7 @@ export function SettingsModal({
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Decrease max level"
+                            accessibilityHint={`Changes max difficulty to level ${levels[maxLevelIndex - 1] ?? maxLevel}`}
                             disabled={!canDecreaseMaxLevel}
                             style={({ pressed }) => [
                               styles.stepperButton,
@@ -442,6 +454,7 @@ export function SettingsModal({
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Increase max level"
+                            accessibilityHint={`Changes max difficulty to level ${levels[maxLevelIndex + 1] ?? maxLevel}`}
                             disabled={!canIncreaseMaxLevel}
                             style={({ pressed }) => [
                               styles.stepperButton,
@@ -467,17 +480,14 @@ export function SettingsModal({
                           {listenCharacterWpm} WPM
                         </Text>
                       </View>
-                      <View
-                        style={styles.stepperGroup}
-                        accessible
-                        accessibilityLabel="Playback character speed"
-                      >
+                      <View style={styles.stepperGroup} accessible={false}>
                         <Pressable
                           onPress={() =>
                             onListenCharacterWpmChange(listenCharacterWpm - 1)
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Decrease playback character speed"
+                          accessibilityHint={`Changes playback letter speed to ${listenCharacterWpm - 1} words per minute`}
                           disabled={listenCharacterWpm <= listenCharacterWpmMin}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -494,6 +504,7 @@ export function SettingsModal({
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Increase playback character speed"
+                          accessibilityHint={`Changes playback letter speed to ${listenCharacterWpm + 1} words per minute`}
                           disabled={listenCharacterWpm >= listenCharacterWpmMax}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -518,17 +529,14 @@ export function SettingsModal({
                           {listenEffectiveWpm} WPM
                         </Text>
                       </View>
-                      <View
-                        style={styles.stepperGroup}
-                        accessible
-                        accessibilityLabel="Playback spacing speed"
-                      >
+                      <View style={styles.stepperGroup} accessible={false}>
                         <Pressable
                           onPress={() =>
                             onListenEffectiveWpmChange(listenEffectiveWpm - 1)
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Decrease playback spacing speed"
+                          accessibilityHint={`Changes playback spacing to ${listenEffectiveWpm - 1} words per minute`}
                           disabled={listenEffectiveWpm <= listenEffectiveWpmMin}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -545,6 +553,7 @@ export function SettingsModal({
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Increase playback spacing speed"
+                          accessibilityHint={`Changes playback spacing to ${listenEffectiveWpm + 1} words per minute`}
                           disabled={listenEffectiveWpm >= listenEffectiveWpmMax}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -574,6 +583,11 @@ export function SettingsModal({
                       onPress={() => setHelperExpanded((prev) => !prev)}
                       accessibilityRole="button"
                       accessibilityLabel="Toggle helper options"
+                      accessibilityHint={
+                        helperExpanded
+                          ? 'Collapses helper settings'
+                          : 'Expands helper settings'
+                      }
                       style={({ pressed }) => [
                         styles.row,
                         pressed && styles.actionRowPressed,
@@ -610,12 +624,14 @@ export function SettingsModal({
                     text="Use recommended settings"
                     onPress={onUseRecommended}
                     accessibilityLabel="Use recommended settings"
+                    accessibilityHint="Applies the default learning setup"
                   />
                   <View style={styles.separator} />
                   <ActionRow
                     text="Letter Reference"
                     onPress={onShowReference}
                     accessibilityLabel="Open reference"
+                    accessibilityHint="Opens the Morse code reference chart"
                   />
                   <View style={styles.separator} />
                   {user ? (
@@ -631,6 +647,7 @@ export function SettingsModal({
                           disabled={isDeletingAccount}
                           accessibilityRole="button"
                           accessibilityLabel="Sign out"
+                          accessibilityHint="Stops sync and returns to local-only progress"
                           style={({ pressed }) => [
                             pressed &&
                               !isDeletingAccount &&
@@ -657,6 +674,7 @@ export function SettingsModal({
                         }
                         onPress={onDeleteAccount}
                         accessibilityLabel="Delete account"
+                        accessibilityHint="Deletes your account, synced progress, and local progress on this device"
                         destructive
                         disabled={isDeletingAccount}
                       />
@@ -669,6 +687,7 @@ export function SettingsModal({
                           void onSignInWithApple()
                         }}
                         accessibilityLabel="Sign in with Apple"
+                        accessibilityHint="Connects your Dit account using Apple"
                       />
                       <View style={styles.separator} />
                       <ActionRow
@@ -677,6 +696,7 @@ export function SettingsModal({
                           void onSignInWithGoogle()
                         }}
                         accessibilityLabel="Sign in with Google"
+                        accessibilityHint="Connects your Dit account using Google"
                       />
                     </>
                   )}

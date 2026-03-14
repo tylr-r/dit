@@ -6,6 +6,24 @@ type AboutPanelProps = {
   onClose: () => void;
 };
 
+type FooterLinkProps = {
+  label: string
+  url: string
+}
+
+const FooterLink = ({ label, url }: FooterLinkProps) => (
+  <Text
+    style={styles.footerLink}
+    accessibilityRole="link"
+    accessibilityHint={`Opens the ${label.toLowerCase()} page in your browser`}
+    onPress={() => {
+      void Linking.openURL(url)
+    }}
+  >
+    {label}
+  </Text>
+)
+
 /** About panel with usage guidance. */
 export function AboutPanel({ onClose }: AboutPanelProps) {
   const currentYear = new Date().getFullYear()
@@ -29,32 +47,18 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
       <View style={styles.footer}>
         <Text style={styles.footerText}>© {currentYear} Tylr</Text>
         <Text style={styles.footerSeparator}>|</Text>
-        <Text
-          style={styles.footerLink}
-          onPress={() => Linking.openURL('https://practicedit.com/privacy')}
-        >
-          Privacy
-        </Text>
+        <FooterLink label="Privacy" url="https://practicedit.com/privacy" />
         <Text style={styles.footerSeparator}>|</Text>
-        <Text
-          style={styles.footerLink}
-          onPress={() => Linking.openURL('https://practicedit.com/terms')}
-        >
-          Terms
-        </Text>
+        <FooterLink label="Terms" url="https://practicedit.com/terms" />
         <Text style={styles.footerSeparator}>|</Text>
-        <Text
-          style={styles.footerLink}
-          onPress={() => Linking.openURL('https://practicedit.com/support')}
-        >
-          Support
-        </Text>
+        <FooterLink label="Support" url="https://practicedit.com/support" />
       </View>
       <DitButton
         text="Close"
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Close about"
+        accessibilityHint="Dismisses the about panel"
         style={styles.closeButton}
         paddingHorizontal={12}
         paddingVertical={12}

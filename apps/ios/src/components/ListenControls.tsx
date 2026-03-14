@@ -30,6 +30,7 @@ export function ListenControls({
       <DitButton
         accessibilityRole="button"
         accessibilityLabel="Play morse letter sound"
+        accessibilityHint="Replays the current Morse letter"
         onPress={onReplay}
         style={{
           marginBottom: spacing.md,
@@ -41,7 +42,7 @@ export function ListenControls({
         text="Play"
         glassEffectStyle="clear"
       />
-      <View style={styles.keyboard} accessibilityRole="keyboardkey">
+      <View style={styles.keyboard} accessible={false}>
         {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
           <GlassContainer
             spacing={6}
@@ -52,8 +53,10 @@ export function ListenControls({
               <DitButton
                 key={key}
                 text={key}
-                onPress={isIdle ? () => onSubmitAnswer(key) : () => {}}
+                onPress={() => onSubmitAnswer(key)}
                 accessibilityLabel={`Type ${key}`}
+                accessibilityHint={`Submits the letter ${key}`}
+                disabled={!isIdle}
                 size={36}
                 radius={radii.sm}
                 textStyle={styles.keyText}

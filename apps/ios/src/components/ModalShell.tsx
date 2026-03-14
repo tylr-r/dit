@@ -20,15 +20,25 @@ export function ModalShell({
   allowBackdropDismiss = true,
 }: ModalShellProps) {
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
+    <View
+      style={styles.overlay}
+      pointerEvents="box-none"
+      accessibilityViewIsModal
+    >
       {allowBackdropDismiss ? (
-        <Pressable onPress={onClose} style={styles.backdrop} />
+        <Pressable
+          onPress={onClose}
+          style={styles.backdrop}
+          accessibilityRole="button"
+          accessibilityLabel="Close dialog"
+          accessibilityHint="Dismisses this dialog"
+        />
       ) : (
-        <View style={styles.backdrop} />
+        <View style={styles.backdrop} accessible={false} />
       )}
       <View style={styles.center} pointerEvents="box-none">
         {cardPressable ? (
-          <Pressable style={styles.card} onPress={noop}>
+          <Pressable style={styles.card} onPress={noop} accessible={false}>
             {children}
           </Pressable>
         ) : (

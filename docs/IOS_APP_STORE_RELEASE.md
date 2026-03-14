@@ -51,6 +51,7 @@ specific build ID if multiple recent iOS builds exist.
 - Confirm App Store Connect metadata includes:
   - Privacy policy URL: `https://practicedit.com/privacy`
   - Support URL: `https://practicedit.com/support`
+- Prepare the remaining App Store copy from `docs/IOS_APP_STORE_METADATA.md`.
 - Complete manual QA on iPhone and iPad before submission.
 - Review App Store privacy answers against the current iOS implementation before submitting.
 
@@ -59,3 +60,4 @@ specific build ID if multiple recent iOS builds exist.
 - `preview` is intended for installable internal builds.
 - `production` is the checked-in store profile for TestFlight and App Store distribution.
 - The privacy policy and support URL now live on the public web app routes, so those URLs can be reused in App Store Connect.
+- Store description, keywords, promotional text, review notes, and screenshot shot list now live in `docs/IOS_APP_STORE_METADATA.md`.

@@ -109,7 +109,11 @@ export function NuxModal({
   }
 
   return (
-    <View style={styles.exerciseOverlay} pointerEvents="box-none">
+    <View
+      style={styles.exerciseOverlay}
+      pointerEvents="box-none"
+      accessibilityViewIsModal
+    >
       <View style={styles.topBlocker} pointerEvents="auto" />
       <View style={styles.exerciseCard} pointerEvents="none">
         <View style={styles.panel}>

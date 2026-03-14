@@ -39,8 +39,12 @@ export type ButtonProps = {
   textStyle?: TextStyle;
   /** Optional: accessibility label */
   accessibilityLabel?: string;
+  /** Optional: accessibility hint */
+  accessibilityHint?: string;
   /** Optional: accessibility role */
   accessibilityRole?: AccessibilityRole;
+  /** Optional: disabled state */
+  disabled?: boolean;
   paddingHorizontal?: number;
   paddingVertical?: number;
   /** Vertical and Horizontal padding, this overrides paddingHorizontal and paddingVertical */
@@ -67,7 +71,9 @@ export function DitButton({
   style,
   textStyle,
   accessibilityLabel,
+  accessibilityHint,
   accessibilityRole = 'button',
+  disabled = false,
   paddingHorizontal = 8,
   paddingVertical = 8,
   padding,
@@ -146,11 +152,11 @@ export function DitButton({
     <GlassView
       glassEffectStyle={glassEffectStyle}
       isInteractive
-      accessibilityRole={accessibilityRole}
-      accessibilityLabel={label}
+      accessible={false}
       style={[
         styles.button,
         style,
+        disabled && styles.buttonDisabled,
         { borderRadius },
         sizeStyle,
         backgroundColor && { backgroundColor },
@@ -164,6 +170,11 @@ export function DitButton({
           paddingStyle,
         ]}
         onPress={onPress}
+        disabled={disabled}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={label}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled }}
       >
         {content}
       </Pressable>
@@ -259,6 +270,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.55,
   },
   pressable: {
     alignItems: 'center',

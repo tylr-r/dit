@@ -108,6 +108,12 @@ Project docs still list release work as future work.
 
 - `docs/NATIVE_IOS.md`
 
+Recent repo-side progress:
+
+- core modal and button accessibility semantics were tightened in the iOS app
+- reference cards now expose real press actions to assistive technologies
+- App Store metadata copy and review notes are documented in `docs/IOS_APP_STORE_METADATA.md`
+
 Still called out there:
 
 - comprehensive device testing
@@ -185,10 +191,14 @@ The app supports iPad and uses custom native UI pieces. Nothing failed in simula
 
 - [ ] Prepare iPhone screenshots
 - [ ] Prepare iPad screenshots if shipping universal
-- [ ] Write App Store subtitle and description
-- [ ] Prepare keywords and promotional text
-- [ ] Prepare review notes for sign-in and any special setup
+- [x] Write App Store subtitle and description
+- [x] Prepare keywords and promotional text
+- [x] Prepare review notes for sign-in and any special setup
 - [ ] Confirm age rating and content declarations
+
+Prepared in repo:
+
+- `docs/IOS_APP_STORE_METADATA.md` now includes subtitle, description, promotional text, keywords, review notes, and screenshot shot list
 
 ## Recommended Next Steps in Priority Order
 
