@@ -1,5 +1,10 @@
 import { requireNativeModule } from 'expo-modules-core'
-import { GoogleAuthProvider, signInWithCredential } from '@firebase/auth'
+import {
+  deleteUser,
+  GoogleAuthProvider,
+  signInWithCredential,
+  type User,
+} from '@firebase/auth'
 import { auth } from '../firebase'
 
 // Access the native module directly
@@ -23,4 +28,14 @@ export const signOut = async () => {
   // We only sign out of Firebase JS SDK here.
   // Native Google session might persist but that's usually desired for SSO.
   await auth.signOut()
+}
+
+export const deleteCurrentUserAccount = async (user?: User | null) => {
+  const currentUser = user ?? auth.currentUser
+
+  if (!currentUser) {
+    throw new Error('No signed-in user to delete')
+  }
+
+  await deleteUser(currentUser)
 }

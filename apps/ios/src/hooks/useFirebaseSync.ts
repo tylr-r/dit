@@ -1,10 +1,11 @@
 import {
   createFirebaseProgressService,
+  progressPathForUser,
   type ProgressPayload,
   type ProgressSnapshot,
 } from '@dit/core'
 import type { User } from '@firebase/auth'
-import { get, ref, set, type Database } from '@firebase/database'
+import { get, ref, remove, set, type Database } from '@firebase/database'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 type UseFirebaseSyncOptions = {
@@ -56,6 +57,13 @@ export const useFirebaseSync = ({
     }
     return createFirebaseProgressService(adapter)
   }, [database])
+
+  const clearPendingSaves = useCallback(() => {
+    clearTimer(saveTimeoutRef)
+    clearTimer(retryTimeoutRef)
+    pendingSnapshotRef.current = null
+    pendingUpdatedAtRef.current = null
+  }, [])
 
   const scheduleRetry = useCallback(() => {
     if (retryTimeoutRef.current !== null) {
@@ -164,9 +172,10 @@ export const useFirebaseSync = ({
 
   useEffect(() => {
     return () => {
+      clearPendingSaves()
       clearTimer(retryTimeoutRef)
     }
-  }, [])
+  }, [clearPendingSaves])
 
   const saveNow = useCallback(
     (snapshot: ProgressSnapshot, updatedAt?: number) => {
@@ -175,5 +184,13 @@ export const useFirebaseSync = ({
     [],
   )
 
-  return { remoteLoaded, saveNow }
+  const deleteRemoteProgress = useCallback(
+    async (userId: string) => {
+      clearPendingSaves()
+      await remove(ref(database, progressPathForUser(userId)))
+    },
+    [clearPendingSaves, database],
+  )
+
+  return { remoteLoaded, saveNow, deleteRemoteProgress }
 }

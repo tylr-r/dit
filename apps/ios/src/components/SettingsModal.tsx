@@ -35,6 +35,7 @@ type SettingsModalProps = {
   showHint: boolean
   showMnemonic: boolean
   user: User | null
+  isDeletingAccount: boolean
   onClose: () => void
   onMaxLevelChange: (value: number) => void
   onPracticeWordModeChange: (value: boolean) => void
@@ -50,6 +51,7 @@ type SettingsModalProps = {
   onShowReference: () => void
   onSignIn: () => Promise<unknown>
   onSignOut: () => Promise<unknown>
+  onDeleteAccount: () => void
 }
 
 type ToggleRowProps = {
@@ -64,6 +66,7 @@ type ActionRowProps = {
   accessibilityLabel: string
   onPress: () => void
   destructive?: boolean
+  disabled?: boolean
 }
 
 const SHEET_MIN_HEIGHT = 360
@@ -105,14 +108,26 @@ const ActionRow = ({
   accessibilityLabel,
   onPress,
   destructive = false,
+  disabled = false,
 }: ActionRowProps) => (
   <Pressable
     onPress={onPress}
+    disabled={disabled}
     accessibilityRole="button"
     accessibilityLabel={accessibilityLabel}
-    style={({ pressed }) => [styles.row, pressed && styles.actionRowPressed]}
+    style={({ pressed }) => [
+      styles.row,
+      disabled && styles.rowDisabled,
+      pressed && !disabled && styles.actionRowPressed,
+    ]}
   >
-    <Text style={[styles.actionText, destructive && styles.destructiveText]}>
+    <Text
+      style={[
+        styles.actionText,
+        destructive && styles.destructiveText,
+        disabled && styles.actionTextDisabled,
+      ]}
+    >
       {text}
     </Text>
   </Pressable>
@@ -142,6 +157,7 @@ export function SettingsModal({
   showHint,
   showMnemonic,
   user,
+  isDeletingAccount,
   onClose,
   onMaxLevelChange,
   onPracticeWordModeChange,
@@ -157,6 +173,7 @@ export function SettingsModal({
   onShowReference,
   onSignIn,
   onSignOut,
+  onDeleteAccount,
 }: SettingsModalProps) {
   const { height: viewportHeight } = useWindowDimensions()
   const insets = useSafeAreaInsets()
@@ -600,27 +617,48 @@ export function SettingsModal({
                   />
                   <View style={styles.separator} />
                   {user ? (
-                    <View style={styles.row}>
-                      <Text style={styles.accountEmail} numberOfLines={1}>
-                        {user.email}
-                      </Text>
-                      <Pressable
-                        onPress={() => {
-                          void onSignOut()
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel="Sign out"
-                        style={({ pressed }) => [
-                          pressed && styles.pressedOpacity,
-                        ]}
-                      >
-                        <Text
-                          style={[styles.actionText, styles.destructiveText]}
-                        >
-                          Sign Out
+                    <>
+                      <View style={[styles.row, isDeletingAccount && styles.rowDisabled]}>
+                        <Text style={styles.accountEmail} numberOfLines={1}>
+                          {user.email}
                         </Text>
-                      </Pressable>
-                    </View>
+                        <Pressable
+                          onPress={() => {
+                            void onSignOut()
+                          }}
+                          disabled={isDeletingAccount}
+                          accessibilityRole="button"
+                          accessibilityLabel="Sign out"
+                          style={({ pressed }) => [
+                            pressed &&
+                              !isDeletingAccount &&
+                              styles.pressedOpacity,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.actionText,
+                              styles.destructiveText,
+                              isDeletingAccount && styles.actionTextDisabled,
+                            ]}
+                          >
+                            Sign Out
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <View style={styles.separator} />
+                      <ActionRow
+                        text={
+                          isDeletingAccount
+                            ? 'Deleting account...'
+                            : 'Delete Account'
+                        }
+                        onPress={onDeleteAccount}
+                        accessibilityLabel="Delete account"
+                        destructive
+                        disabled={isDeletingAccount}
+                      />
+                    </>
                   ) : (
                     <ActionRow
                       text="Sign in"
@@ -745,6 +783,9 @@ const styles = StyleSheet.create({
   rowLabelDisabled: {
     color: colors.text.primary40,
   },
+  rowDisabled: {
+    opacity: 0.55,
+  },
   separator: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -801,6 +842,9 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 16,
     color: actionTintColor,
+  },
+  actionTextDisabled: {
+    color: colors.text.primary40,
   },
   destructiveText: {
     color: colors.feedback.error,

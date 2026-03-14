@@ -26,6 +26,7 @@ type UseProgressPersistenceResult = {
   onRemoteProgress: (raw: unknown) => void
   pendingRemoteSyncTick: number
   consumePendingRemoteSync: () => ProgressPayload | null
+  clearLocalProgress: () => Promise<void>
 }
 
 type TimeoutHandle = ReturnType<typeof setTimeout>
@@ -268,10 +269,24 @@ export const useProgressPersistence = ({
     return localProgressRef.current
   }, [])
 
+  const clearLocalProgress = useCallback(async () => {
+    clearTimer(localSaveTimeoutRef)
+    pendingRemoteProgressRef.current = null
+    pendingRemoteSyncRef.current = false
+    pendingPersistUpdatedAtRef.current = null
+    pendingLocalSnapshotRef.current = null
+    pendingLocalUpdatedAtRef.current = null
+    localProgressRef.current = null
+    lastPersistedSnapshotRef.current = null
+    setProgressUpdatedAt(null)
+    await AsyncStorage.removeItem(LOCAL_PROGRESS_KEY)
+  }, [])
+
   return {
     progressUpdatedAt,
     onRemoteProgress,
     pendingRemoteSyncTick,
     consumePendingRemoteSync,
+    clearLocalProgress,
   }
 }

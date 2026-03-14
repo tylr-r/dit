@@ -27,9 +27,16 @@ import { triggerHaptics } from '@dit/dit-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg'
+import type { User } from '@firebase/auth'
 import { AboutModal } from './src/components/AboutModal'
 import { DitButton } from './src/components/DitButton'
 import { ListenControls } from './src/components/ListenControls'
@@ -45,7 +52,11 @@ import { database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
 import { useFirebaseSync } from './src/hooks/useFirebaseSync'
 import { useProgressPersistence } from './src/hooks/useProgressPersistence'
-import { signInWithGoogle, signOut } from './src/services/auth'
+import {
+  deleteCurrentUserAccount,
+  signInWithGoogle,
+  signOut,
+} from './src/services/auth'
 import {
   playMorseTone,
   prepareToneEngine,
@@ -292,14 +303,36 @@ const getListenPlaybackDurationMs = (
   return elapsedMs + interCharacterGapMs
 }
 
-const initialConfig = (() => {
+const createInitialPracticeConfig = () => {
   const availableLetters = getLettersForLevel(DEFAULT_MAX_LEVEL)
   const practiceWord = getRandomWord(getWordsForLetters(availableLetters))
   return {
     letter: getRandomLetter(availableLetters),
     practiceWord,
   }
-})()
+}
+
+const initialConfig = createInitialPracticeConfig()
+
+const getDeleteAccountErrorMessage = (error: unknown) => {
+  const code =
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    typeof error.code === 'string'
+      ? error.code
+      : null
+
+  if (code?.includes('requires-recent-login')) {
+    return 'For security, sign in again and retry account deletion.'
+  }
+
+  if (code?.includes('network-request-failed')) {
+    return 'A network error interrupted account deletion. Try again on a stable connection.'
+  }
+
+  return 'We could not delete your account. Please try again.'
+}
 
 const BackgroundGlow = () => {
   const { width, height } = useWindowDimensions()
@@ -391,6 +424,7 @@ const BackgroundGlow = () => {
 /** Primary app entry for Dit iOS. */
 export default function App() {
   const { user } = useAuth()
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isPressing, setIsPressing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -546,6 +580,7 @@ export default function App() {
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
   const isNuxActive = nuxReady && nuxStatus === 'pending'
+  const userForSync = isDeletingAccount ? null : user
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
   const isReferencePanelActive = showReference
   const availableLetters = useMemo(
@@ -994,6 +1029,86 @@ export default function App() {
   const handleResetScores = useCallback(() => {
     setScores(initializeScores())
   }, [])
+
+  const resetProgressState = useCallback(() => {
+    const nextConfig = createInitialPracticeConfig()
+    const nextScores = initializeScores()
+
+    stopListenPlayback()
+    clearTimer(wordSpaceTimeoutRef)
+    clearTimer(letterTimeoutRef)
+    clearTimer(successTimeoutRef)
+    clearTimer(errorTimeoutRef)
+    clearTimer(listenTimeoutRef)
+    clearTimer(listenRecognitionTimeoutRef)
+
+    setShowSettings(false)
+    setShowAbout(false)
+    setShowReference(false)
+    setIsPressing(false)
+    setMode('practice')
+    setShowHint(false)
+    setShowMnemonic(false)
+    setPracticeAutoPlay(true)
+    setPracticeLearnMode(true)
+    setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
+    setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
+    setMaxLevel(DEFAULT_MAX_LEVEL)
+    setPracticeWordMode(false)
+    setLetter(nextConfig.letter)
+    setInput('')
+    setStatus('idle')
+    setPracticeWord(nextConfig.practiceWord)
+    setPracticeWordIndex(0)
+    setPracticeWpm(null)
+    setFreestyleInput('')
+    setFreestyleResult(null)
+    setFreestyleWordMode(false)
+    setFreestyleWord('')
+    setListenWpm(DEFAULT_LISTEN_WPM)
+    setListenEffectiveWpm(DEFAULT_LISTEN_EFFECTIVE_WPM)
+    setListenAutoTightening(DEFAULT_LISTEN_AUTO_TIGHTENING)
+    setListenAutoTighteningCorrectCount(
+      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
+    )
+    setListenStatus('idle')
+    setListenReveal(null)
+    setListenWavePlayback(null)
+    setScores(nextScores)
+    setListenTtr({})
+    setListenHasSubmittedAnswer(false)
+    setListenRecognitionText(null)
+
+    pressStartRef.current = null
+    inputRef.current = ''
+    freestyleInputRef.current = ''
+    letterRef.current = nextConfig.letter
+    practiceWordRef.current = nextConfig.practiceWord
+    practiceWordIndexRef.current = 0
+    practiceWordModeRef.current = false
+    practiceLearnModeRef.current = true
+    practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
+    practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
+    practiceWordStartRef.current = null
+    practiceReviewQueueRef.current = []
+    freestyleWordModeRef.current = false
+    scoresRef.current = nextScores
+    listenTtrRef.current = {}
+    maxLevelRef.current = DEFAULT_MAX_LEVEL
+    modeRef.current = 'practice'
+    listenWpmRef.current = DEFAULT_LISTEN_WPM
+    listenEffectiveWpmRef.current = DEFAULT_LISTEN_EFFECTIVE_WPM
+    listenAutoTighteningRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING
+    listenAutoTighteningCorrectCountRef.current =
+      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
+    listenStatusRef.current = 'idle'
+    listenOverlearnQueueRef.current = []
+    listenPromptTimingRef.current = null
+    listenConsecutiveLetterRef.current = nextConfig.letter
+    listenConsecutiveCountRef.current = 1
+    errorLockoutUntilRef.current = 0
+    nuxAttemptStartRef.current = null
+  }, [stopListenPlayback])
 
   const handleNuxSkip = useCallback(() => {
     persistNuxStatus('skipped')
@@ -2017,6 +2132,7 @@ export default function App() {
     onRemoteProgress,
     pendingRemoteSyncTick,
     consumePendingRemoteSync,
+    clearLocalProgress,
   } = useProgressPersistence({
     progressSnapshot,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
@@ -2029,9 +2145,9 @@ export default function App() {
     levelMax: LEVELS[LEVELS.length - 1],
   })
 
-  const { remoteLoaded, saveNow } = useFirebaseSync({
+  const { remoteLoaded, saveNow, deleteRemoteProgress } = useFirebaseSync({
     database,
-    user,
+    user: userForSync,
     onRemoteProgress,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
     progressSnapshot,
@@ -2039,7 +2155,7 @@ export default function App() {
   })
 
   useEffect(() => {
-    if (!remoteLoaded || !user) {
+    if (!remoteLoaded || !userForSync) {
       return
     }
     const payload = consumePendingRemoteSync()
@@ -2052,8 +2168,76 @@ export default function App() {
     pendingRemoteSyncTick,
     remoteLoaded,
     saveNow,
-    user,
+    userForSync,
   ])
+
+  const performAccountDeletion = useCallback(
+    async (currentUser: User) => {
+      if (isDeletingAccount) {
+        return
+      }
+
+      setIsDeletingAccount(true)
+      let accountDeleted = false
+
+      try {
+        setShowSettings(false)
+        await deleteRemoteProgress(currentUser.uid)
+        await deleteCurrentUserAccount(currentUser)
+        accountDeleted = true
+        await clearLocalProgress()
+        resetProgressState()
+      } catch (error) {
+        console.error('Failed to delete account', error)
+
+        if (accountDeleted) {
+          resetProgressState()
+          Alert.alert(
+            'Account Deleted',
+            'Your account was deleted, but local cleanup did not finish cleanly. Relaunch the app if any old progress remains.',
+          )
+          return
+        }
+
+        Alert.alert(
+          'Could Not Delete Account',
+          getDeleteAccountErrorMessage(error),
+        )
+      } finally {
+        setIsDeletingAccount(false)
+      }
+    },
+    [
+      clearLocalProgress,
+      deleteRemoteProgress,
+      isDeletingAccount,
+      resetProgressState,
+    ],
+  )
+
+  const handleDeleteAccount = useCallback(() => {
+    if (!user || isDeletingAccount) {
+      return
+    }
+
+    Alert.alert(
+      'Delete account?',
+      'This permanently deletes your Dit account, synced progress, and local progress on this device.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            void performAccountDeletion(user)
+          },
+        },
+      ],
+    )
+  }, [isDeletingAccount, performAccountDeletion, user])
 
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
@@ -2197,6 +2381,7 @@ export default function App() {
               )}
               showHint={showHint}
               showMnemonic={showMnemonic}
+              isDeletingAccount={isDeletingAccount}
               onClose={() => setShowSettings(false)}
               onMaxLevelChange={handleMaxLevelChange}
               onPracticeWordModeChange={handlePracticeWordModeChange}
@@ -2213,6 +2398,7 @@ export default function App() {
               user={user}
               onSignIn={signInWithGoogle}
               onSignOut={signOut}
+              onDeleteAccount={handleDeleteAccount}
             />
           ) : null}
           {showReference ? (
