@@ -2356,7 +2356,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   practicePlayButton: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   practicePlayButtonText: {
     fontSize: 13,
