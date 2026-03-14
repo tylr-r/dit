@@ -5,7 +5,7 @@ type LegalPageLayoutProps = {
   title: string;
   intro: string;
   lastUpdated: string;
-  current: 'privacy' | 'terms';
+  current: 'privacy' | 'terms' | 'support';
   children: ReactNode;
 };
 
@@ -35,6 +35,12 @@ const LegalPageLayout = ({
               aria-current={current === 'terms' ? 'page' : undefined}
             >
               Terms
+            </a>
+            <a
+              href="/support"
+              aria-current={current === 'support' ? 'page' : undefined}
+            >
+              Support
             </a>
           </nav>
         </div>
@@ -68,58 +74,63 @@ export function PrivacyPolicy() {
   return (
     <LegalPageLayout
       title="Privacy Policy"
-      intro="This policy explains how Dit collects and uses information when you use the app."
-      lastUpdated="January 2026"
+      intro="This policy explains how Dit handles information across the Dit web app, website, and iOS app."
+      lastUpdated="March 2026"
       current="privacy"
     >
       <LegalSection title="Information we collect">
         <ul>
           <li>
-            On-device settings and progress stored in your browser, such as
-            mode, hint preferences, scores, and speed.
+            Local settings and progress needed to run Dit, such as mode,
+            learning progress, scores, hint preferences, and listen speed. On
+            the web, this data is stored in your browser. On iOS, this data is
+            stored on your device.
           </li>
           <li>
-            Account information if you sign in with Google, including your name
-            and email address.
+            Account information if you sign in, including your email address,
+            display name, and authentication provider details. The web app
+            currently supports Google sign-in. The iOS app currently supports
+            Google and Sign in with Apple.
           </li>
           <li>
-            Progress and preferences synced to{' '}
-            <a href="https://cloud.google.com" rel="noreferrer" target="_blank">
-              Google Cloud
-            </a>{' '}
-            when signed in, so you can access them across devices.
+            Progress and preferences synced to Firebase when you sign in, so
+            they can be restored across supported devices.
           </li>
           <li>
-            Usage analytics events through{' '}
+            Website and web app usage analytics through{' '}
             <a
               href="https://marketingplatform.google.com/about/analytics/"
               rel="noreferrer"
               target="_blank"
             >
               Google Analytics
-            </a>{' '}
-            to understand feature usage and improve stability.
+            </a>
+            . The iOS app does not use Google Analytics.
           </li>
         </ul>
       </LegalSection>
       <LegalSection title="How we use information">
         <ul>
-          <li>Provide the core learning experience and app features.</li>
-          <li>Sync your progress when you choose to sign in.</li>
-          <li>Measure performance and improve the app over time.</li>
+          <li>Provide the core learning experience and save your progress.</li>
+          <li>Authenticate your account when you choose to sign in.</li>
+          <li>Sync your settings and progress across devices when signed in.</li>
+          <li>
+            Measure website and web app usage so we can improve the web
+            experience.
+          </li>
         </ul>
       </LegalSection>
-      <LegalSection title="Sharing">
+      <LegalSection title="Services we rely on">
         <p>
-          We rely on{' '}
+          Dit relies on{' '}
+          <a href="https://firebase.google.com" rel="noreferrer" target="_blank">
+            Firebase
+          </a>
+          {' '}and{' '}
           <a href="https://cloud.google.com" rel="noreferrer" target="_blank">
             Google Cloud
-          </a>
-          ,{' '}
-          <a href="https://www.cloudflare.com" rel="noreferrer" target="_blank">
-            Cloudflare
-          </a>
-          , and{' '}
+          </a>{' '}
+          for authentication and synced data. The web app also uses{' '}
           <a
             href="https://marketingplatform.google.com/about/analytics/"
             rel="noreferrer"
@@ -127,23 +138,30 @@ export function PrivacyPolicy() {
           >
             Google Analytics
           </a>{' '}
-          to operate the app. These services process data on our behalf under
-          their own privacy policies. We do not sell your personal information.
+          for analytics. Sign-in providers such as Google and Apple also
+          process authentication data under their own privacy policies. We do
+          not sell personal information.
         </p>
       </LegalSection>
       <LegalSection title="Your choices">
         <ul>
           <li>You can use Dit without signing in.</li>
           <li>
-            You can clear local data at any time using your browser settings.
+            On the web, you can clear locally stored data through your browser
+            settings.
           </li>
-          <li>Signing out stops further syncing to the cloud.</li>
+          <li>
+            On iOS, removing the app deletes data stored only on that device.
+          </li>
+          <li>Signing out stops future sync activity.</li>
         </ul>
       </LegalSection>
       <LegalSection title="Data deletion">
         <p>
-          If you wish to delete your account and all associated synced data,
-          please contact us at{' '}
+          In the iOS app, signed-in users can delete their account from the
+          Settings screen. That flow deletes the Firebase account, synced
+          progress, and local progress on that device. If you only use the web
+          app or need help with deletion, contact{' '}
           <a href="mailto:tyler@tylerobinson.com">tyler@tylerobinson.com</a>.
         </p>
       </LegalSection>
@@ -157,7 +175,8 @@ export function PrivacyPolicy() {
       </LegalSection>
       <LegalSection title="Contact">
         <p>
-          If you have questions about this policy, please contact us at{' '}
+          If you have questions about this policy or need support, visit{' '}
+          <a href="/support">the Dit support page</a> or email{' '}
           <a href="mailto:tyler@tylerobinson.com">tyler@tylerobinson.com</a>.
         </p>
       </LegalSection>
@@ -176,8 +195,8 @@ export function TermsOfService() {
   return (
     <LegalPageLayout
       title="Terms of Service"
-      intro="These terms govern your use of Dit. By using the app, you agree to them."
-      lastUpdated="January 2026"
+      intro="These terms govern your use of the Dit website, web app, and iOS app."
+      lastUpdated="March 2026"
       current="terms"
     >
       <LegalSection title="Use of the service">
@@ -190,7 +209,8 @@ export function TermsOfService() {
         <p>
           Signing in is optional. If you sign in, you are responsible for
           maintaining the security of your account and any activity that occurs
-          under it.
+          under it. The web app currently offers Google sign-in. The iOS app
+          currently offers Google and Sign in with Apple.
         </p>
       </LegalSection>
       <LegalSection title="Acceptable use">
@@ -206,22 +226,23 @@ export function TermsOfService() {
       <LegalSection title="Third-party services">
         <p>
           Dit uses{' '}
+          <a href="https://firebase.google.com" rel="noreferrer" target="_blank">
+            Firebase
+          </a>
+          ,{' '}
           <a href="https://cloud.google.com" rel="noreferrer" target="_blank">
             Google Cloud
           </a>
           ,{' '}
-          <a href="https://www.cloudflare.com" rel="noreferrer" target="_blank">
-            Cloudflare
-          </a>
-          , and{' '}
           <a
             href="https://marketingplatform.google.com/about/analytics/"
             rel="noreferrer"
             target="_blank"
           >
             Google Analytics
-          </a>
-          . Your use of those services is subject to their respective terms and
+          </a>{' '}
+          on the web, and Apple and Google for optional authentication on iOS.
+          Your use of those services is subject to their respective terms and
           policies.
         </p>
       </LegalSection>
@@ -253,7 +274,8 @@ export function TermsOfService() {
       </LegalSection>
       <LegalSection title="Contact">
         <p>
-          If you have questions about these terms, please contact us at{' '}
+          If you have questions about these terms, visit{' '}
+          <a href="/support">the Dit support page</a> or email{' '}
           <a href="mailto:tyler@tylerobinson.com">tyler@tylerobinson.com</a>.
         </p>
       </LegalSection>
@@ -274,6 +296,38 @@ export function TermsOfService() {
         <p>
           We may update these terms from time to time. Continued use of the app
           after changes take effect means you accept the updated terms.
+        </p>
+      </LegalSection>
+    </LegalPageLayout>
+  );
+}
+
+/** Public support contact page for Dit. */
+export function SupportPage() {
+  return (
+    <LegalPageLayout
+      title="Support"
+      intro="Need help with Dit, sign-in, sync, or account deletion? This page is the public support contact for the web app and iOS app."
+      lastUpdated="March 2026"
+      current="support"
+    >
+      <LegalSection title="Contact">
+        <p>
+          Email <a href="mailto:tyler@tylerobinson.com">tyler@tylerobinson.com</a>{' '}
+          for support questions, bug reports, or account help.
+        </p>
+      </LegalSection>
+      <LegalSection title="Account deletion">
+        <p>
+          In the iOS app, you can delete your account from Settings. That
+          removes the Dit account, synced progress, and local progress on that
+          device. If you only use the web app and need deletion help, email us.
+        </p>
+      </LegalSection>
+      <LegalSection title="Privacy and terms">
+        <p>
+          Privacy details are available at <a href="/privacy">/privacy</a> and
+          terms are available at <a href="/terms">/terms</a>.
         </p>
       </LegalSection>
     </LegalPageLayout>

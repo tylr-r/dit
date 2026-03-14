@@ -42,6 +42,13 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
         >
           Terms
         </Text>
+        <Text style={styles.footerSeparator}>|</Text>
+        <Text
+          style={styles.footerLink}
+          onPress={() => Linking.openURL('https://practicedit.com/support')}
+        >
+          Support
+        </Text>
       </View>
       <DitButton
         text="Close"

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { Footer } from './components/Footer';
-import { PrivacyPolicy, TermsOfService } from './components/LegalPage';
+import {
+  PrivacyPolicy,
+  SupportPage,
+  TermsOfService,
+} from './components/LegalPage';
 import { ListenControls } from './components/ListenControls';
 import { MorseButton } from './components/MorseButton';
 import { Page404 } from './components/Page404';
@@ -1473,6 +1477,9 @@ function App() {
   }
   if (path === '/terms') {
     return <TermsOfService />;
+  }
+  if (path === '/support') {
+    return <SupportPage />;
   }
   if (path === '/') {
     return <MainApp />;
