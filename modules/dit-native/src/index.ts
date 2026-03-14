@@ -6,6 +6,28 @@ export type DitNativeModule = {
   triggerHaptics?: (pattern: number | number[]) => boolean | Promise<boolean>
   startTone?: (frequency: number, volume: number) => boolean | Promise<boolean>
   stopTone?: () => boolean | Promise<boolean>
+  signInWithApple?: () => Promise<{
+    idToken?: string
+    rawNonce?: string
+    authorizationCode?: string
+    email?: string
+    givenName?: string
+    familyName?: string
+  }>
+  prepareAppleAccountDeletion?: (userId: string) => Promise<{
+    idToken?: string
+    rawNonce?: string
+    authorizationCode?: string
+  }>
+  revokeAppleTokenForAccountDeletion?: (
+    authorizationCode: string,
+    userId: string
+  ) => Promise<void>
+  signInWithGoogle?: () => Promise<{
+    idToken?: string
+    accessToken?: string
+    email?: string
+  }>
   playTone?: (
     frequency: number,
     durationMs: number,

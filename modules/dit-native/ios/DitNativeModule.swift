@@ -1,9 +1,21 @@
 import AVFoundation
+import AuthenticationServices
+import CryptoKit
 import ExpoModulesCore
 import FirebaseAuth
 import GoogleSignIn
 import FirebaseCore
 import os.lock
+import Security
+
+private struct AppleAuthorizationFailure: LocalizedError {
+  let code: String
+  let message: String
+
+  var errorDescription: String? {
+    message
+  }
+}
 
 private final class ToneGenerator {
   private let engine = AVAudioEngine()
@@ -303,8 +315,146 @@ private final class ToneGenerator {
 
 public final class DitNativeModule: Module {
   private let toneGenerator = ToneGenerator()
+  private var appleAuthorizationCoordinator: AppleAuthorizationCoordinator?
 
-  private func ensureFirebaseConfigured(promise: Promise) -> FirebaseApp? {
+  private final class AppleAuthorizationCoordinator: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    private let promise: Promise
+    private weak var presentationAnchor: UIWindow?
+    private let onComplete: () -> Void
+    private let requestedScopes: [ASAuthorization.Scope]
+    private let errorCode: String
+    private let cancellationCode: String
+    private let onAuthorization: (ASAuthorizationAppleIDCredential, String) async throws -> [String: String]
+    private var currentNonce: String?
+    private var isResolved = false
+
+    init(
+      promise: Promise,
+      presentationAnchor: UIWindow,
+      requestedScopes: [ASAuthorization.Scope],
+      errorCode: String,
+      cancellationCode: String,
+      onComplete: @escaping () -> Void,
+      onAuthorization: @escaping (ASAuthorizationAppleIDCredential, String) async throws -> [String: String]
+    ) {
+      self.promise = promise
+      self.presentationAnchor = presentationAnchor
+      self.requestedScopes = requestedScopes
+      self.errorCode = errorCode
+      self.cancellationCode = cancellationCode
+      self.onComplete = onComplete
+      self.onAuthorization = onAuthorization
+    }
+
+    func start() {
+      let nonce = randomNonceString()
+      currentNonce = nonce
+
+      let provider = ASAuthorizationAppleIDProvider()
+      let request = provider.createRequest()
+      request.requestedScopes = requestedScopes
+      request.nonce = sha256(nonce)
+
+      let controller = ASAuthorizationController(authorizationRequests: [request])
+      controller.delegate = self
+      controller.presentationContextProvider = self
+      controller.performRequests()
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+      presentationAnchor ?? ASPresentationAnchor()
+    }
+
+    func authorizationController(
+      controller: ASAuthorizationController,
+      didCompleteWithAuthorization authorization: ASAuthorization
+    ) {
+      guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+        reject(code: errorCode, message: "Unexpected Apple credential type")
+        return
+      }
+
+      guard let rawNonce = currentNonce else {
+        reject(code: errorCode, message: "Missing Apple sign-in nonce")
+        return
+      }
+
+      Task {
+        do {
+          let result = try await self.onAuthorization(credential, rawNonce)
+          self.resolve(result)
+        } catch let error as AppleAuthorizationFailure {
+          self.reject(code: error.code, message: error.message)
+        } catch {
+          self.reject(code: self.errorCode, message: error.localizedDescription)
+        }
+      }
+    }
+
+    func authorizationController(
+      controller: ASAuthorizationController,
+      didCompleteWithError error: Error
+    ) {
+      let nsError = error as NSError
+      if nsError.domain == ASAuthorizationError.errorDomain,
+         nsError.code == ASAuthorizationError.canceled.rawValue {
+        reject(code: cancellationCode, message: "The Apple sign-in flow was cancelled")
+        return
+      }
+
+      reject(code: errorCode, message: error.localizedDescription)
+    }
+
+    private func resolve(_ value: [String: String]) {
+      guard !isResolved else { return }
+      isResolved = true
+      promise.resolve(value)
+      onComplete()
+    }
+
+    private func reject(code: String, message: String) {
+      guard !isResolved else { return }
+      isResolved = true
+      promise.reject(code, message)
+      onComplete()
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+      precondition(length > 0)
+      let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+      var result = ""
+      var remainingLength = length
+
+      while remainingLength > 0 {
+        var randoms = [UInt8](repeating: 0, count: 16)
+        let errorCode = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+        if errorCode != errSecSuccess {
+          fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(errorCode)")
+        }
+
+        randoms.forEach { random in
+          if remainingLength == 0 {
+            return
+          }
+
+          if random < charset.count {
+            result.append(charset[Int(random)])
+            remainingLength -= 1
+          }
+        }
+      }
+
+      return result
+    }
+
+    private func sha256(_ input: String) -> String {
+      let inputData = Data(input.utf8)
+      let hashedData = SHA256.hash(data: inputData)
+      return hashedData.map { String(format: "%02x", $0) }.joined()
+    }
+  }
+
+  private func ensureFirebaseConfigured() throws -> FirebaseApp {
     if let app = FirebaseApp.app() {
       return app
     }
@@ -313,23 +463,96 @@ public final class DitNativeModule: Module {
       forResource: "GoogleService-Info",
       ofType: "plist"
     ) else {
-      promise.reject(
-        "ERR_FIREBASE_CONFIG",
-        "GoogleService-Info.plist not found in app bundle"
+      throw AppleAuthorizationFailure(
+        code: "ERR_FIREBASE_CONFIG",
+        message: "GoogleService-Info.plist not found in app bundle"
       )
-      return nil
     }
 
     guard let options = FirebaseOptions(contentsOfFile: filePath) else {
-      promise.reject(
-        "ERR_FIREBASE_CONFIG",
-        "Could not load Firebase options from GoogleService-Info.plist"
+      throw AppleAuthorizationFailure(
+        code: "ERR_FIREBASE_CONFIG",
+        message: "Could not load Firebase options from GoogleService-Info.plist"
       )
-      return nil
     }
 
     FirebaseApp.configure(options: options)
-    return FirebaseApp.app()
+
+    guard let configuredApp = FirebaseApp.app() else {
+      throw AppleAuthorizationFailure(
+        code: "ERR_FIREBASE_CONFIG",
+        message: "Firebase could not be configured"
+      )
+    }
+
+    return configuredApp
+  }
+
+  private func ensureFirebaseConfigured(promise: Promise) -> FirebaseApp? {
+    do {
+      return try ensureFirebaseConfigured()
+    } catch let error as AppleAuthorizationFailure {
+      promise.reject(error.code, error.message)
+      return nil
+    } catch {
+      promise.reject("ERR_FIREBASE_CONFIG", error.localizedDescription)
+      return nil
+    }
+  }
+
+  private func currentPresentationWindow() -> UIWindow? {
+    let currentViewController = appContext?.utilities?.currentViewController()
+    return currentViewController?.view.window
+      ?? currentViewController?.viewIfLoaded?.window
+      ?? UIApplication.shared.connectedScenes
+        .compactMap { $0 as? UIWindowScene }
+        .flatMap(\.windows)
+        .first(where: \.isKeyWindow)
+  }
+
+  private func appleAuthorizationResult(
+    from credential: ASAuthorizationAppleIDCredential,
+    rawNonce: String,
+    includeProfile: Bool,
+    requireAuthorizationCode: Bool,
+    errorCode: String
+  ) throws -> [String: String] {
+    guard let identityToken = credential.identityToken else {
+      throw AppleAuthorizationFailure(
+        code: errorCode,
+        message: "No Apple identity token returned"
+      )
+    }
+
+    guard let idToken = String(data: identityToken, encoding: .utf8) else {
+      throw AppleAuthorizationFailure(
+        code: errorCode,
+        message: "Unable to serialize Apple identity token"
+      )
+    }
+
+    var result = [
+      "idToken": idToken,
+      "rawNonce": rawNonce
+    ]
+
+    if let authorizationCodeData = credential.authorizationCode,
+       let authorizationCode = String(data: authorizationCodeData, encoding: .utf8) {
+      result["authorizationCode"] = authorizationCode
+    } else if requireAuthorizationCode {
+      throw AppleAuthorizationFailure(
+        code: "ERR_APPLE_ACCOUNT_DELETION",
+        message: "No Apple authorization code returned"
+      )
+    }
+
+    if includeProfile {
+      result["email"] = credential.email ?? ""
+      result["givenName"] = credential.fullName?.givenName ?? ""
+      result["familyName"] = credential.fullName?.familyName ?? ""
+    }
+
+    return result
   }
 
   public func definition() -> ModuleDefinition {
@@ -425,6 +648,172 @@ public final class DitNativeModule: Module {
           ])
         }
       }
+    }
+
+    AsyncFunction("signInWithApple") { (promise: Promise) in
+      DispatchQueue.main.async { [weak self] in
+        guard let self else {
+          promise.reject("ERR_APPLE_SIGN_IN", "Module unavailable")
+          return
+        }
+
+        guard #available(iOS 13.0, *) else {
+          promise.reject("ERR_APPLE_SIGN_IN", "Sign in with Apple requires iOS 13 or later")
+          return
+        }
+
+        guard let presentationWindow = self.currentPresentationWindow() else {
+          promise.reject("ERR_NO_VIEW_CONTROLLER", "Could not find presentation window for Apple sign-in")
+          return
+        }
+
+        let coordinator = AppleAuthorizationCoordinator(
+          promise: promise,
+          presentationAnchor: presentationWindow,
+          requestedScopes: [.fullName, .email],
+          errorCode: "ERR_APPLE_SIGN_IN",
+          cancellationCode: "ERR_APPLE_SIGN_IN_CANCELLED",
+          onComplete: { [weak self] in
+            self?.appleAuthorizationCoordinator = nil
+          },
+          onAuthorization: { [weak self] credential, rawNonce in
+            guard let self else {
+              throw AppleAuthorizationFailure(
+                code: "ERR_APPLE_SIGN_IN",
+                message: "Module unavailable"
+              )
+            }
+
+            return try self.appleAuthorizationResult(
+              from: credential,
+              rawNonce: rawNonce,
+              includeProfile: true,
+              requireAuthorizationCode: false,
+              errorCode: "ERR_APPLE_SIGN_IN"
+            )
+          }
+        )
+        self.appleAuthorizationCoordinator = coordinator
+        coordinator.start()
+      }
+    }
+
+    AsyncFunction("prepareAppleAccountDeletion") { (userId: String, promise: Promise) in
+      DispatchQueue.main.async { [weak self] in
+        guard let self else {
+          promise.reject("ERR_APPLE_ACCOUNT_DELETION", "Module unavailable")
+          return
+        }
+
+        guard #available(iOS 13.0, *) else {
+          promise.reject(
+            "ERR_APPLE_ACCOUNT_DELETION",
+            "Sign in with Apple requires iOS 13 or later"
+          )
+          return
+        }
+
+        guard self.ensureFirebaseConfigured(promise: promise) != nil else {
+          return
+        }
+
+        guard let presentationWindow = self.currentPresentationWindow() else {
+          promise.reject(
+            "ERR_NO_VIEW_CONTROLLER",
+            "Could not find presentation window for Apple sign-in"
+          )
+          return
+        }
+
+        let coordinator = AppleAuthorizationCoordinator(
+          promise: promise,
+          presentationAnchor: presentationWindow,
+          requestedScopes: [],
+          errorCode: "ERR_APPLE_ACCOUNT_DELETION",
+          cancellationCode: "ERR_APPLE_ACCOUNT_DELETION_CANCELLED",
+          onComplete: { [weak self] in
+            self?.appleAuthorizationCoordinator = nil
+          },
+          onAuthorization: { [weak self] credential, rawNonce in
+            guard let self else {
+              throw AppleAuthorizationFailure(
+                code: "ERR_APPLE_ACCOUNT_DELETION",
+                message: "Module unavailable"
+              )
+            }
+
+            let result = try self.appleAuthorizationResult(
+              from: credential,
+              rawNonce: rawNonce,
+              includeProfile: false,
+              requireAuthorizationCode: true,
+              errorCode: "ERR_APPLE_ACCOUNT_DELETION"
+            )
+
+            guard let idToken = result["idToken"] else {
+              throw AppleAuthorizationFailure(
+                code: "ERR_APPLE_ACCOUNT_DELETION",
+                message: "No Apple identity token returned"
+              )
+            }
+
+            let firebaseCredential = OAuthProvider.appleCredential(
+              withIDToken: idToken,
+              rawNonce: rawNonce,
+              fullName: credential.fullName
+            )
+            let auth = Auth.auth()
+
+            if let currentUser = auth.currentUser, currentUser.uid == userId {
+              _ = try await currentUser.reauthenticate(with: firebaseCredential)
+              return result
+            }
+
+            if auth.currentUser != nil {
+              try? auth.signOut()
+            }
+
+            let authResult = try await auth.signIn(with: firebaseCredential)
+            guard authResult.user.uid == userId else {
+              try? auth.signOut()
+              throw AppleAuthorizationFailure(
+                code: "ERR_APPLE_ACCOUNT_DELETION_USER_MISMATCH",
+                message: "Please continue with the Apple account linked to this Dit account."
+              )
+            }
+
+            return result
+          }
+        )
+        self.appleAuthorizationCoordinator = coordinator
+        coordinator.start()
+      }
+    }
+
+    AsyncFunction("revokeAppleTokenForAccountDeletion") { (authorizationCode: String, userId: String) async throws in
+      try ensureFirebaseConfigured()
+
+      let auth = Auth.auth()
+      guard let currentUser = auth.currentUser else {
+        throw AppleAuthorizationFailure(
+          code: "ERR_APPLE_ACCOUNT_DELETION",
+          message: "No native Firebase user is available for Apple token revocation."
+        )
+      }
+
+      guard currentUser.uid == userId else {
+        try? auth.signOut()
+        throw AppleAuthorizationFailure(
+          code: "ERR_APPLE_ACCOUNT_DELETION_USER_MISMATCH",
+          message: "Please continue with the Apple account linked to this Dit account."
+        )
+      }
+
+      defer {
+        try? auth.signOut()
+      }
+
+      try await auth.revokeToken(withAuthorizationCode: authorizationCode)
     }
   }
 }

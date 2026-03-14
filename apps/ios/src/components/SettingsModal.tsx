@@ -49,7 +49,8 @@ type SettingsModalProps = {
   onShowMnemonicChange: (value: boolean) => void
   onUseRecommended: () => void
   onShowReference: () => void
-  onSignIn: () => Promise<unknown>
+  onSignInWithApple: () => Promise<unknown>
+  onSignInWithGoogle: () => Promise<unknown>
   onSignOut: () => Promise<unknown>
   onDeleteAccount: () => void
 }
@@ -171,7 +172,8 @@ export function SettingsModal({
   onShowMnemonicChange,
   onUseRecommended,
   onShowReference,
-  onSignIn,
+  onSignInWithApple,
+  onSignInWithGoogle,
   onSignOut,
   onDeleteAccount,
 }: SettingsModalProps) {
@@ -660,13 +662,23 @@ export function SettingsModal({
                       />
                     </>
                   ) : (
-                    <ActionRow
-                      text="Sign in"
-                      onPress={() => {
-                        void onSignIn()
-                      }}
-                      accessibilityLabel="Sign in with Google"
-                    />
+                    <>
+                      <ActionRow
+                        text="Sign in with Apple"
+                        onPress={() => {
+                          void onSignInWithApple()
+                        }}
+                        accessibilityLabel="Sign in with Apple"
+                      />
+                      <View style={styles.separator} />
+                      <ActionRow
+                        text="Sign in with Google"
+                        onPress={() => {
+                          void onSignInWithGoogle()
+                        }}
+                        accessibilityLabel="Sign in with Google"
+                      />
+                    </>
                   )}
                 </SettingsGroup>
               </ScrollView>

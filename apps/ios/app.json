@@ -17,6 +17,9 @@
       "userInterfaceStyle": "dark",
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
+      },
       "icon": {
         "dark": "./assets/images/icon-dark.png",
         "light": "./assets/images/icon-light.png",

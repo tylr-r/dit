@@ -54,6 +54,8 @@ import { useFirebaseSync } from './src/hooks/useFirebaseSync'
 import { useProgressPersistence } from './src/hooks/useProgressPersistence'
 import {
   deleteCurrentUserAccount,
+  prepareCurrentUserAccountDeletion,
+  signInWithApple,
   signInWithGoogle,
   signOut,
 } from './src/services/auth'
@@ -323,6 +325,14 @@ const getDeleteAccountErrorMessage = (error: unknown) => {
       ? error.code
       : null
 
+  if (code === 'ERR_APPLE_ACCOUNT_DELETION_USER_MISMATCH') {
+    return 'Sign in with the same Apple account tied to this Dit account, then try again.'
+  }
+
+  if (code?.includes('user-mismatch')) {
+    return 'Sign in with the same account you used for Dit, then try again.'
+  }
+
   if (code?.includes('requires-recent-login')) {
     return 'For security, sign in again and retry account deletion.'
   }
@@ -332,6 +342,26 @@ const getDeleteAccountErrorMessage = (error: unknown) => {
   }
 
   return 'We could not delete your account. Please try again.'
+}
+
+const isErrorWithCode = (error: unknown, code: string) =>
+  Boolean(
+    error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === code,
+  )
+
+const getSignInErrorMessage = (error: unknown) => {
+  if (isErrorWithCode(error, 'auth/account-exists-with-different-credential')) {
+    return 'An account already exists with a different sign-in method for this email address.'
+  }
+
+  if (isErrorWithCode(error, 'auth/network-request-failed')) {
+    return 'A network error interrupted sign-in. Try again on a stable connection.'
+  }
+
+  return 'We could not sign you in. Please try again.'
 }
 
 const BackgroundGlow = () => {
@@ -1011,6 +1041,28 @@ export default function App() {
     setShowSettings(false)
     setShowAbout(false)
     setShowReference(true)
+  }, [])
+
+  const handleSignInWithApple = useCallback(async () => {
+    try {
+      await signInWithApple()
+    } catch (error) {
+      if (isErrorWithCode(error, 'ERR_APPLE_SIGN_IN_CANCELLED')) {
+        return
+      }
+
+      console.error('Failed to sign in with Apple', error)
+      Alert.alert('Could Not Sign In', getSignInErrorMessage(error))
+    }
+  }, [])
+
+  const handleSignInWithGoogle = useCallback(async () => {
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      console.error('Failed to sign in with Google', error)
+      Alert.alert('Could Not Sign In', getSignInErrorMessage(error))
+    }
   }, [])
 
   const handleAboutToggle = useCallback(() => {
@@ -2182,12 +2234,17 @@ export default function App() {
 
       try {
         setShowSettings(false)
+        await prepareCurrentUserAccountDeletion(currentUser)
         await deleteRemoteProgress(currentUser.uid)
         await deleteCurrentUserAccount(currentUser)
         accountDeleted = true
         await clearLocalProgress()
         resetProgressState()
       } catch (error) {
+        if (isErrorWithCode(error, 'ERR_APPLE_ACCOUNT_DELETION_CANCELLED')) {
+          return
+        }
+
         console.error('Failed to delete account', error)
 
         if (accountDeleted) {
@@ -2396,7 +2453,8 @@ export default function App() {
               onUseRecommended={handleUseRecommended}
               onShowReference={handleShowReference}
               user={user}
-              onSignIn={signInWithGoogle}
+              onSignInWithApple={handleSignInWithApple}
+              onSignInWithGoogle={handleSignInWithGoogle}
               onSignOut={signOut}
               onDeleteAccount={handleDeleteAccount}
             />
