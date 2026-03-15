@@ -146,7 +146,7 @@ Native components implemented and integrated.
 - i18n support (requires prop fix)
 
 ### 📋 Phase 4: Release
-- Production and preview EAS profiles configured
+- Local App Store build/export/upload scripts configured in `apps/ios/scripts/`
 - Release/versioning process documented in `docs/IOS_APP_STORE_RELEASE.md`
 - Comprehensive testing on devices
 - Performance profiling

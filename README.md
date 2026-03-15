@@ -95,6 +95,7 @@ pnpm run deploy        # builds web app and deploys to Firebase
 See `docs/` for detailed references:
 
 - [APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md) — intended behavior across platforms
+- [IOS_APP_STORE_RELEASE.md](docs/IOS_APP_STORE_RELEASE.md) — iOS build, export, and upload flow
 - [STYLE_GUIDE.md](docs/STYLE_GUIDE.md) — code style and naming conventions
 - [NATIVE_IOS.md](docs/NATIVE_IOS.md) — iOS native module details
 - [PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) — learning methodology

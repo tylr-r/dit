@@ -3,29 +3,31 @@
     "name": "Dit",
     "slug": "dit-ios",
     "version": "1.0.0",
+    "platforms": [
+      "ios"
+    ],
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "plugins": ["expo-dev-client"],
+    "plugins": [
+      "expo-dev-client"
+    ],
     "ios": {
       "userInterfaceStyle": "dark",
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ]
       },
-      "icon": {
-        "dark": "./assets/images/icon-dark.png",
-        "light": "./assets/images/icon-light.png",
-        "tinted": "./assets/images/icon.png"
-      },
-      "buildNumber": "1",
+      "icon": "./assets/images/AppIcon.icon",
+      "buildNumber": "4",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -38,17 +40,6 @@
           }
         ]
       }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
