@@ -1,8 +1,15 @@
 import { registerRootComponent } from 'expo'
+import type { ComponentType } from 'react'
 
-import App from './App'
+let App: ComponentType
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
+if (process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true') {
+  const {
+    default: StorybookUIRoot,
+  } = require('./.rnstorybook/storybook.requires')
+  App = StorybookUIRoot
+} else {
+  App = require('./App').default
+}
+
 registerRootComponent(App)

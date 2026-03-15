@@ -42,3 +42,6 @@ yarn-error.*
 
 # Firebase iOS config (keep local only)
 GoogleService-Info.plist
+
+# Storybook auto-generated
+.rnstorybook/storybook.requires.ts
