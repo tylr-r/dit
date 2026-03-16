@@ -8,6 +8,8 @@ import {
   type ViewStyle,
 } from 'react-native'
 import {
+  default as Animated,
+  useAnimatedStyle,
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
@@ -16,17 +18,21 @@ import {
 import { shader as shaderTokens } from '../design/tokens'
 
 type LayoutSize = {
-  width: number;
-  height: number;
-};
+  width: number
+  height: number
+}
 
 type MorseLiquidSurfaceProps = {
-  speedMultiplier?: number;
-  style?: StyleProp<ViewStyle>;
-};
+  targetFps?: number
+  paused?: boolean
+  speedMultiplier?: number
+  style?: StyleProp<ViewStyle>
+}
 
 const SHADER_HUE = shaderTokens.liquidHue
 const SHADER_CYCLE_SECONDS = shaderTokens.liquidCycleSeconds
+const PAUSE_FADE_DURATION_MS = 420
+const RESUME_FADE_DURATION_MS = 320
 
 const SWIRL_SHADER_SOURCE = `
   uniform float iTime;
@@ -110,6 +116,8 @@ const useLayoutSize = () => {
 
 /** Liquid shader layer for Morse UI surfaces or full-screen backgrounds. */
 export function MorseLiquidSurface({
+  targetFps = 24,
+  paused = false,
   speedMultiplier = 1,
   style,
 }: MorseLiquidSurfaceProps) {
@@ -141,22 +149,51 @@ export function MorseLiquidSurface({
     ? Skia.RRectXY(surfaceRect, radius, radius)
     : null
   const time = useSharedValue(0)
+  const accumulatedMs = useSharedValue(0)
+  const pausedValue = useSharedValue(paused)
+  const frameIntervalMs = useSharedValue(
+    1000 / Math.max(1, Math.round(targetFps)),
+  )
+  const surfaceOpacity = useSharedValue(paused ? 0 : 1)
 
   const speed = useSharedValue(speedMultiplier)
   useEffect(() => {
     speed.value = withTiming(speedMultiplier, { duration: 100 })
   }, [speedMultiplier, speed])
 
+  useEffect(() => {
+    pausedValue.value = paused
+  }, [paused, pausedValue])
+
+  useEffect(() => {
+    frameIntervalMs.value = 1000 / Math.max(1, Math.round(targetFps))
+  }, [frameIntervalMs, targetFps])
+
+  useEffect(() => {
+    surfaceOpacity.value = withTiming(paused ? 0 : 1, {
+      duration: paused ? PAUSE_FADE_DURATION_MS : RESUME_FADE_DURATION_MS,
+    })
+  }, [paused, surfaceOpacity])
+
   const speedValue = useDerivedValue(() => speed.value, [speed])
+  const surfaceAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: surfaceOpacity.value,
+  }))
 
   useFrameCallback((frameInfo) => {
-    if (frameInfo.timeSincePreviousFrame === null) {
+    if (pausedValue.value || frameInfo.timeSincePreviousFrame === null) {
       return
     }
+
+    accumulatedMs.value += frameInfo.timeSincePreviousFrame
+    if (accumulatedMs.value < frameIntervalMs.value) {
+      return
+    }
+
     time.value =
-      (time.value +
-        (frameInfo.timeSincePreviousFrame / 1000) * speedValue.value) %
+      (time.value + (accumulatedMs.value / 1000) * speedValue.value) %
       SHADER_CYCLE_SECONDS
+    accumulatedMs.value = 0
   })
 
   const uniforms = useDerivedValue(() => {
@@ -203,20 +240,27 @@ export function MorseLiquidSurface({
       onLayout={onLayout}
       pointerEvents="none"
     >
-      <Canvas
-        style={{ width: layout.width, height: layout.height }}
-        pointerEvents="none"
-      >
-        <RoundedRect rect={surfaceRRect}>
-          <Shader source={SWIRL_RUNTIME_EFFECT} uniforms={uniforms} />
-        </RoundedRect>
-      </Canvas>
+      <Animated.View style={[styles.canvasLayer, surfaceAnimatedStyle]}>
+        <Canvas
+          style={{ width: layout.width, height: layout.height }}
+          pointerEvents="none"
+        >
+          <RoundedRect rect={surfaceRRect}>
+            <Shader source={SWIRL_RUNTIME_EFFECT} uniforms={uniforms} />
+          </RoundedRect>
+        </Canvas>
+      </Animated.View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   surface: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
+  },
+  canvasLayer: {
     width: '100%',
     height: '100%',
   },

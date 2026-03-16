@@ -316,6 +316,7 @@ private final class ToneGenerator {
 public final class DitNativeModule: Module {
   private let toneGenerator = ToneGenerator()
   private var appleAuthorizationCoordinator: AppleAuthorizationCoordinator?
+  private var lowPowerModeObserver: NSObjectProtocol?
 
   private final class AppleAuthorizationCoordinator: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     private let promise: Promise
@@ -555,11 +556,56 @@ public final class DitNativeModule: Module {
     return result
   }
 
+  private func currentLowPowerModePayload() -> [String: Bool] {
+    [
+      "isLowPowerModeEnabled": ProcessInfo.processInfo.isLowPowerModeEnabled
+    ]
+  }
+
+  private func startLowPowerModeObservation() {
+    guard lowPowerModeObserver == nil else {
+      return
+    }
+
+    lowPowerModeObserver = NotificationCenter.default.addObserver(
+      forName: Notification.Name.NSProcessInfoPowerStateDidChange,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      guard let self else {
+        return
+      }
+      self.sendEvent("onLowPowerModeChanged", self.currentLowPowerModePayload())
+    }
+  }
+
+  private func stopLowPowerModeObservation() {
+    guard let lowPowerModeObserver else {
+      return
+    }
+    NotificationCenter.default.removeObserver(lowPowerModeObserver)
+    self.lowPowerModeObserver = nil
+  }
+
   public func definition() -> ModuleDefinition {
     Name("DitNative")
 
+    Events("onLowPowerModeChanged")
+
+    OnStartObserving {
+      self.startLowPowerModeObservation()
+    }
+
+    OnStopObserving {
+      self.stopLowPowerModeObservation()
+    }
+
     Function("getHello") {
       return "Dit native module ready"
+    }
+
+    AsyncFunction("getLowPowerModeEnabled") { () -> Bool in
+      ProcessInfo.processInfo.isLowPowerModeEnabled
     }
 
     AsyncFunction("triggerHaptics") { (_ pattern: [Int]) -> Bool in

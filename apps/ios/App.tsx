@@ -23,7 +23,12 @@ import {
   type Progress,
   type ProgressSnapshot,
 } from '@dit/core'
-import { triggerHaptics } from '@dit/dit-native'
+import {
+  addLowPowerModeListener,
+  getLowPowerModeEnabled,
+  triggerHaptics,
+} from '@dit/dit-native'
+import type { User } from '@firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -36,7 +41,6 @@ import {
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg'
-import type { User } from '@firebase/auth'
 import { AboutModal } from './src/components/AboutModal'
 import { DitButton } from './src/components/DitButton'
 import { ListenControls } from './src/components/ListenControls'
@@ -60,28 +64,28 @@ import {
   signOut,
 } from './src/services/auth'
 import {
-  playMorseTone,
-  prepareToneEngine,
-  startTone,
-  stopMorseTone,
-  stopTone,
-} from './src/utils/tone'
+  getAutoEffectiveWpm,
+  LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS,
+  normalizeListenSpeeds,
+} from './src/utils/listenSpeed'
 import {
   getListenPlaybackDurationMs,
   getListenTiming,
   type ListenWavePlayback,
 } from './src/utils/listenWave'
 import {
-  getAutoEffectiveWpm,
-  LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS,
-  normalizeListenSpeeds,
-} from './src/utils/listenSpeed'
-import {
   enqueueReviewLetter,
   filterReviewQueue,
   pullDueReviewLetter,
   type PracticeReviewItem,
 } from './src/utils/practiceReviewQueue'
+import {
+  playMorseTone,
+  prepareToneEngine,
+  startTone,
+  stopMorseTone,
+  stopTone,
+} from './src/utils/tone'
 
 const LEVELS = [1, 2, 3, 4] as const
 const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3
@@ -118,6 +122,7 @@ const INTRO_HINTS_KEY = 'dit-intro-hint-step'
 const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
 const NUX_STATUS_KEY = 'dit-nux-status'
 const LOCAL_PROGRESS_KEY = 'dit-progress'
+const BACKGROUND_IDLE_TIMEOUT_MS = 10000
 const DEFAULT_PRACTICE_IFR_MODE = true
 const DEFAULT_PRACTICE_REVIEW_MISSES = true
 const PRACTICE_REVIEW_DELAY_STEPS = 3
@@ -138,14 +143,15 @@ const NUX_SLOW_DEFAULTS = {
   listenWpm: DEFAULT_LISTEN_WPM,
   listenEffectiveWpm: DEFAULT_LISTEN_EFFECTIVE_WPM,
   listenAutoTightening: DEFAULT_LISTEN_AUTO_TIGHTENING,
-  listenAutoTighteningCorrectCount: DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
+  listenAutoTighteningCorrectCount:
+    DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
   maxLevel: 1,
 } as const
 
-type IntroHintStep = 'morse' | 'settings' | 'done';
-type NuxStatus = 'pending' | 'completed' | 'skipped';
-type NuxStep = 'welcome' | 'exercise' | 'result';
-type NuxResult = 'fast' | 'slow' | null;
+type IntroHintStep = 'morse' | 'settings' | 'done'
+type NuxStatus = 'pending' | 'completed' | 'skipped'
+type NuxStep = 'welcome' | 'exercise' | 'result'
+type NuxResult = 'fast' | 'slow' | null
 type ListenPromptTiming = {
   targetLetter: Letter
   expectedEndAt: number
@@ -166,7 +172,7 @@ const REFERENCE_NUMBERS: Letter[] = [
   '9',
 ]
 
-type TimeoutHandle = ReturnType<typeof setTimeout>;
+type TimeoutHandle = ReturnType<typeof setTimeout>
 
 const clearTimer = (ref: { current: TimeoutHandle | null }) => {
   if (ref.current !== null) {
@@ -278,7 +284,9 @@ const pullNextListenOverlearnLetter = (
       reviewLetter: null as Letter | null,
     }
   }
-  const nextIndex = filteredQueue.findIndex((letter) => letter !== previousLetter)
+  const nextIndex = filteredQueue.findIndex(
+    (letter) => letter !== previousLetter,
+  )
   const resolvedIndex = nextIndex >= 0 ? nextIndex : 0
   const reviewLetter = filteredQueue[resolvedIndex]
   return {
@@ -442,6 +450,9 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [mode, setMode] = useState<Mode>('practice')
+  const [isSystemLowPowerModeEnabled, setIsSystemLowPowerModeEnabled] =
+    useState(false)
+  const [isBackgroundIdle, setIsBackgroundIdle] = useState(false)
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
@@ -477,8 +488,10 @@ export default function App() {
   const [listenAutoTightening, setListenAutoTightening] = useState(
     DEFAULT_LISTEN_AUTO_TIGHTENING,
   )
-  const [listenAutoTighteningCorrectCount, setListenAutoTighteningCorrectCount] =
-    useState(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
+  const [
+    listenAutoTighteningCorrectCount,
+    setListenAutoTighteningCorrectCount,
+  ] = useState(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
   >('idle')
@@ -487,10 +500,11 @@ export default function App() {
     useState<ListenWavePlayback | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
   const [listenTtr, setListenTtr] = useState<ListenTtrRecord>({})
-  const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
-  const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(
-    null,
-  )
+  const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] =
+    useState(false)
+  const [listenRecognitionText, setListenRecognitionText] = useState<
+    string | null
+  >(null)
   const nuxTimingsRef = useRef<number[]>([])
   const nuxAttemptStartRef = useRef<number | null>(null)
   useEffect(() => {
@@ -560,10 +574,10 @@ export default function App() {
   const persistIntroHintStep = useCallback((next: IntroHintStep) => {
     setIntroHintStep(next)
     interface AsyncStorageError {
-      message?: string;
-      name?: string;
-      stack?: string;
-      [key: string]: unknown;
+      message?: string
+      name?: string
+      stack?: string
+      [key: string]: unknown
     }
     void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch(
       (error: AsyncStorageError) => {
@@ -589,8 +603,28 @@ export default function App() {
     }
     persistIntroHintStep('done')
   }, [introHintStep, persistIntroHintStep])
+  useEffect(() => {
+    let isMounted = true
+
+    void getLowPowerModeEnabled().then((enabled) => {
+      if (isMounted) {
+        setIsSystemLowPowerModeEnabled(enabled)
+      }
+    })
+
+    const subscription = addLowPowerModeListener((enabled) => {
+      setIsSystemLowPowerModeEnabled(enabled)
+    })
+
+    return () => {
+      isMounted = false
+      subscription.remove()
+    }
+  }, [])
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
+  const isBackgroundAnimationPaused =
+    isSystemLowPowerModeEnabled || isBackgroundIdle
   const isNuxActive = nuxReady && nuxStatus === 'pending'
   const userForSync = isDeletingAccount ? null : user
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
@@ -671,7 +705,34 @@ export default function App() {
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null)
   const listenRecognitionTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const backgroundIdleTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const isBackgroundIdleRef = useRef(false)
   const completeNuxRef = useRef<() => void>(() => {})
+  const scheduleBackgroundIdle = useCallback(() => {
+    clearTimer(backgroundIdleTimeoutRef)
+    backgroundIdleTimeoutRef.current = setTimeout(() => {
+      isBackgroundIdleRef.current = true
+      setIsBackgroundIdle(true)
+    }, BACKGROUND_IDLE_TIMEOUT_MS)
+  }, [])
+  const registerAppInteraction = useCallback(() => {
+    if (isBackgroundIdleRef.current) {
+      isBackgroundIdleRef.current = false
+      setIsBackgroundIdle(false)
+    }
+    scheduleBackgroundIdle()
+  }, [scheduleBackgroundIdle])
+  const handleRootTouchStart = useCallback(() => {
+    registerAppInteraction()
+    return false
+  }, [registerAppInteraction])
+
+  useEffect(() => {
+    registerAppInteraction()
+    return () => {
+      clearTimer(backgroundIdleTimeoutRef)
+    }
+  }, [registerAppInteraction])
 
   const setPracticeWordFromList = useCallback(
     (words: string[], avoidWord?: string) => {
@@ -697,11 +758,7 @@ export default function App() {
         ? currentLetter
         : practiceLearnModeRef.current
         ? nextLetters[0]
-        : getRandomWeightedLetter(
-            nextLetters,
-            scoresRef.current,
-            currentLetter,
-          )
+        : getRandomWeightedLetter(nextLetters, scoresRef.current, currentLetter)
       letterRef.current = nextLetter
       setLetter(nextLetter)
       return nextLetter
@@ -727,11 +784,7 @@ export default function App() {
       }
       const nextLetter = practiceLearnModeRef.current
         ? getNextOrderedLetter(nextLetters, currentLetter)
-        : getRandomWeightedLetter(
-            nextLetters,
-            scoresRef.current,
-            currentLetter,
-          )
+        : getRandomWeightedLetter(nextLetters, scoresRef.current, currentLetter)
       letterRef.current = nextLetter
       setLetter(nextLetter)
       return nextLetter
@@ -773,7 +826,9 @@ export default function App() {
             LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
           )
         }
-        const alternatives = nextLetters.filter((letter) => letter !== currentLetter)
+        const alternatives = nextLetters.filter(
+          (letter) => letter !== currentLetter,
+        )
         nextLetter = getRandomLatencyAwareLetter(
           alternatives,
           scoresRef.current,
@@ -810,7 +865,8 @@ export default function App() {
       if (startTime && currentWord.length > 0) {
         const elapsedMs = now() - startTime
         if (elapsedMs > 0) {
-          const nextWpm = (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
+          const nextWpm =
+            (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
           setPracticeWpm(Math.round(nextWpm * 10) / 10)
         }
       }
@@ -884,8 +940,8 @@ export default function App() {
     (
       code: string,
       overrides?: {
-        characterWpm?: number;
-        effectiveWpm?: number;
+        characterWpm?: number
+        effectiveWpm?: number
       },
     ) => {
       stopListenPlayback()
@@ -1286,8 +1342,7 @@ export default function App() {
         }
       }
       if (isCorrect && listenAutoTighteningRef.current) {
-        const nextCorrectCount =
-          listenAutoTighteningCorrectCountRef.current + 1
+        const nextCorrectCount = listenAutoTighteningCorrectCountRef.current + 1
         listenAutoTighteningCorrectCountRef.current = nextCorrectCount
         setListenAutoTighteningCorrectCount(nextCorrectCount)
         const autoEffectiveWpm = getAutoEffectiveWpm(
@@ -1300,23 +1355,20 @@ export default function App() {
           setListenEffectiveWpm(autoEffectiveWpm)
         }
       }
-      listenTimeoutRef.current = setTimeout(
-        () => {
-          const nextLetter = setNextListenLetter(availableLetters, targetLetter)
-          setListenReveal(null)
-          listenTimeoutRef.current = setTimeout(() => {
-            if (modeRef.current !== 'listen') {
-              return
-            }
-            setListenStatus('idle')
-            playListenSequence(MORSE_DATA[nextLetter].code, {
-              characterWpm: listenWpmRef.current,
-              effectiveWpm: nextEffectiveWpm,
-            })
-          }, LISTEN_REVEAL_FADE_OUT_MS + LISTEN_POST_REVEAL_PAUSE_MS)
-        },
-        (isCorrect ? 650 : ERROR_LOCKOUT_MS) + LISTEN_REVEAL_EXTRA_MS,
-      )
+      listenTimeoutRef.current = setTimeout(() => {
+        const nextLetter = setNextListenLetter(availableLetters, targetLetter)
+        setListenReveal(null)
+        listenTimeoutRef.current = setTimeout(() => {
+          if (modeRef.current !== 'listen') {
+            return
+          }
+          setListenStatus('idle')
+          playListenSequence(MORSE_DATA[nextLetter].code, {
+            characterWpm: listenWpmRef.current,
+            effectiveWpm: nextEffectiveWpm,
+          })
+        }, LISTEN_REVEAL_FADE_OUT_MS + LISTEN_POST_REVEAL_PAUSE_MS)
+      }, (isCorrect ? 650 : ERROR_LOCKOUT_MS) + LISTEN_REVEAL_EXTRA_MS)
     },
     [
       availableLetters,
@@ -1566,13 +1618,7 @@ export default function App() {
       void stopMorseTone()
     }
     startTonePlayback()
-  }, [
-    isErrorLocked,
-    isFreestyle,
-    isListen,
-    startTonePlayback,
-    stopMorseTone,
-  ])
+  }, [isErrorLocked, isFreestyle, isListen, startTonePlayback, stopMorseTone])
   const handleIntroPressIn = useCallback(() => {
     if (!isNuxActive) {
       dismissMorseHint()
@@ -1598,12 +1644,7 @@ export default function App() {
     const duration = now() - start
     const symbol = duration < DOT_THRESHOLD_MS ? '.' : '-'
     registerSymbol(symbol)
-  }, [
-    isListen,
-    registerSymbol,
-    stopMorseTone,
-    stopTonePlayback,
-  ])
+  }, [isListen, registerSymbol, stopMorseTone, stopTonePlayback])
 
   const handleMaxLevelChange = useCallback(
     (value: number) => {
@@ -1930,7 +1971,10 @@ export default function App() {
     }
 
     if (practiceWordModeRef.current) {
-      setPracticeWordFromList(getWordsForLetters(nextLetters), practiceWordRef.current)
+      setPracticeWordFromList(
+        getWordsForLetters(nextLetters),
+        practiceWordRef.current,
+      )
       return
     }
 
@@ -1985,10 +2029,7 @@ export default function App() {
         return
       }
       if (practiceWordModeRef.current) {
-        setPracticeWordFromList(
-          availablePracticeWords,
-          practiceWordRef.current,
-        )
+        setPracticeWordFromList(availablePracticeWords, practiceWordRef.current)
         return
       }
       setNextLetterForLevel(availableLetters)
@@ -2117,13 +2158,10 @@ export default function App() {
             modeRef.current === 'listen' &&
             listenStatusRef.current === 'idle'
           ) {
-            playListenSequenceRef.current(
-              MORSE_DATA[letterRef.current].code,
-              {
-                characterWpm: resolvedListenWpm,
-                effectiveWpm: autoEffectiveWpm,
-              },
-            )
+            playListenSequenceRef.current(MORSE_DATA[letterRef.current].code, {
+              characterWpm: resolvedListenWpm,
+              effectiveWpm: autoEffectiveWpm,
+            })
           }
         }
       }
@@ -2316,9 +2354,7 @@ export default function App() {
       ? `${formatWpm(practiceWpm)} WPM`
       : null
   const listenTtrText =
-    isListen && listenRecognitionText
-      ? listenRecognitionText
-      : null
+    isListen && listenRecognitionText ? listenRecognitionText : null
   const isInputOnTrack =
     !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
@@ -2381,8 +2417,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
+      <View
+        style={styles.container}
+        onStartShouldSetResponderCapture={handleRootTouchStart}
+      >
         <MorseLiquidSurface
+          paused={isBackgroundAnimationPaused}
+          targetFps={20}
           speedMultiplier={0.35}
           style={styles.liquidBackground}
         />
@@ -2404,7 +2445,9 @@ export default function App() {
               isListen={isListen}
               levels={LEVELS}
               maxLevel={maxLevel}
-              practiceWordMode={isFreestyle ? freestyleWordMode : practiceWordMode}
+              practiceWordMode={
+                isFreestyle ? freestyleWordMode : practiceWordMode
+              }
               practiceAutoPlay={practiceAutoPlay}
               practiceLearnMode={practiceLearnMode}
               practiceIfrMode={practiceIfrMode}

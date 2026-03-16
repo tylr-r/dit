@@ -1,8 +1,19 @@
-import { requireOptionalNativeModule } from 'expo-modules-core'
+import {
+  EventEmitter,
+  requireOptionalNativeModule,
+  type EventSubscription,
+} from 'expo-modules-core'
 import { Vibration } from 'react-native'
+
+type DitNativeEvents = {
+  onLowPowerModeChanged: (event: {
+    isLowPowerModeEnabled: boolean
+  }) => void
+}
 
 export type DitNativeModule = {
   getHello?: () => string
+  getLowPowerModeEnabled?: () => boolean | Promise<boolean>
   triggerHaptics?: (pattern: number | number[]) => boolean | Promise<boolean>
   startTone?: (frequency: number, volume: number) => boolean | Promise<boolean>
   stopTone?: () => boolean | Promise<boolean>
@@ -39,6 +50,30 @@ const DitNative = requireOptionalNativeModule<DitNativeModule>('DitNative')
 
 export const getHello = () => {
   return DitNative?.getHello?.() ?? 'Dit native module not available'
+}
+
+export const getLowPowerModeEnabled = async () => {
+  if (!DitNative?.getLowPowerModeEnabled) {
+    return false
+  }
+
+  return Boolean(await DitNative.getLowPowerModeEnabled())
+}
+
+export const addLowPowerModeListener = (
+  listener: (isLowPowerModeEnabled: boolean) => void
+): EventSubscription => {
+  if (!DitNative) {
+    return {
+      remove() {},
+    }
+  }
+
+  const emitter = new EventEmitter<DitNativeEvents>(DitNative as never)
+
+  return emitter.addListener('onLowPowerModeChanged', (event) => {
+    listener(Boolean(event.isLowPowerModeEnabled))
+  })
 }
 
 export const triggerHaptics = async (pattern: number | number[]) => {
