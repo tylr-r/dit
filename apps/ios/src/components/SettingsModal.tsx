@@ -176,6 +176,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const { height: viewportHeight } = useWindowDimensions()
   const insets = useSafeAreaInsets()
+  const isPractice = !isFreestyle && !isListen
 
   const maxSheetHeight = Math.max(
     SHEET_MIN_HEIGHT,
@@ -189,13 +190,15 @@ export function SettingsModal({
   const hasOpenedRef = React.useRef(false)
   const isClosingRef = React.useRef(false)
 
-  const showPracticeControls = !isFreestyle && !isListen
-  const canShowWordsToggle = !isListen
-  const showHintControls = !isFreestyle && !isListen
-  const hasControlsBeforePlaybackSpeed = canShowWordsToggle || showPracticeControls
+  const showFreestyleWordToggle = isFreestyle
+  const showMaxLevelControl = !isFreestyle
+  const hasControlsBeforePlaybackSpeed =
+    showFreestyleWordToggle || showMaxLevelControl
   const maxLevelIndex = levels.indexOf(maxLevel)
   const canDecreaseMaxLevel = maxLevelIndex > 0
   const canIncreaseMaxLevel = maxLevelIndex < levels.length - 1
+  const [practiceSettingsExpanded, setPracticeSettingsExpanded] =
+    React.useState(false)
   const [helperExpanded, setHelperExpanded] = React.useState(false)
   const bottomInsetPadding = Math.max(
     spacing.xl * 2,
@@ -363,52 +366,23 @@ export function SettingsModal({
                 bounces
               >
                 <SettingsGroup>
-                  {canShowWordsToggle ? (
-                    <ToggleRow
-                      label={isFreestyle ? 'Word mode' : 'Practice Words'}
-                      value={practiceWordMode}
-                      onValueChange={onPracticeWordModeChange}
-                    />
-                  ) : null}
-                  {showPracticeControls ? (
+                  {showFreestyleWordToggle ? (
                     <>
-                      <View style={styles.separator} />
                       <ToggleRow
-                        label="Auto-play sound"
-                        value={practiceAutoPlay}
-                        onValueChange={onPracticeAutoPlayChange}
-                      />
-                      <View style={styles.separator} />
-                      <ToggleRow
-                        label="Learn mode"
-                        value={practiceLearnMode}
-                        disabled={practiceWordMode}
-                        onValueChange={onPracticeLearnModeChange}
+                        label="Word mode"
+                        value={practiceWordMode}
+                        onValueChange={onPracticeWordModeChange}
                       />
                       <Text style={styles.helperText}>
-                        Cycles through characters in order of most common
-                        instead of random selection.
+                        Build a running word from decoded letters in Freestyle.
                       </Text>
-                      <View style={styles.separator} />
-                      <ToggleRow
-                        label="IFR mode"
-                        value={practiceIfrMode}
-                        onValueChange={onPracticeIfrModeChange}
-                      />
-                      <Text style={styles.helperText}>
-                        On misses, immediately continue to the next symbol.
-                      </Text>
-                      <View style={styles.separator} />
-                      <ToggleRow
-                        label="Review misses later"
-                        value={practiceReviewMisses}
-                        disabled={!practiceIfrMode}
-                        onValueChange={onPracticeReviewMissesChange}
-                      />
-                      <Text style={styles.helperText}>
-                        Replays missed symbols after a short delay.
-                      </Text>
-                      <View style={styles.separator} />
+                    </>
+                  ) : null}
+                  {showMaxLevelControl ? (
+                    <>
+                      {showFreestyleWordToggle ? (
+                        <View style={styles.separator} />
+                      ) : null}
                       <View style={styles.row}>
                         <View style={styles.stepperInfo}>
                           <Text style={styles.rowLabel}>Max Difficulty</Text>
@@ -459,6 +433,10 @@ export function SettingsModal({
                           </Pressable>
                         </View>
                       </View>
+                      <Text style={styles.helperText}>
+                        Limits Practice and Listen to the characters in this
+                        level.
+                      </Text>
                     </>
                   ) : null}
                   <>
@@ -510,54 +488,146 @@ export function SettingsModal({
                       </View>
                     </View>
                     <Text style={styles.helperText}>
-                      Playback speed used whenever the app plays Morse for you.
-                      Higher = faster dits and dahs.
+                      Used whenever Dit plays Morse for you. Higher = faster
+                      dits and dahs.
                     </Text>
                     {/* TODO: Restore a playback spacing control when word playback ships. */}
                   </>
                 </SettingsGroup>
 
-                {showHintControls ? (
-                  <SettingsGroup>
+                <SettingsGroup>
+                  {!isPractice ? (
                     <Pressable
-                      onPress={() => setHelperExpanded((prev) => !prev)}
+                      onPress={() =>
+                        setPracticeSettingsExpanded((prev) => !prev)
+                      }
                       accessibilityRole="button"
-                      accessibilityLabel="Toggle helper options"
+                      accessibilityLabel="Toggle practice settings"
                       accessibilityHint={
-                        helperExpanded
-                          ? 'Collapses helper settings'
-                          : 'Expands helper settings'
+                        practiceSettingsExpanded
+                          ? 'Collapses practice-only settings'
+                          : 'Expands practice-only settings'
                       }
                       style={({ pressed }) => [
                         styles.row,
                         pressed && styles.actionRowPressed,
                       ]}
                     >
-                      <Text style={styles.rowLabel}>Helpers</Text>
+                      <Text style={styles.rowLabel}>Practice settings</Text>
                       <Text style={styles.helperTriggerChevron}>
-                        {helperExpanded ? '▾' : '▸'}
+                        {practiceSettingsExpanded ? '▾' : '▸'}
                       </Text>
                     </Pressable>
-                    {helperExpanded ? (
-                      <>
-                        <View style={styles.separator} />
-                        <ToggleRow
-                          label="Show hints"
-                          value={showHint}
-                          onValueChange={onShowHintChange}
-                        />
-                        <Text style={styles.helperText}>Not recommended</Text>
-                        <View style={styles.separator} />
-                        <ToggleRow
-                          label="Show mnemonics"
-                          value={showMnemonic}
-                          onValueChange={onShowMnemonicChange}
-                        />
-                        <Text style={styles.helperText}>Not recommended</Text>
-                      </>
-                    ) : null}
-                  </SettingsGroup>
-                ) : null}
+                  ) : null}
+                  {isPractice || practiceSettingsExpanded ? (
+                    <>
+                      {!isPractice ? (
+                        <>
+                          <View style={styles.separator} />
+                          <Text style={styles.helperText}>
+                            Applies when you switch back to Practice mode.
+                          </Text>
+                          <View style={styles.separator} />
+                        </>
+                      ) : null}
+                      <ToggleRow
+                        label="Practice Words"
+                        value={practiceWordMode}
+                        onValueChange={onPracticeWordModeChange}
+                      />
+                      <Text style={styles.helperText}>
+                        Practice full words instead of single characters.
+                      </Text>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Auto-play sound"
+                        value={practiceAutoPlay}
+                        onValueChange={onPracticeAutoPlayChange}
+                      />
+                      <Text style={styles.helperText}>
+                        Automatically plays the current Practice target.
+                      </Text>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Learn mode"
+                        value={practiceLearnMode}
+                        disabled={practiceWordMode}
+                        onValueChange={onPracticeLearnModeChange}
+                      />
+                      <Text style={styles.helperText}>
+                        {practiceWordMode
+                          ? 'Unavailable while Practice Words is on.'
+                          : 'Shows characters in a fixed learning order instead of random selection.'}
+                      </Text>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Immediate flow recovery"
+                        value={practiceIfrMode}
+                        onValueChange={onPracticeIfrModeChange}
+                      />
+                      <Text style={styles.helperText}>
+                        On a miss, move on to the next target instead of
+                        repeating the same one.
+                      </Text>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Review misses later"
+                        value={practiceReviewMisses}
+                        disabled={!practiceIfrMode}
+                        onValueChange={onPracticeReviewMissesChange}
+                      />
+                      <Text style={styles.helperText}>
+                        {!practiceIfrMode
+                          ? 'Requires Immediate flow recovery.'
+                          : 'Brings missed targets back after a short delay.'}
+                      </Text>
+                    </>
+                  ) : null}
+                </SettingsGroup>
+
+                <SettingsGroup>
+                  <Pressable
+                    onPress={() => setHelperExpanded((prev) => !prev)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle helper options"
+                    accessibilityHint={
+                      helperExpanded
+                        ? 'Collapses helper settings'
+                        : 'Expands helper settings'
+                    }
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && styles.actionRowPressed,
+                    ]}
+                  >
+                    <Text style={styles.rowLabel}>Helpers</Text>
+                    <Text style={styles.helperTriggerChevron}>
+                      {helperExpanded ? '▾' : '▸'}
+                    </Text>
+                  </Pressable>
+                  {helperExpanded ? (
+                    <>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Show hints"
+                        value={showHint}
+                        onValueChange={onShowHintChange}
+                      />
+                      <Text style={styles.helperText}>
+                        Not recommended. This can be tempting at first, but learning by ear improves recall.
+                      </Text>
+                      <View style={styles.separator} />
+                      <ToggleRow
+                        label="Show mnemonics"
+                        value={showMnemonic}
+                        onValueChange={onShowMnemonicChange}
+                      />
+                      <Text style={styles.helperText}>
+                        Memory aids for Morse patterns. Best used temporarily.
+                      </Text>
+                    </>
+                  ) : null}
+                </SettingsGroup>
 
                 <SettingsGroup>
                   <ActionRow

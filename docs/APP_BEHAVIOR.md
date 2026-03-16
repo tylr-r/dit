@@ -55,6 +55,11 @@ This document captures the intended, shared behavior across web and iOS.
 - Reference chart modal
 - Sound check
 - Cloud sync (sign in/out)
+- Availability by mode:
+  - Playback speed and account/reference actions are global.
+  - Max level applies to Practice and Listen.
+  - Freestyle word mode is freestyle-only.
+  - Practice-only options can be adjusted from other modes, but should stay grouped separately from the current mode's settings.
 
 ## Feedback
 

@@ -1812,12 +1812,13 @@ export default function App() {
 
   const handlePracticeLearnModeChange = useCallback(
     (value: boolean) => {
-      if (isFreestyle || isListen) {
-        return
-      }
       setPracticeLearnMode(value)
       practiceLearnModeRef.current = value
-      if (practiceWordModeRef.current || !value) {
+      if (
+        modeRef.current !== 'practice' ||
+        practiceWordModeRef.current ||
+        !value
+      ) {
         return
       }
       const firstLetter = availableLetters[0]
@@ -1832,14 +1833,11 @@ export default function App() {
       letterRef.current = firstLetter
       setLetter(firstLetter)
     },
-    [availableLetters, isFreestyle, isListen],
+    [availableLetters],
   )
 
   const handlePracticeIfrModeChange = useCallback(
     (value: boolean) => {
-      if (isFreestyle || isListen) {
-        return
-      }
       setPracticeIfrMode(value)
       practiceIfrModeRef.current = value
       if (!value) {
@@ -1847,24 +1845,24 @@ export default function App() {
       } else {
         errorLockoutUntilRef.current = 0
       }
+      if (modeRef.current !== 'practice') {
+        return
+      }
       clearTimer(errorTimeoutRef)
       setStatus('idle')
     },
-    [isFreestyle, isListen],
+    [],
   )
 
   const handlePracticeReviewMissesChange = useCallback(
     (value: boolean) => {
-      if (isFreestyle || isListen) {
-        return
-      }
       setPracticeReviewMisses(value)
       practiceReviewMissesRef.current = value
       if (!value) {
         practiceReviewQueueRef.current = []
       }
     },
-    [isFreestyle, isListen],
+    [],
   )
 
   const handleUseRecommended = useCallback(() => {
