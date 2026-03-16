@@ -3,7 +3,7 @@ import { MORSE_DATA } from '@dit/core'
 import { BlurView } from 'expo-blur'
 import { GlassContainer } from 'expo-glass-effect'
 import React from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -83,6 +83,17 @@ export function ReferenceModal({
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0)
   const [exiting, setExiting] = React.useState(false)
+
+  const handleResetPress = React.useCallback(() => {
+    Alert.alert(
+      'Reset Progress',
+      'This will reset all your scores back to zero. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reset', style: 'destructive', onPress: onResetScores },
+      ],
+    )
+  }, [onResetScores])
 
   // Animate panel in on mount
   React.useEffect(() => {
@@ -207,7 +218,7 @@ export function ReferenceModal({
         <GlassContainer spacing={spacing.sm} style={styles.actions}>
           <DitButton
             text="Reset"
-            onPress={onResetScores}
+            onPress={handleResetPress}
             color={colors.feedback.error}
             style={styles.resetButton}
             accessibilityLabel="Reset scores"
