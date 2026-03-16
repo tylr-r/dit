@@ -1,13 +1,18 @@
-import js from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
-import globals from 'globals';
+import js from '@eslint/js'
+import tseslint from '@typescript-eslint/eslint-plugin'
+import tsParser from '@typescript-eslint/parser'
+import globals from 'globals'
 
 export default [
   js.configs.recommended,
   // Node.js config for JS files like metro.config.js
   {
-    files: ['metro.config.js', 'babel.config.js'],
+    files: [
+      'metro.config.js',
+      'babel.config.js',
+      'app.config.js',
+      'plugins/**/*.js',
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
@@ -43,4 +48,4 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error'],
     },
   },
-];
+]

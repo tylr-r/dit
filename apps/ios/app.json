@@ -15,7 +15,8 @@
       "backgroundColor": "#000000"
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      "./plugins/withModularHeaders"
     ],
     "ios": {
       "userInterfaceStyle": "dark",
