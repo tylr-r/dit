@@ -11,9 +11,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg'
 import { hslaFromHsl } from '../design/color'
 import { colors } from '../design/tokens'
-import {
-  type ListenWavePlayback,
-} from '../utils/listenWave'
+import { type ListenWavePlayback } from '../utils/listenWave'
 
 type ListenWaveTintStatus = 'idle' | 'success' | 'error'
 
@@ -29,11 +27,13 @@ const TWO_PI = Math.PI * 2
 const SAMPLE_POINTS = 80
 const IDLE_ENERGY = 0.12
 const ACTIVE_ENERGY = 1
-const BASE_PHASE_SPEED = 0.95
-const ACTIVE_PHASE_SPEED_BONUS = 2.4
-const WAVE_CYCLES = 1.85
+const BASE_PHASE_SPEED = 0.005
+const ACTIVE_PHASE_SPEED_BONUS = 0.015
+const WAVE_CYCLES = 1.2
 const LOWER_BAND_OFFSET_SCALE = 0
 const UPPER_BAND_OFFSET_SCALE = 0
+const MIN_CARRIER_PERIOD_MS = 1400
+const CARRIER_PERIOD_UNIT_MULTIPLIER = 18
 const SUCCESS_COLOR = colors.feedback.success
 const ERROR_COLOR = colors.feedback.error
 const TINT_FADE_IN_MS = 420
@@ -62,6 +62,17 @@ const LINE_SPECS = [
     laneOffsetScale: 0.03,
   },
 ] as const
+
+const LOWER_LINE_DIRECTIONS = [1, -1, 1] as const
+const UPPER_LINE_DIRECTIONS = [-1, 1, 1] as const
+const SAMPLE_T_VALUES = Array.from(
+  { length: SAMPLE_POINTS + 1 },
+  (_, index) => index / SAMPLE_POINTS,
+)
+const EDGE_WEIGHTS = SAMPLE_T_VALUES.map(
+  (t) => 0.52 + Math.sin(Math.PI * t) * 0.48,
+)
+const SPATIAL_PHASES = SAMPLE_T_VALUES.map((t) => t * WAVE_CYCLES * TWO_PI)
 
 const getToneLevelAtElapsedMsWorklet = (
   symbolsCode: string,
@@ -106,6 +117,8 @@ const createPath = (
   height: number,
   phase: number,
   energy: number,
+  unitMs: number,
+  elapsedMs: number,
   bandOffsetScale: number,
   laneOffsetScale: number,
   amplitudeScale: number,
@@ -122,19 +135,28 @@ const createPath = (
   const midY = height * 0.5
   const maxAmplitude = height * 0.165
   const idleAmplitude = height * 0.028
-  const amplitude = (idleAmplitude + maxAmplitude * energy) * amplitudeScale
   const baseline = midY + height * (bandOffsetScale + laneOffsetScale)
   const invert = invertHeight ? -1 : 1
+  const globalEnergy = 0.24 + energy * 0.76
+  const amplitude = (idleAmplitude + maxAmplitude * globalEnergy) * amplitudeScale
+  const carrierPeriodMs = Math.max(
+    MIN_CARRIER_PERIOD_MS,
+    unitMs * CARRIER_PERIOD_UNIT_MULTIPLIER,
+  )
+  const carrierPhase = (elapsedMs / carrierPeriodMs) * TWO_PI * direction
+  const driftPhase = phase * direction * 0.005
 
   let path = ''
-  for (let index = 0; index <= SAMPLE_POINTS; index += 1) {
-    const t = index / SAMPLE_POINTS
+  for (let index = 0; index < SAMPLE_T_VALUES.length; index += 1) {
+    const t = SAMPLE_T_VALUES[index]
     const x = width * t
-    const edgeWeight = 0.52 + Math.sin(Math.PI * t) * 0.48
     const travelPhase =
-      t * WAVE_CYCLES * TWO_PI + phaseOffset + phase * direction
+      carrierPhase +
+      SPATIAL_PHASES[index] +
+      phaseOffset +
+      driftPhase
     const oscillation = Math.sin(travelPhase)
-    const y = baseline + invert * oscillation * amplitude * edgeWeight
+    const y = baseline + invert * oscillation * amplitude * EDGE_WEIGHTS[index]
     path += index === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`
   }
 
@@ -174,13 +196,7 @@ export function ListenSineWave({
     unitMs.value = playback.unitMs
     interCharacterGapMs.value = playback.interCharacterGapMs
     elapsedMs.value = 0
-  }, [
-    playback,
-    symbolsCode,
-    elapsedMs,
-    interCharacterGapMs,
-    unitMs,
-  ])
+  }, [playback, symbolsCode, elapsedMs, interCharacterGapMs, unitMs])
 
   useEffect(() => {
     const targetOpacity = tintStatus === 'idle' ? 0 : 0.7
@@ -243,11 +259,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[0].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       LOWER_BAND_OFFSET_SCALE,
       LINE_SPECS[0].laneOffsetScale,
       LINE_SPECS[0].amplitudeScale,
       LINE_SPECS[0].phaseOffset,
-      -1,
+      LOWER_LINE_DIRECTIONS[0],
       false,
     ),
   }))
@@ -258,11 +276,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[1].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       LOWER_BAND_OFFSET_SCALE,
       LINE_SPECS[1].laneOffsetScale,
       LINE_SPECS[1].amplitudeScale,
       LINE_SPECS[1].phaseOffset,
-      -1,
+      LOWER_LINE_DIRECTIONS[1],
       false,
     ),
   }))
@@ -273,11 +293,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[2].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       LOWER_BAND_OFFSET_SCALE,
       LINE_SPECS[2].laneOffsetScale,
       LINE_SPECS[2].amplitudeScale,
       LINE_SPECS[2].phaseOffset,
-      -1,
+      LOWER_LINE_DIRECTIONS[2],
       false,
     ),
   }))
@@ -288,11 +310,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[0].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       UPPER_BAND_OFFSET_SCALE,
       LINE_SPECS[0].laneOffsetScale,
       LINE_SPECS[0].amplitudeScale,
       LINE_SPECS[0].phaseOffset,
-      1,
+      UPPER_LINE_DIRECTIONS[0],
       true,
     ),
   }))
@@ -303,11 +327,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[1].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       UPPER_BAND_OFFSET_SCALE,
       LINE_SPECS[1].laneOffsetScale,
       LINE_SPECS[1].amplitudeScale,
       LINE_SPECS[1].phaseOffset,
-      1,
+      UPPER_LINE_DIRECTIONS[1],
       true,
     ),
   }))
@@ -318,11 +344,13 @@ export function ListenSineWave({
       height.value,
       phase.value + LINE_SPECS[2].phaseOffset,
       energy.value,
+      unitMs.value,
+      elapsedMs.value,
       UPPER_BAND_OFFSET_SCALE,
       LINE_SPECS[2].laneOffsetScale,
       LINE_SPECS[2].amplitudeScale,
       LINE_SPECS[2].phaseOffset,
-      1,
+      UPPER_LINE_DIRECTIONS[2],
       true,
     ),
   }))

@@ -28,6 +28,31 @@ export const getListenTiming = (
 
 const isMorseSymbol = (value: string) => value === '.' || value === '-'
 
+export const getListenPlaybackDurationMs = (
+  code: string,
+  unitMs: number,
+  interCharacterGapMs: number = unitMs * 3,
+) => {
+  if (unitMs <= 0) {
+    return 0
+  }
+
+  const symbols = code.split('').filter(isMorseSymbol)
+  if (symbols.length === 0) {
+    return 0
+  }
+
+  let elapsedMs = 0
+  for (let index = 0; index < symbols.length; index += 1) {
+    elapsedMs += symbols[index] === '.' ? unitMs : unitMs * 3
+    if (index < symbols.length - 1) {
+      elapsedMs += unitMs
+    }
+  }
+
+  return elapsedMs + interCharacterGapMs
+}
+
 export const getListenToneLevelAtElapsedMs = (
   code: string,
   unitMs: number,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getListenPlaybackDurationMs,
   getListenTiming,
   getListenToneLevelAtElapsedMs,
   getListenUnitMs,
@@ -16,6 +17,12 @@ describe('listenWave utils', () => {
     const timing = getListenTiming(12, 8, 40)
     expect(timing.unitMs).toBe(100)
     expect(timing.interCharacterGapMs).toBe(450)
+  })
+
+  it('computes playback duration including symbol and character gaps', () => {
+    expect(getListenPlaybackDurationMs('.-', 100, 450)).toBe(950)
+    expect(getListenPlaybackDurationMs(' . x - ', 100, 450)).toBe(950)
+    expect(getListenPlaybackDurationMs('', 100, 450)).toBe(0)
   })
 
   it('returns expected tone levels for dot and dash segments', () => {
