@@ -189,6 +189,7 @@ export function SettingsModal({
   const dragStartTranslateYRef = React.useRef(0)
   const hasOpenedRef = React.useRef(false)
   const isClosingRef = React.useRef(false)
+  const afterCloseActionRef = React.useRef<(() => void) | null>(null)
 
   const showFreestyleWordToggle = isFreestyle
   const showMaxLevelControl = !isFreestyle
@@ -217,22 +218,33 @@ export function SettingsModal({
     [sheetTranslateY],
   )
 
-  const requestClose = React.useCallback(() => {
-    if (isClosingRef.current) return
-    isClosingRef.current = true
-    Animated.timing(sheetTranslateY, {
-      toValue: hiddenOffset,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        onClose()
-      } else {
-        isClosingRef.current = false
-      }
-    })
-  }, [hiddenOffset, onClose, sheetTranslateY])
+  const requestClose = React.useCallback(
+    (afterClose?: () => void) => {
+      if (isClosingRef.current) return
+      isClosingRef.current = true
+      afterCloseActionRef.current = afterClose ?? null
+      Animated.timing(sheetTranslateY, {
+        toValue: hiddenOffset,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          onClose()
+          afterCloseActionRef.current?.()
+          afterCloseActionRef.current = null
+        } else {
+          afterCloseActionRef.current = null
+          isClosingRef.current = false
+        }
+      })
+    },
+    [hiddenOffset, onClose, sheetTranslateY],
+  )
+
+  const handleBackdropPress = React.useCallback(() => {
+    requestClose()
+  }, [requestClose])
 
   const settleSheet = React.useCallback(
     (value: number, velocityY: number) => {
@@ -287,7 +299,6 @@ export function SettingsModal({
   )
 
   React.useEffect(() => {
-    isClosingRef.current = false
     const targetOffset = 0
     if (!hasOpenedRef.current) {
       sheetTranslateY.setValue(hiddenOffset)
@@ -319,7 +330,7 @@ export function SettingsModal({
         style={[styles.backdrop, { opacity: backdropOpacity }]}
       />
       <Pressable
-        onPress={requestClose}
+        onPress={handleBackdropPress}
         style={styles.backdropTouchTarget}
         accessibilityRole="button"
         accessibilityLabel="Close settings"
@@ -400,7 +411,9 @@ export function SettingsModal({
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Decrease max level"
-                            accessibilityHint={`Changes max difficulty to level ${levels[maxLevelIndex - 1] ?? maxLevel}`}
+                            accessibilityHint={`Changes max difficulty to level ${
+                              levels[maxLevelIndex - 1] ?? maxLevel
+                            }`}
                             disabled={!canDecreaseMaxLevel}
                             style={({ pressed }) => [
                               styles.stepperButton,
@@ -420,7 +433,9 @@ export function SettingsModal({
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Increase max level"
-                            accessibilityHint={`Changes max difficulty to level ${levels[maxLevelIndex + 1] ?? maxLevel}`}
+                            accessibilityHint={`Changes max difficulty to level ${
+                              levels[maxLevelIndex + 1] ?? maxLevel
+                            }`}
                             disabled={!canIncreaseMaxLevel}
                             style={({ pressed }) => [
                               styles.stepperButton,
@@ -445,7 +460,9 @@ export function SettingsModal({
                     ) : null}
                     <View style={styles.row}>
                       <View style={styles.stepperInfo}>
-                        <Text style={styles.rowLabel}>Playback letter speed</Text>
+                        <Text style={styles.rowLabel}>
+                          Playback letter speed
+                        </Text>
                         <Text style={styles.stepperValue}>
                           {listenCharacterWpm} WPM
                         </Text>
@@ -457,7 +474,9 @@ export function SettingsModal({
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Decrease playback character speed"
-                          accessibilityHint={`Changes playback letter speed to ${listenCharacterWpm - 1} words per minute`}
+                          accessibilityHint={`Changes playback letter speed to ${
+                            listenCharacterWpm - 1
+                          } words per minute`}
                           disabled={listenCharacterWpm <= listenCharacterWpmMin}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -474,7 +493,9 @@ export function SettingsModal({
                           }
                           accessibilityRole="button"
                           accessibilityLabel="Increase playback character speed"
-                          accessibilityHint={`Changes playback letter speed to ${listenCharacterWpm + 1} words per minute`}
+                          accessibilityHint={`Changes playback letter speed to ${
+                            listenCharacterWpm + 1
+                          } words per minute`}
                           disabled={listenCharacterWpm >= listenCharacterWpmMax}
                           style={({ pressed }) => [
                             styles.stepperButton,
@@ -614,7 +635,8 @@ export function SettingsModal({
                         onValueChange={onShowHintChange}
                       />
                       <Text style={styles.helperText}>
-                        Not recommended. This can be tempting at first, but learning by ear improves recall.
+                        Not recommended. This can be tempting at first, but
+                        learning by ear improves recall.
                       </Text>
                       <View style={styles.separator} />
                       <ToggleRow
@@ -639,14 +661,21 @@ export function SettingsModal({
                   <View style={styles.separator} />
                   <ActionRow
                     text="About Dit"
-                    onPress={onShowAbout}
+                    onPress={() => {
+                      requestClose(onShowAbout)
+                    }}
                     accessibilityLabel="Open about"
                     accessibilityHint="Shows the about panel"
                   />
                   <View style={styles.separator} />
                   {user ? (
                     <>
-                      <View style={[styles.row, isDeletingAccount && styles.rowDisabled]}>
+                      <View
+                        style={[
+                          styles.row,
+                          isDeletingAccount && styles.rowDisabled,
+                        ]}
+                      >
                         <Text style={styles.accountEmail} numberOfLines={1}>
                           {user.email}
                         </Text>

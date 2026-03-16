@@ -1082,7 +1082,6 @@ export default function App() {
   }, [])
 
   const handleShowAbout = useCallback(() => {
-    setShowSettings(false)
     setShowReference(false)
     setShowAbout(true)
   }, [])
