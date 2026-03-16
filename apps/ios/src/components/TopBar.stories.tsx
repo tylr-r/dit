@@ -11,7 +11,7 @@ const meta: Meta<typeof TopBar> = {
     },
     showSettingsHint: { control: 'boolean' },
     onModeChange: { action: 'modeChange' },
-    onPressAbout: { action: 'pressAbout' },
+    onPressReference: { action: 'pressReference' },
     onSettingsPress: { action: 'settingsPress' },
   },
 }

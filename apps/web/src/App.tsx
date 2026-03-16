@@ -987,9 +987,17 @@ function MainApp() {
   ]);
 
   const handleShowReference = useCallback(() => {
+    setShowAbout(false);
+    setShowSettings(false);
     setShowReference(true);
     trackEvent('reference_open');
   }, [trackEvent]);
+
+  const handleShowAbout = useCallback(() => {
+    setShowReference(false);
+    setShowSettings(false);
+    setShowAbout(true);
+  }, []);
 
   useEffect(() => {
     if (!isFreestyle) {
@@ -1284,10 +1292,10 @@ function MainApp() {
           <button
             type="button"
             className="logo-button"
-            onClick={() => setShowAbout((prev) => !prev)}
-            aria-label="About Dit"
+            onClick={handleShowReference}
+            aria-label="Open reference chart"
             aria-haspopup="dialog"
-            aria-expanded={showAbout}
+            aria-expanded={showReference}
           >
             <img src="/Dit-logo.svg" alt="Dit" />
           </button>
@@ -1334,8 +1342,8 @@ function MainApp() {
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
+              onShowAbout={handleShowAbout}
               onListenWpmChange={handleListenWpmChange}
-              onShowReference={handleShowReference}
               freestyleWordMode={freestyleWordMode}
               onWordModeChange={handleWordModeToggle}
               onSoundCheck={handleSoundCheck}
@@ -1443,8 +1451,9 @@ function MainApp() {
               dashes.
             </p>
             <p className="about-instruction about-instruction-secondary">
-              Use <strong>settings</strong> to adjust difficulty, check the
-              reference chart, enable hints, and sign in to save your progress.
+              Use <strong>settings</strong> to adjust difficulty, enable hints,
+              and sign in to save your progress. Tap the logo for the reference
+              chart.
             </p>
             <p className="about-instruction about-instruction-secondary">
               <strong>Modes:</strong> Practice for guided learning, Freestyle to

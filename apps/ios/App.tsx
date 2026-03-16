@@ -1081,6 +1081,12 @@ export default function App() {
     setShowReference(true)
   }, [])
 
+  const handleShowAbout = useCallback(() => {
+    setShowSettings(false)
+    setShowReference(false)
+    setShowAbout(true)
+  }, [])
+
   const handleSignInWithApple = useCallback(async () => {
     try {
       await signInWithApple()
@@ -1101,12 +1107,6 @@ export default function App() {
       console.error('Failed to sign in with Google', error)
       Alert.alert('Could Not Sign In', getSignInErrorMessage(error))
     }
-  }, [])
-
-  const handleAboutToggle = useCallback(() => {
-    setShowSettings(false)
-    setShowReference(false)
-    setShowAbout((prev) => !prev)
   }, [])
 
   const handleSettingsToggle = useCallback(() => {
@@ -2408,7 +2408,7 @@ export default function App() {
           <TopBar
             mode={mode}
             onModeChange={handleModeChange}
-            onPressAbout={handleAboutToggle}
+            onPressReference={handleShowReference}
             onSettingsPress={handleSettingsToggle}
             showSettingsHint={showSettingsHint}
           />
@@ -2445,7 +2445,7 @@ export default function App() {
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}
               onUseRecommended={handleUseRecommended}
-              onShowReference={handleShowReference}
+              onShowAbout={handleShowAbout}
               user={user}
               onSignInWithApple={handleSignInWithApple}
               onSignInWithGoogle={handleSignInWithGoogle}

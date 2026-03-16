@@ -36,8 +36,8 @@ export function AboutPanel({ onClose }: AboutPanelProps) {
       </Text>
       <Text style={styles.bodySecondary}>
         Use <Text style={styles.emphasis}>settings</Text> to adjust difficulty,
-        check the reference chart, enable hints, and sign in to save your
-        progress.
+        enable hints, and sign in to save your progress. Tap the logo for the
+        reference chart.
       </Text>
       <Text style={styles.bodySecondary}>
         <Text style={styles.emphasis}>Modes:</Text> Practice for guided

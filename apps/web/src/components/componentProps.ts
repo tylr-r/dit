@@ -58,9 +58,9 @@ export interface SettingsPanelProps {
   onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onShowAbout: () => void
   onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowMnemonicChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onShowReference: () => void
   onSoundCheck: () => void
   onWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   showHint: boolean

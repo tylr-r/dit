@@ -8,7 +8,7 @@ import { ModeSwitcher, type Mode } from './ModeSwitcher'
 type TopBarProps = {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
-  onPressAbout: () => void;
+  onPressReference: () => void;
   onSettingsPress: () => void;
   showSettingsHint?: boolean;
 };
@@ -17,7 +17,7 @@ type TopBarProps = {
 export function TopBar({
   mode,
   onModeChange,
-  onPressAbout,
+  onPressReference,
   onSettingsPress,
   showSettingsHint = false,
 }: TopBarProps) {
@@ -25,9 +25,10 @@ export function TopBar({
     <View style={styles.topBar}>
       <View style={styles.topBarSide}>
         <Pressable
-          onPress={onPressAbout}
+          onPress={onPressReference}
           accessibilityRole="button"
-          accessibilityLabel="About Dit"
+          accessibilityLabel="Open reference chart"
+          accessibilityHint="Shows the Morse code reference chart"
           style={styles.logoButton}
         >
           <DitLogo />

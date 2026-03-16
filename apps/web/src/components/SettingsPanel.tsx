@@ -14,9 +14,9 @@ export function SettingsPanel({
   onListenWpmChange,
   onMaxLevelChange,
   onPracticeWordModeChange,
+  onShowAbout,
   onShowHintChange,
   onShowMnemonicChange,
-  onShowReference,
   onSoundCheck,
   onWordModeChange,
   showHint,
@@ -102,19 +102,6 @@ export function SettingsPanel({
               </select>
             </label>
           ) : null}
-          <button
-            type="button"
-            className="panel-button"
-            onClick={onShowReference}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              Reference
-            </span>
-          </button>
         </div>
       ) : null}
       {isFreestyle ? (
@@ -128,6 +115,22 @@ export function SettingsPanel({
           />
         </label>
       ) : null}
+      <div className="panel-group">
+        <button
+          type="button"
+          className="panel-button"
+          onClick={onShowAbout}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v.01"></path>
+              <path d="M12 8a2 2 0 0 1 2 2c0 1.5-2 2.25-2 4"></path>
+            </svg>
+            About
+          </span>
+        </button>
+      </div>
       {isListen ? (
         <div className="panel-group">
           <button

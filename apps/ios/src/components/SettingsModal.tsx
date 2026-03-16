@@ -44,7 +44,7 @@ type SettingsModalProps = {
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
   onUseRecommended: () => void
-  onShowReference: () => void
+  onShowAbout: () => void
   onSignInWithApple: () => Promise<unknown>
   onSignInWithGoogle: () => Promise<unknown>
   onSignOut: () => Promise<unknown>
@@ -168,7 +168,7 @@ export function SettingsModal({
   onShowHintChange,
   onShowMnemonicChange,
   onUseRecommended,
-  onShowReference,
+  onShowAbout,
   onSignInWithApple,
   onSignInWithGoogle,
   onSignOut,
@@ -638,10 +638,10 @@ export function SettingsModal({
                   />
                   <View style={styles.separator} />
                   <ActionRow
-                    text="Letter Reference"
-                    onPress={onShowReference}
-                    accessibilityLabel="Open reference"
-                    accessibilityHint="Opens the Morse code reference chart"
+                    text="About Dit"
+                    onPress={onShowAbout}
+                    accessibilityLabel="Open about"
+                    accessibilityHint="Shows the about panel"
                   />
                   <View style={styles.separator} />
                   {user ? (
