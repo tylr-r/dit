@@ -16,17 +16,18 @@ import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
 type ReferenceModalProps = {
-  letters: Letter[];
-  numbers: Letter[];
-  morseData: Record<Letter, { code: string }>;
-  scores: ScoreRecord;
-  onClose: () => void;
-  onResetScores: () => void;
-  onPlaySound?: (char: Letter) => void;
-  paddingVertical?: number;
-};
+  letters: Letter[]
+  numbers: Letter[]
+  morseData: Record<Letter, { code: string }>
+  scores: ScoreRecord
+  onClose: () => void
+  onResetScores: () => void
+  onPlaySound?: (char: Letter) => void
+  paddingVertical?: number
+}
 
 const SCORE_INTENSITY_MAX = 15
+const CARD_VERTICAL_PADDING = 10
 
 const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
 
@@ -147,10 +148,12 @@ export function ReferenceModal({
           tint="dark"
           style={StyleSheet.absoluteFillObject}
         />
-        <Animated.View style={overlayStyle} />
+        <Animated.View pointerEvents="none" style={overlayStyle} />
         <Pressable
           accessibilityRole={canPlaySound ? 'button' : undefined}
-          accessibilityLabel={`${char}, ${getCodeAccessibilityText(code)}, ${getScoreAccessibilityText(scoreValue)}`}
+          accessibilityLabel={`${char}, ${getCodeAccessibilityText(
+            code,
+          )}, ${getScoreAccessibilityText(scoreValue)}`}
           accessibilityHint={
             canPlaySound ? `Plays the Morse sound for ${char}` : undefined
           }
@@ -167,10 +170,12 @@ export function ReferenceModal({
           onPress={() => {
             onPlaySound?.(char)
           }}
-          style={{
-            borderRadius: radii.md,
-            paddingVertical: paddingVertical ?? 0,
-          }}
+          style={[
+            styles.cardPressable,
+            {
+              paddingVertical: CARD_VERTICAL_PADDING + (paddingVertical ?? 0),
+            },
+          ]}
         >
           <View style={styles.cardHeader}>
             <Text style={styles.cardLetter}>{char}</Text>
@@ -230,9 +235,7 @@ export function ReferenceModal({
             if (levelLetters.length === 0) return null
             return (
               <View key={`level-${level}`} style={styles.levelSection}>
-                <Text style={styles.levelSectionTitle}>
-                  Level {level}
-                </Text>
+                <Text style={styles.levelSectionTitle}>Level {level}</Text>
                 <GlassContainer spacing={spacing.sm} style={styles.levelCards}>
                   {levelLetters.map((char) => (
                     <ReferenceCard key={char} char={char} />
@@ -277,8 +280,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    experimental_backgroundImage:
-      colors.surface.headerGradient,
+    experimental_backgroundImage: colors.surface.headerGradient,
   },
   title: {
     fontSize: 14,
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   actionButton: {
     paddingVertical: 6,
@@ -336,13 +338,17 @@ const styles = StyleSheet.create({
   card: {
     width: '30%',
     minWidth: 86,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
     backgroundColor: colors.surface.card,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     // marginBottom: 12,
+  },
+  cardPressable: {
+    width: '100%',
+    paddingVertical: CARD_VERTICAL_PADDING,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
   },
   cardHeader: {
     flexDirection: 'row',
