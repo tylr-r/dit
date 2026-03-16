@@ -29,9 +29,6 @@ type SettingsModalProps = {
   listenCharacterWpm: number
   listenCharacterWpmMin: number
   listenCharacterWpmMax: number
-  listenEffectiveWpm: number
-  listenEffectiveWpmMin: number
-  listenEffectiveWpmMax: number
   showHint: boolean
   showMnemonic: boolean
   user: User | null
@@ -44,7 +41,6 @@ type SettingsModalProps = {
   onPracticeIfrModeChange: (value: boolean) => void
   onPracticeReviewMissesChange: (value: boolean) => void
   onListenCharacterWpmChange: (value: number) => void
-  onListenEffectiveWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
   onUseRecommended: () => void
@@ -157,9 +153,6 @@ export function SettingsModal({
   listenCharacterWpm,
   listenCharacterWpmMin,
   listenCharacterWpmMax,
-  listenEffectiveWpm,
-  listenEffectiveWpmMin,
-  listenEffectiveWpmMax,
   showHint,
   showMnemonic,
   user,
@@ -172,7 +165,6 @@ export function SettingsModal({
   onPracticeIfrModeChange,
   onPracticeReviewMissesChange,
   onListenCharacterWpmChange,
-  onListenEffectiveWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
   onUseRecommended,
@@ -521,59 +513,7 @@ export function SettingsModal({
                       Playback speed used whenever the app plays Morse for you.
                       Higher = faster dits and dahs.
                     </Text>
-                    <View style={styles.separator} />
-                    <View style={styles.row}>
-                      <View style={styles.stepperInfo}>
-                        <Text style={styles.rowLabel}>Playback spacing</Text>
-                        <Text style={styles.stepperValue}>
-                          {listenEffectiveWpm} WPM
-                        </Text>
-                      </View>
-                      <View style={styles.stepperGroup} accessible={false}>
-                        <Pressable
-                          onPress={() =>
-                            onListenEffectiveWpmChange(listenEffectiveWpm - 1)
-                          }
-                          accessibilityRole="button"
-                          accessibilityLabel="Decrease playback spacing speed"
-                          accessibilityHint={`Changes playback spacing to ${listenEffectiveWpm - 1} words per minute`}
-                          disabled={listenEffectiveWpm <= listenEffectiveWpmMin}
-                          style={({ pressed }) => [
-                            styles.stepperButton,
-                            pressed && styles.stepperButtonPressed,
-                            listenEffectiveWpm <= listenEffectiveWpmMin &&
-                              styles.stepperButtonDisabled,
-                          ]}
-                        >
-                          <Text style={styles.stepperButtonText}>-</Text>
-                        </Pressable>
-                        <Pressable
-                          onPress={() =>
-                            onListenEffectiveWpmChange(listenEffectiveWpm + 1)
-                          }
-                          accessibilityRole="button"
-                          accessibilityLabel="Increase playback spacing speed"
-                          accessibilityHint={`Changes playback spacing to ${listenEffectiveWpm + 1} words per minute`}
-                          disabled={listenEffectiveWpm >= listenEffectiveWpmMax}
-                          style={({ pressed }) => [
-                            styles.stepperButton,
-                            pressed && styles.stepperButtonPressed,
-                            listenEffectiveWpm >= listenEffectiveWpmMax &&
-                              styles.stepperButtonDisabled,
-                          ]}
-                        >
-                          <Text style={styles.stepperButtonText}>+</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                    <Text style={styles.helperText}>
-                      Gap between letters during playback. Lower = longer pause
-                      to think.
-                    </Text>
-                    <Text style={styles.helperText}>
-                      Applies to playback across modes. Morse key tap timing
-                      (dit vs dah) does not change.
-                    </Text>
+                    {/* TODO: Restore a playback spacing control when word playback ships. */}
                   </>
                 </SettingsGroup>
 

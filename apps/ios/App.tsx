@@ -1810,28 +1810,6 @@ export default function App() {
     [isListen, listenStatus, playListenSequence],
   )
 
-  const handleListenEffectiveWpmChange = useCallback(
-    (value: number) => {
-      const normalizedListenSpeeds = normalizeListenSpeeds(
-        listenWpmRef.current,
-        value,
-      )
-      const nextEffectiveWpm = normalizedListenSpeeds.effectiveWpm
-      setListenEffectiveWpm(nextEffectiveWpm)
-      listenEffectiveWpmRef.current = nextEffectiveWpm
-      setListenAutoTightening(false)
-      listenAutoTighteningRef.current = false
-      if (!isListen || listenStatus !== 'idle') {
-        return
-      }
-      playListenSequence(MORSE_DATA[letterRef.current].code, {
-        characterWpm: listenWpmRef.current,
-        effectiveWpm: nextEffectiveWpm,
-      })
-    },
-    [isListen, listenStatus, playListenSequence],
-  )
-
   const handlePracticeLearnModeChange = useCallback(
     (value: boolean) => {
       if (isFreestyle || isListen) {
@@ -2455,12 +2433,6 @@ export default function App() {
               listenCharacterWpm={listenWpm}
               listenCharacterWpmMin={LISTEN_WPM_MIN}
               listenCharacterWpmMax={LISTEN_WPM_MAX}
-              listenEffectiveWpm={listenEffectiveWpm}
-              listenEffectiveWpmMin={LISTEN_EFFECTIVE_WPM_MIN}
-              listenEffectiveWpmMax={Math.min(
-                LISTEN_EFFECTIVE_WPM_MAX,
-                listenWpm,
-              )}
               showHint={showHint}
               showMnemonic={showMnemonic}
               isDeletingAccount={isDeletingAccount}
@@ -2472,7 +2444,6 @@ export default function App() {
               onPracticeIfrModeChange={handlePracticeIfrModeChange}
               onPracticeReviewMissesChange={handlePracticeReviewMissesChange}
               onListenCharacterWpmChange={handleListenWpmChange}
-              onListenEffectiveWpmChange={handleListenEffectiveWpmChange}
               onShowHintChange={setShowHint}
               onShowMnemonicChange={setShowMnemonic}
               onUseRecommended={handleUseRecommended}
