@@ -4,6 +4,9 @@ import tsParser from '@typescript-eslint/parser'
 import globals from 'globals'
 
 export default [
+  {
+    ignores: ['.rnstorybook/storybook.requires.ts'],
+  },
   js.configs.recommended,
   // Node.js config for JS files like metro.config.js
   {

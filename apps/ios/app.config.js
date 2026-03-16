@@ -1,5 +1,3 @@
-/* global module, process, require */
-
 const appJson = require('./app.json')
 
 const clone = (value) => JSON.parse(JSON.stringify(value))

@@ -11,6 +11,14 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "tests", ".rnstorybook", "*.ts", "*.tsx", "*.js"],
+  "include": [
+    "src",
+    "tests",
+    ".rnstorybook/**/*.ts",
+    ".rnstorybook/**/*.tsx",
+    "*.ts",
+    "*.tsx",
+    "*.js"
+  ],
   "exclude": ["node_modules", "dist", "build"]
 }
