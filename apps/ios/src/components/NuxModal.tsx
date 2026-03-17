@@ -30,6 +30,7 @@ type NuxModalProps = {
   onPlaySymbol: (symbol: '.' | '-') => void;
   /** Start the timed exercise (heavy setup) */
   onStart: () => void;
+  onReplayLetter: () => void;
   onSkip: () => void;
   onFinish: () => void;
   onChoosePreset: (preset: 'beginner' | 'advanced') => void;
@@ -159,6 +160,7 @@ export function NuxModal({
   onSplashDone,
   onNext,
   onPlaySymbol,
+  onReplayLetter,
   onStart,
   onSkip,
   onFinish,
@@ -256,7 +258,7 @@ export function NuxModal({
             <NuxProgress step="exercise" letterIndex={index} total={total} />
           </View>
           <View style={styles.letterArea}>
-            <Text style={styles.tapLabel}>TAP THIS LETTER</Text>
+            <Text style={styles.tapLabel}>TAP WHAT YOU HEAR</Text>
             <Text style={styles.bigLetter}>{letter}</Text>
           </View>
           <View style={styles.exerciseFooter}>
@@ -276,6 +278,16 @@ export function NuxModal({
             })}
           </View>
         </Animated.View>
+        <View style={styles.replayOverlay} pointerEvents="box-none">
+          <Pressable
+            onPress={onReplayLetter}
+            style={({ pressed }) => [styles.replayBtn, pressed && styles.replayBtnPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="Hear this letter"
+          >
+            <Text style={styles.replayBtnText}>▶  hear it</Text>
+          </Pressable>
+        </View>
       </View>
     )
   }
@@ -660,6 +672,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: colors.text.primary60,
     lineHeight: 28,
+  },
+  replayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
   },
   replayBtn: {
     paddingVertical: spacing.sm,

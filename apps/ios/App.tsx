@@ -1231,6 +1231,18 @@ export default function App() {
     void triggerHaptics(10)
   }, [])
 
+  const handleNuxReplayLetter = useCallback(() => {
+    const code = MORSE_DATA[letter]?.code
+    if (!code) return
+    void playMorseTone({
+      code,
+      characterWpm: DEFAULT_CHARACTER_WPM,
+      effectiveWpm: DEFAULT_CHARACTER_WPM,
+      minUnitMs: LISTEN_MIN_UNIT_MS,
+    })
+    void triggerHaptics(10)
+  }, [letter])
+
   const handleNuxStart = useCallback(() => {
     setNuxStep('exercise')
     setNuxIndex(0)
@@ -2606,6 +2618,7 @@ export default function App() {
             onSplashDone={handleNuxSplashDone}
             onNext={handleNuxAdvance}
             onPlaySymbol={handleNuxPlaySymbol}
+            onReplayLetter={handleNuxReplayLetter}
             onStart={handleNuxStart}
             onSkip={handleNuxSkip}
             onFinish={handleNuxFinish}
