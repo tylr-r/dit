@@ -150,7 +150,7 @@ const NUX_SLOW_DEFAULTS = {
 
 type IntroHintStep = 'morse' | 'settings' | 'done'
 type NuxStatus = 'pending' | 'completed' | 'skipped'
-type NuxStep = 'welcome' | 'exercise' | 'result'
+type NuxStep = 'splash' | 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | 'result'
 type NuxResult = 'fast' | 'slow' | null
 type ListenPromptTiming = {
   targetLetter: Letter
@@ -465,10 +465,11 @@ export default function App() {
   )
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
-  const [nuxStep, setNuxStep] = useState<NuxStep>('welcome')
+  const [nuxStep, setNuxStep] = useState<NuxStep>('splash')
   const [nuxIndex, setNuxIndex] = useState(0)
   const [nuxReady, setNuxReady] = useState(false)
   const [nuxResult, setNuxResult] = useState<NuxResult>(null)
+  const [nuxAvgMs, setNuxAvgMs] = useState<number | null>(null)
   const [maxLevel, setMaxLevel] = useState(DEFAULT_MAX_LEVEL)
   const [practiceWordMode, setPracticeWordMode] = useState(false)
   const [letter, setLetter] = useState<Letter>(initialConfig.letter)
@@ -624,7 +625,8 @@ export default function App() {
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
   const isBackgroundAnimationPaused =
-    isSystemLowPowerModeEnabled || isBackgroundIdle
+    !(nuxReady && nuxStatus === 'pending') &&
+    (isSystemLowPowerModeEnabled || isBackgroundIdle)
   const isNuxActive = nuxReady && nuxStatus === 'pending'
   const userForSync = isDeletingAccount ? null : user
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
@@ -1207,6 +1209,28 @@ export default function App() {
     setNuxResult(null)
   }, [persistIntroHintStep, persistNuxStatus])
 
+  const handleNuxSplashDone = useCallback(() => {
+    setNuxStep('welcome')
+  }, [])
+
+  const handleNuxAdvance = useCallback(() => {
+    setNuxStep((current) => {
+      if (current === 'welcome') return 'sound_check'
+      if (current === 'sound_check') return 'dit_dah'
+      return current
+    })
+  }, [])
+
+  const handleNuxPlaySymbol = useCallback((symbol: '.' | '-') => {
+    void playMorseTone({
+      code: symbol,
+      characterWpm: DEFAULT_CHARACTER_WPM,
+      effectiveWpm: DEFAULT_CHARACTER_WPM,
+      minUnitMs: LISTEN_MIN_UNIT_MS,
+    })
+    void triggerHaptics(10)
+  }, [])
+
   const handleNuxStart = useCallback(() => {
     setNuxStep('exercise')
     setNuxIndex(0)
@@ -1727,9 +1751,8 @@ export default function App() {
         preset === 'advanced' ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
       applyNuxDefaults(defaults)
       setNuxResult(preset === 'advanced' ? 'fast' : 'slow')
-      handleNuxFinish()
     },
-    [applyNuxDefaults, handleNuxFinish],
+    [applyNuxDefaults],
   )
 
   const completeNux = useCallback(() => {
@@ -1741,6 +1764,7 @@ export default function App() {
     const isFast = averageMs <= NUX_FAST_THRESHOLD_MS
     const defaults = isFast ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
     applyNuxDefaults(defaults)
+    setNuxAvgMs(Math.round(averageMs))
     setNuxResult(isFast ? 'fast' : 'slow')
     setNuxStep('result')
   }, [applyNuxDefaults])
@@ -2404,13 +2428,15 @@ export default function App() {
         />
         <BackgroundGlow />
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          <TopBar
-            mode={mode}
-            onModeChange={handleModeChange}
-            onPressReference={handleShowReference}
-            onSettingsPress={handleSettingsToggle}
-            showSettingsHint={showSettingsHint}
-          />
+          {!isNuxActive ? (
+            <TopBar
+              mode={mode}
+              onModeChange={handleModeChange}
+              onPressReference={handleShowReference}
+              onSettingsPress={handleSettingsToggle}
+              showSettingsHint={showSettingsHint}
+            />
+          ) : null}
           {showAbout ? (
             <AboutModal onClose={() => setShowAbout(false)} />
           ) : null}
@@ -2470,91 +2496,109 @@ export default function App() {
               }}
             />
           ) : null}
-          {isNuxActive ? (
-            <NuxModal
-              step={nuxStep}
-              index={nuxIndex}
-              total={NUX_LETTERS.length}
-              result={nuxResult}
-              onStart={handleNuxStart}
-              onSkip={handleNuxSkip}
-              onFinish={handleNuxFinish}
-              onChoosePreset={handleNuxPresetSelect}
+          {!isNuxActive ? (
+            <StageDisplay
+              letter={stageLetter}
+              statusText={statusText}
+              pips={stagePips}
+              hintVisible={hintVisible}
+              letterPlaceholder={letterPlaceholder}
+              isListen={isListen}
+              listenStatus={listenStatus}
+              listenWavePlayback={listenWavePlayback}
+              freestyleToneActive={isPressing}
+              practiceWpmText={practiceWpmText}
+              listenTtrText={listenTtrText}
+              practiceWordMode={showPracticeWord}
+              practiceWord={showPracticeWord ? practiceWord : null}
+              practiceWordIndex={practiceWordIndex}
+              isFreestyle={isFreestyle}
             />
           ) : null}
-          <StageDisplay
-            letter={stageLetter}
-            statusText={statusText}
-            pips={stagePips}
-            hintVisible={hintVisible}
-            letterPlaceholder={letterPlaceholder}
-            isListen={isListen}
-            listenStatus={listenStatus}
-            listenWavePlayback={listenWavePlayback}
-            freestyleToneActive={isPressing}
-            practiceWpmText={practiceWpmText}
-            listenTtrText={listenTtrText}
-            practiceWordMode={showPracticeWord}
-            practiceWord={showPracticeWord ? practiceWord : null}
-            practiceWordIndex={practiceWordIndex}
-            isFreestyle={isFreestyle}
-          />
-          <View style={styles.controls}>
-            {isListen ? (
-              <ListenControls
-                listenStatus={listenStatus}
-                onReplay={handleListenReplay}
-                onSubmitAnswer={submitListenAnswer}
-              />
-            ) : (
-              <>
-                {isFreestyle ? (
-                  <DitButton
-                    onPress={handleFreestyleClear}
-                    accessibilityRole="button"
-                    accessibilityLabel="Clear freestyle word"
-                    style={{ marginBottom: 12 }}
-                    textStyle={{ fontSize: 14 }}
-                    radius={24}
-                    paddingHorizontal={12}
-                    paddingVertical={8}
-                    text="Clear"
-                  />
-                ) : null}
-                {!isFreestyle ? (
-                  <DitButton
-                    onPress={handlePracticeReplay}
-                    accessibilityRole="button"
-                    accessibilityLabel="Play target character"
-                    style={styles.practicePlayButton}
-                    textStyle={styles.practicePlayButtonText}
-                    radius={24}
-                    paddingHorizontal={18}
-                    paddingVertical={8}
-                    text="Play"
-                  />
-                ) : null}
-                <View style={styles.morseButtonWrap}>
-                  {showMorseHint ? (
-                    <View style={styles.morseHint}>
-                      <Text style={styles.hintText}>
-                        Tap the big Morse key to make a dit (short press) or dah
-                        (long press).
-                      </Text>
-                      <View style={styles.morseHintArrow} />
-                    </View>
+          {!isNuxActive ? (
+            <View style={styles.controls}>
+              {isListen ? (
+                <ListenControls
+                  listenStatus={listenStatus}
+                  onReplay={handleListenReplay}
+                  onSubmitAnswer={submitListenAnswer}
+                />
+              ) : (
+                <>
+                  {isFreestyle ? (
+                    <DitButton
+                      onPress={handleFreestyleClear}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear freestyle word"
+                      style={{ marginBottom: 12 }}
+                      textStyle={{ fontSize: 14 }}
+                      radius={24}
+                      paddingHorizontal={12}
+                      paddingVertical={8}
+                      text="Clear"
+                    />
                   ) : null}
-                  <MorseButton
-                    disabled={isMorseDisabled}
-                    isPressing={isPressing}
-                    onPressIn={handleIntroPressIn}
-                    onPressOut={handlePressOut}
-                  />
-                </View>
-              </>
-            )}
-          </View>
+                  {!isFreestyle ? (
+                    <DitButton
+                      onPress={handlePracticeReplay}
+                      accessibilityRole="button"
+                      accessibilityLabel="Play target character"
+                      style={styles.practicePlayButton}
+                      textStyle={styles.practicePlayButtonText}
+                      radius={24}
+                      paddingHorizontal={18}
+                      paddingVertical={8}
+                      text="Play"
+                    />
+                  ) : null}
+                  <View style={styles.morseButtonWrap}>
+                    {showMorseHint ? (
+                      <View style={styles.morseHint}>
+                        <Text style={styles.hintText}>
+                          Tap the big Morse key to make a dit (short press) or
+                          dah (long press).
+                        </Text>
+                        <View style={styles.morseHintArrow} />
+                      </View>
+                    ) : null}
+                    <MorseButton
+                      disabled={isMorseDisabled}
+                      isPressing={isPressing}
+                      onPressIn={handleIntroPressIn}
+                      onPressOut={handlePressOut}
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+          ) : isNuxActive && nuxStep === 'exercise' ? (
+            <View style={styles.nuxExerciseControls}>
+              <MorseButton
+                disabled={isMorseDisabled}
+                isPressing={isPressing}
+                onPressIn={handleIntroPressIn}
+                onPressOut={handlePressOut}
+              />
+            </View>
+          ) : null}
         </SafeAreaView>
+        {isNuxActive ? (
+          <NuxModal
+            step={nuxStep}
+            index={nuxIndex}
+            total={NUX_LETTERS.length}
+            result={nuxResult}
+            avgMs={nuxAvgMs}
+            letter={letter}
+            onSplashDone={handleNuxSplashDone}
+            onNext={handleNuxAdvance}
+            onPlaySymbol={handleNuxPlaySymbol}
+            onStart={handleNuxStart}
+            onSkip={handleNuxSkip}
+            onFinish={handleNuxFinish}
+            onChoosePreset={handleNuxPresetSelect}
+          />
+        ) : null}
       </View>
       <StatusBar style="light" />
     </SafeAreaProvider>
@@ -2629,5 +2673,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: 'rgba(244, 247, 249, 0.9)',
+  },
+  nuxExerciseControls: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    alignItems: 'center',
   },
 })

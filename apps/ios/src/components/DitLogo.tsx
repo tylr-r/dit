@@ -8,8 +8,13 @@ const LOGO_FILL = colors.text.primary
  * DitLogo – Main logo SVG for Dit iOS app.
  * @returns {JSX.Element}
  */
-const DitLogo = () => (
-  <Svg width={54} height={54} viewBox="0 0 806 806" opacity={0.5}>
+type DitLogoProps = {
+  size?: number
+  opacity?: number
+}
+
+const DitLogo = ({ size = 54, opacity = 0.5 }: DitLogoProps) => (
+  <Svg width={size} height={size} viewBox="0 0 806 806" opacity={opacity}>
     <Path
       d="M92.1113 255.555C74.9852 291.601 63.9443 331.099 60.3145 372.72L4.51855 367.913C8.72293 319.533 21.5381 273.619 41.4258 231.712L92.1113 255.555Z"
       fill={LOGO_FILL}
