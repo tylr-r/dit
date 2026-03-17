@@ -49,6 +49,7 @@ type SettingsModalProps = {
   onSignInWithGoogle: () => Promise<unknown>
   onSignOut: () => Promise<unknown>
   onDeleteAccount: () => void
+  onReplayNux?: () => void
 }
 
 type ToggleRowProps = {
@@ -173,6 +174,7 @@ export function SettingsModal({
   onSignInWithGoogle,
   onSignOut,
   onDeleteAccount,
+  onReplayNux,
 }: SettingsModalProps) {
   const { height: viewportHeight } = useWindowDimensions()
   const insets = useSafeAreaInsets()
@@ -740,6 +742,21 @@ export function SettingsModal({
                     </>
                   )}
                 </SettingsGroup>
+
+                {onReplayNux ? (
+                  <SettingsGroup>
+                    <View style={styles.row}>
+                      <Text style={styles.rowLabel}>Dev Mode</Text>
+                    </View>
+                    <View style={styles.separator} />
+                    <ActionRow
+                      text="Replay onboarding"
+                      onPress={onReplayNux}
+                      accessibilityLabel="Replay onboarding"
+                      accessibilityHint="Resets and replays the new user experience flow"
+                    />
+                  </SettingsGroup>
+                ) : null}
               </ScrollView>
             </View>
           </View>

@@ -1,3 +1,4 @@
+import { GlassView } from 'expo-glass-effect'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Animated,
@@ -9,8 +10,9 @@ import {
   ViewStyle,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import DitLogo from './DitLogo'
 import { colors, radii, spacing } from '../design/tokens'
+import { DitButton } from './DitButton'
+import DitLogo from './DitLogo'
 
 type NuxStep = 'splash' | 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | 'result'
 
@@ -117,35 +119,12 @@ const progressStyles = StyleSheet.create({
 
 // ─── Primary CTA ──────────────────────────────────────────────────────────────
 
-function PrimaryButton({ text, onPress }: { text: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [primaryBtn.btn, pressed && primaryBtn.pressed]}
-      accessibilityRole="button"
-      accessibilityLabel={text}
-    >
-      <Text style={primaryBtn.text}>{text}</Text>
-    </Pressable>
-  )
+const ctaTextStyle = {
+  fontSize: 16,
+  fontWeight: '600' as const,
+  letterSpacing: 0.3,
+  textTransform: 'none' as const,
 }
-
-const primaryBtn = StyleSheet.create({
-  btn: {
-    backgroundColor: colors.accent.wave,
-    borderRadius: radii.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    width: '100%',
-  },
-  pressed: { opacity: 0.82 },
-  text: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
-})
 
 // ─── Step transition hook ─────────────────────────────────────────────────────
 
@@ -220,7 +199,7 @@ export function NuxModal({
             </Text>
           </View>
           <View style={styles.ctaArea}>
-            <PrimaryButton text="Start quick exercise" onPress={onNext} />
+            <DitButton text="Start quick exercise" onPress={onNext} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
             <Pressable
               onPress={onSkip}
               style={styles.skipBtn}
@@ -356,7 +335,7 @@ export function NuxModal({
           </Pressable>
         </View>
         <View style={styles.ctaArea}>
-          <PrimaryButton text="Let's go" onPress={onFinish} />
+          <DitButton text="Let's go" onPress={onFinish} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
         </View>
       </Animated.View>
     </View>
@@ -455,20 +434,11 @@ function SoundCheckStep({
             accessibilityLabel="Tap to hear Morse code for E"
           >
             <Text style={styles.soundCircleLetter}>E</Text>
-            <Text style={styles.soundCircleMorse}>·</Text>
-          </Pressable>
-          <Pressable
-            onPress={handleTap}
-            style={({ pressed }) => [styles.replayBtn, pressed && styles.replayBtnPressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Replay sound"
-          >
-            <Text style={styles.replayBtnText}>↺  replay</Text>
           </Pressable>
         </View>
 
         <View style={styles.ctaArea}>
-          <PrimaryButton text="Sounds good" onPress={onNext} />
+          <DitButton text="Sounds good" onPress={onNext} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
         </View>
       </Animated.View>
     </View>
@@ -510,41 +480,55 @@ function DitDahStep({
         </View>
 
         <View style={styles.ditDahCards}>
-          <Pressable
-            onPress={() => { onPlaySymbol('.'); setTappedDit(true) }}
-            style={({ pressed }) => [
-              styles.symbolCard,
-              pressed && styles.symbolCardPressed,
-              tappedDit && styles.symbolCardTapped,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Tap to hear dit — short press"
+          <GlassView
+            glassEffectStyle="clear"
+            isInteractive
+            style={[styles.symbolRow, tappedDit && styles.symbolRowTapped]}
           >
-            <Text style={styles.symbolGlyph}>·</Text>
-            <Text style={styles.symbolName}>DIT</Text>
-            <Text style={styles.symbolHint}>short tap</Text>
-            <Text style={styles.symbolPlay}>▶ play</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => { onPlaySymbol('.'); setTappedDit(true) }}
+              style={({ pressed }) => [
+                styles.symbolPressable,
+                pressed && styles.symbolPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Tap to hear dit — short press"
+            >
+              <Text style={styles.symbolGlyph}>·</Text>
+              <View style={styles.symbolInfo}>
+                <Text style={styles.symbolName}>DIT</Text>
+                <Text style={styles.symbolHint}>short tap</Text>
+              </View>
+              <Text style={styles.symbolPlay}>▶</Text>
+            </Pressable>
+          </GlassView>
 
-          <Pressable
-            onPress={() => { onPlaySymbol('-'); setTappedDah(true) }}
-            style={({ pressed }) => [
-              styles.symbolCard,
-              pressed && styles.symbolCardPressed,
-              tappedDah && styles.symbolCardTapped,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Tap to hear dah — hold"
+          <GlassView
+            glassEffectStyle="clear"
+            isInteractive
+            style={[styles.symbolRow, tappedDah && styles.symbolRowTapped]}
           >
-            <Text style={styles.symbolGlyph}>—</Text>
-            <Text style={styles.symbolName}>DAH</Text>
-            <Text style={styles.symbolHint}>hold</Text>
-            <Text style={styles.symbolPlay}>▶ play</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => { onPlaySymbol('-'); setTappedDah(true) }}
+              style={({ pressed }) => [
+                styles.symbolPressable,
+                pressed && styles.symbolPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Tap to hear dah — hold"
+            >
+              <Text style={styles.symbolGlyph}>—</Text>
+              <View style={styles.symbolInfo}>
+                <Text style={styles.symbolName}>DAH</Text>
+                <Text style={styles.symbolHint}>hold</Text>
+              </View>
+              <Text style={styles.symbolPlay}>▶</Text>
+            </Pressable>
+          </GlassView>
         </View>
 
         <View style={styles.ctaArea}>
-          <PrimaryButton text="Got it, let's go" onPress={onStart} />
+          <DitButton text="Got it, let's go" onPress={onStart} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
         </View>
       </Animated.View>
     </View>
@@ -561,6 +545,7 @@ const styles = StyleSheet.create({
   progressRow: {
     alignItems: 'center',
     paddingTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
 
   // ── Splash
@@ -598,7 +583,7 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: colors.border.subtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -611,13 +596,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
+  ctaButton: {
+    width: '100%' as unknown as number,
+  },
   skipBtn: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
   },
   skipText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.35)',
+    color: colors.text.primary40,
     textAlign: 'center',
   },
 
@@ -641,21 +629,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.35)',
+    color: colors.text.primary40,
   },
   soundCircle: {
     width: 148,
     height: 148,
     borderRadius: 74,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: colors.controls.switchTrackOff,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    backgroundColor: colors.surface.input,
   },
   soundCirclePressed: {
     borderColor: colors.accent.wave,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface.inputPressed,
     transform: [{ scale: 0.96 }],
   },
   soundCircleTapped: {
@@ -697,53 +686,54 @@ const styles = StyleSheet.create({
   },
   ditDahCards: {
     flex: 1,
-    flexDirection: 'row',
     gap: spacing.md,
-    alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.xl,
   },
-  symbolCard: {
-    flex: 1,
-    aspectRatio: 0.85,
+  symbolRow: {
     borderRadius: radii.lg,
+    overflow: 'hidden',
+  },
+  symbolRowTapped: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  symbolCardPressed: {
-    borderColor: colors.accent.wave,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    transform: [{ scale: 0.97 }],
-  },
-  symbolCardTapped: {
     borderColor: colors.feedback.success,
   },
+  symbolPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
+  },
+  symbolPressed: {
+    opacity: 0.7,
+  },
   symbolGlyph: {
-    fontSize: 52,
+    fontSize: 36,
     fontWeight: '200',
     color: colors.text.primary,
-    lineHeight: 56,
+    width: 40,
+    textAlign: 'center',
+  },
+  symbolInfo: {
+    flex: 1,
+    gap: 2,
   },
   symbolName: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 2,
     textTransform: 'uppercase',
-    color: colors.text.primary70,
+    color: colors.text.primary80,
   },
   symbolHint: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.text.primary40,
     letterSpacing: 0.3,
   },
   symbolPlay: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.text.primary40,
-    marginTop: spacing.sm,
   },
 
   // ── Exercise
@@ -860,14 +850,14 @@ const styles = StyleSheet.create({
   },
   chipGhost: {
     backgroundColor: 'transparent',
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: colors.controls.switchTrackOff,
   },
   chipPressed: { opacity: 0.75 },
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.45)',
+    color: colors.text.primary40,
     letterSpacing: 0.2,
   },
-  chipTextSelected: { color: '#fff' },
+  chipTextSelected: { color: colors.text.primary },
 })

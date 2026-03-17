@@ -1745,6 +1745,18 @@ export default function App() {
     [setNextLetterForLevel],
   )
 
+  const handleReplayNux = useCallback(() => {
+    setShowSettings(false)
+    setNuxStatus('pending')
+    setNuxStep('splash')
+    setNuxIndex(0)
+    setNuxResult(null)
+    setNuxAvgMs(null)
+    nuxTimingsRef.current = []
+    nuxAttemptStartRef.current = null
+    void AsyncStorage.setItem(NUX_STATUS_KEY, 'pending')
+  }, [])
+
   const handleNuxPresetSelect = useCallback(
     (preset: 'beginner' | 'advanced') => {
       const defaults =
@@ -2476,6 +2488,7 @@ export default function App() {
               onSignInWithGoogle={handleSignInWithGoogle}
               onSignOut={signOut}
               onDeleteAccount={handleDeleteAccount}
+              onReplayNux={__DEV__ ? handleReplayNux : undefined}
             />
           ) : null}
           {showReference ? (
