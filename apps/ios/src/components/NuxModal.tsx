@@ -18,9 +18,10 @@ type NuxStep = 'splash' | 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | '
 
 type NuxModalProps = {
   step: NuxStep;
+  status: 'idle' | 'success' | 'error';
   index: number;
   total: number;
-  result: 'fast' | 'slow' | null;
+  result: 'fast' | 'slow' | 'skipped' | null;
   avgMs: number | null;
   letter: string;
   onSplashDone: () => void;
@@ -32,6 +33,8 @@ type NuxModalProps = {
   onStart: () => void;
   onReplayLetter: () => void;
   onSkip: () => void;
+  /** Skip the exercise entirely and apply beginner settings */
+  onSkipExercise: () => void;
   onFinish: () => void;
   onChoosePreset: (preset: 'beginner' | 'advanced') => void;
 };
@@ -44,19 +47,23 @@ type NuxProgressProps = {
   step: 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | 'result';
   letterIndex: number;
   total: number;
-}
+};
 
 function NuxProgress({ step, letterIndex, total }: NuxProgressProps) {
-  const exerciseStart = 3
-  const resultSlot = exerciseStart + total
-  const totalSlots = resultSlot + 1
+  const exerciseStart = 3;
+  const resultSlot = exerciseStart + total;
+  const totalSlots = resultSlot + 1;
 
   const activeSlot =
-    step === 'welcome' ? 0
-    : step === 'sound_check' ? 1
-    : step === 'dit_dah' ? 2
-    : step === 'exercise' ? exerciseStart + letterIndex
-    : resultSlot
+    step === 'welcome'
+      ? 0
+      : step === 'sound_check'
+      ? 1
+      : step === 'dit_dah'
+      ? 2
+      : step === 'exercise'
+      ? exerciseStart + letterIndex
+      : resultSlot;
 
   return (
     <View style={progressStyles.row}>
@@ -152,6 +159,7 @@ function useStepTransition(step: string) {
 
 export function NuxModal({
   step,
+  status,
   index,
   total,
   result,
@@ -163,6 +171,7 @@ export function NuxModal({
   onReplayLetter,
   onStart,
   onSkip,
+  onSkipExercise,
   onFinish,
   onChoosePreset,
 }: NuxModalProps) {
@@ -191,17 +200,26 @@ export function NuxModal({
           </View>
           <View style={styles.heroArea}>
             <View style={styles.logoRing}>
-              <DitLogo size={130} opacity={0.85} />
+              <DitLogo size={130} opacity={0.85} animated />
             </View>
           </View>
           <View style={styles.copyArea}>
-            <Text style={styles.headline}>Let's find your speed</Text>
+            <Text style={styles.headline}>Let's find your level</Text>
             <Text style={styles.subtext}>
-              Tap 6 letters and we'll auto configure settings.
+              Tap 6 letters and we'll measure your speed and accuracy to auto-configure your
+              settings.
             </Text>
           </View>
           <View style={styles.ctaArea}>
-            <DitButton text="Start quick exercise" onPress={onNext} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
+            <DitButton
+              text="Start quick exercise"
+              onPress={onNext}
+              style={styles.ctaButton}
+              textStyle={ctaTextStyle}
+              radius={radii.pill}
+              paddingVertical={16}
+              glassEffectStyle="clear"
+            />
             <Pressable
               onPress={onSkip}
               style={styles.skipBtn}
@@ -243,62 +261,88 @@ export function NuxModal({
   }
 
   if (step === 'exercise') {
-    const progressItems = Array.from({ length: total })
+    const progressItems = Array.from({ length: total });
+    const isError = status === 'error';
     return (
       <View style={styles.fullScreen} pointerEvents="box-none" accessibilityViewIsModal>
         <Animated.View
           style={[
             styles.exerciseContent,
-            { paddingTop, paddingBottom: paddingBottom + 120 },
+            { paddingTop, paddingBottom: paddingBottom + 72 },
             animStyle,
           ]}
-          pointerEvents="none"
+          pointerEvents="box-none"
         >
-          <View style={styles.progressRow}>
-            <NuxProgress step="exercise" letterIndex={index} total={total} />
-          </View>
-          <View style={styles.letterArea}>
+          {/* Top */}
+          <View pointerEvents="none">
+            <View style={styles.progressRow}>
+              <NuxProgress step="exercise" letterIndex={index} total={total} />
+            </View>
             <Text style={styles.tapLabel}>TAP WHAT YOU HEAR</Text>
-            <Text style={styles.bigLetter}>{letter}</Text>
           </View>
-          <View style={styles.exerciseFooter}>
-            {progressItems.map((_, i) => {
-              const isDone = i < index
-              const isActive = i === index
-              return (
-                <View
-                  key={`letter-${i}`}
-                  style={[
-                    styles.letterDot,
-                    isDone && styles.letterDotDone,
-                    isActive && styles.letterDotActive,
-                  ]}
-                />
-              )
-            })}
+
+          {/* Letter group */}
+          <View style={styles.letterGroup} pointerEvents="box-none">
+            <Pressable
+              onPress={onReplayLetter}
+              style={({ pressed }) => [styles.replayBtn, pressed && styles.replayBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Hear this letter"
+            >
+              <Text style={styles.replayBtnText}>▶ play sound</Text>
+            </Pressable>
+            <Text style={[styles.bigLetter, isError && styles.bigLetterError]}>{letter}</Text>
+            <Text style={[styles.errorHint, isError && styles.errorHintVisible]}>
+              Not quite. Try again
+            </Text>
+            <View style={styles.exerciseFooter}>
+              {progressItems.map((_, i) => {
+                const isDone = i < index;
+                const isActive = i === index;
+                return (
+                  <View
+                    key={`letter-${i}`}
+                    style={[
+                      styles.letterDot,
+                      isDone && styles.letterDotDone,
+                      isActive && styles.letterDotActive,
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Bottom */}
+          <View style={styles.exerciseBottom} pointerEvents="box-none">
+            <Pressable
+              onPress={onSkipExercise}
+              style={({ pressed }) => [
+                styles.exerciseSkipBtn,
+                pressed && styles.exerciseSkipBtnPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Skip test and use beginner settings"
+            >
+              <Text style={styles.exerciseSkipText}>skip exercise</Text>
+            </Pressable>
           </View>
         </Animated.View>
-        <View style={styles.replayOverlay} pointerEvents="box-none">
-          <Pressable
-            onPress={onReplayLetter}
-            style={({ pressed }) => [styles.replayBtn, pressed && styles.replayBtnPressed]}
-            accessibilityRole="button"
-            accessibilityLabel="Hear this letter"
-          >
-            <Text style={styles.replayBtnText}>▶  hear it</Text>
-          </Pressable>
-        </View>
       </View>
     )
   }
 
   // ── Result ─────────────────────────────────────────────────────────────────
-  const isFast = result === 'fast'
-  const gaugeColor = isFast ? colors.feedback.success : colors.accent.wave
-  const resultHeadline = isFast ? "You're quick" : 'Great start'
-  const presetName = isFast ? 'advanced' : 'beginner'
-  const resultSubtext = `We've set you up with ${presetName} defaults. You can always adjust later.`
-  const timeDisplay = avgMs !== null ? `${(avgMs / 1000).toFixed(1)}s` : '—'
+  const isFast = result === 'fast';
+  const gaugeColor = isFast ? colors.feedback.success : colors.accent.wave;
+  const resultHeadline = isFast
+    ? "You're quick"
+    : result === 'skipped'
+    ? 'No problem'
+    : 'Great start';
+  const presetName = isFast ? 'advanced' : 'beginner';
+  const resultSubtext = `We've set you up with ${presetName} defaults. You can always adjust later.`;
+  const timeDisplay = avgMs !== null ? `${(avgMs / 1000).toFixed(1)}s` : '—';
 
   return (
     <View style={styles.fullScreen} pointerEvents="auto" accessibilityViewIsModal>
@@ -347,11 +391,19 @@ export function NuxModal({
           </Pressable>
         </View>
         <View style={styles.ctaArea}>
-          <DitButton text="Let's go" onPress={onFinish} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
+          <DitButton
+            text="Let's go"
+            onPress={onFinish}
+            style={styles.ctaButton}
+            textStyle={ctaTextStyle}
+            radius={radii.pill}
+            paddingVertical={16}
+            glassEffectStyle="clear"
+          />
         </View>
       </Animated.View>
     </View>
-  )
+  );
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
@@ -387,7 +439,7 @@ function SplashStep({
         style={[styles.splashContent, { paddingTop, paddingBottom }, { opacity: fadeAnim }]}
       >
         <View style={styles.splashLogoWrap}>
-          <DitLogo size={96} opacity={0.9} />
+          <DitLogo size={96} opacity={0.9} animated />
         </View>
         <Text style={styles.splashTitle}>Welcome to Dit</Text>
       </Animated.View>
@@ -428,9 +480,7 @@ function SoundCheckStep({
 
         <View style={styles.soundCheckMain}>
           <Text style={styles.headline}>Sound check</Text>
-          <Text style={styles.subtext}>
-            Learning by ear is faster — you don't need to know any Morse code yet.
-          </Text>
+          <Text style={styles.subtext}>Learning by ear is more effective long-term.</Text>
         </View>
 
         <View style={styles.soundCheckInteractive}>
@@ -450,7 +500,15 @@ function SoundCheckStep({
         </View>
 
         <View style={styles.ctaArea}>
-          <DitButton text="Sounds good" onPress={onNext} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
+          <DitButton
+            text="Sounds good"
+            onPress={onNext}
+            style={styles.ctaButton}
+            textStyle={ctaTextStyle}
+            radius={radii.pill}
+            paddingVertical={16}
+            glassEffectStyle="clear"
+          />
         </View>
       </Animated.View>
     </View>
@@ -486,9 +544,7 @@ function DitDahStep({
 
         <View style={styles.ditDahMain}>
           <Text style={styles.headline}>dit · dah</Text>
-          <Text style={styles.subtext}>
-            Two sounds — short and long. Morse is made of them.
-          </Text>
+          <Text style={styles.subtext}>Two sounds. Short and long.</Text>
         </View>
 
         <View style={styles.ditDahCards}>
@@ -498,11 +554,11 @@ function DitDahStep({
             style={[styles.symbolRow, tappedDit && styles.symbolRowTapped]}
           >
             <Pressable
-              onPress={() => { onPlaySymbol('.'); setTappedDit(true) }}
-              style={({ pressed }) => [
-                styles.symbolPressable,
-                pressed && styles.symbolPressed,
-              ]}
+              onPress={() => {
+                onPlaySymbol('.');
+                setTappedDit(true);
+              }}
+              style={({ pressed }) => [styles.symbolPressable, pressed && styles.symbolPressed]}
               accessibilityRole="button"
               accessibilityLabel="Tap to hear dit — short press"
             >
@@ -521,11 +577,11 @@ function DitDahStep({
             style={[styles.symbolRow, tappedDah && styles.symbolRowTapped]}
           >
             <Pressable
-              onPress={() => { onPlaySymbol('-'); setTappedDah(true) }}
-              style={({ pressed }) => [
-                styles.symbolPressable,
-                pressed && styles.symbolPressed,
-              ]}
+              onPress={() => {
+                onPlaySymbol('-');
+                setTappedDah(true);
+              }}
+              style={({ pressed }) => [styles.symbolPressable, pressed && styles.symbolPressed]}
               accessibilityRole="button"
               accessibilityLabel="Tap to hear dah — hold"
             >
@@ -540,7 +596,15 @@ function DitDahStep({
         </View>
 
         <View style={styles.ctaArea}>
-          <DitButton text="Got it, let's go" onPress={onStart} style={styles.ctaButton} textStyle={ctaTextStyle} radius={radii.pill} paddingVertical={16} glassEffectStyle="clear" />
+          <DitButton
+            text="Got it, let's go"
+            onPress={onStart}
+            style={styles.ctaButton}
+            textStyle={ctaTextStyle}
+            radius={radii.pill}
+            paddingVertical={16}
+            glassEffectStyle="clear"
+          />
         </View>
       </Animated.View>
     </View>
@@ -642,6 +706,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
     color: colors.text.primary40,
+    textAlign: 'center',
   },
   soundCircle: {
     width: 148,
@@ -673,12 +738,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary60,
     lineHeight: 28,
   },
-  replayOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
   replayBtn: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
@@ -690,6 +749,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.primary40,
     letterSpacing: 0.5,
+  },
+  exerciseSkipBtn: {
+    paddingVertical: 9,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.text.primary20,
+  },
+  exerciseSkipBtnPressed: {
+    opacity: 0.5,
+  },
+  exerciseSkipText: {
+    fontSize: 13,
+    color: colors.text.primary40,
+    letterSpacing: 0.3,
   },
 
   // ── Dit / Dah
@@ -760,11 +834,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     justifyContent: 'space-between',
   },
-  letterArea: {
+  letterGroup: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
+  },
+  exerciseBottom: {
+    alignItems: 'center',
   },
   bigLetter: {
     fontSize: 108,
@@ -772,11 +849,21 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     lineHeight: 120,
   },
+  bigLetterError: {
+    color: colors.feedback.error,
+  },
+  errorHint: {
+    fontSize: 13,
+    color: 'transparent',
+    letterSpacing: 0.3,
+  },
+  errorHintVisible: {
+    color: colors.feedback.error,
+  },
   exerciseFooter: {
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'center',
-    paddingBottom: spacing.lg,
   },
   letterDot: {
     width: 8,
@@ -863,8 +950,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chipSelected: {
-    backgroundColor: colors.accent.wave,
-    borderColor: colors.accent.wave,
+    backgroundColor: colors.surface.card,
+    borderColor: colors.feedback.success,
   },
   chipGhost: {
     backgroundColor: 'transparent',

@@ -151,7 +151,7 @@ const NUX_SLOW_DEFAULTS = {
 type IntroHintStep = 'morse' | 'settings' | 'done'
 type NuxStatus = 'pending' | 'completed' | 'skipped'
 type NuxStep = 'splash' | 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | 'result'
-type NuxResult = 'fast' | 'slow' | null
+type NuxResult = 'fast' | 'slow' | 'skipped' | null
 type ListenPromptTiming = {
   targetLetter: Letter
   expectedEndAt: number
@@ -508,6 +508,7 @@ export default function App() {
   >(null)
   const nuxTimingsRef = useRef<number[]>([])
   const nuxAttemptStartRef = useRef<number | null>(null)
+  const nuxErrorCountRef = useRef<number>(0)
   useEffect(() => {
     let isActive = true
     const loadIntroHints = async () => {
@@ -1249,6 +1250,7 @@ export default function App() {
     setNuxResult(null)
     nuxTimingsRef.current = []
     nuxAttemptStartRef.current = null
+    nuxErrorCountRef.current = 0
     setShowSettings(false)
     setShowAbout(false)
     setShowReference(false)
@@ -1434,7 +1436,6 @@ export default function App() {
     clearTimer(errorTimeoutRef)
     setInput('')
     setStatus('idle')
-    nuxAttemptStartRef.current = null
     stopListenPlayback()
     void triggerHaptics(12)
     void playMorseTone({
@@ -1515,6 +1516,7 @@ export default function App() {
             setStatus('success')
             successTimeoutRef.current = setTimeout(() => {
               const nextLetter = NUX_LETTERS[nextIndex]
+              nuxAttemptStartRef.current = null  // reset for next letter
               setNuxIndex(nextIndex)
               letterRef.current = nextLetter
               setLetter(nextLetter)
@@ -1542,7 +1544,9 @@ export default function App() {
           bumpScore(targetLetter, -1)
         }
         setInput('')
-        nuxAttemptStartRef.current = null
+        if (isNuxActive && nuxStep === 'exercise') {
+          nuxErrorCountRef.current += 1
+        }
         if (ifrEnabled) {
           if (practiceReviewMissesRef.current) {
             practiceReviewQueueRef.current = enqueueReviewLetter(
@@ -1766,6 +1770,7 @@ export default function App() {
     setNuxAvgMs(null)
     nuxTimingsRef.current = []
     nuxAttemptStartRef.current = null
+    nuxErrorCountRef.current = 0
     void AsyncStorage.setItem(NUX_STATUS_KEY, 'pending')
   }, [])
 
@@ -1779,13 +1784,24 @@ export default function App() {
     [applyNuxDefaults],
   )
 
+  const handleNuxSkipExercise = useCallback(() => {
+    clearTimer(errorTimeoutRef)
+    clearTimer(successTimeoutRef)
+    setInput('')
+    setStatus('idle')
+    applyNuxDefaults(NUX_SLOW_DEFAULTS)
+    setNuxAvgMs(null)
+    setNuxResult('skipped')
+    setNuxStep('result')
+  }, [applyNuxDefaults])
+
   const completeNux = useCallback(() => {
     const timings = nuxTimingsRef.current
     const averageMs =
       timings.length === 0
         ? NUX_FAST_THRESHOLD_MS + 1
         : timings.reduce((sum, value) => sum + value, 0) / timings.length
-    const isFast = averageMs <= NUX_FAST_THRESHOLD_MS
+    const isFast = averageMs <= NUX_FAST_THRESHOLD_MS && nuxErrorCountRef.current <= 1
     const defaults = isFast ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
     applyNuxDefaults(defaults)
     setNuxAvgMs(Math.round(averageMs))
@@ -2610,6 +2626,7 @@ export default function App() {
         {isNuxActive ? (
           <NuxModal
             step={nuxStep}
+            status={status}
             index={nuxIndex}
             total={NUX_LETTERS.length}
             result={nuxResult}
@@ -2621,6 +2638,7 @@ export default function App() {
             onReplayLetter={handleNuxReplayLetter}
             onStart={handleNuxStart}
             onSkip={handleNuxSkip}
+            onSkipExercise={handleNuxSkipExercise}
             onFinish={handleNuxFinish}
             onChoosePreset={handleNuxPresetSelect}
           />
