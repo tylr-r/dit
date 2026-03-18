@@ -2304,8 +2304,6 @@ export default function App() {
           return
         }
 
-        console.error('Failed to delete account', error)
-
         if (accountDeleted) {
           resetProgressState()
           Alert.alert(

@@ -3,7 +3,6 @@ import {
   deleteUser,
   GoogleAuthProvider,
   OAuthProvider,
-  reauthenticateWithCredential,
   signInWithCredential,
   type User,
 } from '@firebase/auth'
@@ -100,9 +99,6 @@ export const prepareCurrentUserAccountDeletion = async (user?: User | null) => {
       throw new Error('No authorization code returned from Apple account deletion flow')
     }
 
-    const credential = createAppleCredential(result)
-
-    await reauthenticateWithCredential(currentUser, credential)
     await DitNative.revokeAppleTokenForAccountDeletion(
       result.authorizationCode,
       currentUser.uid,
