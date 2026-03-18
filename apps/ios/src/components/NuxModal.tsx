@@ -181,56 +181,17 @@ export function NuxModal({
   const paddingTop = insets.top + spacing.xl
   const paddingBottom = insets.bottom + spacing.xl
 
-  if (step === 'splash') {
+  if (step === 'splash' || step === 'welcome') {
     return (
-      <SplashStep
-        onSplashDone={onSplashDone}
+      <SplashWelcomeStep
+        step={step}
         paddingTop={paddingTop}
         paddingBottom={paddingBottom}
+        total={total}
+        onSplashDone={onSplashDone}
+        onNext={onNext}
+        onSkip={onSkip}
       />
-    )
-  }
-
-  if (step === 'welcome') {
-    return (
-      <View style={styles.fullScreen} pointerEvents="auto" accessibilityViewIsModal>
-        <Animated.View style={[styles.welcomeContent, { paddingTop, paddingBottom }, animStyle]}>
-          <View style={styles.progressRow}>
-            <NuxProgress step="welcome" letterIndex={0} total={total} />
-          </View>
-          <View style={styles.heroArea}>
-            <View style={styles.logoRing}>
-              <DitLogo size={130} opacity={0.85} animated />
-            </View>
-          </View>
-          <View style={styles.copyArea}>
-            <Text style={styles.headline}>Let's find your level</Text>
-            <Text style={styles.subtext}>
-              Tap 6 letters and we'll measure your speed and accuracy to auto-configure your
-              settings.
-            </Text>
-          </View>
-          <View style={styles.ctaArea}>
-            <DitButton
-              text="Start quick exercise"
-              onPress={onNext}
-              style={styles.ctaButton}
-              textStyle={ctaTextStyle}
-              radius={radii.pill}
-              paddingVertical={16}
-              glassEffectStyle="clear"
-            />
-            <Pressable
-              onPress={onSkip}
-              style={styles.skipBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Skip personalization"
-            >
-              <Text style={styles.skipText}>Skip for now</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      </View>
     )
   }
 
@@ -406,43 +367,123 @@ export function NuxModal({
   );
 }
 
-// ─── Splash ───────────────────────────────────────────────────────────────────
+// ─── Splash / Welcome shared view ────────────────────────────────────────────
+//
+// Both steps share a single layout so the logo never unmounts. The splash title
+// crossfades into the welcome copy/progress/CTA using animated opacities.
 
-function SplashStep({
-  onSplashDone,
+function SplashWelcomeStep({
+  step,
   paddingTop,
   paddingBottom,
+  total,
+  onSplashDone,
+  onNext,
+  onSkip,
 }: {
-  onSplashDone: () => void
+  step: 'splash' | 'welcome'
   paddingTop: number
   paddingBottom: number
+  total: number
+  onSplashDone: () => void
+  onNext: () => void
+  onSkip: () => void
 }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current
+  // Splash title: fades in on mount, fades out when step becomes 'welcome'
+  const splashOpacity = useRef(new Animated.Value(0)).current
+  // Welcome elements: fade in when step becomes 'welcome'
+  const welcomeOpacity = useRef(new Animated.Value(0)).current
 
+  // Splash entrance
   useEffect(() => {
-    const animation = Animated.timing(fadeAnim, {
+    Animated.timing(splashOpacity, {
       toValue: 1,
       duration: 1100,
       useNativeDriver: true,
-    })
-    animation.start()
+    }).start()
     const timer = setTimeout(onSplashDone, 2400)
-    return () => {
-      clearTimeout(timer)
-      animation.stop()
-    }
-  }, []) // intentionally empty — splash runs once on mount
+    return () => clearTimeout(timer)
+  }, []) // intentionally empty — runs once on mount
+
+  // Crossfade splash → welcome
+  useEffect(() => {
+    if (step !== 'welcome') return
+    Animated.parallel([
+      Animated.timing(splashOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(welcomeOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [step, splashOpacity, welcomeOpacity])
 
   return (
     <View style={styles.fullScreen} pointerEvents="auto" accessibilityViewIsModal>
-      <Animated.View
-        style={[styles.splashContent, { paddingTop, paddingBottom }, { opacity: fadeAnim }]}
-      >
-        <View style={styles.splashLogoWrap}>
-          <DitLogo size={96} opacity={0.9} animated />
+      <View style={[styles.welcomeContent, { paddingTop, paddingBottom }]}>
+        {/* Progress */}
+        <Animated.View style={[styles.progressRow, { opacity: welcomeOpacity }]}>
+          <NuxProgress step="welcome" letterIndex={0} total={total} />
+        </Animated.View>
+
+        {/* Logo — always visible, never animated */}
+        <View style={styles.heroArea}>
+          <View style={styles.logoRing}>
+            <DitLogo size={130} opacity={0.85} animated />
+          </View>
         </View>
-        <Text style={styles.splashTitle}>Welcome to Dit</Text>
-      </Animated.View>
+
+        {/* Copy — both layers rendered, crossfaded */}
+        <View style={styles.copyArea}>
+          {/* Splash title (absolute so it doesn't affect layout) */}
+          <Animated.View
+            style={[styles.splashOverlay, { opacity: splashOpacity }]}
+            pointerEvents="none"
+          >
+            <Text style={styles.splashTitle}>Welcome to Dit</Text>
+          </Animated.View>
+          {/* Welcome copy */}
+          <Animated.View style={{ opacity: welcomeOpacity }}>
+            <Text style={styles.headline}>Let's find your level</Text>
+            <Text style={[styles.subtext, { marginTop: spacing.md }]}>
+              Tap 6 letters and we'll measure your speed and accuracy to auto-configure your
+              settings.
+            </Text>
+          </Animated.View>
+        </View>
+
+        {/* CTA — always in the tree so layout stays stable (no logo jump).
+             The button itself is NOT wrapped in an opacity Animated.View because
+             GlassView can't composite when a parent has opacity 0. Instead the
+             button appears instantly on welcome. The skip link fades in. */}
+        <View style={styles.ctaArea} pointerEvents={step === 'welcome' ? 'auto' : 'none'}>
+          <View style={step === 'splash' ? styles.invisible : undefined}>
+            <DitButton
+              text="Start quick exercise"
+              onPress={onNext}
+              style={styles.ctaButton}
+              textStyle={ctaTextStyle}
+              radius={radii.pill}
+              paddingVertical={16}
+              glassEffectStyle="clear"
+            />
+          </View>
+          <View style={step === 'splash' ? styles.invisible : undefined}>
+            <Pressable
+              onPress={onSkip}
+              style={styles.skipBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Skip personalization"
+            >
+              <Text style={styles.skipText}>skip</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
     </View>
   )
 }
@@ -625,14 +666,13 @@ const styles = StyleSheet.create({
   },
 
   // ── Splash
-  splashContent: {
-    flex: 1,
+  invisible: {
+    opacity: 0,
+  },
+  splashOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xl,
-  },
-  splashLogoWrap: {
-    marginBottom: spacing.md,
   },
   splashTitle: {
     fontSize: 30,
