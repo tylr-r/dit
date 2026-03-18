@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Footer } from './Footer';
+import type { ReactNode } from 'react'
+import { Footer } from './Footer'
 
 type LegalPageLayoutProps = {
   title: string;
@@ -54,8 +54,8 @@ const LegalPageLayout = ({
       <article className="legal-card">{children}</article>
       <Footer />
     </div>
-  );
-};
+  )
+}
 
 type LegalSectionProps = {
   title: string;
@@ -67,7 +67,7 @@ const LegalSection = ({ title, children }: LegalSectionProps) => (
     <h2>{title}</h2>
     {children}
   </section>
-);
+)
 
 /** Privacy policy content page for Dit. */
 export function PrivacyPolicy() {
@@ -187,7 +187,7 @@ export function PrivacyPolicy() {
         </p>
       </LegalSection>
     </LegalPageLayout>
-  );
+  )
 }
 
 /** Terms of service content page for Dit. */
@@ -299,7 +299,7 @@ export function TermsOfService() {
         </p>
       </LegalSection>
     </LegalPageLayout>
-  );
+  )
 }
 
 /** Public support contact page for Dit. */
@@ -331,5 +331,5 @@ export function SupportPage() {
         </p>
       </LegalSection>
     </LegalPageLayout>
-  );
+  )
 }

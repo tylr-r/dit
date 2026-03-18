@@ -23,22 +23,12 @@ import {
   type Progress,
   type ProgressSnapshot,
 } from '@dit/core'
-import {
-  addLowPowerModeListener,
-  getLowPowerModeEnabled,
-  triggerHaptics,
-} from '@dit/dit-native'
+import { addLowPowerModeListener, getLowPowerModeEnabled, triggerHaptics } from '@dit/dit-native'
 import type { User } from '@firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native'
+import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg'
 import { AboutModal } from './src/components/AboutModal'
@@ -134,8 +124,7 @@ const NUX_FAST_DEFAULTS = {
   listenWpm: DEFAULT_LISTEN_WPM,
   listenEffectiveWpm: DEFAULT_LISTEN_WPM,
   listenAutoTightening: false,
-  listenAutoTighteningCorrectCount:
-    LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight,
+  listenAutoTighteningCorrectCount: LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight,
   maxLevel: 4,
 } as const
 const NUX_SLOW_DEFAULTS = {
@@ -143,8 +132,7 @@ const NUX_SLOW_DEFAULTS = {
   listenWpm: DEFAULT_LISTEN_WPM,
   listenEffectiveWpm: DEFAULT_LISTEN_EFFECTIVE_WPM,
   listenAutoTightening: DEFAULT_LISTEN_AUTO_TIGHTENING,
-  listenAutoTighteningCorrectCount:
-    DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
+  listenAutoTighteningCorrectCount: DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
   maxLevel: 1,
 } as const
 
@@ -156,21 +144,10 @@ type ListenPromptTiming = {
   targetLetter: Letter
   expectedEndAt: number
 }
-const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter(
-  (letter) => /^[A-Z]$/.test(letter),
+const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter((letter) =>
+  /^[A-Z]$/.test(letter),
 )
-const REFERENCE_NUMBERS: Letter[] = [
-  '0',
-  '1',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-]
+const REFERENCE_NUMBERS: Letter[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 type TimeoutHandle = ReturnType<typeof setTimeout>
 
@@ -219,13 +196,8 @@ const applyListenTtrSample = (
     }
   }
   const alpha = Math.min(0.85, LISTEN_TTR_EMA_ALPHA * normalizedWeight)
-  const averageMs = clampListenTtrMs(
-    existing.averageMs * (1 - alpha) + normalizedSampleMs * alpha,
-  )
-  const samples = Math.min(
-    LISTEN_TTR_MAX_SAMPLES,
-    existing.samples + normalizedWeight,
-  )
+  const averageMs = clampListenTtrMs(existing.averageMs * (1 - alpha) + normalizedSampleMs * alpha)
+  const samples = Math.min(LISTEN_TTR_MAX_SAMPLES, existing.samples + normalizedWeight)
   return {
     ...current,
     [letter]: {
@@ -255,11 +227,7 @@ const enqueueListenOverlearnLetters = (
     return queue
   }
   const nextQueue = [...queue]
-  for (
-    let count = 0;
-    count < repeats && nextQueue.length < maxSize;
-    count += 1
-  ) {
+  for (let count = 0; count < repeats && nextQueue.length < maxSize; count += 1) {
     nextQueue.push(letter)
   }
   return nextQueue
@@ -284,9 +252,7 @@ const pullNextListenOverlearnLetter = (
       reviewLetter: null as Letter | null,
     }
   }
-  const nextIndex = filteredQueue.findIndex(
-    (letter) => letter !== previousLetter,
-  )
+  const nextIndex = filteredQueue.findIndex((letter) => letter !== previousLetter)
   const resolvedIndex = nextIndex >= 0 ? nextIndex : 0
   const reviewLetter = filteredQueue[resolvedIndex]
   return {
@@ -308,10 +274,7 @@ const initialConfig = createInitialPracticeConfig()
 
 const getDeleteAccountErrorMessage = (error: unknown) => {
   const code =
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    typeof error.code === 'string'
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
       ? error.code
       : null
 
@@ -335,12 +298,7 @@ const getDeleteAccountErrorMessage = (error: unknown) => {
 }
 
 const isErrorWithCode = (error: unknown, code: string) =>
-  Boolean(
-    error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      error.code === code,
-  )
+  Boolean(error && typeof error === 'object' && 'code' in error && error.code === code)
 
 const getSignInErrorMessage = (error: unknown) => {
   if (isErrorWithCode(error, 'auth/account-exists-with-different-credential')) {
@@ -406,9 +364,9 @@ const BackgroundGlow = () => {
               cy={glow.cy}
               r={1}
               gradientUnits="userSpaceOnUse"
-              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${
-                glow.rx
-              } ${glow.ry}) translate(${-glow.cx} ${-glow.cy})`}
+              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${glow.rx} ${
+                glow.ry
+              }) translate(${-glow.cx} ${-glow.cy})`}
             >
               <Stop
                 offset="0%"
@@ -429,12 +387,7 @@ const BackgroundGlow = () => {
           ))}
         </Defs>
         {glowStops.map((glow) => (
-          <Rect
-            key={`${glow.id}-rect`}
-            width={width}
-            height={height}
-            fill={`url(#${glow.id})`}
-          />
+          <Rect key={`${glow.id}-rect`} width={width} height={height} fill={`url(#${glow.id})`} />
         ))}
       </Svg>
     </View>
@@ -450,19 +403,14 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [mode, setMode] = useState<Mode>('practice')
-  const [isSystemLowPowerModeEnabled, setIsSystemLowPowerModeEnabled] =
-    useState(false)
+  const [isSystemLowPowerModeEnabled, setIsSystemLowPowerModeEnabled] = useState(false)
   const [isBackgroundIdle, setIsBackgroundIdle] = useState(false)
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
-  const [practiceIfrMode, setPracticeIfrMode] = useState(
-    DEFAULT_PRACTICE_IFR_MODE,
-  )
-  const [practiceReviewMisses, setPracticeReviewMisses] = useState(
-    DEFAULT_PRACTICE_REVIEW_MISSES,
-  )
+  const [practiceIfrMode, setPracticeIfrMode] = useState(DEFAULT_PRACTICE_IFR_MODE)
+  const [practiceReviewMisses, setPracticeReviewMisses] = useState(DEFAULT_PRACTICE_REVIEW_MISSES)
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
   const [nuxStep, setNuxStep] = useState<NuxStep>('splash')
@@ -483,29 +431,18 @@ export default function App() {
   const [freestyleWordMode, setFreestyleWordMode] = useState(false)
   const [freestyleWord, setFreestyleWord] = useState('')
   const [listenWpm, setListenWpm] = useState(DEFAULT_LISTEN_WPM)
-  const [listenEffectiveWpm, setListenEffectiveWpm] = useState(
-    DEFAULT_LISTEN_EFFECTIVE_WPM,
+  const [listenEffectiveWpm, setListenEffectiveWpm] = useState(DEFAULT_LISTEN_EFFECTIVE_WPM)
+  const [listenAutoTightening, setListenAutoTightening] = useState(DEFAULT_LISTEN_AUTO_TIGHTENING)
+  const [listenAutoTighteningCorrectCount, setListenAutoTighteningCorrectCount] = useState(
+    DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
   )
-  const [listenAutoTightening, setListenAutoTightening] = useState(
-    DEFAULT_LISTEN_AUTO_TIGHTENING,
-  )
-  const [
-    listenAutoTighteningCorrectCount,
-    setListenAutoTighteningCorrectCount,
-  ] = useState(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
-  const [listenStatus, setListenStatus] = useState<
-    'idle' | 'success' | 'error'
-  >('idle')
+  const [listenStatus, setListenStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [listenReveal, setListenReveal] = useState<Letter | null>(null)
-  const [listenWavePlayback, setListenWavePlayback] =
-    useState<ListenWavePlayback | null>(null)
+  const [listenWavePlayback, setListenWavePlayback] = useState<ListenWavePlayback | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
   const [listenTtr, setListenTtr] = useState<ListenTtrRecord>({})
-  const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] =
-    useState(false)
-  const [listenRecognitionText, setListenRecognitionText] = useState<
-    string | null
-  >(null)
+  const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
+  const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(null)
   const nuxTimingsRef = useRef<number[]>([])
   const nuxAttemptStartRef = useRef<number | null>(null)
   const nuxErrorCountRef = useRef<number>(0)
@@ -581,11 +518,9 @@ export default function App() {
       stack?: string
       [key: string]: unknown
     }
-    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch(
-      (error: AsyncStorageError) => {
-        console.error('Failed to save intro hints', error)
-      },
-    )
+    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error: AsyncStorageError) => {
+      console.error('Failed to save intro hints', error)
+    })
   }, [])
   const persistNuxStatus = useCallback((next: NuxStatus) => {
     setNuxStatus(next)
@@ -626,16 +561,12 @@ export default function App() {
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
   const isBackgroundAnimationPaused =
-    !(nuxReady && nuxStatus === 'pending') &&
-    (isSystemLowPowerModeEnabled || isBackgroundIdle)
+    !(nuxReady && nuxStatus === 'pending') && (isSystemLowPowerModeEnabled || isBackgroundIdle)
   const isNuxActive = nuxReady && nuxStatus === 'pending'
   const userForSync = isDeletingAccount ? null : user
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
   const isReferencePanelActive = showReference
-  const availableLetters = useMemo(
-    () => getLettersForLevel(maxLevel),
-    [maxLevel],
-  )
+  const availableLetters = useMemo(() => getLettersForLevel(maxLevel), [maxLevel])
   const availablePracticeWords = useMemo(
     () => getWordsForLetters(availableLetters),
     [availableLetters],
@@ -693,9 +624,7 @@ export default function App() {
   const listenWpmRef = useRef(listenWpm)
   const listenEffectiveWpmRef = useRef(listenEffectiveWpm)
   const listenAutoTighteningRef = useRef(listenAutoTightening)
-  const listenAutoTighteningCorrectCountRef = useRef(
-    listenAutoTighteningCorrectCount,
-  )
+  const listenAutoTighteningCorrectCountRef = useRef(listenAutoTighteningCorrectCount)
   const listenStatusRef = useRef(listenStatus)
   const listenOverlearnQueueRef = useRef<Letter[]>([])
   const listenPromptTimingRef = useRef<ListenPromptTiming | null>(null)
@@ -737,20 +666,17 @@ export default function App() {
     }
   }, [registerAppInteraction])
 
-  const setPracticeWordFromList = useCallback(
-    (words: string[], avoidWord?: string) => {
-      const nextWord = getRandomWord(words, avoidWord)
-      practiceWordRef.current = nextWord
-      practiceWordIndexRef.current = 0
-      practiceWordStartRef.current = null
-      const nextLetter = nextWord[0] as Letter
-      letterRef.current = nextLetter
-      setPracticeWord(nextWord)
-      setPracticeWordIndex(0)
-      setLetter(nextLetter)
-    },
-    [],
-  )
+  const setPracticeWordFromList = useCallback((words: string[], avoidWord?: string) => {
+    const nextWord = getRandomWord(words, avoidWord)
+    practiceWordRef.current = nextWord
+    practiceWordIndexRef.current = 0
+    practiceWordStartRef.current = null
+    const nextLetter = nextWord[0] as Letter
+    letterRef.current = nextLetter
+    setPracticeWord(nextWord)
+    setPracticeWordIndex(0)
+    setLetter(nextLetter)
+  }, [])
 
   const setNextLetterForLevel = useCallback(
     (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
@@ -775,9 +701,7 @@ export default function App() {
         return currentLetter
       }
       if (practiceIfrModeRef.current && practiceReviewMissesRef.current) {
-        const { nextQueue, reviewLetter } = pullDueReviewLetter(
-          practiceReviewQueueRef.current,
-        )
+        const { nextQueue, reviewLetter } = pullDueReviewLetter(practiceReviewQueueRef.current)
         practiceReviewQueueRef.current = nextQueue
         if (reviewLetter && nextLetters.includes(reviewLetter)) {
           letterRef.current = reviewLetter
@@ -816,11 +740,7 @@ export default function App() {
           listenTtrRef.current,
           currentLetter,
         )
-      if (
-        hasReachedConsecutiveCap &&
-        nextLetter === currentLetter &&
-        nextLetters.length > 1
-      ) {
+      if (hasReachedConsecutiveCap && nextLetter === currentLetter && nextLetters.length > 1) {
         if (reviewLetter === currentLetter) {
           nextQueue = enqueueListenOverlearnLetters(
             nextQueue,
@@ -829,9 +749,7 @@ export default function App() {
             LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
           )
         }
-        const alternatives = nextLetters.filter(
-          (letter) => letter !== currentLetter,
-        )
+        const alternatives = nextLetters.filter((letter) => letter !== currentLetter)
         nextLetter = getRandomLatencyAwareLetter(
           alternatives,
           scoresRef.current,
@@ -868,8 +786,7 @@ export default function App() {
       if (startTime && currentWord.length > 0) {
         const elapsedMs = now() - startTime
         if (elapsedMs > 0) {
-          const nextWpm =
-            (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
+          const nextWpm = (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
           setPracticeWpm(Math.round(nextWpm * 10) / 10)
         }
       }
@@ -901,8 +818,7 @@ export default function App() {
     listenWpmRef.current = listenWpm
     listenEffectiveWpmRef.current = listenEffectiveWpm
     listenAutoTighteningRef.current = listenAutoTightening
-    listenAutoTighteningCorrectCountRef.current =
-      listenAutoTighteningCorrectCount
+    listenAutoTighteningCorrectCountRef.current = listenAutoTighteningCorrectCount
     listenStatusRef.current = listenStatus
   }, [
     freestyleInput,
@@ -954,18 +870,9 @@ export default function App() {
       )
       const resolvedCharacterWpm = normalizedListenSpeeds.characterWpm
       const resolvedEffectiveWpm = normalizedListenSpeeds.effectiveWpm
-      const timing = getListenTiming(
-        resolvedCharacterWpm,
-        resolvedEffectiveWpm,
-        LISTEN_MIN_UNIT_MS,
-      )
+      const timing = getListenTiming(resolvedCharacterWpm, resolvedEffectiveWpm, LISTEN_MIN_UNIT_MS)
       const expectedEndAt =
-        now() +
-        getListenPlaybackDurationMs(
-          code,
-          timing.unitMs,
-          timing.interCharacterGapMs,
-        )
+        now() + getListenPlaybackDurationMs(code, timing.unitMs, timing.interCharacterGapMs)
       listenPromptTimingRef.current = {
         targetLetter: letterRef.current,
         expectedEndAt,
@@ -1060,19 +967,13 @@ export default function App() {
     setShowReference(false)
   }, [isNuxActive])
 
-  const canScoreAttempt = useCallback(
-    () => !showHint && !isNuxActive,
-    [isNuxActive, showHint],
-  )
+  const canScoreAttempt = useCallback(() => !showHint && !isNuxActive, [isNuxActive, showHint])
 
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
   }, [])
 
-  const isErrorLocked = useCallback(
-    () => now() < errorLockoutUntilRef.current,
-    [],
-  )
+  const isErrorLocked = useCallback(() => now() < errorLockoutUntilRef.current, [])
 
   const startErrorLockout = useCallback(() => {
     errorLockoutUntilRef.current = now() + ERROR_LOCKOUT_MS
@@ -1160,9 +1061,7 @@ export default function App() {
     setListenWpm(DEFAULT_LISTEN_WPM)
     setListenEffectiveWpm(DEFAULT_LISTEN_EFFECTIVE_WPM)
     setListenAutoTightening(DEFAULT_LISTEN_AUTO_TIGHTENING)
-    setListenAutoTighteningCorrectCount(
-      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
-    )
+    setListenAutoTighteningCorrectCount(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
     setListenStatus('idle')
     setListenReveal(null)
     setListenWavePlayback(null)
@@ -1191,8 +1090,7 @@ export default function App() {
     listenWpmRef.current = DEFAULT_LISTEN_WPM
     listenEffectiveWpmRef.current = DEFAULT_LISTEN_EFFECTIVE_WPM
     listenAutoTighteningRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING
-    listenAutoTighteningCorrectCountRef.current =
-      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
+    listenAutoTighteningCorrectCountRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
     listenStatusRef.current = 'idle'
     listenOverlearnQueueRef.current = []
     listenPromptTimingRef.current = null
@@ -1310,9 +1208,7 @@ export default function App() {
         setFreestyleResult('No input')
         return
       }
-      const match = Object.entries(MORSE_DATA).find(
-        ([, data]) => data.code === value,
-      )
+      const match = Object.entries(MORSE_DATA).find(([, data]) => data.code === value)
       const result = match ? match[0] : 'No match'
       if (result !== 'No match' && freestyleWordMode) {
         setFreestyleWord((prev) => prev + result)
@@ -1356,11 +1252,7 @@ export default function App() {
         listenRecognitionTimeoutRef.current = setTimeout(() => {
           setListenRecognitionText(null)
         }, LISTEN_RECOGNITION_DISPLAY_MS)
-        const nextListenTtr = applyListenTtrSample(
-          listenTtrRef.current,
-          targetLetter,
-          ttrMs,
-        )
+        const nextListenTtr = applyListenTtrSample(listenTtrRef.current, targetLetter, ttrMs)
         if (nextListenTtr !== listenTtrRef.current) {
           listenTtrRef.current = nextListenTtr
           setListenTtr(nextListenTtr)
@@ -1382,10 +1274,7 @@ export default function App() {
         const nextCorrectCount = listenAutoTighteningCorrectCountRef.current + 1
         listenAutoTighteningCorrectCountRef.current = nextCorrectCount
         setListenAutoTighteningCorrectCount(nextCorrectCount)
-        const autoEffectiveWpm = getAutoEffectiveWpm(
-          listenWpmRef.current,
-          nextCorrectCount,
-        )
+        const autoEffectiveWpm = getAutoEffectiveWpm(listenWpmRef.current, nextCorrectCount)
         if (autoEffectiveWpm !== listenEffectiveWpmRef.current) {
           listenEffectiveWpmRef.current = autoEffectiveWpm
           nextEffectiveWpm = autoEffectiveWpm
@@ -1444,14 +1333,7 @@ export default function App() {
       effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
-  }, [
-    isFreestyle,
-    isListen,
-    listenEffectiveWpm,
-    listenWpm,
-    stopListenPlayback,
-    triggerHaptics,
-  ])
+  }, [isFreestyle, isListen, listenEffectiveWpm, listenWpm, stopListenPlayback, triggerHaptics])
 
   useEffect(() => {
     if (mode !== 'practice' || !practiceAutoPlay) {
@@ -1464,14 +1346,7 @@ export default function App() {
       effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
-  }, [
-    letter,
-    listenEffectiveWpm,
-    listenWpm,
-    mode,
-    practiceAutoPlay,
-    stopListenPlayback,
-  ])
+  }, [letter, listenEffectiveWpm, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
@@ -1491,9 +1366,7 @@ export default function App() {
         const target = MORSE_DATA[targetLetter].code
         const isCorrect = attempt === target
         const ifrEnabled =
-          practiceIfrModeRef.current &&
-          !isNuxActive &&
-          modeRef.current === 'practice'
+          practiceIfrModeRef.current && !isNuxActive && modeRef.current === 'practice'
         if (isCorrect) {
           if (isNuxActive && nuxStep === 'exercise') {
             const startedAt = nuxAttemptStartRef.current
@@ -1516,7 +1389,7 @@ export default function App() {
             setStatus('success')
             successTimeoutRef.current = setTimeout(() => {
               const nextLetter = NUX_LETTERS[nextIndex]
-              nuxAttemptStartRef.current = null  // reset for next letter
+              nuxAttemptStartRef.current = null // reset for next letter
               setNuxIndex(nextIndex)
               letterRef.current = nextLetter
               setLetter(nextLetter)
@@ -1706,10 +1579,7 @@ export default function App() {
         return
       }
       if (practiceWordModeRef.current) {
-        setPracticeWordFromList(
-          getWordsForLetters(nextLetters),
-          practiceWordRef.current,
-        )
+        setPracticeWordFromList(getWordsForLetters(nextLetters), practiceWordRef.current)
         return
       }
       setNextLetterForLevel(nextLetters)
@@ -1739,11 +1609,8 @@ export default function App() {
       listenEffectiveWpmRef.current = defaults.listenEffectiveWpm
       setListenAutoTightening(defaults.listenAutoTightening)
       listenAutoTighteningRef.current = defaults.listenAutoTightening
-      setListenAutoTighteningCorrectCount(
-        defaults.listenAutoTighteningCorrectCount,
-      )
-      listenAutoTighteningCorrectCountRef.current =
-        defaults.listenAutoTighteningCorrectCount
+      setListenAutoTighteningCorrectCount(defaults.listenAutoTighteningCorrectCount)
+      listenAutoTighteningCorrectCountRef.current = defaults.listenAutoTighteningCorrectCount
       setPracticeWordMode(false)
       practiceWordModeRef.current = false
       setPracticeWpm(null)
@@ -1776,8 +1643,7 @@ export default function App() {
 
   const handleNuxPresetSelect = useCallback(
     (preset: 'beginner' | 'advanced') => {
-      const defaults =
-        preset === 'advanced' ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
+      const defaults = preset === 'advanced' ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
       applyNuxDefaults(defaults)
       setNuxResult(preset === 'advanced' ? 'fast' : 'slow')
     },
@@ -1848,10 +1714,7 @@ export default function App() {
 
   const handleListenWpmChange = useCallback(
     (value: number) => {
-      const normalizedListenSpeeds = normalizeListenSpeeds(
-        value,
-        listenEffectiveWpmRef.current,
-      )
+      const normalizedListenSpeeds = normalizeListenSpeeds(value, listenEffectiveWpmRef.current)
       const nextCharacterWpm = normalizedListenSpeeds.characterWpm
       const nextEffectiveWpm = normalizedListenSpeeds.effectiveWpm
       setListenWpm(nextCharacterWpm)
@@ -1877,11 +1740,7 @@ export default function App() {
     (value: boolean) => {
       setPracticeLearnMode(value)
       practiceLearnModeRef.current = value
-      if (
-        modeRef.current !== 'practice' ||
-        practiceWordModeRef.current ||
-        !value
-      ) {
+      if (modeRef.current !== 'practice' || practiceWordModeRef.current || !value) {
         return
       }
       const firstLetter = availableLetters[0]
@@ -1899,42 +1758,35 @@ export default function App() {
     [availableLetters],
   )
 
-  const handlePracticeIfrModeChange = useCallback(
-    (value: boolean) => {
-      setPracticeIfrMode(value)
-      practiceIfrModeRef.current = value
-      if (!value) {
-        practiceReviewQueueRef.current = []
-      } else {
-        errorLockoutUntilRef.current = 0
-      }
-      if (modeRef.current !== 'practice') {
-        return
-      }
-      clearTimer(errorTimeoutRef)
-      setStatus('idle')
-    },
-    [],
-  )
+  const handlePracticeIfrModeChange = useCallback((value: boolean) => {
+    setPracticeIfrMode(value)
+    practiceIfrModeRef.current = value
+    if (!value) {
+      practiceReviewQueueRef.current = []
+    } else {
+      errorLockoutUntilRef.current = 0
+    }
+    if (modeRef.current !== 'practice') {
+      return
+    }
+    clearTimer(errorTimeoutRef)
+    setStatus('idle')
+  }, [])
 
-  const handlePracticeReviewMissesChange = useCallback(
-    (value: boolean) => {
-      setPracticeReviewMisses(value)
-      practiceReviewMissesRef.current = value
-      if (!value) {
-        practiceReviewQueueRef.current = []
-      }
-    },
-    [],
-  )
+  const handlePracticeReviewMissesChange = useCallback((value: boolean) => {
+    setPracticeReviewMisses(value)
+    practiceReviewMissesRef.current = value
+    if (!value) {
+      practiceReviewQueueRef.current = []
+    }
+  }, [])
 
   const handleUseRecommended = useCallback(() => {
     const preferredMaxLevel = DEFAULT_MAX_LEVEL
     const preferredListenWpm = DEFAULT_LISTEN_WPM
     const preferredListenEffectiveWpm = DEFAULT_LISTEN_EFFECTIVE_WPM
     const preferredListenAutoTightening = DEFAULT_LISTEN_AUTO_TIGHTENING
-    const preferredListenAutoTighteningCorrectCount =
-      DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
+    const preferredListenAutoTighteningCorrectCount = DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
     const preferredShowHint = false
     const preferredShowMnemonic = false
     const preferredPracticeLearnMode = true
@@ -1952,8 +1804,7 @@ export default function App() {
       listenWpm === preferredListenWpm &&
       listenEffectiveWpm === preferredListenEffectiveWpm &&
       listenAutoTightening === preferredListenAutoTightening &&
-      listenAutoTighteningCorrectCount ===
-        preferredListenAutoTighteningCorrectCount &&
+      listenAutoTighteningCorrectCount === preferredListenAutoTighteningCorrectCount &&
       maxLevel === preferredMaxLevel
 
     if (isAlreadyRecommended) {
@@ -1979,11 +1830,8 @@ export default function App() {
     listenEffectiveWpmRef.current = preferredListenEffectiveWpm
     setListenAutoTightening(preferredListenAutoTightening)
     listenAutoTighteningRef.current = preferredListenAutoTightening
-    setListenAutoTighteningCorrectCount(
-      preferredListenAutoTighteningCorrectCount,
-    )
-    listenAutoTighteningCorrectCountRef.current =
-      preferredListenAutoTighteningCorrectCount
+    setListenAutoTighteningCorrectCount(preferredListenAutoTighteningCorrectCount)
+    listenAutoTighteningCorrectCountRef.current = preferredListenAutoTighteningCorrectCount
     setMaxLevel(preferredMaxLevel)
     maxLevelRef.current = preferredMaxLevel as 1 | 2 | 3 | 4
 
@@ -2010,10 +1858,7 @@ export default function App() {
     }
 
     if (practiceWordModeRef.current) {
-      setPracticeWordFromList(
-        getWordsForLetters(nextLetters),
-        practiceWordRef.current,
-      )
+      setPracticeWordFromList(getWordsForLetters(nextLetters), practiceWordRef.current)
       return
     }
 
@@ -2088,9 +1933,7 @@ export default function App() {
   const applyParsedProgress = useCallback(
     (progress: Progress) => {
       const resolvedMaxLevel =
-        typeof progress.maxLevel === 'number'
-          ? progress.maxLevel
-          : maxLevelRef.current
+        typeof progress.maxLevel === 'number' ? progress.maxLevel : maxLevelRef.current
 
       if (progress.scores) {
         scoresRef.current = progress.scores
@@ -2135,12 +1978,9 @@ export default function App() {
       let resolvedListenWpm = listenWpmRef.current
       let resolvedListenEffectiveWpm = listenEffectiveWpmRef.current
       let hasListenSpeedUpdate = false
-      const incomingListenWpm =
-        typeof progress.listenWpm === 'number' ? progress.listenWpm : null
+      const incomingListenWpm = typeof progress.listenWpm === 'number' ? progress.listenWpm : null
       const incomingListenEffectiveWpm =
-        typeof progress.listenEffectiveWpm === 'number'
-          ? progress.listenEffectiveWpm
-          : null
+        typeof progress.listenEffectiveWpm === 'number' ? progress.listenEffectiveWpm : null
       if (
         incomingListenWpm !== null ||
         incomingListenEffectiveWpm !== null ||
@@ -2168,10 +2008,7 @@ export default function App() {
         listenAutoTighteningRef.current = progress.listenAutoTightening
       }
       if (typeof progress.listenAutoTighteningCorrectCount === 'number') {
-        const nextCorrectCount = Math.max(
-          0,
-          Math.round(progress.listenAutoTighteningCorrectCount),
-        )
+        const nextCorrectCount = Math.max(0, Math.round(progress.listenAutoTighteningCorrectCount))
         setListenAutoTighteningCorrectCount(nextCorrectCount)
         listenAutoTighteningCorrectCountRef.current = nextCorrectCount
       }
@@ -2193,10 +2030,7 @@ export default function App() {
         if (autoEffectiveWpm !== listenEffectiveWpmRef.current) {
           setListenEffectiveWpm(autoEffectiveWpm)
           listenEffectiveWpmRef.current = autoEffectiveWpm
-          if (
-            modeRef.current === 'listen' &&
-            listenStatusRef.current === 'idle'
-          ) {
+          if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
             playListenSequenceRef.current(MORSE_DATA[letterRef.current].code, {
               characterWpm: resolvedListenWpm,
               effectiveWpm: autoEffectiveWpm,
@@ -2216,10 +2050,7 @@ export default function App() {
             ? setNextListenLetter(nextLetters, letterRef.current)
             : setNextLetterForLevel(nextLetters, letterRef.current)
         setMaxLevel(progress.maxLevel as (typeof LEVELS)[number])
-        if (
-          modeRef.current === 'listen' &&
-          listenStatusRef.current === 'idle'
-        ) {
+        if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
           playListenSequenceRef.current(MORSE_DATA[nextLetter].code)
         }
       }
@@ -2274,13 +2105,7 @@ export default function App() {
       return
     }
     saveNow(payload, payload.updatedAt)
-  }, [
-    consumePendingRemoteSync,
-    pendingRemoteSyncTick,
-    remoteLoaded,
-    saveNow,
-    userForSync,
-  ])
+  }, [consumePendingRemoteSync, pendingRemoteSyncTick, remoteLoaded, saveNow, userForSync])
 
   const performAccountDeletion = useCallback(
     async (currentUser: User) => {
@@ -2313,20 +2138,12 @@ export default function App() {
           return
         }
 
-        Alert.alert(
-          'Could Not Delete Account',
-          getDeleteAccountErrorMessage(error),
-        )
+        Alert.alert('Could Not Delete Account', getDeleteAccountErrorMessage(error))
       } finally {
         setIsDeletingAccount(false)
       }
     },
-    [
-      clearLocalProgress,
-      deleteRemoteProgress,
-      isDeletingAccount,
-      resetProgressState,
-    ],
+    [clearLocalProgress, deleteRemoteProgress, isDeletingAccount, resetProgressState],
   )
 
   const handleDeleteAccount = useCallback(() => {
@@ -2356,13 +2173,10 @@ export default function App() {
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
   const hintVisible =
-    !isFreestyle &&
-    !isListen &&
-    (showHint || (isNuxActive && nuxStep === 'exercise'))
+    !isFreestyle && !isListen && (showHint || (isNuxActive && nuxStep === 'exercise'))
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
   const showMorseHint = introHintStep === 'morse' && !isListen && !isNuxActive
-  const showSettingsHint =
-    introHintStep === 'settings' && !isListen && !isNuxActive
+  const showSettingsHint = introHintStep === 'settings' && !isListen && !isNuxActive
   const ifrActive = !isFreestyle && !isListen && !isNuxActive && practiceIfrMode
   const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked()
   const baseStatusText =
@@ -2390,16 +2204,10 @@ export default function App() {
     !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
       : null
-  const listenTtrText =
-    isListen && listenRecognitionText ? listenRecognitionText : null
-  const isInputOnTrack =
-    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
+  const listenTtrText = isListen && listenRecognitionText ? listenRecognitionText : null
+  const isInputOnTrack = !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
-    status === 'success'
-      ? targetSymbols.length
-      : isInputOnTrack
-      ? input.length
-      : 0
+    status === 'success' ? targetSymbols.length : isInputOnTrack ? input.length : 0
   const pips = useMemo<StagePip[]>(
     () =>
       targetSymbols.map((symbol, index) => ({
@@ -2408,9 +2216,7 @@ export default function App() {
       })),
     [highlightCount, targetSymbols],
   )
-  const isLetterResult = freestyleResult
-    ? /^[A-Z0-9]$/.test(freestyleResult)
-    : false
+  const isLetterResult = freestyleResult ? /^[A-Z0-9]$/.test(freestyleResult) : false
   const freestyleStatus = freestyleResult
     ? isLetterResult
       ? freestyleWordMode
@@ -2443,21 +2249,14 @@ export default function App() {
     : isListen
     ? listenStatusText
     : practiceStatusText
-  const stageLetter = isFreestyle
-    ? freestyleDisplay
-    : isListen
-    ? listenDisplay
-    : letter
+  const stageLetter = isFreestyle ? freestyleDisplay : isListen ? listenDisplay : letter
   const stagePips = isFreestyle || isListen ? [] : pips
   const showPracticeWord = !isFreestyle && !isListen && practiceWordMode
   const letterPlaceholder = isListen && listenReveal === null
 
   return (
     <SafeAreaProvider>
-      <View
-        style={styles.container}
-        onStartShouldSetResponderCapture={handleRootTouchStart}
-      >
+      <View style={styles.container} onStartShouldSetResponderCapture={handleRootTouchStart}>
         <MorseLiquidSurface
           paused={isBackgroundAnimationPaused}
           targetFps={20}
@@ -2475,18 +2274,14 @@ export default function App() {
               showSettingsHint={showSettingsHint}
             />
           ) : null}
-          {showAbout ? (
-            <AboutModal onClose={() => setShowAbout(false)} />
-          ) : null}
+          {showAbout ? <AboutModal onClose={() => setShowAbout(false)} /> : null}
           {showSettings ? (
             <SettingsModal
               isFreestyle={isFreestyle}
               isListen={isListen}
               levels={LEVELS}
               maxLevel={maxLevel}
-              practiceWordMode={
-                isFreestyle ? freestyleWordMode : practiceWordMode
-              }
+              practiceWordMode={isFreestyle ? freestyleWordMode : practiceWordMode}
               practiceAutoPlay={practiceAutoPlay}
               practiceLearnMode={practiceLearnMode}
               practiceIfrMode={practiceIfrMode}
@@ -2594,8 +2389,7 @@ export default function App() {
                     {showMorseHint ? (
                       <View style={styles.morseHint}>
                         <Text style={styles.hintText}>
-                          Tap the big Morse key to make a dit (short press) or
-                          dah (long press).
+                          Tap the big Morse key to make a dit (short press) or dah (long press).
                         </Text>
                         <View style={styles.morseHintArrow} />
                       </View>

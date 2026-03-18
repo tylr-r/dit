@@ -1,23 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Footer } from './Footer';
-import './Page404.css';
+import { useEffect, useState } from 'react'
+import { Footer } from './Footer'
+import './Page404.css'
 
 export function Page404() {
-  const [showMessage, setShowMessage] = useState(false);
+  const [showMessage, setShowMessage] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowMessage(true), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    const timer = setTimeout(() => setShowMessage(true), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const morseCode404 = {
     '4': '....-',
     '0': '-----',
-  };
+  }
 
   const handleGoHome = () => {
-    window.location.href = '/';
-  };
+    window.location.href = '/'
+  }
 
   return (
     <div className="page-404-container">
@@ -49,5 +49,5 @@ export function Page404() {
 
       <Footer />
     </div>
-  );
+  )
 }

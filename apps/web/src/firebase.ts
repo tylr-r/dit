@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp } from 'firebase/app'
 import {
   GoogleAuthProvider,
   getAuth,
@@ -6,9 +6,9 @@ import {
   signInWithPopup,
   signInWithRedirect,
   signOut,
-} from 'firebase/auth';
-import { get, getDatabase, goOffline, goOnline, ref, set } from 'firebase/database';
-import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core';
+} from 'firebase/auth'
+import { get, getDatabase, goOffline, goOnline, ref, set } from 'firebase/database'
+import type { FirebaseSignInMethod, FirebaseSyncService } from '@dit/core'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,37 +18,37 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
+}
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
-const googleProvider = new GoogleAuthProvider();
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const database = getDatabase(app)
+const googleProvider = new GoogleAuthProvider()
 
 const isPopupFallbackError = (error: unknown) =>
   typeof error === 'object' &&
   error !== null &&
   'code' in error &&
   (error.code === 'auth/popup-blocked' ||
-    error.code === 'auth/operation-not-supported-in-this-environment');
+    error.code === 'auth/operation-not-supported-in-this-environment')
 
 const signInWithPopupFlow = async () => {
   try {
-    await signInWithPopup(auth, googleProvider);
-    return 'popup' as const;
+    await signInWithPopup(auth, googleProvider)
+    return 'popup' as const
   } catch (error) {
     if (isPopupFallbackError(error)) {
-      await signInWithRedirect(auth, googleProvider);
-      return 'redirect' as const;
+      await signInWithRedirect(auth, googleProvider)
+      return 'redirect' as const
     }
-    throw error;
+    throw error
   }
-};
+}
 
 const signInWithRedirectFlow = async () => {
-  await signInWithRedirect(auth, googleProvider);
-  return 'redirect' as const;
-};
+  await signInWithRedirect(auth, googleProvider)
+  return 'redirect' as const
+}
 
 export const firebaseService: FirebaseSyncService = {
   onAuthStateChanged: (listener) =>
@@ -66,34 +66,34 @@ export const firebaseService: FirebaseSyncService = {
     ),
   signIn: (method: FirebaseSignInMethod = 'popup') => {
     if (method === 'redirect') {
-      return signInWithRedirectFlow();
+      return signInWithRedirectFlow()
     }
-    return signInWithPopupFlow();
+    return signInWithPopupFlow()
   },
   signOut: () => signOut(auth),
   getProgress: async (userId: string) => {
-    const progressRef = ref(database, `users/${userId}/progress`);
-    const snapshot = await get(progressRef);
-    return snapshot.exists() ? snapshot.val() : null;
+    const progressRef = ref(database, `users/${userId}/progress`)
+    const snapshot = await get(progressRef)
+    return snapshot.exists() ? snapshot.val() : null
   },
   setProgress: async (userId, progress) => {
-    const progressRef = ref(database, `users/${userId}/progress`);
-    await set(progressRef, progress);
+    const progressRef = ref(database, `users/${userId}/progress`)
+    await set(progressRef, progress)
   },
-};
+}
 
 // Monitor connection status and sync with Firebase
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    goOnline(database);
-  });
+    goOnline(database)
+  })
 
   window.addEventListener('offline', () => {
-    goOffline(database);
-  });
+    goOffline(database)
+  })
 
   // Set initial state
   if (!navigator.onLine) {
-    goOffline(database);
+    goOffline(database)
   }
 }

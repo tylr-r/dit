@@ -4,8 +4,8 @@ import type {
   PointerEvent,
   ReactNode,
   RefObject,
-} from 'react';
-import type { FirebaseUser, Letter } from '@dit/core';
+} from 'react'
+import type { FirebaseUser, Letter } from '@dit/core'
 
 export interface ListenControlsProps {
   listenStatus: 'idle' | 'success' | 'error'

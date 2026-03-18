@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { createAudioContext } from '../platform/audio';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createAudioContext } from '../platform/audio'
 
 type UseAudioOptions = {
   toneFrequency: number;
@@ -15,15 +15,15 @@ const createToneNodes = (
   frequency: number,
   initialGain: number,
 ) => {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = 'sine';
-  oscillator.frequency.value = frequency;
-  gain.gain.value = initialGain;
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-  return { oscillator, gain };
-};
+  const oscillator = context.createOscillator()
+  const gain = context.createGain()
+  oscillator.type = 'sine'
+  oscillator.frequency.value = frequency
+  gain.gain.value = initialGain
+  oscillator.connect(gain)
+  gain.connect(context.destination)
+  return { oscillator, gain }
+}
 
 const scheduleToneEnvelope = (
   gain: GainNode,
@@ -33,14 +33,14 @@ const scheduleToneEnvelope = (
   rampSeconds: number,
   sustain = true,
 ) => {
-  const endTime = startTime + duration;
-  gain.gain.setValueAtTime(0, startTime);
-  gain.gain.linearRampToValueAtTime(toneGain, startTime + rampSeconds);
+  const endTime = startTime + duration
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(toneGain, startTime + rampSeconds)
   if (sustain) {
-    gain.gain.setValueAtTime(toneGain, endTime - rampSeconds);
+    gain.gain.setValueAtTime(toneGain, endTime - rampSeconds)
   }
-  gain.gain.linearRampToValueAtTime(0, endTime);
-};
+  gain.gain.linearRampToValueAtTime(0, endTime)
+}
 
 export const useAudio = ({
   toneFrequency,
@@ -52,119 +52,119 @@ export const useAudio = ({
 }: UseAudioOptions) => {
   const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
     'idle',
-  );
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
+  )
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const oscillatorRef = useRef<OscillatorNode | null>(null)
+  const gainRef = useRef<GainNode | null>(null)
   const listenPlaybackRef = useRef<{
     oscillator: OscillatorNode;
     gain: GainNode;
-  } | null>(null);
+  } | null>(null)
 
   const ensureAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
-      audioContextRef.current = createAudioContext();
+      audioContextRef.current = createAudioContext()
     }
-    const context = audioContextRef.current;
+    const context = audioContextRef.current
     if (!context) {
-      return null;
+      return null
     }
     if (context.state === 'suspended') {
-      await context.resume();
+      await context.resume()
     }
-    return context;
-  }, []);
+    return context
+  }, [])
 
   const startTone = useCallback(async () => {
-    const context = await ensureAudioContext();
+    const context = await ensureAudioContext()
     if (!context || oscillatorRef.current) {
-      return;
+      return
     }
     const { oscillator, gain } = createToneNodes(
       context,
       toneFrequency,
       toneGain,
-    );
-    oscillator.start();
-    oscillatorRef.current = oscillator;
-    gainRef.current = gain;
-  }, [ensureAudioContext, toneFrequency, toneGain]);
+    )
+    oscillator.start()
+    oscillatorRef.current = oscillator
+    gainRef.current = gain
+  }, [ensureAudioContext, toneFrequency, toneGain])
 
   const stopTone = useCallback(() => {
     if (!oscillatorRef.current) {
-      return;
+      return
     }
-    oscillatorRef.current.stop();
-    oscillatorRef.current.disconnect();
-    oscillatorRef.current = null;
+    oscillatorRef.current.stop()
+    oscillatorRef.current.disconnect()
+    oscillatorRef.current = null
     if (gainRef.current) {
-      gainRef.current.disconnect();
-      gainRef.current = null;
+      gainRef.current.disconnect()
+      gainRef.current = null
     }
-  }, []);
+  }, [])
 
   const stopListenPlayback = useCallback(() => {
-    const current = listenPlaybackRef.current;
+    const current = listenPlaybackRef.current
     if (!current) {
-      return;
+      return
     }
     try {
-      current.oscillator.stop();
+      current.oscillator.stop()
     } catch {
       // No-op: oscillator might already be stopped.
     }
-    current.oscillator.disconnect();
-    current.gain.disconnect();
-    listenPlaybackRef.current = null;
-  }, []);
+    current.oscillator.disconnect()
+    current.gain.disconnect()
+    listenPlaybackRef.current = null
+  }, [])
 
   const playListenSequence = useCallback(
     async (code: string) => {
-      stopListenPlayback();
-      const context = await ensureAudioContext();
+      stopListenPlayback()
+      const context = await ensureAudioContext()
       if (!context) {
-        return;
+        return
       }
-      const { oscillator, gain } = createToneNodes(context, toneFrequency, 0);
-      listenPlaybackRef.current = { oscillator, gain };
+      const { oscillator, gain } = createToneNodes(context, toneFrequency, 0)
+      listenPlaybackRef.current = { oscillator, gain }
 
-      const unitSeconds = 1.2 / listenWpm;
-      const rampSeconds = 0.005;
-      let currentTime = context.currentTime + 0.05;
+      const unitSeconds = 1.2 / listenWpm
+      const rampSeconds = 0.005
+      let currentTime = context.currentTime + 0.05
       if (useCustomKeyboard) {
-        const unitMs = Math.max(Math.round(unitSeconds * 1000), 40);
-        const pattern: number[] = [];
+        const unitMs = Math.max(Math.round(unitSeconds * 1000), 40)
+        const pattern: number[] = []
         for (let index = 0; index < code.length; index += 1) {
-          const symbol = code[index];
-          pattern.push(symbol === '.' ? unitMs : unitMs * 3);
+          const symbol = code[index]
+          pattern.push(symbol === '.' ? unitMs : unitMs * 3)
           if (index < code.length - 1) {
-            pattern.push(unitMs);
+            pattern.push(unitMs)
           }
         }
-        onHaptics(pattern);
+        onHaptics(pattern)
       }
 
       for (const symbol of code) {
-        const duration = symbol === '.' ? unitSeconds : unitSeconds * 3;
+        const duration = symbol === '.' ? unitSeconds : unitSeconds * 3
         scheduleToneEnvelope(
           gain,
           toneGain,
           currentTime,
           duration,
           rampSeconds,
-        );
-        currentTime += duration + unitSeconds;
+        )
+        currentTime += duration + unitSeconds
       }
 
-      oscillator.start(context.currentTime);
-      oscillator.stop(currentTime + 0.05);
+      oscillator.start(context.currentTime)
+      oscillator.stop(currentTime + 0.05)
       oscillator.onended = () => {
         if (listenPlaybackRef.current?.oscillator === oscillator) {
-          listenPlaybackRef.current = null;
+          listenPlaybackRef.current = null
         }
-        oscillator.disconnect();
-        gain.disconnect();
-      };
+        oscillator.disconnect()
+        gain.disconnect()
+      }
     },
     [
       ensureAudioContext,
@@ -175,31 +175,31 @@ export const useAudio = ({
       toneGain,
       useCustomKeyboard,
     ],
-  );
+  )
 
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
-      return;
+      return
     }
-    const context = await ensureAudioContext();
+    const context = await ensureAudioContext()
     if (!context) {
-      return;
+      return
     }
-    onTrackEvent?.('sound_check');
-    setSoundCheckStatus('playing');
-    const { oscillator, gain } = createToneNodes(context, toneFrequency, 0);
-    const startTime = context.currentTime + 0.02;
-    const duration = 0.25;
-    scheduleToneEnvelope(gain, toneGain, startTime, duration, 0.02, false);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.02);
+    onTrackEvent?.('sound_check')
+    setSoundCheckStatus('playing')
+    const { oscillator, gain } = createToneNodes(context, toneFrequency, 0)
+    const startTime = context.currentTime + 0.02
+    const duration = 0.25
+    scheduleToneEnvelope(gain, toneGain, startTime, duration, 0.02, false)
+    oscillator.start(startTime)
+    oscillator.stop(startTime + duration + 0.02)
     oscillator.onended = () => {
-      oscillator.disconnect();
-      gain.disconnect();
-      setSoundCheckStatus('idle');
-    };
+      oscillator.disconnect()
+      gain.disconnect()
+      setSoundCheckStatus('idle')
+    }
     if (useCustomKeyboard) {
-      onHaptics([40, 40, 40]);
+      onHaptics([40, 40, 40])
     }
   }, [
     ensureAudioContext,
@@ -209,23 +209,23 @@ export const useAudio = ({
     toneFrequency,
     toneGain,
     useCustomKeyboard,
-  ]);
+  ])
 
   useEffect(() => {
     return () => {
-      stopListenPlayback();
+      stopListenPlayback()
       if (oscillatorRef.current) {
-        oscillatorRef.current.stop();
-        oscillatorRef.current.disconnect();
+        oscillatorRef.current.stop()
+        oscillatorRef.current.disconnect()
       }
       if (gainRef.current) {
-        gainRef.current.disconnect();
+        gainRef.current.disconnect()
       }
       if (audioContextRef.current) {
-        audioContextRef.current.close();
+        audioContextRef.current.close()
       }
-    };
-  }, [stopListenPlayback]);
+    }
+  }, [stopListenPlayback])
 
   return {
     handleSoundCheck,
@@ -234,5 +234,5 @@ export const useAudio = ({
     startTone,
     stopListenPlayback,
     stopTone,
-  };
-};
+  }
+}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react'
 
 type UseMorseInputOptions = {
   dotThresholdMs: number;
@@ -22,144 +22,144 @@ export const useMorseInput = ({
   onPressStart,
   onSymbol,
 }: UseMorseInputOptions) => {
-  const [isPressing, setIsPressing] = useState(false);
-  const pressStartRef = useRef<number | null>(null);
+  const [isPressing, setIsPressing] = useState(false)
+  const pressStartRef = useRef<number | null>(null)
 
   const beginPress = useCallback(() => {
     if (pressStartRef.current !== null) {
-      return false;
+      return false
     }
     if (!canStartPress()) {
-      return false;
+      return false
     }
-    pressStartRef.current = performance.now();
-    setIsPressing(true);
-    onPressStart?.();
-    return true;
-  }, [canStartPress, onPressStart]);
+    pressStartRef.current = performance.now()
+    setIsPressing(true)
+    onPressStart?.()
+    return true
+  }, [canStartPress, onPressStart])
 
   const releasePress = useCallback(
     (register: boolean) => {
-      setIsPressing(false);
-      const start = pressStartRef.current;
-      pressStartRef.current = null;
-      onPressEnd?.();
+      setIsPressing(false)
+      const start = pressStartRef.current
+      pressStartRef.current = null
+      onPressEnd?.()
       if (!register || start === null) {
-        return;
+        return
       }
-      const duration = performance.now() - start;
-      onSymbol(duration < dotThresholdMs ? '.' : '-');
+      const duration = performance.now() - start
+      onSymbol(duration < dotThresholdMs ? '.' : '-')
     },
     [dotThresholdMs, onPressEnd, onSymbol],
-  );
+  )
 
   const handlePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       if (event.button !== 0) {
-        return;
+        return
       }
       if (event.pointerType === 'touch') {
-        event.preventDefault();
+        event.preventDefault()
       }
       if (!beginPress()) {
-        return;
+        return
       }
-      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.setPointerCapture(event.pointerId)
     },
     [beginPress],
-  );
+  )
 
   const handlePointerUp = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       if (event.pointerType === 'touch') {
-        event.preventDefault();
+        event.preventDefault()
       }
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        event.currentTarget.releasePointerCapture(event.pointerId)
       }
       if (pressStartRef.current === null) {
-        return;
+        return
       }
-      releasePress(true);
+      releasePress(true)
     },
     [releasePress],
-  );
+  )
 
   const handlePointerCancel = useCallback(() => {
     if (pressStartRef.current === null) {
-      return;
+      return
     }
-    releasePress(false);
-    onCancel?.();
-  }, [onCancel, releasePress]);
+    releasePress(false)
+    onCancel?.()
+  }, [onCancel, releasePress])
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (event.repeat) {
-        return;
+        return
       }
       if (event.key !== ' ' && event.key !== 'Enter') {
-        return;
+        return
       }
-      event.preventDefault();
-      beginPress();
+      event.preventDefault()
+      beginPress()
     },
     [beginPress],
-  );
+  )
 
   const handleKeyUp = useCallback(
     (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       if (event.key !== ' ' && event.key !== 'Enter') {
-        return;
+        return
       }
-      event.preventDefault();
+      event.preventDefault()
       if (pressStartRef.current === null) {
-        return;
+        return
       }
-      releasePress(true);
+      releasePress(true)
     },
     [releasePress],
-  );
+  )
 
   useEffect(() => {
     if (!enableGlobalKeyboard) {
-      return;
+      return
     }
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (isGlobalShortcutBlocked()) {
-        return;
+        return
       }
       if (event.repeat) {
-        return;
+        return
       }
       if (event.code !== 'Space' && event.key !== ' ') {
-        return;
+        return
       }
-      event.preventDefault();
-      beginPress();
-    };
+      event.preventDefault()
+      beginPress()
+    }
 
     const handleGlobalKeyUp = (event: globalThis.KeyboardEvent) => {
       if (isGlobalShortcutBlocked()) {
-        return;
+        return
       }
       if (event.code !== 'Space' && event.key !== ' ') {
-        return;
+        return
       }
-      event.preventDefault();
+      event.preventDefault()
       if (pressStartRef.current === null) {
-        return;
+        return
       }
-      releasePress(true);
-    };
+      releasePress(true)
+    }
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    window.addEventListener('keyup', handleGlobalKeyUp);
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    window.addEventListener('keyup', handleGlobalKeyUp)
     return () => {
-      window.removeEventListener('keydown', handleGlobalKeyDown);
-      window.removeEventListener('keyup', handleGlobalKeyUp);
-    };
-  }, [beginPress, enableGlobalKeyboard, isGlobalShortcutBlocked, releasePress]);
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      window.removeEventListener('keyup', handleGlobalKeyUp)
+    }
+  }, [beginPress, enableGlobalKeyboard, isGlobalShortcutBlocked, releasePress])
 
   return {
     handleKeyDown,
@@ -168,5 +168,5 @@ export const useMorseInput = ({
     handlePointerDown,
     handlePointerUp,
     isPressing,
-  };
-};
+  }
+}

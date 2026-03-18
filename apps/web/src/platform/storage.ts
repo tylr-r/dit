@@ -1,35 +1,35 @@
 export const getLocalStorage = () => {
   if (typeof window === 'undefined') {
-    return null;
+    return null
   }
   try {
-    return window.localStorage;
+    return window.localStorage
   } catch {
-    return null;
+    return null
   }
-};
+}
 
 export const readStorageItem = (key: string) => {
-  const storage = getLocalStorage();
+  const storage = getLocalStorage()
   if (!storage) {
-    return null;
+    return null
   }
   try {
-    return storage.getItem(key);
+    return storage.getItem(key)
   } catch {
-    return null;
+    return null
   }
-};
+}
 
 export const writeStorageItem = (key: string, value: string) => {
-  const storage = getLocalStorage();
+  const storage = getLocalStorage()
   if (!storage) {
-    return false;
+    return false
   }
   try {
-    storage.setItem(key, value);
-    return true;
+    storage.setItem(key, value)
+    return true
   } catch {
-    return false;
+    return false
   }
-};
+}

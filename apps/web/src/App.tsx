@@ -1,17 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import './App.css';
-import { Footer } from './components/Footer';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import './App.css'
+import { Footer } from './components/Footer'
 import {
   PrivacyPolicy,
   SupportPage,
   TermsOfService,
-} from './components/LegalPage';
-import { ListenControls } from './components/ListenControls';
-import { MorseButton } from './components/MorseButton';
-import { Page404 } from './components/Page404';
-import { ReferenceModal } from './components/ReferenceModal';
-import { SettingsPanel } from './components/SettingsPanel';
-import { StageDisplay } from './components/StageDisplay';
+} from './components/LegalPage'
+import { ListenControls } from './components/ListenControls'
+import { MorseButton } from './components/MorseButton'
+import { Page404 } from './components/Page404'
+import { ReferenceModal } from './components/ReferenceModal'
+import { SettingsPanel } from './components/SettingsPanel'
+import { StageDisplay } from './components/StageDisplay'
 import {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
@@ -34,22 +34,22 @@ import {
   useFirebaseSync,
   type Letter,
   type ProgressSnapshot,
-} from '@dit/core';
-import { firebaseService } from './firebase';
-import { useAudio } from './hooks/useAudio';
-import { useMorseInput } from './hooks/useMorseInput';
+} from '@dit/core'
+import { firebaseService } from './firebase'
+import { useAudio } from './hooks/useAudio'
+import { useMorseInput } from './hooks/useMorseInput'
 import {
   readStoredBoolean,
   readStoredNumber,
   readStoredScores,
   useProgress,
-} from './hooks/useProgress';
-import { vibrate } from './platform/haptics';
-import { readStorageItem } from './platform/storage';
+} from './hooks/useProgress'
+import { vibrate } from './platform/haptics'
+import { readStorageItem } from './platform/storage'
 
-const LETTERS = Object.keys(MORSE_CODE) as Letter[];
-const LEVELS = [1, 2, 3, 4] as const;
-const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter));
+const LETTERS = Object.keys(MORSE_CODE) as Letter[]
+const LEVELS = [1, 2, 3, 4] as const
+const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter))
 const REFERENCE_NUMBERS: Letter[] = [
   '1',
   '2',
@@ -61,18 +61,18 @@ const REFERENCE_NUMBERS: Letter[] = [
   '8',
   '9',
   '0',
-];
-const DOT_THRESHOLD_MS = DASH_THRESHOLD;
-const UNIT_MS = UNIT_TIME_MS;
-const [LISTEN_WPM_MIN, LISTEN_WPM_MAX] = WPM_RANGE;
-const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS;
-const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS;
-const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS;
-const PRACTICE_WORD_UNITS = 5;
-const TONE_FREQUENCY = AUDIO_FREQUENCY;
-const TONE_GAIN = AUDIO_VOLUME;
-const ERROR_LOCKOUT_MS = 1000;
-const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY;
+]
+const DOT_THRESHOLD_MS = DASH_THRESHOLD
+const UNIT_MS = UNIT_TIME_MS
+const [LISTEN_WPM_MIN, LISTEN_WPM_MAX] = WPM_RANGE
+const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS
+const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS
+const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
+const PRACTICE_WORD_UNITS = 5
+const TONE_FREQUENCY = AUDIO_FREQUENCY
+const TONE_GAIN = AUDIO_VOLUME
+const ERROR_LOCKOUT_MS = 1000
+const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
 const STORAGE_KEYS = {
   mode: 'morse-mode',
   showHint: 'morse-show-hint',
@@ -82,93 +82,93 @@ const STORAGE_KEYS = {
   maxLevel: 'morse-max-level',
   scores: 'morse-scores',
   listenWpm: 'morse-listen-wpm',
-};
+}
 
 const clearTimer = (ref: { current: number | null }) => {
   if (ref.current !== null) {
-    window.clearTimeout(ref.current);
-    ref.current = null;
+    window.clearTimeout(ref.current)
+    ref.current = null
   }
-};
+}
 
 const isEditableTarget = (target: EventTarget | null) => {
-  const element = target as HTMLElement | null;
+  const element = target as HTMLElement | null
   if (!element) {
-    return false;
+    return false
   }
   return (
     element.isContentEditable ||
     element.tagName === 'INPUT' ||
     element.tagName === 'SELECT' ||
     element.tagName === 'TEXTAREA'
-  );
-};
+  )
+}
 
 const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
   event.repeat ||
   event.ctrlKey ||
   event.metaKey ||
   event.altKey ||
-  isEditableTarget(event.target);
+  isEditableTarget(event.target)
 
 function MainApp() {
   const initialConfig = useMemo(() => {
-    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4);
+    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4)
     const practiceWordMode = readStoredBoolean(
       STORAGE_KEYS.practiceWordMode,
       false,
-    );
-    const availableLetters = getLettersForLevel(maxLevel);
+    )
+    const availableLetters = getLettersForLevel(maxLevel)
     const practiceWord = getRandomWord(
       getWordsForLetters(availableLetters),
-    );
+    )
     const letter = practiceWordMode
       ? (practiceWord[0] as Letter)
-      : getRandomLetter(availableLetters);
+      : getRandomLetter(availableLetters)
     return {
       letter,
       maxLevel,
       practiceWord,
       practiceWordMode,
-    };
-  }, []);
+    }
+  }, [])
 
-  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel);
-  const [letter, setLetter] = useState<Letter>(initialConfig.letter);
-  const [input, setInput] = useState('');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel)
+  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
+  const [input, setInput] = useState('')
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [showHint, setShowHint] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showHint, true),
-  );
+  )
   const [showMnemonic, setShowMnemonic] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.showMnemonic, false),
-  );
+  )
   const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
     if (typeof window === 'undefined') {
-      return 'practice';
+      return 'practice'
     }
-    const stored = readStorageItem(STORAGE_KEYS.mode);
+    const stored = readStorageItem(STORAGE_KEYS.mode)
     if (stored === 'freestyle') {
-      return 'freestyle';
+      return 'freestyle'
     }
     if (stored === 'listen') {
-      return 'listen';
+      return 'listen'
     }
-    return 'practice';
-  });
-  const [showHintOnce, setShowHintOnce] = useState(false);
+    return 'practice'
+  })
+  const [showHintOnce, setShowHintOnce] = useState(false)
   const [practiceWordMode, setPracticeWordMode] = useState(
     initialConfig.practiceWordMode,
-  );
-  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord);
-  const [practiceWordIndex, setPracticeWordIndex] = useState(0);
-  const [practiceWpm, setPracticeWpm] = useState<number | null>(null);
-  const [freestyleInput, setFreestyleInput] = useState('');
-  const [freestyleResult, setFreestyleResult] = useState<string | null>(null);
+  )
+  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord)
+  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
+  const [practiceWpm, setPracticeWpm] = useState<number | null>(null)
+  const [freestyleInput, setFreestyleInput] = useState('')
+  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
   const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
     readStoredBoolean(STORAGE_KEYS.wordMode, false),
-  );
-  const [freestyleWord, setFreestyleWord] = useState('');
+  )
+  const [freestyleWord, setFreestyleWord] = useState('')
   const [listenWpm, setListenWpm] = useState(() =>
     readStoredNumber(
       STORAGE_KEYS.listenWpm,
@@ -176,44 +176,44 @@ function MainApp() {
       LISTEN_WPM_MIN,
       LISTEN_WPM_MAX,
     ),
-  );
-  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false);
+  )
+  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
-  >('idle');
-  const [listenReveal, setListenReveal] = useState<Letter | null>(null);
-  const [showReference, setShowReference] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showAbout, setShowAbout] = useState(false);
+  >('idle')
+  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
+  const [showReference, setShowReference] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
   const [scores, setScores] = useState(() =>
     readStoredScores(STORAGE_KEYS.scores),
-  );
-  const maxLevelRef = useRef(maxLevel);
-  const inputRef = useRef(input);
-  const freestyleInputRef = useRef('');
-  const freestyleWordModeRef = useRef(freestyleWordMode);
-  const practiceWordModeRef = useRef(practiceWordMode);
-  const practiceWordRef = useRef(practiceWord);
-  const practiceWordIndexRef = useRef(practiceWordIndex);
-  const practiceWordStartRef = useRef<number | null>(null);
-  const showReferenceRef = useRef(showReference);
-  const letterRef = useRef(letter);
-  const scoresRef = useRef(scores);
-  const errorLockoutUntilRef = useRef(0);
-  const errorTimeoutRef = useRef<number | null>(null);
-  const successTimeoutRef = useRef<number | null>(null);
-  const letterTimeoutRef = useRef<number | null>(null);
-  const wordSpaceTimeoutRef = useRef<number | null>(null);
-  const listenTimeoutRef = useRef<number | null>(null);
-  const morseButtonRef = useRef<HTMLButtonElement | null>(null);
+  )
+  const maxLevelRef = useRef(maxLevel)
+  const inputRef = useRef(input)
+  const freestyleInputRef = useRef('')
+  const freestyleWordModeRef = useRef(freestyleWordMode)
+  const practiceWordModeRef = useRef(practiceWordMode)
+  const practiceWordRef = useRef(practiceWord)
+  const practiceWordIndexRef = useRef(practiceWordIndex)
+  const practiceWordStartRef = useRef<number | null>(null)
+  const showReferenceRef = useRef(showReference)
+  const letterRef = useRef(letter)
+  const scoresRef = useRef(scores)
+  const errorLockoutUntilRef = useRef(0)
+  const errorTimeoutRef = useRef<number | null>(null)
+  const successTimeoutRef = useRef<number | null>(null)
+  const letterTimeoutRef = useRef<number | null>(null)
+  const wordSpaceTimeoutRef = useRef<number | null>(null)
+  const listenTimeoutRef = useRef<number | null>(null)
+  const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const availableLetters = useMemo(
     () => getLettersForLevel(maxLevel),
     [maxLevel],
-  );
+  )
   const availablePracticeWords = useMemo(
     () => getWordsForLetters(availableLetters),
     [availableLetters],
-  );
+  )
   const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
       listenWpm,
@@ -233,36 +233,36 @@ function MainApp() {
       showHint,
       showMnemonic,
     ],
-  );
+  )
   const triggerHaptics = useCallback((pattern: number | number[]) => {
-    vibrate(pattern);
-  }, []);
+    vibrate(pattern)
+  }, [])
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
-    setScores((prev) => applyScoreDelta(prev, targetLetter, delta));
-  }, []);
+    setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
+  }, [])
   const handleResetScores = useCallback(() => {
-    setScores(initializeScores());
-  }, []);
+    setScores(initializeScores())
+  }, [])
   const isErrorLocked = useCallback(
     () => performance.now() < errorLockoutUntilRef.current,
     [],
-  );
+  )
   const startErrorLockout = useCallback(() => {
-    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS;
-  }, []);
+    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS
+  }, [])
   const canScoreAttempt = useCallback(
     () => !(showHint || showHintOnce),
     [showHint, showHintOnce],
-  );
+  )
   const trackEvent = useCallback(
     (name: string, params?: Record<string, unknown>) => {
       if (typeof window === 'undefined' || !window.gtag) {
-        return;
+        return
       }
-      window.gtag('event', name, params ?? {});
+      window.gtag('event', name, params ?? {})
     },
     [],
-  );
+  )
   useProgress({
     storageKeys: STORAGE_KEYS,
     mode,
@@ -273,7 +273,7 @@ function MainApp() {
     maxLevel,
     listenWpm,
     scores,
-  });
+  })
 
   const {
     handleSoundCheck,
@@ -289,258 +289,258 @@ function MainApp() {
     toneFrequency: TONE_FREQUENCY,
     toneGain: TONE_GAIN,
     useCustomKeyboard,
-  });
+  })
 
   useEffect(() => {
-    freestyleInputRef.current = freestyleInput;
-  }, [freestyleInput]);
+    freestyleInputRef.current = freestyleInput
+  }, [freestyleInput])
 
   useEffect(() => {
-    inputRef.current = input;
-  }, [input]);
+    inputRef.current = input
+  }, [input])
 
   useEffect(() => {
-    freestyleWordModeRef.current = freestyleWordMode;
-  }, [freestyleWordMode]);
+    freestyleWordModeRef.current = freestyleWordMode
+  }, [freestyleWordMode])
 
   useEffect(() => {
-    maxLevelRef.current = maxLevel;
-  }, [maxLevel]);
+    maxLevelRef.current = maxLevel
+  }, [maxLevel])
 
   useEffect(() => {
-    practiceWordModeRef.current = practiceWordMode;
-  }, [practiceWordMode]);
+    practiceWordModeRef.current = practiceWordMode
+  }, [practiceWordMode])
 
   useEffect(() => {
-    practiceWordRef.current = practiceWord;
-  }, [practiceWord]);
+    practiceWordRef.current = practiceWord
+  }, [practiceWord])
 
   useEffect(() => {
-    practiceWordIndexRef.current = practiceWordIndex;
-  }, [practiceWordIndex]);
+    practiceWordIndexRef.current = practiceWordIndex
+  }, [practiceWordIndex])
 
   useEffect(() => {
-    showReferenceRef.current = showReference;
-  }, [showReference]);
+    showReferenceRef.current = showReference
+  }, [showReference])
 
   useEffect(() => {
-    letterRef.current = letter;
-  }, [letter]);
+    letterRef.current = letter
+  }, [letter])
 
   useEffect(() => {
-    scoresRef.current = scores;
-  }, [scores]);
+    scoresRef.current = scores
+  }, [scores])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
-      return;
+      return
     }
-    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    const mediaQuery = window.matchMedia('(pointer: coarse)')
     const updateKeyboardMode = () => {
-      setUseCustomKeyboard(mediaQuery.matches);
-    };
-    updateKeyboardMode();
+      setUseCustomKeyboard(mediaQuery.matches)
+    }
+    updateKeyboardMode()
     if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', updateKeyboardMode);
+      mediaQuery.addEventListener('change', updateKeyboardMode)
     } else {
-      mediaQuery.addListener(updateKeyboardMode);
+      mediaQuery.addListener(updateKeyboardMode)
     }
     return () => {
       if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', updateKeyboardMode);
+        mediaQuery.removeEventListener('change', updateKeyboardMode)
       } else {
-        mediaQuery.removeListener(updateKeyboardMode);
+        mediaQuery.removeListener(updateKeyboardMode)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   useEffect(() => {
     if (!showReference) {
-      return;
+      return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setShowReference(false);
+        setShowReference(false)
       }
-    };
-    window.addEventListener('keydown', handleKeyDown);
+    }
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [showReference]);
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showReference])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
-      return;
+      return
     }
     if (!showReference) {
-      return;
+      return
     }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showReference]);
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showReference])
 
-  const isFreestyle = mode === 'freestyle';
-  const isListen = mode === 'listen';
+  const isFreestyle = mode === 'freestyle'
+  const isListen = mode === 'listen'
 
   useEffect(() => {
     if (typeof window === 'undefined') {
-      return;
+      return
     }
     const updateAppHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      const heightValue = `${height}px`;
-      document.documentElement.style.setProperty('--app-height', heightValue);
-      document.documentElement.style.height = heightValue;
+      const height = window.visualViewport?.height ?? window.innerHeight
+      const heightValue = `${height}px`
+      document.documentElement.style.setProperty('--app-height', heightValue)
+      document.documentElement.style.height = heightValue
       if (document.body) {
-        document.body.style.height = heightValue;
+        document.body.style.height = heightValue
       }
       if (window.scrollY) {
-        window.scrollTo(0, 0);
+        window.scrollTo(0, 0)
       }
-    };
-    updateAppHeight();
-    window.addEventListener('resize', updateAppHeight);
+    }
+    updateAppHeight()
+    window.addEventListener('resize', updateAppHeight)
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateAppHeight);
-      window.visualViewport.addEventListener('scroll', updateAppHeight);
+      window.visualViewport.addEventListener('resize', updateAppHeight)
+      window.visualViewport.addEventListener('scroll', updateAppHeight)
     }
     return () => {
-      window.removeEventListener('resize', updateAppHeight);
+      window.removeEventListener('resize', updateAppHeight)
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateAppHeight);
-        window.visualViewport.removeEventListener('scroll', updateAppHeight);
+        window.visualViewport.removeEventListener('resize', updateAppHeight)
+        window.visualViewport.removeEventListener('scroll', updateAppHeight)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   useEffect(() => {
-    const button = morseButtonRef.current;
+    const button = morseButtonRef.current
     if (!button) {
-      return;
+      return
     }
     const preventTouchDefault = (event: Event) => {
       if (event.cancelable) {
-        event.preventDefault();
+        event.preventDefault()
       }
-    };
+    }
     const preventContextMenu = (event: Event) => {
-      event.preventDefault();
-    };
+      event.preventDefault()
+    }
     button.addEventListener('touchstart', preventTouchDefault, {
       passive: false,
-    });
+    })
     button.addEventListener('touchmove', preventTouchDefault, {
       passive: false,
-    });
+    })
     button.addEventListener('touchend', preventTouchDefault, {
       passive: false,
-    });
+    })
     button.addEventListener('touchcancel', preventTouchDefault, {
       passive: false,
-    });
+    })
     button.addEventListener('dblclick', preventTouchDefault, {
       passive: false,
-    });
-    button.addEventListener('contextmenu', preventContextMenu);
+    })
+    button.addEventListener('contextmenu', preventContextMenu)
     return () => {
-      button.removeEventListener('touchstart', preventTouchDefault);
-      button.removeEventListener('touchmove', preventTouchDefault);
-      button.removeEventListener('touchend', preventTouchDefault);
-      button.removeEventListener('touchcancel', preventTouchDefault);
-      button.removeEventListener('dblclick', preventTouchDefault);
-      button.removeEventListener('contextmenu', preventContextMenu);
-    };
-  }, [isListen]);
+      button.removeEventListener('touchstart', preventTouchDefault)
+      button.removeEventListener('touchmove', preventTouchDefault)
+      button.removeEventListener('touchend', preventTouchDefault)
+      button.removeEventListener('touchcancel', preventTouchDefault)
+      button.removeEventListener('dblclick', preventTouchDefault)
+      button.removeEventListener('contextmenu', preventContextMenu)
+    }
+  }, [isListen])
 
   useEffect(() => {
     return () => {
-      clearTimer(errorTimeoutRef);
-      clearTimer(successTimeoutRef);
-      clearTimer(letterTimeoutRef);
-      clearTimer(wordSpaceTimeoutRef);
-      clearTimer(listenTimeoutRef);
-      stopListenPlayback();
-    };
-  }, [stopListenPlayback]);
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
+      clearTimer(listenTimeoutRef)
+      stopListenPlayback()
+    }
+  }, [stopListenPlayback])
 
   const resetListenState = useCallback(() => {
-    clearTimer(listenTimeoutRef);
-    setListenStatus('idle');
-    setListenReveal(null);
-  }, []);
+    clearTimer(listenTimeoutRef)
+    setListenStatus('idle')
+    setListenReveal(null)
+  }, [])
 
   useEffect(() => {
     if (showHint || isFreestyle || isListen) {
-      return;
+      return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) {
-        return;
+        return
       }
       if (event.key.toLowerCase() !== 'n') {
-        return;
+        return
       }
       if (showHintOnce) {
-        return;
+        return
       }
-      event.preventDefault();
-      setShowHintOnce(true);
-    };
-    window.addEventListener('keydown', handleKeyDown);
+      event.preventDefault()
+      setShowHintOnce(true)
+    }
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isFreestyle, isListen, showHint, showHintOnce]);
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFreestyle, isListen, showHint, showHintOnce])
 
   const applyModeChange = useCallback(
     (nextMode: 'practice' | 'freestyle' | 'listen') => {
-      trackEvent('mode_change', { mode: nextMode });
+      trackEvent('mode_change', { mode: nextMode })
       if (nextMode !== 'practice') {
-        practiceWordStartRef.current = null;
-        setPracticeWpm(null);
+        practiceWordStartRef.current = null
+        setPracticeWpm(null)
       }
-      setMode(nextMode);
-      stopListenPlayback();
-      setFreestyleInput('');
-      setFreestyleResult(null);
-      setFreestyleWord('');
-      clearTimer(letterTimeoutRef);
-      clearTimer(wordSpaceTimeoutRef);
-      setInput('');
-      setStatus('idle');
-      setShowHintOnce(false);
-      resetListenState();
+      setMode(nextMode)
+      stopListenPlayback()
+      setFreestyleInput('')
+      setFreestyleResult(null)
+      setFreestyleWord('')
+      clearTimer(letterTimeoutRef)
+      clearTimer(wordSpaceTimeoutRef)
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
+      resetListenState()
       if (nextMode === 'freestyle') {
-        return;
+        return
       }
       if (nextMode === 'listen') {
         const nextLetter = availableLetters.includes(letter)
           ? letter
-          : getRandomWeightedLetter(availableLetters, scores);
-        setLetter(nextLetter);
-        void playListenSequence(MORSE_CODE[nextLetter].code);
-        return;
+          : getRandomWeightedLetter(availableLetters, scores)
+        setLetter(nextLetter)
+        void playListenSequence(MORSE_CODE[nextLetter].code)
+        return
       }
       if (practiceWordModeRef.current) {
         const nextWord = getRandomWord(
           availablePracticeWords,
           practiceWordRef.current,
-        );
-        practiceWordStartRef.current = null;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextWord[0] as Letter);
-        return;
+        )
+        practiceWordStartRef.current = null
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
+        return
       }
       setLetter((current) =>
         availableLetters.includes(current)
           ? current
           : getRandomWeightedLetter(availableLetters, scores),
-      );
+      )
     },
     [
       availableLetters,
@@ -552,98 +552,98 @@ function MainApp() {
       stopListenPlayback,
       trackEvent,
     ],
-  );
+  )
 
   const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value } = event.target;
+    const { value } = event.target
     const nextMode =
       value === 'freestyle'
         ? 'freestyle'
         : value === 'listen'
           ? 'listen'
-          : 'practice';
-    applyModeChange(nextMode);
-  };
+          : 'practice'
+    applyModeChange(nextMode)
+  }
 
   const handleShowHintToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setShowHint(event.target.checked);
+      setShowHint(event.target.checked)
     },
     [],
-  );
+  )
 
   const handleShowMnemonicToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setShowMnemonic(event.target.checked);
+      setShowMnemonic(event.target.checked)
     },
     [],
-  );
+  )
 
   const handlePracticeWordModeChange = useCallback(
     (nextValue: boolean) => {
-      trackEvent('practice_word_mode_toggle', { enabled: nextValue });
-      setPracticeWordMode(nextValue);
-      practiceWordStartRef.current = null;
-      setPracticeWpm(null);
-      clearTimer(letterTimeoutRef);
-      clearTimer(errorTimeoutRef);
-      clearTimer(successTimeoutRef);
-      setInput('');
-      setStatus('idle');
-      setShowHintOnce(false);
+      trackEvent('practice_word_mode_toggle', { enabled: nextValue })
+      setPracticeWordMode(nextValue)
+      practiceWordStartRef.current = null
+      setPracticeWpm(null)
+      clearTimer(letterTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
       if (!nextValue) {
         const nextLetter = getRandomWeightedLetter(
           availableLetters,
           scoresRef.current,
           letterRef.current,
-        );
-        setPracticeWordIndex(0);
-        setLetter(nextLetter);
-        return;
+        )
+        setPracticeWordIndex(0)
+        setLetter(nextLetter)
+        return
       }
       const nextWord = getRandomWord(
         availablePracticeWords,
         practiceWordRef.current,
-      );
-      setPracticeWord(nextWord);
-      setPracticeWordIndex(0);
-      setLetter(nextWord[0] as Letter);
+      )
+      setPracticeWord(nextWord)
+      setPracticeWordIndex(0)
+      setLetter(nextWord[0] as Letter)
     },
     [availableLetters, availablePracticeWords, trackEvent],
-  );
+  )
 
   const handlePracticeWordModeToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlePracticeWordModeChange(event.target.checked);
+      handlePracticeWordModeChange(event.target.checked)
     },
     [handlePracticeWordModeChange],
-  );
+  )
 
   const handleMaxLevelChange = useCallback(
     (nextLevel: number) => {
-      setMaxLevel(nextLevel);
-      setInput('');
-      setStatus('idle');
-      setShowHintOnce(false);
-      resetListenState();
-      const nextLetters = getLettersForLevel(nextLevel);
+      setMaxLevel(nextLevel)
+      setInput('')
+      setStatus('idle')
+      setShowHintOnce(false)
+      resetListenState()
+      const nextLetters = getLettersForLevel(nextLevel)
       if (!isListen && practiceWordModeRef.current) {
         const nextWord = getRandomWord(
           getWordsForLetters(nextLetters),
           practiceWordRef.current,
-        );
-        practiceWordStartRef.current = null;
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextWord[0] as Letter);
-        return;
+        )
+        practiceWordStartRef.current = null
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
+        return
       }
       const nextLetter = nextLetters.includes(letter)
         ? letter
-        : getRandomWeightedLetter(nextLetters, scores);
-      setLetter(nextLetter);
+        : getRandomWeightedLetter(nextLetters, scores)
+      setLetter(nextLetter)
       if (isListen) {
-        void playListenSequence(MORSE_CODE[nextLetter].code);
+        void playListenSequence(MORSE_CODE[nextLetter].code)
       }
     },
     [
@@ -654,74 +654,74 @@ function MainApp() {
       scores,
       setMaxLevel,
     ],
-  );
+  )
 
   const handleMaxLevelSelectChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handleMaxLevelChange(Number(event.target.value));
+      handleMaxLevelChange(Number(event.target.value))
     },
     [handleMaxLevelChange],
-  );
+  )
 
   const handleListenWpmChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
-      setListenWpm(Number(event.target.value));
+      setListenWpm(Number(event.target.value))
     },
     [],
-  );
+  )
 
   const applyRemoteProgress = useCallback((raw: unknown) => {
     const progress = parseProgress(raw, {
       listenWpmMin: LISTEN_WPM_MIN,
       listenWpmMax: LISTEN_WPM_MAX,
-    });
+    })
     if (!progress) {
-      return;
+      return
     }
-    const nextScores = progress.scores ?? scoresRef.current;
+    const nextScores = progress.scores ?? scoresRef.current
     const resolvedMaxLevel =
       typeof progress.maxLevel === 'number'
         ? progress.maxLevel
-        : maxLevelRef.current;
+        : maxLevelRef.current
     if (progress.scores) {
-      setScores(progress.scores);
+      setScores(progress.scores)
     }
     if (typeof progress.showHint === 'boolean') {
-      setShowHint(progress.showHint);
+      setShowHint(progress.showHint)
     }
     if (typeof progress.showMnemonic === 'boolean') {
-      setShowMnemonic(progress.showMnemonic);
+      setShowMnemonic(progress.showMnemonic)
     }
     if (typeof progress.wordMode === 'boolean') {
-      setFreestyleWordMode(progress.wordMode);
+      setFreestyleWordMode(progress.wordMode)
     }
     if (typeof progress.listenWpm === 'number') {
-      setListenWpm(progress.listenWpm);
+      setListenWpm(progress.listenWpm)
     }
     if (typeof progress.maxLevel === 'number') {
-      const nextLetters = getLettersForLevel(progress.maxLevel);
-      const currentLetter = letterRef.current;
+      const nextLetters = getLettersForLevel(progress.maxLevel)
+      const currentLetter = letterRef.current
       const nextLetter = nextLetters.includes(currentLetter)
         ? currentLetter
-        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter);
-      setMaxLevel(progress.maxLevel);
-      setLetter(nextLetter);
+        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter)
+      setMaxLevel(progress.maxLevel)
+      setLetter(nextLetter)
     }
     if (typeof progress.practiceWordMode === 'boolean') {
-      setPracticeWordMode(progress.practiceWordMode);
-      practiceWordStartRef.current = null;
+      setPracticeWordMode(progress.practiceWordMode)
+      practiceWordStartRef.current = null
       if (!progress.practiceWordMode) {
-        setPracticeWpm(null);
+        setPracticeWpm(null)
       }
       if (progress.practiceWordMode) {
-        const nextLetters = getLettersForLevel(resolvedMaxLevel);
-        const nextWord = getRandomWord(getWordsForLetters(nextLetters));
-        setPracticeWord(nextWord);
-        setPracticeWordIndex(0);
-        setLetter(nextWord[0] as Letter);
+        const nextLetters = getLettersForLevel(resolvedMaxLevel)
+        const nextWord = getRandomWord(getWordsForLetters(nextLetters))
+        setPracticeWord(nextWord)
+        setPracticeWordIndex(0)
+        setLetter(nextWord[0] as Letter)
       }
     }
-  }, []);
+  }, [])
 
   const { authReady, handleSignIn, handleSignOut, user } = useFirebaseSync({
     firebaseService,
@@ -731,139 +731,139 @@ function MainApp() {
     signInMethod: 'popup',
     trackEvent,
     isOnline: () => navigator.onLine,
-  });
+  })
 
   const scheduleWordSpace = useCallback(() => {
-    clearTimer(wordSpaceTimeoutRef);
+    clearTimer(wordSpaceTimeoutRef)
     wordSpaceTimeoutRef.current = window.setTimeout(() => {
       if (!freestyleWordModeRef.current) {
-        return;
+        return
       }
       if (freestyleInputRef.current) {
-        return;
+        return
       }
       setFreestyleWord((prev) => {
         if (!prev || prev.endsWith(' ')) {
-          return prev;
+          return prev
         }
-        return `${prev} `;
-      });
-    }, WORD_GAP_EXTRA_MS);
-  }, []);
+        return `${prev} `
+      })
+    }, WORD_GAP_EXTRA_MS)
+  }, [])
 
   const submitFreestyleInput = useCallback(
     (value: string) => {
       if (!value) {
-        setFreestyleResult('No input');
-        return;
+        setFreestyleResult('No input')
+        return
       }
       const match = Object.entries(MORSE_CODE).find(
         ([, data]) => data.code === value,
-      );
-      const result = match ? match[0] : 'No match';
+      )
+      const result = match ? match[0] : 'No match'
       if (result !== 'No match') {
         if (freestyleWordMode) {
-          setFreestyleWord((prev) => prev + result);
-          scheduleWordSpace();
+          setFreestyleWord((prev) => prev + result)
+          scheduleWordSpace()
         }
       }
-      setFreestyleResult(result);
-      setFreestyleInput('');
+      setFreestyleResult(result)
+      setFreestyleInput('')
     },
     [freestyleWordMode, scheduleWordSpace],
-  );
+  )
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
-      clearTimer(letterTimeoutRef);
+      clearTimer(letterTimeoutRef)
       letterTimeoutRef.current = window.setTimeout(() => {
         if (nextMode === 'freestyle') {
-          submitFreestyleInput(freestyleInputRef.current);
-          return;
+          submitFreestyleInput(freestyleInputRef.current)
+          return
         }
-        const attempt = inputRef.current;
+        const attempt = inputRef.current
         if (!attempt) {
-          return;
+          return
         }
-        clearTimer(errorTimeoutRef);
-        clearTimer(successTimeoutRef);
-        const target = MORSE_CODE[letterRef.current].code;
-        const isCorrect = attempt === target;
+        clearTimer(errorTimeoutRef)
+        clearTimer(successTimeoutRef)
+        const target = MORSE_CODE[letterRef.current].code
+        const isCorrect = attempt === target
         if (isCorrect) {
           if (canScoreAttempt()) {
-            bumpScore(letterRef.current, 1);
+            bumpScore(letterRef.current, 1)
           }
-          setInput('');
+          setInput('')
           if (practiceWordModeRef.current) {
-            const currentWord = practiceWordRef.current;
+            const currentWord = practiceWordRef.current
             if (!currentWord) {
-              const nextWord = getRandomWord(availablePracticeWords);
-              const nextLetter = nextWord[0] as Letter;
-              practiceWordStartRef.current = null;
-              practiceWordRef.current = nextWord;
-              practiceWordIndexRef.current = 0;
-              letterRef.current = nextLetter;
-              setPracticeWord(nextWord);
-              setPracticeWordIndex(0);
-              setLetter(nextLetter);
-              setShowHintOnce(false);
-              setStatus('idle');
-              return;
+              const nextWord = getRandomWord(availablePracticeWords)
+              const nextLetter = nextWord[0] as Letter
+              practiceWordStartRef.current = null
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
+              setShowHintOnce(false)
+              setStatus('idle')
+              return
             }
-            const nextIndex = practiceWordIndexRef.current + 1;
+            const nextIndex = practiceWordIndexRef.current + 1
             if (nextIndex >= currentWord.length) {
-              const startTime = practiceWordStartRef.current;
+              const startTime = practiceWordStartRef.current
               if (startTime && currentWord.length > 0) {
-                const elapsedMs = performance.now() - startTime;
+                const elapsedMs = performance.now() - startTime
                 if (elapsedMs > 0) {
                   const nextWpm =
                     (currentWord.length / PRACTICE_WORD_UNITS) *
-                    (60000 / elapsedMs);
-                  setPracticeWpm(Math.round(nextWpm * 10) / 10);
+                    (60000 / elapsedMs)
+                  setPracticeWpm(Math.round(nextWpm * 10) / 10)
                 }
               }
-              const nextWord = getRandomWord(availablePracticeWords, currentWord);
-              const nextLetter = nextWord[0] as Letter;
-              practiceWordStartRef.current = null;
-              practiceWordRef.current = nextWord;
-              practiceWordIndexRef.current = 0;
-              letterRef.current = nextLetter;
-              setPracticeWord(nextWord);
-              setPracticeWordIndex(0);
-              setLetter(nextLetter);
-              setShowHintOnce(false);
-              setStatus('idle');
-              return;
+              const nextWord = getRandomWord(availablePracticeWords, currentWord)
+              const nextLetter = nextWord[0] as Letter
+              practiceWordStartRef.current = null
+              practiceWordRef.current = nextWord
+              practiceWordIndexRef.current = 0
+              letterRef.current = nextLetter
+              setPracticeWord(nextWord)
+              setPracticeWordIndex(0)
+              setLetter(nextLetter)
+              setShowHintOnce(false)
+              setStatus('idle')
+              return
             }
-            const nextLetter = currentWord[nextIndex] as Letter;
-            practiceWordIndexRef.current = nextIndex;
-            letterRef.current = nextLetter;
-            setPracticeWordIndex(nextIndex);
-            setLetter(nextLetter);
-            setShowHintOnce(false);
-            setStatus('idle');
-            return;
+            const nextLetter = currentWord[nextIndex] as Letter
+            practiceWordIndexRef.current = nextIndex
+            letterRef.current = nextLetter
+            setPracticeWordIndex(nextIndex)
+            setLetter(nextLetter)
+            setShowHintOnce(false)
+            setStatus('idle')
+            return
           }
-          setStatus('success');
+          setStatus('success')
           successTimeoutRef.current = window.setTimeout(() => {
             setLetter((current) =>
               getRandomWeightedLetter(availableLetters, scoresRef.current, current),
-            );
-            setShowHintOnce(false);
-            setStatus('idle');
-          }, 650);
-          return;
+            )
+            setShowHintOnce(false)
+            setStatus('idle')
+          }, 650)
+          return
         }
-        startErrorLockout();
+        startErrorLockout()
         if (canScoreAttempt()) {
-          bumpScore(letterRef.current, -1);
+          bumpScore(letterRef.current, -1)
         }
-        setStatus('error');
-        setInput('');
+        setStatus('error')
+        setInput('')
         errorTimeoutRef.current = window.setTimeout(() => {
-          setStatus('idle');
-        }, ERROR_LOCKOUT_MS);
-      }, INTER_CHAR_GAP_MS);
+          setStatus('idle')
+        }, ERROR_LOCKOUT_MS)
+      }, INTER_CHAR_GAP_MS)
     },
     [
       availableLetters,
@@ -875,86 +875,86 @@ function MainApp() {
       startErrorLockout,
       submitFreestyleInput,
     ],
-  );
+  )
 
   const handleFreestyleClear = useCallback(() => {
-    clearTimer(letterTimeoutRef);
-    clearTimer(wordSpaceTimeoutRef);
-    setFreestyleResult(null);
-    setFreestyleInput('');
-    setFreestyleWord('');
-  }, []);
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    setFreestyleResult(null)
+    setFreestyleInput('')
+    setFreestyleWord('')
+  }, [])
 
   const handleFreestyleBackspace = useCallback(() => {
-    clearTimer(letterTimeoutRef);
-    clearTimer(wordSpaceTimeoutRef);
-    setFreestyleResult(null);
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    setFreestyleResult(null)
     if (freestyleInputRef.current) {
       setFreestyleInput((prev) => {
-        const next = prev.slice(0, -1);
-        freestyleInputRef.current = next;
-        return next;
-      });
-      return;
+        const next = prev.slice(0, -1)
+        freestyleInputRef.current = next
+        return next
+      })
+      return
     }
     if (!freestyleWordModeRef.current) {
-      return;
+      return
     }
     setFreestyleWord((prev) => {
-      const trimmed = prev.replace(/\s+$/, '');
+      const trimmed = prev.replace(/\s+$/, '')
       if (!trimmed) {
-        return '';
+        return ''
       }
-      return trimmed.slice(0, -1);
-    });
-  }, []);
+      return trimmed.slice(0, -1)
+    })
+  }, [])
 
   const handleWordModeChange = useCallback(
     (nextValue: boolean) => {
-      setFreestyleWordMode(nextValue);
-      handleFreestyleClear();
+      setFreestyleWordMode(nextValue)
+      handleFreestyleClear()
     },
     [handleFreestyleClear],
-  );
+  )
 
   const handleWordModeToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      handleWordModeChange(event.target.checked);
+      handleWordModeChange(event.target.checked)
     },
     [handleWordModeChange],
-  );
+  )
 
   const submitListenAnswer = useCallback(
     (value: Letter) => {
       if (listenStatus !== 'idle') {
-        return;
+        return
       }
       if (!/^[A-Z0-9]$/.test(value)) {
-        return;
+        return
       }
       if (useCustomKeyboard) {
-        triggerHaptics(10);
+        triggerHaptics(10)
       }
-      clearTimer(listenTimeoutRef);
-      stopListenPlayback();
-      const isCorrect = value === letter;
-      setListenStatus(isCorrect ? 'success' : 'error');
-      setListenReveal(letter);
-      bumpScore(letter, isCorrect ? 1 : -1);
+      clearTimer(listenTimeoutRef)
+      stopListenPlayback()
+      const isCorrect = value === letter
+      setListenStatus(isCorrect ? 'success' : 'error')
+      setListenReveal(letter)
+      bumpScore(letter, isCorrect ? 1 : -1)
       listenTimeoutRef.current = window.setTimeout(
         () => {
           const nextLetter = getRandomWeightedLetter(
             availableLetters,
             scores,
             letter,
-          );
-          setListenStatus('idle');
-          setListenReveal(null);
-          setLetter(nextLetter);
-          void playListenSequence(MORSE_CODE[nextLetter].code);
+          )
+          setListenStatus('idle')
+          setListenReveal(null)
+          setLetter(nextLetter)
+          void playListenSequence(MORSE_CODE[nextLetter].code)
         },
         isCorrect ? 650 : ERROR_LOCKOUT_MS,
-      );
+      )
     },
     [
       availableLetters,
@@ -967,110 +967,110 @@ function MainApp() {
       triggerHaptics,
       useCustomKeyboard,
     ],
-  );
+  )
 
   const handleListenReplay = useCallback(() => {
     if (listenStatus !== 'idle') {
-      return;
+      return
     }
-    setListenReveal(null);
+    setListenReveal(null)
     if (useCustomKeyboard) {
-      triggerHaptics(12);
+      triggerHaptics(12)
     }
-    void playListenSequence(MORSE_CODE[letter].code);
+    void playListenSequence(MORSE_CODE[letter].code)
   }, [
     letter,
     listenStatus,
     playListenSequence,
     triggerHaptics,
     useCustomKeyboard,
-  ]);
+  ])
 
   const handleShowReference = useCallback(() => {
-    setShowAbout(false);
-    setShowSettings(false);
-    setShowReference(true);
-    trackEvent('reference_open');
-  }, [trackEvent]);
+    setShowAbout(false)
+    setShowSettings(false)
+    setShowReference(true)
+    trackEvent('reference_open')
+  }, [trackEvent])
 
   const handleShowAbout = useCallback(() => {
-    setShowReference(false);
-    setShowSettings(false);
-    setShowAbout(true);
-  }, []);
+    setShowReference(false)
+    setShowSettings(false)
+    setShowAbout(true)
+  }, [])
 
   useEffect(() => {
     if (!isFreestyle) {
-      return;
+      return
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) {
-        return;
+        return
       }
       if (event.key.toLowerCase() !== 'n') {
-        return;
+        return
       }
-      event.preventDefault();
-      handleFreestyleClear();
-    };
-    window.addEventListener('keydown', handleKeyDown);
+      event.preventDefault()
+      handleFreestyleClear()
+    }
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleFreestyleClear, isFreestyle]);
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [handleFreestyleClear, isFreestyle])
 
   useEffect(() => {
     if (isListen) {
-      return;
+      return
     }
     const handleShortcut = (event: KeyboardEvent) => {
       if (showReference) {
-        return;
+        return
       }
       if (shouldIgnoreShortcutEvent(event)) {
-        return;
+        return
       }
-      const key = event.key.toLowerCase();
+      const key = event.key.toLowerCase()
       if (key === 'f') {
-        event.preventDefault();
-        applyModeChange('freestyle');
-        return;
+        event.preventDefault()
+        applyModeChange('freestyle')
+        return
       }
       if (key === 'i') {
-        event.preventDefault();
-        applyModeChange('listen');
-        return;
+        event.preventDefault()
+        applyModeChange('listen')
+        return
       }
       if (key === 'l') {
-        event.preventDefault();
-        applyModeChange('practice');
-        return;
+        event.preventDefault()
+        applyModeChange('practice')
+        return
       }
       if (key === 'h') {
         if (mode === 'practice') {
-          event.preventDefault();
-          setShowHint((prev) => !prev);
+          event.preventDefault()
+          setShowHint((prev) => !prev)
         }
-        return;
+        return
       }
       if (key === 'w') {
         if (mode === 'freestyle') {
-          event.preventDefault();
-          handleWordModeChange(!freestyleWordMode);
+          event.preventDefault()
+          handleWordModeChange(!freestyleWordMode)
         }
-        return;
+        return
       }
       if (event.key === 'Backspace') {
         if (mode === 'freestyle') {
-          event.preventDefault();
-          handleFreestyleBackspace();
+          event.preventDefault()
+          handleFreestyleBackspace()
         }
       }
-    };
-    window.addEventListener('keydown', handleShortcut);
+    }
+    window.addEventListener('keydown', handleShortcut)
     return () => {
-      window.removeEventListener('keydown', handleShortcut);
-    };
+      window.removeEventListener('keydown', handleShortcut)
+    }
   }, [
     applyModeChange,
     freestyleWordMode,
@@ -1079,25 +1079,25 @@ function MainApp() {
     isListen,
     mode,
     showReference,
-  ]);
+  ])
 
   const registerSymbol = useCallback(
     (symbol: '.' | '-') => {
       if (!isFreestyle && isErrorLocked()) {
-        return;
+        return
       }
-      clearTimer(errorTimeoutRef);
-      clearTimer(successTimeoutRef);
-      clearTimer(letterTimeoutRef);
+      clearTimer(errorTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(letterTimeoutRef)
 
       if (isFreestyle) {
         setFreestyleInput((prev) => {
-          const next = prev + symbol;
-          scheduleLetterReset('freestyle');
-          return next;
-        });
-        setFreestyleResult(null);
-        return;
+          const next = prev + symbol
+          scheduleLetterReset('freestyle')
+          return next
+        })
+        setFreestyleResult(null)
+        return
       }
 
       if (
@@ -1106,41 +1106,41 @@ function MainApp() {
         practiceWordStartRef.current === null &&
         practiceWordRef.current
       ) {
-        practiceWordStartRef.current = performance.now();
+        practiceWordStartRef.current = performance.now()
       }
 
-      setStatus('idle');
-      setInput((prev) => prev + symbol);
-      scheduleLetterReset('practice');
+      setStatus('idle')
+      setInput((prev) => prev + symbol)
+      scheduleLetterReset('practice')
     },
     [isErrorLocked, isFreestyle, scheduleLetterReset],
-  );
+  )
   const handlePressStart = useCallback(() => {
-    clearTimer(letterTimeoutRef);
-    clearTimer(wordSpaceTimeoutRef);
-    void startTone();
-  }, [startTone]);
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    void startTone()
+  }, [startTone])
 
   const handlePressEnd = useCallback(() => {
-    stopTone();
-  }, [stopTone]);
+    stopTone()
+  }, [stopTone])
 
   const handlePressCancel = useCallback(() => {
-    const hasInput = isFreestyle ? freestyleInput : input;
+    const hasInput = isFreestyle ? freestyleInput : input
     if (hasInput) {
-      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice');
+      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice')
     }
-  }, [freestyleInput, input, isFreestyle, scheduleLetterReset]);
+  }, [freestyleInput, input, isFreestyle, scheduleLetterReset])
 
   const canStartPress = useCallback(
     () => (isFreestyle ? true : !isErrorLocked()),
     [isErrorLocked, isFreestyle],
-  );
+  )
 
   const isGlobalShortcutBlocked = useCallback(
     () => showReferenceRef.current,
     [],
-  );
+  )
 
   const {
     handleKeyDown,
@@ -1158,44 +1158,44 @@ function MainApp() {
     onPressEnd: handlePressEnd,
     onPressStart: handlePressStart,
     onSymbol: registerSymbol,
-  });
+  })
 
   useEffect(() => {
     if (!isListen) {
-      return;
+      return
     }
     const handleListenKey = (event: KeyboardEvent) => {
       if (showReferenceRef.current) {
-        return;
+        return
       }
       if (shouldIgnoreShortcutEvent(event)) {
-        return;
+        return
       }
       if (event.code === 'Space' || event.key === ' ') {
-        event.preventDefault();
-        handleListenReplay();
-        return;
+        event.preventDefault()
+        handleListenReplay()
+        return
       }
       if (event.key.length !== 1) {
-        return;
+        return
       }
-      const next = event.key.toUpperCase();
+      const next = event.key.toUpperCase()
       if (!/^[A-Z0-9]$/.test(next)) {
-        return;
+        return
       }
-      event.preventDefault();
-      submitListenAnswer(next as Letter);
-    };
-    window.addEventListener('keydown', handleListenKey);
+      event.preventDefault()
+      submitListenAnswer(next as Letter)
+    }
+    window.addEventListener('keydown', handleListenKey)
     return () => {
-      window.removeEventListener('keydown', handleListenKey);
-    };
-  }, [handleListenReplay, isListen, submitListenAnswer]);
+      window.removeEventListener('keydown', handleListenKey)
+    }
+  }, [handleListenReplay, isListen, submitListenAnswer])
 
-  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce);
-  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic;
-  const target = MORSE_CODE[letter].code;
-  const mnemonic = MORSE_CODE[letter].mnemonic;
+  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
+  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
+  const target = MORSE_CODE[letter].code
+  const mnemonic = MORSE_CODE[letter].mnemonic
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -1203,7 +1203,7 @@ function MainApp() {
         ? 'Missed. Start over.'
         : mnemonicVisible
           ? mnemonic
-          : ' ';
+          : ' '
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -1213,23 +1213,23 @@ function MainApp() {
     !mnemonicVisible &&
     practiceWord
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
-      : null;
-  const statusText = practiceProgressText ?? baseStatusText;
+      : null
+  const statusText = practiceProgressText ?? baseStatusText
   const practiceWpmText =
     !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
-      : null;
-  const targetSymbols = target.split('');
+      : null
+  const targetSymbols = target.split('')
   const isInputOnTrack =
-    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input);
+    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
     status === 'success'
       ? targetSymbols.length
       : isInputOnTrack
         ? input.length
-        : 0;
+        : 0
   const pips = targetSymbols.map((symbol, index) => {
-    const isHit = index < highlightCount;
+    const isHit = index < highlightCount
     return (
       <span
         key={`${symbol}-${index}`}
@@ -1237,11 +1237,11 @@ function MainApp() {
           isHit ? 'hit' : 'expected'
         }`}
       />
-    );
-  });
+    )
+  })
   const isLetterResult = freestyleResult
     ? /^[A-Z0-9]$/.test(freestyleResult)
-    : false;
+    : false
   const freestyleStatus = freestyleResult
     ? isLetterResult
       ? freestyleWordMode
@@ -1252,34 +1252,34 @@ function MainApp() {
       ? `Input ${freestyleInput}`
       : freestyleWordMode && freestyleWord
         ? `Word ${freestyleWord}`
-        : 'Tap and pause';
+        : 'Tap and pause'
   const freestyleDisplay = freestyleWordMode
     ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
     : freestyleResult
       ? isLetterResult
         ? freestyleResult
         : '?'
-      : '';
+      : ''
   const hasFreestyleDisplay = freestyleWordMode
     ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
-    : Boolean(freestyleResult);
+    : Boolean(freestyleResult)
   const listenStatusText =
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
         ? 'Incorrect'
-        : 'Listen and type the character';
-  const listenDisplay = listenReveal ?? '?';
+        : 'Listen and type the character'
+  const listenDisplay = listenReveal ?? '?'
   const listenDisplayClass = `letter ${
     listenReveal ? '' : 'letter-placeholder'
-  }`;
-  const listenFocused = isListen && useCustomKeyboard;
-  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : '';
+  }`
+  const listenFocused = isListen && useCustomKeyboard
+  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : ''
   const userInitial = user
     ? userLabel
       ? userLabel[0].toUpperCase()
       : '?'
-    : '';
+    : ''
 
   return (
     <div
@@ -1471,30 +1471,30 @@ function MainApp() {
         </div>
       ) : null}
     </div>
-  );
+  )
 }
 
 /** Routes between the main app and legal pages. */
 function App() {
   if (typeof window === 'undefined') {
-    return <MainApp />;
+    return <MainApp />
   }
-  const trimmedPath = window.location.pathname.replace(/\/+$/, '');
-  const path = trimmedPath === '' ? '/' : trimmedPath;
+  const trimmedPath = window.location.pathname.replace(/\/+$/, '')
+  const path = trimmedPath === '' ? '/' : trimmedPath
   if (path === '/privacy') {
-    return <PrivacyPolicy />;
+    return <PrivacyPolicy />
   }
   if (path === '/terms') {
-    return <TermsOfService />;
+    return <TermsOfService />
   }
   if (path === '/support') {
-    return <SupportPage />;
+    return <SupportPage />
   }
   if (path === '/') {
-    return <MainApp />;
+    return <MainApp />
   }
   // Show 404 page for all other routes
-  return <Page404 />;
+  return <Page404 />
 }
 
-export default App;
+export default App

@@ -1,7 +1,7 @@
-import './Footer.css';
+import './Footer.css'
 
 export function Footer() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear()
 
   return (
     <footer className="app-footer">
@@ -13,5 +13,5 @@ export function Footer() {
       <span>| </span>
       <a href="/support">Support</a>
     </footer>
-  );
+  )
 }
