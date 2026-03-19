@@ -3,31 +3,22 @@
     "name": "Dit",
     "slug": "dit-ios",
     "version": "1.0.0",
-    "platforms": [
-      "ios"
-    ],
+    "platforms": ["ios"],
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "plugins": [
-      "expo-dev-client",
-      "./plugins/withModularHeaders"
-    ],
+    "plugins": ["expo-dev-client", "./plugins/withModularHeaders"],
     "ios": {
       "userInterfaceStyle": "dark",
       "supportsTablet": true,
       "bundleIdentifier": "com.tylerobinson.dit",
       "entitlements": {
-        "com.apple.developer.applesignin": [
-          "Default"
-        ]
+        "com.apple.developer.applesignin": ["Default"]
       },
-      "icon": "./assets/images/AppIcon.icon",
       "buildNumber": "4",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
