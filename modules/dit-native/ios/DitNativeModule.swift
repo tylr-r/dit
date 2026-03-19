@@ -455,6 +455,7 @@ public final class DitNativeModule: Module {
     }
   }
 
+  @discardableResult
   private func ensureFirebaseConfigured() throws -> FirebaseApp {
     if let app = FirebaseApp.app() {
       return app
