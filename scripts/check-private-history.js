@@ -72,7 +72,10 @@ function runGit(args, { allowFailure = false } = {}) {
       return stdout
     }
 
-    throw new Error(stderr || `git ${args.join(' ')} failed`)
+    const fallbackMessage =
+      error instanceof Error ? error.message : `git ${args.join(' ')} failed`
+
+    throw new Error(stderr || fallbackMessage)
   }
 }
 
@@ -177,7 +180,7 @@ function findContentMatches() {
       }
 
       seenLocations.add(locationKey)
-      uniqueUnsafeLocations.push(`${commitSha} | ${filePath}`)
+      uniqueUnsafeLocations.push(`${commitSha}:${filePath}`)
     }
 
     if (uniqueUnsafeLocations.length === 0) {
