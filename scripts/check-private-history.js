@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 
-const repoRoot = process.cwd()
+const repositoryRoot = process.cwd()
 const maxReportedFindings = 10
 
 const suspiciousPathChecks = [
@@ -53,16 +53,24 @@ const safeContentMatchPaths = [
 function runGit(args, { allowFailure = false } = {}) {
   try {
     return execFileSync('git', args, {
-      cwd: repoRoot,
+      cwd: repositoryRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim()
   } catch (error) {
+    const stdout =
+      error && typeof error === 'object' && 'stdout' in error
+        ? String(error.stdout ?? '').trim()
+        : ''
+    const stderr =
+      error && typeof error === 'object' && 'stderr' in error
+        ? String(error.stderr ?? '').trim()
+        : ''
+
     if (allowFailure) {
-      return String(error.stdout ?? '').trim()
+      return stdout
     }
 
-    const stderr = String(error.stderr ?? '').trim()
     throw new Error(stderr || `git ${args.join(' ')} failed`)
   }
 }
@@ -140,42 +148,42 @@ function findContentMatches() {
     )
 
     const lines = output.split('\n').map((line) => line.trim()).filter(Boolean)
-    let currentCommit = ''
-    let currentFiles = []
+    let commitSha = ''
+    let filesInCommit = []
 
     const flush = () => {
-      if (!currentCommit) {
+      if (!commitSha) {
         return
       }
 
-      const unsafeFiles = currentFiles.filter(
+      const unsafeFiles = filesInCommit.filter(
         (filePath) => !safeContentMatchPaths.some((pattern) => pattern.test(filePath)),
       )
 
       if (unsafeFiles.length === 0) {
-        currentCommit = ''
-        currentFiles = []
+        commitSha = ''
+        filesInCommit = []
         return
       }
 
       findings.push({
         source: 'git content history',
         label: check.label,
-        detail: `${currentCommit} | ${unsafeFiles.slice(0, 4).join(', ')}`,
+        detail: `${commitSha} | ${unsafeFiles.slice(0, 4).join(', ')}`,
       })
 
-      currentCommit = ''
-      currentFiles = []
+      commitSha = ''
+      filesInCommit = []
     }
 
     for (const line of lines) {
       if (/^[0-9a-f]{40}\b/i.test(line)) {
         flush()
-        currentCommit = line
+        commitSha = line
         continue
       }
 
-      currentFiles.push(line)
+      filesInCommit.push(line)
     }
 
     flush()
