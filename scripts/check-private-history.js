@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 
 const repositoryRoot = process.cwd()
 const maxReportedFindings = 10
+const maxFilesPerFinding = 4
 
 const suspiciousPathChecks = [
   {
@@ -87,6 +88,13 @@ function collectHistoricalPaths() {
     .filter(Boolean)
 }
 
+function collectReachableRevisions() {
+  return runGit(['rev-list', '--all'])
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
 function collectDeletedPaths() {
   const output = runGit([
     'log',
@@ -140,53 +148,47 @@ function findPathMatches(paths, source) {
 
 function findContentMatches() {
   const findings = []
+  const reachableRevisions = collectReachableRevisions()
 
   for (const check of suspiciousContentChecks) {
     const output = runGit(
-      ['log', '--all', `-S${check.needle}`, '--pretty=format:%H %s', '--name-only'],
+      ['grep', '-nI', '-F', check.needle, ...reachableRevisions],
       { allowFailure: true },
     )
 
     const lines = output.split('\n').map((line) => line.trim()).filter(Boolean)
-    let commitSha = ''
-    let filesInCommit = []
-
-    const flush = () => {
-      if (!commitSha) {
-        return
-      }
-
-      const unsafeFiles = filesInCommit.filter(
-        (filePath) => !safeContentMatchPaths.some((pattern) => pattern.test(filePath)),
-      )
-
-      if (unsafeFiles.length === 0) {
-        commitSha = ''
-        filesInCommit = []
-        return
-      }
-
-      findings.push({
-        source: 'git content history',
-        label: check.label,
-        detail: `${commitSha} | ${unsafeFiles.slice(0, 4).join(', ')}`,
-      })
-
-      commitSha = ''
-      filesInCommit = []
-    }
+    const uniqueUnsafeLocations = []
+    const seenLocations = new Set()
 
     for (const line of lines) {
-      if (/^[0-9a-f]{40}\b/i.test(line)) {
-        flush()
-        commitSha = line
+      const match = line.match(/^([0-9a-f]{40,64}):(.+?):\d+:/i)
+      if (!match) {
         continue
       }
 
-      filesInCommit.push(line)
+      const [, commitSha, filePath] = match
+      if (safeContentMatchPaths.some((pattern) => pattern.test(filePath))) {
+        continue
+      }
+
+      const locationKey = `${commitSha}:${filePath}`
+      if (seenLocations.has(locationKey)) {
+        continue
+      }
+
+      seenLocations.add(locationKey)
+      uniqueUnsafeLocations.push(`${commitSha} | ${filePath}`)
     }
 
-    flush()
+    if (uniqueUnsafeLocations.length === 0) {
+      continue
+    }
+
+    findings.push({
+      source: 'git content history',
+      label: check.label,
+      detail: uniqueUnsafeLocations.slice(0, maxFilesPerFinding).join(', '),
+    })
   }
 
   return findings
