@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "build:ci": "corepack pnpm run lint && corepack pnpm run test:types && corepack pnpm run security:history && corepack pnpm run build",
+    "build:ci": "pnpm run lint && pnpm run test:types && pnpm run security:history && pnpm run build",
     "lint": "turbo run lint",
     "preview": "turbo run preview",
     "deploy": "pnpm --filter @dit/web build && firebase deploy",

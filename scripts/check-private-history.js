@@ -19,9 +19,8 @@ const suspiciousPathChecks = [
   {
     label: 'private key or certificate',
     matches: (filePath) =>
-      /(^|\/)(id_rsa|id_dsa|id_ecdsa|id_ed25519)$|(\.(pem|p8|p12|jks|keystore))$/i.test(
-        filePath,
-      ),
+      /(^|\/)(id_rsa|id_dsa|id_ecdsa|id_ed25519)$/i.test(filePath) ||
+      /\.(pem|p8|p12|jks|keystore)$/i.test(filePath),
   },
   {
     label: 'service account export',
@@ -43,6 +42,12 @@ const suspiciousContentChecks = [
     label: 'OpenSSH private key',
     needle: '-----BEGIN OPENSSH PRIVATE KEY-----',
   },
+]
+
+const safeContentMatchPaths = [
+  /^README\.md$/i,
+  /^docs\//i,
+  /^scripts\/check-private-history\.js$/i,
 ]
 
 function runGit(args, { allowFailure = false } = {}) {
@@ -134,16 +139,46 @@ function findContentMatches() {
       { allowFailure: true },
     )
 
-    const details = output.split('\n').map((line) => line.trim()).filter(Boolean)
-    if (details.length === 0) {
-      continue
+    const lines = output.split('\n').map((line) => line.trim()).filter(Boolean)
+    let currentCommit = ''
+    let currentFiles = []
+
+    const flush = () => {
+      if (!currentCommit) {
+        return
+      }
+
+      const unsafeFiles = currentFiles.filter(
+        (filePath) => !safeContentMatchPaths.some((pattern) => pattern.test(filePath)),
+      )
+
+      if (unsafeFiles.length === 0) {
+        currentCommit = ''
+        currentFiles = []
+        return
+      }
+
+      findings.push({
+        source: 'git content history',
+        label: check.label,
+        detail: `${currentCommit} | ${unsafeFiles.slice(0, 4).join(', ')}`,
+      })
+
+      currentCommit = ''
+      currentFiles = []
     }
 
-    findings.push({
-      source: 'git content history',
-      label: check.label,
-      detail: details.slice(0, 5).join(' | '),
-    })
+    for (const line of lines) {
+      if (/^[0-9a-f]{40}\b/i.test(line)) {
+        flush()
+        currentCommit = line
+        continue
+      }
+
+      currentFiles.push(line)
+    }
+
+    flush()
   }
 
   return findings
