@@ -72,7 +72,9 @@ pnpm run dev
 
 ```bash
 pnpm run build
+pnpm run build:ci
 pnpm run lint
+pnpm run security:history
 pnpm run test:unit
 pnpm run test:e2e
 pnpm run test:types
