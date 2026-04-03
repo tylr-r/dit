@@ -2465,7 +2465,7 @@ export default function App() {
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
   const hintVisible =
-    !isFreestyle && !isListen && (showHint || isGuidedPracticeActive)
+    !isFreestyle && !isListen && showHint
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
   const showMorseHint = introHintStep === 'morse' && !isListen && !isNuxActive
   const showSettingsHint = introHintStep === 'settings' && !isListen && !isNuxActive
@@ -2492,7 +2492,7 @@ export default function App() {
       ? `Listen and try ${letter} again`
       : guidedPhase === 'teach'
       ? `Send ${letter} ${guidedTeachRemaining} more ${guidedTeachRemaining === 1 ? 'time' : 'times'}`
-      : `Practice pack ${guidedPackIndex + 1}: ${guidedCurrentPack.join(' ')}`
+      : ' '
     : null
   const practiceProgressText =
     !isFreestyle &&
@@ -2506,14 +2506,11 @@ export default function App() {
       : null
   const practiceStatusText = guidedPracticeStatusText ?? practiceProgressText ?? baseStatusText
   const practiceWpmText =
-    isGuidedPracticeActive
-      ? `Pack ${guidedPackIndex + 1}/${BEGINNER_COURSE_PACKS.length} · ${guidedPhase}`
-      : !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
+    !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
       : null
-  const listenTtrText = isGuidedListenActive
-    ? listenRecognitionText ?? `Pack ${guidedPackIndex + 1}/${BEGINNER_COURSE_PACKS.length} · listen`
-    : isListen && listenRecognitionText
+  const listenTtrText =
+    isListen && listenRecognitionText
     ? listenRecognitionText
     : null
   const isInputOnTrack = !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
@@ -2587,6 +2584,7 @@ export default function App() {
               onPressReference={handleShowReference}
               onSettingsPress={handleSettingsToggle}
               showSettingsHint={showSettingsHint}
+              courseChipText={guidedCourseActive ? `Pack ${guidedPackIndex + 1} · ${guidedPhase}` : null}
             />
           ) : null}
           {showAbout ? <AboutModal onClose={() => setShowAbout(false)} /> : null}
@@ -2634,6 +2632,12 @@ export default function App() {
               numbers={REFERENCE_NUMBERS}
               morseData={MORSE_DATA}
               scores={scores}
+              courseProgress={guidedCourseActive ? {
+                packIndex: guidedPackIndex,
+                totalPacks: BEGINNER_COURSE_PACKS.length,
+                phase: guidedPhase,
+                packLetters: guidedCurrentPack,
+              } : null}
               onClose={() => setShowReference(false)}
               onResetScores={handleResetScores}
               onPlaySound={(char) => {

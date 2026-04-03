@@ -15,11 +15,19 @@ import { hslaFromHsl } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 
+type CourseProgress = {
+  packIndex: number
+  totalPacks: number
+  phase: string
+  packLetters: string[]
+}
+
 type ReferenceModalProps = {
   letters: Letter[]
   numbers: Letter[]
   morseData: Record<Letter, { code: string }>
   scores: ScoreRecord
+  courseProgress?: CourseProgress | null
   onClose: () => void
   onResetScores: () => void
   onPlaySound?: (char: Letter) => void
@@ -75,6 +83,7 @@ export function ReferenceModal({
   numbers,
   morseData,
   scores,
+  courseProgress,
   onClose,
   onResetScores,
   onPlaySound,
@@ -236,6 +245,16 @@ export function ReferenceModal({
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
         >
+          {courseProgress ? (
+            <View style={styles.courseBanner}>
+              <Text style={styles.courseBannerTitle}>
+                Pack {courseProgress.packIndex + 1}/{courseProgress.totalPacks} · {courseProgress.phase}
+              </Text>
+              <Text style={styles.courseBannerLetters}>
+                {courseProgress.packLetters.join('  ')}
+              </Text>
+            </View>
+          ) : null}
           {[1, 2, 3, 4].map((level) => {
             let levelLetters = letters.filter(
               (l) => MORSE_DATA[l].level === level,
@@ -412,5 +431,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  courseBanner: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+  },
+  courseBannerTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary40,
+  },
+  courseBannerLetters: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 4,
+    color: colors.text.primary,
   },
 })
