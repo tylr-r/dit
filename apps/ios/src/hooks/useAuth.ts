@@ -8,6 +8,14 @@ const DELETED_ACCOUNT_CODES = new Set([
   'auth/user-token-revoked',
 ])
 
+const getAuthErrorCode = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  typeof error.code === 'string'
+    ? error.code
+    : null
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
   const [initializing, setInitializing] = useState(true)
@@ -20,7 +28,8 @@ export const useAuth = () => {
         if (initializing) setInitializing(false)
       },
       (error) => {
-        if (DELETED_ACCOUNT_CODES.has(error.code)) {
+        const code = getAuthErrorCode(error)
+        if (code && DELETED_ACCOUNT_CODES.has(code)) {
           void signOut(auth)
         }
       },

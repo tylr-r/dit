@@ -1,11 +1,16 @@
 import {
+  BEGINNER_COURSE_PACKS,
   applyScoreDelta,
+  clamp,
+  createGuidedLessonProgress,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   DEFAULT_CHARACTER_WPM,
   DEFAULT_EFFECTIVE_WPM,
   EFFECTIVE_WPM_RANGE,
   formatWpm,
+  getBeginnerCoursePack,
+  getBeginnerUnlockedLetters,
   getLettersForLevel,
   getRandomLatencyAwareLetter,
   getRandomLetter,
@@ -15,10 +20,19 @@ import {
   initializeScores,
   INTER_LETTER_UNITS,
   INTER_WORD_UNITS,
+  isGuidedListenComplete,
+  isGuidedPracticeComplete,
+  isGuidedTeachComplete,
   MORSE_DATA,
+  recordGuidedListenResult,
+  recordGuidedPracticeResult,
+  recordGuidedTeachSuccess,
   UNIT_TIME_MS,
   WPM_RANGE,
+  type GuidedLessonProgress,
+  type GuidedPhase,
   type Letter,
+  type LearnerProfile,
   type ListenTtrRecord,
   type Progress,
   type ProgressSnapshot,
@@ -55,7 +69,6 @@ import {
 } from './src/services/auth'
 import {
   getAutoEffectiveWpm,
-  LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS,
   normalizeListenSpeeds,
 } from './src/utils/listenSpeed'
 import {
@@ -117,29 +130,15 @@ const DEFAULT_PRACTICE_IFR_MODE = true
 const DEFAULT_PRACTICE_REVIEW_MISSES = true
 const PRACTICE_REVIEW_DELAY_STEPS = 3
 const PRACTICE_REVIEW_MAX_SIZE = 24
-const NUX_LETTERS: Letter[] = ['E', 'T', 'I', 'M', 'A', 'N']
-const NUX_FAST_THRESHOLD_MS = 1600
-const NUX_FAST_DEFAULTS = {
-  showHint: false,
-  listenWpm: DEFAULT_LISTEN_WPM,
-  listenEffectiveWpm: DEFAULT_LISTEN_WPM,
-  listenAutoTightening: false,
-  listenAutoTighteningCorrectCount: LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS.tight,
-  maxLevel: 4,
-} as const
-const NUX_SLOW_DEFAULTS = {
-  showHint: false,
-  listenWpm: DEFAULT_LISTEN_WPM,
-  listenEffectiveWpm: DEFAULT_LISTEN_EFFECTIVE_WPM,
-  listenAutoTightening: DEFAULT_LISTEN_AUTO_TIGHTENING,
-  listenAutoTighteningCorrectCount: DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
-  maxLevel: 1,
-} as const
 
 type IntroHintStep = 'morse' | 'settings' | 'done'
 type NuxStatus = 'pending' | 'completed' | 'skipped'
-type NuxStep = 'splash' | 'welcome' | 'sound_check' | 'dit_dah' | 'exercise' | 'result'
-type NuxResult = 'fast' | 'slow' | 'skipped' | null
+type NuxStep =
+  | 'profile'
+  | 'sound_check'
+  | 'button_tutorial'
+  | 'known_tour'
+  | 'beginner_intro'
 type ListenPromptTiming = {
   targetLetter: Letter
   expectedEndAt: number
@@ -169,6 +168,28 @@ const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
     return letters[0]
   }
   return letters[(currentIndex + 1) % letters.length]
+}
+
+const getLevelForLetters = (letters: readonly Letter[]) => {
+  if (letters.length === 0) {
+    return LEVELS[0]
+  }
+  const highestLevel = letters.reduce(
+    (maxLevel, letter) => Math.max(maxLevel, MORSE_DATA[letter].level),
+    1,
+  )
+  return clamp(highestLevel, LEVELS[0], LEVELS[LEVELS.length - 1]) as (typeof LEVELS)[number]
+}
+
+const getGuidedPracticePool = (packIndex: number) => {
+  const currentPack = getBeginnerCoursePack(packIndex)
+  const unlockedLetters = getBeginnerUnlockedLetters(packIndex)
+  const reviewPool = unlockedLetters.filter((letter) => !currentPack.includes(letter))
+  return {
+    currentPack,
+    unlockedLetters,
+    reviewPool,
+  }
 }
 
 const clampListenTtrMs = (value: number) =>
@@ -413,11 +434,18 @@ export default function App() {
   const [practiceReviewMisses, setPracticeReviewMisses] = useState(DEFAULT_PRACTICE_REVIEW_MISSES)
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
-  const [nuxStep, setNuxStep] = useState<NuxStep>('splash')
-  const [nuxIndex, setNuxIndex] = useState(0)
+  const [nuxStep, setNuxStep] = useState<NuxStep>('profile')
   const [nuxReady, setNuxReady] = useState(false)
-  const [nuxResult, setNuxResult] = useState<NuxResult>(null)
-  const [nuxAvgMs, setNuxAvgMs] = useState<number | null>(null)
+  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null)
+  const [guidedCourseActive, setGuidedCourseActive] = useState(false)
+  const [guidedPackIndex, setGuidedPackIndex] = useState(0)
+  const [guidedPhase, setGuidedPhase] = useState<GuidedPhase>('teach')
+  const [guidedProgress, setGuidedProgress] = useState<GuidedLessonProgress>(
+    createGuidedLessonProgress(),
+  )
+  const [didCompleteSoundCheck, setDidCompleteSoundCheck] = useState(false)
+  const [didCompleteTutorialTap, setDidCompleteTutorialTap] = useState(false)
+  const [didCompleteTutorialHold, setDidCompleteTutorialHold] = useState(false)
   const [maxLevel, setMaxLevel] = useState(DEFAULT_MAX_LEVEL)
   const [practiceWordMode, setPracticeWordMode] = useState(false)
   const [letter, setLetter] = useState<Letter>(initialConfig.letter)
@@ -443,9 +471,11 @@ export default function App() {
   const [listenTtr, setListenTtr] = useState<ListenTtrRecord>({})
   const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
   const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(null)
-  const nuxTimingsRef = useRef<number[]>([])
-  const nuxAttemptStartRef = useRef<number | null>(null)
-  const nuxErrorCountRef = useRef<number>(0)
+  const learnerProfileRef = useRef<LearnerProfile | null>(learnerProfile)
+  const guidedCourseActiveRef = useRef(guidedCourseActive)
+  const guidedPackIndexRef = useRef(guidedPackIndex)
+  const guidedPhaseRef = useRef<GuidedPhase>(guidedPhase)
+  const guidedProgressRef = useRef<GuidedLessonProgress>(guidedProgress)
   useEffect(() => {
     let isActive = true
     const loadIntroHints = async () => {
@@ -563,13 +593,29 @@ export default function App() {
   const isBackgroundAnimationPaused =
     !(nuxReady && nuxStatus === 'pending') && (isSystemLowPowerModeEnabled || isBackgroundIdle)
   const isNuxActive = nuxReady && nuxStatus === 'pending'
+  const guidedCurrentPack = useMemo(
+    () => (guidedCourseActive ? getBeginnerCoursePack(guidedPackIndex) : []),
+    [guidedCourseActive, guidedPackIndex],
+  )
+  const guidedUnlockedLetters = useMemo(
+    () => (guidedCourseActive ? getBeginnerUnlockedLetters(guidedPackIndex) : []),
+    [guidedCourseActive, guidedPackIndex],
+  )
+  const guidedLessonMode: Mode = guidedPhase === 'listen' ? 'listen' : 'practice'
+  const isGuidedLessonModeMismatch =
+    guidedCourseActive && !isNuxActive && mode !== guidedLessonMode
+  const isGuidedPracticeActive =
+    guidedCourseActive && !isNuxActive && !isGuidedLessonModeMismatch && mode === 'practice'
+  const isGuidedListenActive =
+    guidedCourseActive && !isNuxActive && !isGuidedLessonModeMismatch && mode === 'listen'
   const userForSync = isDeletingAccount ? null : user
   // Also treat reference panel as a mode that requires the tone player to stay alive for instant playback
   const isReferencePanelActive = showReference
   const availableLetters = useMemo(() => getLettersForLevel(maxLevel), [maxLevel])
+  const activeLetters = guidedCourseActive ? guidedUnlockedLetters : availableLetters
   const availablePracticeWords = useMemo(
-    () => getWordsForLetters(availableLetters),
-    [availableLetters],
+    () => getWordsForLetters(activeLetters),
+    [activeLetters],
   )
   const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
@@ -582,6 +628,11 @@ export default function App() {
       practiceWordMode,
       practiceIfrMode,
       practiceReviewMisses,
+      learnerProfile: learnerProfile ?? undefined,
+      guidedCourseActive,
+      guidedPackIndex,
+      guidedPhase,
+      guidedProgress,
       scores,
       showHint,
       showMnemonic,
@@ -595,7 +646,12 @@ export default function App() {
       listenTtr,
       listenWpm,
       maxLevel,
+      learnerProfile,
       practiceIfrMode,
+      guidedCourseActive,
+      guidedPackIndex,
+      guidedPhase,
+      guidedProgress,
       practiceReviewMisses,
       practiceWordMode,
       scores,
@@ -639,7 +695,6 @@ export default function App() {
   const listenRecognitionTimeoutRef = useRef<TimeoutHandle | null>(null)
   const backgroundIdleTimeoutRef = useRef<TimeoutHandle | null>(null)
   const isBackgroundIdleRef = useRef(false)
-  const completeNuxRef = useRef<() => void>(() => {})
   const scheduleBackgroundIdle = useCallback(() => {
     clearTimer(backgroundIdleTimeoutRef)
     backgroundIdleTimeoutRef.current = setTimeout(() => {
@@ -695,10 +750,95 @@ export default function App() {
     [],
   )
 
+  const syncGuidedLevel = useCallback((packIndex: number) => {
+    const nextLevel = getLevelForLetters(getBeginnerUnlockedLetters(packIndex))
+    maxLevelRef.current = nextLevel
+    setMaxLevel(nextLevel)
+  }, [])
+
+  const applyKnownLearnerDefaults = useCallback(() => {
+    setShowHint(false)
+    setShowMnemonic(false)
+    setPracticeAutoPlay(true)
+    setPracticeLearnMode(true)
+    practiceLearnModeRef.current = true
+    setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
+    practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
+    setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
+    practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
+    practiceReviewQueueRef.current = []
+    setPracticeWordMode(false)
+    practiceWordModeRef.current = false
+    setListenWpm(DEFAULT_LISTEN_WPM)
+    listenWpmRef.current = DEFAULT_LISTEN_WPM
+    setListenEffectiveWpm(DEFAULT_LISTEN_EFFECTIVE_WPM)
+    listenEffectiveWpmRef.current = DEFAULT_LISTEN_EFFECTIVE_WPM
+    setListenAutoTightening(DEFAULT_LISTEN_AUTO_TIGHTENING)
+    listenAutoTighteningRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING
+    setListenAutoTighteningCorrectCount(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
+    listenAutoTighteningCorrectCountRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
+    maxLevelRef.current = DEFAULT_MAX_LEVEL
+    setMaxLevel(DEFAULT_MAX_LEVEL)
+  }, [])
+
+  const setGuidedPhaseState = useCallback(
+    (nextPhase: GuidedPhase, nextPackIndex: number, nextProgress: GuidedLessonProgress) => {
+      guidedCourseActiveRef.current = true
+      guidedPackIndexRef.current = nextPackIndex
+      guidedPhaseRef.current = nextPhase
+      guidedProgressRef.current = nextProgress
+      setGuidedCourseActive(true)
+      setGuidedPackIndex(nextPackIndex)
+      setGuidedPhase(nextPhase)
+      setGuidedProgress(nextProgress)
+      syncGuidedLevel(nextPackIndex)
+      setPracticeWordMode(false)
+      practiceWordModeRef.current = false
+      setPracticeWpm(null)
+      practiceWordStartRef.current = null
+      setInput('')
+      setStatus('idle')
+      setListenStatus('idle')
+      setListenReveal(null)
+      setListenHasSubmittedAnswer(false)
+      clearTimer(letterTimeoutRef)
+      clearTimer(successTimeoutRef)
+      clearTimer(errorTimeoutRef)
+      clearTimer(listenTimeoutRef)
+      clearTimer(listenRecognitionTimeoutRef)
+    },
+    [syncGuidedLevel],
+  )
+
+  const pickGuidedPracticeLetter = useCallback((currentLetter: Letter = letterRef.current) => {
+    const { currentPack, unlockedLetters, reviewPool } = getGuidedPracticePool(guidedPackIndexRef.current)
+    if (guidedPhaseRef.current === 'teach') {
+      const incompleteLetter =
+        currentPack.find(
+          (letter) => (guidedProgressRef.current.teachCounts[letter] ?? 0) < 2,
+        ) ?? currentPack[0]
+      return incompleteLetter ?? currentLetter
+    }
+    if (reviewPool.length > 0 && Math.random() >= 0.6) {
+      return getRandomWeightedLetter(reviewPool, scoresRef.current, currentLetter)
+    }
+    return getRandomWeightedLetter(
+      currentPack.length > 0 ? currentPack : unlockedLetters,
+      scoresRef.current,
+      currentLetter,
+    )
+  }, [])
+
   const setNextPracticeLetter = useCallback(
     (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
       if (nextLetters.length === 0) {
         return currentLetter
+      }
+      if (guidedCourseActiveRef.current) {
+        const nextLetter = pickGuidedPracticeLetter(currentLetter)
+        letterRef.current = nextLetter
+        setLetter(nextLetter)
+        return nextLetter
       }
       if (practiceIfrModeRef.current && practiceReviewMissesRef.current) {
         const { nextQueue, reviewLetter } = pullDueReviewLetter(practiceReviewQueueRef.current)
@@ -716,13 +856,32 @@ export default function App() {
       setLetter(nextLetter)
       return nextLetter
     },
-    [],
+    [pickGuidedPracticeLetter],
   )
 
   const setNextListenLetter = useCallback(
     (nextLetters: Letter[], currentLetter: Letter = letterRef.current) => {
       if (nextLetters.length === 0) {
         return currentLetter
+      }
+      if (guidedCourseActiveRef.current && guidedPhaseRef.current === 'listen') {
+        const { currentPack, unlockedLetters } = getGuidedPracticePool(guidedPackIndexRef.current)
+        const unseenCurrentPack = currentPack.filter(
+          (letter) => (guidedProgressRef.current.listenLetterCorrect[letter] ?? 0) < 1,
+        )
+        const nextLetter =
+          unseenCurrentPack[0] ??
+          getRandomLatencyAwareLetter(
+            unlockedLetters.length > 0 ? unlockedLetters : nextLetters,
+            scoresRef.current,
+            listenTtrRef.current,
+            currentLetter,
+          )
+        listenConsecutiveLetterRef.current = nextLetter
+        listenConsecutiveCountRef.current = nextLetter === currentLetter ? 2 : 1
+        letterRef.current = nextLetter
+        setLetter(nextLetter)
+        return nextLetter
       }
       let { nextQueue, reviewLetter } = pullNextListenOverlearnLetter(
         listenOverlearnQueueRef.current,
@@ -810,6 +969,11 @@ export default function App() {
     practiceLearnModeRef.current = practiceLearnMode
     practiceIfrModeRef.current = practiceIfrMode
     practiceReviewMissesRef.current = practiceReviewMisses
+    learnerProfileRef.current = learnerProfile
+    guidedCourseActiveRef.current = guidedCourseActive
+    guidedPackIndexRef.current = guidedPackIndex
+    guidedPhaseRef.current = guidedPhase
+    guidedProgressRef.current = guidedProgress
     freestyleWordModeRef.current = freestyleWordMode
     scoresRef.current = scores
     listenTtrRef.current = listenTtr
@@ -838,6 +1002,11 @@ export default function App() {
     practiceLearnMode,
     practiceIfrMode,
     practiceReviewMisses,
+    learnerProfile,
+    guidedCourseActive,
+    guidedPackIndex,
+    guidedPhase,
+    guidedProgress,
     scores,
     listenTtr,
   ])
@@ -944,19 +1113,19 @@ export default function App() {
     }
     practiceReviewQueueRef.current = filterReviewQueue(
       practiceReviewQueueRef.current,
-      availableLetters,
+      activeLetters,
     )
-    if (!availableLetters.includes(letterRef.current)) {
+    if (!activeLetters.includes(letterRef.current)) {
       const nextLetter = practiceLearnModeRef.current
-        ? availableLetters[0]
-        : getRandomLetter(availableLetters)
+        ? activeLetters[0]
+        : getRandomLetter(activeLetters)
       letterRef.current = nextLetter
       setLetter(nextLetter)
     }
     if (practiceWordModeRef.current) {
       setPracticeWordFromList(availablePracticeWords, practiceWordRef.current)
     }
-  }, [availableLetters, availablePracticeWords, mode, setPracticeWordFromList])
+  }, [activeLetters, availablePracticeWords, mode, setPracticeWordFromList])
 
   useEffect(() => {
     if (!isNuxActive) {
@@ -967,7 +1136,10 @@ export default function App() {
     setShowReference(false)
   }, [isNuxActive])
 
-  const canScoreAttempt = useCallback(() => !showHint && !isNuxActive, [isNuxActive, showHint])
+  const canScoreAttempt = useCallback(
+    () => !isNuxActive && (!showHint || isGuidedPracticeActive),
+    [isGuidedPracticeActive, isNuxActive, showHint],
+  )
 
   const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
     setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
@@ -1046,6 +1218,14 @@ export default function App() {
     setPracticeLearnMode(true)
     setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
     setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
+    setLearnerProfile(null)
+    setGuidedCourseActive(false)
+    setGuidedPackIndex(0)
+    setGuidedPhase('teach')
+    setGuidedProgress(createGuidedLessonProgress())
+    setDidCompleteSoundCheck(false)
+    setDidCompleteTutorialTap(false)
+    setDidCompleteTutorialHold(false)
     setMaxLevel(DEFAULT_MAX_LEVEL)
     setPracticeWordMode(false)
     setLetter(nextConfig.letter)
@@ -1080,6 +1260,11 @@ export default function App() {
     practiceLearnModeRef.current = true
     practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
     practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
+    learnerProfileRef.current = null
+    guidedCourseActiveRef.current = false
+    guidedPackIndexRef.current = 0
+    guidedPhaseRef.current = 'teach'
+    guidedProgressRef.current = createGuidedLessonProgress()
     practiceWordStartRef.current = null
     practiceReviewQueueRef.current = []
     freestyleWordModeRef.current = false
@@ -1097,32 +1282,83 @@ export default function App() {
     listenConsecutiveLetterRef.current = nextConfig.letter
     listenConsecutiveCountRef.current = 1
     errorLockoutUntilRef.current = 0
-    nuxAttemptStartRef.current = null
   }, [stopListenPlayback])
 
-  const handleNuxSkip = useCallback(() => {
-    persistNuxStatus('skipped')
-    persistIntroHintStep('done')
-    setNuxStep('welcome')
-    setNuxIndex(0)
-    setNuxResult(null)
-  }, [persistIntroHintStep, persistNuxStatus])
+  const moveIntoGuidedLesson = useCallback(
+    (nextPhase: GuidedPhase, nextPackIndex: number, nextProgress: GuidedLessonProgress) => {
+      setGuidedPhaseState(nextPhase, nextPackIndex, nextProgress)
+      setShowSettings(false)
+      setShowAbout(false)
+      setShowReference(false)
+      const lessonMode = nextPhase === 'listen' ? 'listen' : 'practice'
+      setMode(lessonMode)
+      modeRef.current = lessonMode
+      const nextLetters = getBeginnerUnlockedLetters(nextPackIndex)
+      if (lessonMode === 'listen') {
+        const nextLetter = setNextListenLetter(nextLetters, letterRef.current)
+        playListenSequenceRef.current(MORSE_DATA[nextLetter].code, {
+          characterWpm: listenWpmRef.current,
+          effectiveWpm: listenEffectiveWpmRef.current,
+        })
+        return
+      }
+      setNextPracticeLetter(nextLetters, letterRef.current)
+    },
+    [setGuidedPhaseState, setNextListenLetter, setNextPracticeLetter],
+  )
 
-  const handleNuxSplashDone = useCallback(() => {
-    setNuxStep('welcome')
+  const unlockNextGuidedPack = useCallback(() => {
+    const nextPackIndex = guidedPackIndexRef.current + 1
+    if (nextPackIndex >= BEGINNER_COURSE_PACKS.length) {
+      const completedProgress = createGuidedLessonProgress()
+      guidedCourseActiveRef.current = false
+      guidedPhaseRef.current = 'complete'
+      guidedProgressRef.current = completedProgress
+      setGuidedCourseActive(false)
+      setGuidedPhase('complete')
+      setGuidedProgress(completedProgress)
+      Alert.alert('Course complete', 'You unlocked all beginner letter packs.')
+      return
+    }
+    const nextPack = getBeginnerCoursePack(nextPackIndex)
+    Alert.alert('New letters unlocked', nextPack.join(' '))
+    moveIntoGuidedLesson('teach', nextPackIndex, createGuidedLessonProgress())
+  }, [moveIntoGuidedLesson])
+
+  const retryGuidedPractice = useCallback(() => {
+    const nextProgress: GuidedLessonProgress = {
+      teachCounts: guidedProgressRef.current.teachCounts,
+      practiceAttempts: 0,
+      practiceCorrect: 0,
+      practiceLetterCorrect: {},
+      listenAttempts: 0,
+      listenCorrect: 0,
+      listenLetterCorrect: {},
+    }
+    Alert.alert('Keep going', 'One more practice round before new letters.')
+    moveIntoGuidedLesson('practice', guidedPackIndexRef.current, nextProgress)
+  }, [moveIntoGuidedLesson])
+
+  const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
+    setLearnerProfile(profile)
+    learnerProfileRef.current = profile
+    setNuxStep('sound_check')
   }, [])
 
-  const handleNuxAdvance = useCallback(() => {
-    setNuxStep((current) => {
-      if (current === 'welcome') return 'sound_check'
-      if (current === 'sound_check') return 'dit_dah'
-      return current
-    })
-  }, [])
-
-  const handleNuxPlaySymbol = useCallback((symbol: '.' | '-') => {
+  const handleNuxPlaySoundCheck = useCallback(() => {
     void playMorseTone({
-      code: symbol,
+      code: '.',
+      characterWpm: DEFAULT_CHARACTER_WPM,
+      effectiveWpm: DEFAULT_CHARACTER_WPM,
+      minUnitMs: LISTEN_MIN_UNIT_MS,
+    })
+    void triggerHaptics(10)
+    setDidCompleteSoundCheck(true)
+  }, [])
+
+  const handleNuxPlayDitDemo = useCallback(() => {
+    void playMorseTone({
+      code: '.',
       characterWpm: DEFAULT_CHARACTER_WPM,
       effectiveWpm: DEFAULT_CHARACTER_WPM,
       minUnitMs: LISTEN_MIN_UNIT_MS,
@@ -1130,59 +1366,68 @@ export default function App() {
     void triggerHaptics(10)
   }, [])
 
-  const handleNuxReplayLetter = useCallback(() => {
-    const code = MORSE_DATA[letter]?.code
-    if (!code) return
+  const handleNuxPlayDahDemo = useCallback(() => {
     void playMorseTone({
-      code,
+      code: '-',
       characterWpm: DEFAULT_CHARACTER_WPM,
       effectiveWpm: DEFAULT_CHARACTER_WPM,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
     void triggerHaptics(10)
-  }, [letter])
-
-  const handleNuxStart = useCallback(() => {
-    setNuxStep('exercise')
-    setNuxIndex(0)
-    setNuxResult(null)
-    nuxTimingsRef.current = []
-    nuxAttemptStartRef.current = null
-    nuxErrorCountRef.current = 0
-    setShowSettings(false)
-    setShowAbout(false)
-    setShowReference(false)
-    setShowHint(false)
-    setShowMnemonic(false)
-    setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
-    practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
-    setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
-    practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
-    practiceReviewQueueRef.current = []
-    listenOverlearnQueueRef.current = []
-    setMode('practice')
-    setPracticeWordMode(false)
-    practiceWordModeRef.current = false
-    setPracticeWpm(null)
-    practiceWordStartRef.current = null
-    clearTimer(letterTimeoutRef)
-    clearTimer(successTimeoutRef)
-    clearTimer(errorTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setInput('')
-    setStatus('idle')
-    const firstLetter = NUX_LETTERS[0]
-    letterRef.current = firstLetter
-    setLetter(firstLetter)
   }, [])
 
-  const handleNuxFinish = useCallback(() => {
+  const handleNuxContinueFromSoundCheck = useCallback(() => {
+    if (!didCompleteSoundCheck) {
+      return
+    }
+    setNuxStep('button_tutorial')
+  }, [didCompleteSoundCheck])
+
+  const handleNuxCompleteButtonTutorial = useCallback(() => {
+    if (!didCompleteTutorialTap || !didCompleteTutorialHold) {
+      return
+    }
+    setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_intro')
+  }, [didCompleteTutorialHold, didCompleteTutorialTap])
+
+  const finishOnboarding = useCallback(() => {
     persistNuxStatus('completed')
     persistIntroHintStep('done')
-    setNuxStep('welcome')
-    setNuxIndex(0)
-    setNuxResult(null)
+    setNuxStep('profile')
+    setDidCompleteSoundCheck(false)
+    setDidCompleteTutorialTap(false)
+    setDidCompleteTutorialHold(false)
   }, [persistIntroHintStep, persistNuxStatus])
+
+  const handleFinishKnownTour = useCallback(() => {
+    applyKnownLearnerDefaults()
+    learnerProfileRef.current = 'known'
+    setLearnerProfile('known')
+    guidedCourseActiveRef.current = false
+    guidedPhaseRef.current = 'complete'
+    guidedProgressRef.current = createGuidedLessonProgress()
+    setGuidedCourseActive(false)
+    setGuidedPhase('complete')
+    setGuidedProgress(createGuidedLessonProgress())
+    finishOnboarding()
+  }, [applyKnownLearnerDefaults, finishOnboarding])
+
+  const handleStartBeginnerCourse = useCallback(() => {
+    learnerProfileRef.current = 'beginner'
+    setLearnerProfile('beginner')
+    setShowHint(false)
+    setShowMnemonic(false)
+    setPracticeAutoPlay(true)
+    setPracticeLearnMode(false)
+    practiceLearnModeRef.current = false
+    setPracticeIfrMode(false)
+    practiceIfrModeRef.current = false
+    practiceReviewQueueRef.current = []
+    setPracticeReviewMisses(false)
+    practiceReviewMissesRef.current = false
+    finishOnboarding()
+    moveIntoGuidedLesson('teach', 0, createGuidedLessonProgress())
+  }, [finishOnboarding, moveIntoGuidedLesson])
 
   const scheduleWordSpace = useCallback(() => {
     clearTimer(wordSpaceTimeoutRef)
@@ -1245,6 +1490,16 @@ export default function App() {
       setListenStatus(isCorrect ? 'success' : 'error')
       setListenReveal(targetLetter)
       bumpScore(targetLetter, isCorrect ? 1 : -1)
+      const isGuidedListenAttempt =
+        guidedCourseActiveRef.current &&
+        guidedPhaseRef.current === 'listen' &&
+        modeRef.current === 'listen'
+      let nextGuidedProgress = guidedProgressRef.current
+      if (isGuidedListenAttempt) {
+        nextGuidedProgress = recordGuidedListenResult(nextGuidedProgress, targetLetter, isCorrect)
+        guidedProgressRef.current = nextGuidedProgress
+        setGuidedProgress(nextGuidedProgress)
+      }
       if (ttrMs !== null) {
         const recognitionText = `${(ttrMs / 1000).toFixed(1)}s`
         setListenRecognitionText(recognitionText)
@@ -1282,7 +1537,22 @@ export default function App() {
         }
       }
       listenTimeoutRef.current = setTimeout(() => {
-        const nextLetter = setNextListenLetter(availableLetters, targetLetter)
+        if (
+          isGuidedListenAttempt &&
+          isGuidedListenComplete(nextGuidedProgress, getBeginnerCoursePack(guidedPackIndexRef.current))
+        ) {
+          unlockNextGuidedPack()
+          return
+        }
+        if (
+          isGuidedListenAttempt &&
+          nextGuidedProgress.listenAttempts >= 6 &&
+          !isGuidedListenComplete(nextGuidedProgress, getBeginnerCoursePack(guidedPackIndexRef.current))
+        ) {
+          retryGuidedPractice()
+          return
+        }
+        const nextLetter = setNextListenLetter(activeLetters, targetLetter)
         setListenReveal(null)
         listenTimeoutRef.current = setTimeout(() => {
           if (modeRef.current !== 'listen') {
@@ -1297,13 +1567,15 @@ export default function App() {
       }, (isCorrect ? 650 : ERROR_LOCKOUT_MS) + LISTEN_REVEAL_EXTRA_MS)
     },
     [
-      availableLetters,
+      activeLetters,
       bumpScore,
       listenStatus,
       playListenSequence,
+      retryGuidedPractice,
       setNextListenLetter,
       stopListenPlayback,
       triggerHaptics,
+      unlockNextGuidedPack,
     ],
   )
 
@@ -1336,7 +1608,7 @@ export default function App() {
   }, [isFreestyle, isListen, listenEffectiveWpm, listenWpm, stopListenPlayback, triggerHaptics])
 
   useEffect(() => {
-    if (mode !== 'practice' || !practiceAutoPlay) {
+    if (mode !== 'practice' || !practiceAutoPlay || isNuxActive) {
       return
     }
     stopListenPlayback()
@@ -1346,7 +1618,7 @@ export default function App() {
       effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
     })
-  }, [letter, listenEffectiveWpm, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
+  }, [isNuxActive, letter, listenEffectiveWpm, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
@@ -1367,34 +1639,63 @@ export default function App() {
         const isCorrect = attempt === target
         const ifrEnabled =
           practiceIfrModeRef.current && !isNuxActive && modeRef.current === 'practice'
+        const isGuidedPracticeAttempt =
+          guidedCourseActiveRef.current &&
+          modeRef.current === 'practice' &&
+          (guidedPhaseRef.current === 'teach' || guidedPhaseRef.current === 'practice')
         if (isCorrect) {
-          if (isNuxActive && nuxStep === 'exercise') {
-            const startedAt = nuxAttemptStartRef.current
-            if (startedAt !== null) {
-              nuxTimingsRef.current.push(now() - startedAt)
-            }
-            nuxAttemptStartRef.current = null
+          if (isGuidedPracticeAttempt) {
+            const currentPack = getBeginnerCoursePack(guidedPackIndexRef.current)
             setInput('')
-            clearTimer(errorTimeoutRef)
-            clearTimer(successTimeoutRef)
-            if (nuxIndex + 1 >= NUX_LETTERS.length) {
+            if (guidedPhaseRef.current === 'teach') {
+              const nextGuidedProgress = recordGuidedTeachSuccess(guidedProgressRef.current, targetLetter)
+              guidedProgressRef.current = nextGuidedProgress
+              setGuidedProgress(nextGuidedProgress)
               setStatus('success')
               successTimeoutRef.current = setTimeout(() => {
+                if (isGuidedTeachComplete(nextGuidedProgress, currentPack)) {
+                  const practiceProgress: GuidedLessonProgress = {
+                    ...nextGuidedProgress,
+                    practiceAttempts: 0,
+                    practiceCorrect: 0,
+                    practiceLetterCorrect: {},
+                    listenAttempts: 0,
+                    listenCorrect: 0,
+                    listenLetterCorrect: {},
+                  }
+                  Alert.alert('Next up', `Practice ${currentPack.join(' ')} in mixed order.`)
+                  moveIntoGuidedLesson('practice', guidedPackIndexRef.current, practiceProgress)
+                  return
+                }
+                setNextPracticeLetter(activeLetters, targetLetter)
                 setStatus('idle')
-                completeNuxRef.current()
-              }, 350)
+              }, PRACTICE_NEXT_LETTER_DELAY_MS)
               return
             }
-            const nextIndex = nuxIndex + 1
+            bumpScore(targetLetter, 1)
+            const nextGuidedProgress = recordGuidedPracticeResult(
+              guidedProgressRef.current,
+              targetLetter,
+              true,
+            )
+            guidedProgressRef.current = nextGuidedProgress
+            setGuidedProgress(nextGuidedProgress)
             setStatus('success')
             successTimeoutRef.current = setTimeout(() => {
-              const nextLetter = NUX_LETTERS[nextIndex]
-              nuxAttemptStartRef.current = null // reset for next letter
-              setNuxIndex(nextIndex)
-              letterRef.current = nextLetter
-              setLetter(nextLetter)
+              if (isGuidedPracticeComplete(nextGuidedProgress, currentPack)) {
+                const listenProgress: GuidedLessonProgress = {
+                  ...nextGuidedProgress,
+                  listenAttempts: 0,
+                  listenCorrect: 0,
+                  listenLetterCorrect: {},
+                }
+                Alert.alert('Ready to listen', `Hear and identify ${currentPack.join(' ')}.`)
+                moveIntoGuidedLesson('listen', guidedPackIndexRef.current, listenProgress)
+                return
+              }
+              setNextPracticeLetter(activeLetters, targetLetter)
               setStatus('idle')
-            }, 350)
+            }, PRACTICE_NEXT_LETTER_DELAY_MS)
             return
           }
           if (canScoreAttempt()) {
@@ -1408,18 +1709,39 @@ export default function App() {
           }
           setStatus('success')
           successTimeoutRef.current = setTimeout(() => {
-            setNextPracticeLetter(availableLetters, targetLetter)
+            setNextPracticeLetter(activeLetters, targetLetter)
             setStatus('idle')
           }, PRACTICE_NEXT_LETTER_DELAY_MS)
+          return
+        }
+        if (isGuidedPracticeAttempt) {
+          if (guidedPhaseRef.current === 'practice') {
+            bumpScore(targetLetter, -1)
+            const nextGuidedProgress = recordGuidedPracticeResult(
+              guidedProgressRef.current,
+              targetLetter,
+              false,
+            )
+            guidedProgressRef.current = nextGuidedProgress
+            setGuidedProgress(nextGuidedProgress)
+          }
+          setInput('')
+          setStatus('error')
+          void playMorseTone({
+            code: MORSE_DATA[targetLetter].code,
+            characterWpm: listenWpmRef.current,
+            effectiveWpm: listenEffectiveWpmRef.current,
+            minUnitMs: LISTEN_MIN_UNIT_MS,
+          })
+          errorTimeoutRef.current = setTimeout(() => {
+            setStatus('idle')
+          }, ERROR_LOCKOUT_MS)
           return
         }
         if (canScoreAttempt()) {
           bumpScore(targetLetter, -1)
         }
         setInput('')
-        if (isNuxActive && nuxStep === 'exercise') {
-          nuxErrorCountRef.current += 1
-        }
         if (ifrEnabled) {
           if (practiceReviewMissesRef.current) {
             practiceReviewQueueRef.current = enqueueReviewLetter(
@@ -1438,7 +1760,7 @@ export default function App() {
             if (isPracticeWordMode) {
               advancePracticeWordTarget()
             } else {
-              setNextPracticeLetter(availableLetters, targetLetter)
+              setNextPracticeLetter(activeLetters, targetLetter)
             }
             setStatus('idle')
           }, PRACTICE_NEXT_LETTER_DELAY_MS)
@@ -1453,12 +1775,10 @@ export default function App() {
     },
     [
       advancePracticeWordTarget,
-      availableLetters,
+      activeLetters,
       bumpScore,
       canScoreAttempt,
-      isNuxActive,
-      nuxIndex,
-      nuxStep,
+      moveIntoGuidedLesson,
       setNextPracticeLetter,
       startErrorLockout,
       submitFreestyleInput,
@@ -1492,6 +1812,15 @@ export default function App() {
         return
       }
 
+      if (isNuxActive && nuxStep === 'button_tutorial') {
+        if (symbol === '.') {
+          setDidCompleteTutorialTap(true)
+        } else {
+          setDidCompleteTutorialHold(true)
+        }
+        return
+      }
+
       if (
         practiceWordModeRef.current &&
         practiceWordIndexRef.current === 0 &&
@@ -1502,11 +1831,6 @@ export default function App() {
       }
 
       setStatus('idle')
-      if (isNuxActive && nuxStep === 'exercise') {
-        if (nuxAttemptStartRef.current === null) {
-          nuxAttemptStartRef.current = now()
-        }
-      }
       setInput((prev) => prev + symbol)
       scheduleLetterReset('practice')
     },
@@ -1560,6 +1884,9 @@ export default function App() {
 
   const handleMaxLevelChange = useCallback(
     (value: number) => {
+      if (guidedCourseActiveRef.current) {
+        return
+      }
       setMaxLevel(value as (typeof LEVELS)[number])
       setInput('')
       setStatus('idle')
@@ -1594,93 +1921,24 @@ export default function App() {
     ],
   )
 
-  const applyNuxDefaults = useCallback(
-    (defaults: typeof NUX_FAST_DEFAULTS | typeof NUX_SLOW_DEFAULTS) => {
-      setShowHint(defaults.showHint)
-      setShowMnemonic(false)
-      setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
-      practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
-      setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
-      practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
-      practiceReviewQueueRef.current = []
-      setListenWpm(defaults.listenWpm)
-      listenWpmRef.current = defaults.listenWpm
-      setListenEffectiveWpm(defaults.listenEffectiveWpm)
-      listenEffectiveWpmRef.current = defaults.listenEffectiveWpm
-      setListenAutoTightening(defaults.listenAutoTightening)
-      listenAutoTighteningRef.current = defaults.listenAutoTightening
-      setListenAutoTighteningCorrectCount(defaults.listenAutoTighteningCorrectCount)
-      listenAutoTighteningCorrectCountRef.current = defaults.listenAutoTighteningCorrectCount
-      setPracticeWordMode(false)
-      practiceWordModeRef.current = false
-      setPracticeWpm(null)
-      clearTimer(letterTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      practiceWordStartRef.current = null
-      const nextLetters = getLettersForLevel(defaults.maxLevel)
-      maxLevelRef.current = defaults.maxLevel as (typeof LEVELS)[number]
-      setMaxLevel(defaults.maxLevel as (typeof LEVELS)[number])
-      setNextLetterForLevel(nextLetters)
-      setInput('')
-      setStatus('idle')
-    },
-    [setNextLetterForLevel],
-  )
-
   const handleReplayNux = useCallback(() => {
     setShowSettings(false)
+    setShowAbout(false)
+    setShowReference(false)
     setNuxStatus('pending')
-    setNuxStep('splash')
-    setNuxIndex(0)
-    setNuxResult(null)
-    setNuxAvgMs(null)
-    nuxTimingsRef.current = []
-    nuxAttemptStartRef.current = null
-    nuxErrorCountRef.current = 0
+    setNuxStep('profile')
+    setLearnerProfile(null)
+    setDidCompleteSoundCheck(false)
+    setDidCompleteTutorialTap(false)
+    setDidCompleteTutorialHold(false)
     void AsyncStorage.setItem(NUX_STATUS_KEY, 'pending')
   }, [])
 
-  const handleNuxPresetSelect = useCallback(
-    (preset: 'beginner' | 'advanced') => {
-      const defaults = preset === 'advanced' ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
-      applyNuxDefaults(defaults)
-      setNuxResult(preset === 'advanced' ? 'fast' : 'slow')
-    },
-    [applyNuxDefaults],
-  )
-
-  const handleNuxSkipExercise = useCallback(() => {
-    clearTimer(errorTimeoutRef)
-    clearTimer(successTimeoutRef)
-    setInput('')
-    setStatus('idle')
-    applyNuxDefaults(NUX_SLOW_DEFAULTS)
-    setNuxAvgMs(null)
-    setNuxResult('skipped')
-    setNuxStep('result')
-  }, [applyNuxDefaults])
-
-  const completeNux = useCallback(() => {
-    const timings = nuxTimingsRef.current
-    const averageMs =
-      timings.length === 0
-        ? NUX_FAST_THRESHOLD_MS + 1
-        : timings.reduce((sum, value) => sum + value, 0) / timings.length
-    const isFast = averageMs <= NUX_FAST_THRESHOLD_MS && nuxErrorCountRef.current <= 1
-    const defaults = isFast ? NUX_FAST_DEFAULTS : NUX_SLOW_DEFAULTS
-    applyNuxDefaults(defaults)
-    setNuxAvgMs(Math.round(averageMs))
-    setNuxResult(isFast ? 'fast' : 'slow')
-    setNuxStep('result')
-  }, [applyNuxDefaults])
-
-  useEffect(() => {
-    completeNuxRef.current = completeNux
-  }, [completeNux])
-
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
+      if (guidedCourseActiveRef.current && !isFreestyle) {
+        return
+      }
       if (isFreestyle) {
         setFreestyleWordMode(value)
         freestyleWordModeRef.current = value
@@ -1738,6 +1996,9 @@ export default function App() {
 
   const handlePracticeLearnModeChange = useCallback(
     (value: boolean) => {
+      if (guidedCourseActiveRef.current) {
+        return
+      }
       setPracticeLearnMode(value)
       practiceLearnModeRef.current = value
       if (modeRef.current !== 'practice' || practiceWordModeRef.current || !value) {
@@ -1759,6 +2020,9 @@ export default function App() {
   )
 
   const handlePracticeIfrModeChange = useCallback((value: boolean) => {
+    if (guidedCourseActiveRef.current) {
+      return
+    }
     setPracticeIfrMode(value)
     practiceIfrModeRef.current = value
     if (!value) {
@@ -1774,6 +2038,9 @@ export default function App() {
   }, [])
 
   const handlePracticeReviewMissesChange = useCallback((value: boolean) => {
+    if (guidedCourseActiveRef.current) {
+      return
+    }
     setPracticeReviewMisses(value)
     practiceReviewMissesRef.current = value
     if (!value) {
@@ -1782,6 +2049,9 @@ export default function App() {
   }, [])
 
   const handleUseRecommended = useCallback(() => {
+    if (guidedCourseActiveRef.current) {
+      return
+    }
     const preferredMaxLevel = DEFAULT_MAX_LEVEL
     const preferredListenWpm = DEFAULT_LISTEN_WPM
     const preferredListenEffectiveWpm = DEFAULT_LISTEN_EFFECTIVE_WPM
@@ -1908,7 +2178,7 @@ export default function App() {
       }
       if (nextMode === 'listen') {
         setListenHasSubmittedAnswer(false)
-        const nextLetter = setNextListenLetter(availableLetters)
+        const nextLetter = setNextListenLetter(activeLetters)
         playListenSequence(MORSE_DATA[nextLetter].code)
         return
       }
@@ -1916,10 +2186,10 @@ export default function App() {
         setPracticeWordFromList(availablePracticeWords, practiceWordRef.current)
         return
       }
-      setNextLetterForLevel(availableLetters)
+      setNextLetterForLevel(activeLetters)
     },
     [
-      availableLetters,
+      activeLetters,
       availablePracticeWords,
       playListenSequence,
       resetListenState,
@@ -1964,6 +2234,27 @@ export default function App() {
         if (!progress.practiceReviewMisses) {
           practiceReviewQueueRef.current = []
         }
+      }
+      if (progress.learnerProfile) {
+        learnerProfileRef.current = progress.learnerProfile
+        setLearnerProfile(progress.learnerProfile)
+      }
+      if (typeof progress.guidedCourseActive === 'boolean') {
+        guidedCourseActiveRef.current = progress.guidedCourseActive
+        setGuidedCourseActive(progress.guidedCourseActive)
+      }
+      if (typeof progress.guidedPackIndex === 'number') {
+        guidedPackIndexRef.current = progress.guidedPackIndex
+        setGuidedPackIndex(progress.guidedPackIndex)
+        syncGuidedLevel(progress.guidedPackIndex)
+      }
+      if (progress.guidedPhase) {
+        guidedPhaseRef.current = progress.guidedPhase
+        setGuidedPhase(progress.guidedPhase)
+      }
+      if (progress.guidedProgress) {
+        guidedProgressRef.current = progress.guidedProgress
+        setGuidedProgress(progress.guidedProgress)
       }
       if (typeof progress.wordMode === 'boolean') {
         if (freestyleWordModeRef.current !== progress.wordMode) {
@@ -2038,7 +2329,7 @@ export default function App() {
           }
         }
       }
-      if (typeof progress.maxLevel === 'number') {
+      if (typeof progress.maxLevel === 'number' && !progress.guidedCourseActive) {
         maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number]
         const nextLetters = getLettersForLevel(progress.maxLevel)
         practiceReviewQueueRef.current = filterReviewQueue(
@@ -2057,17 +2348,18 @@ export default function App() {
       if (typeof progress.practiceWordMode === 'boolean') {
         practiceWordModeRef.current = progress.practiceWordMode
         practiceWordStartRef.current = null
-        setPracticeWordMode(progress.practiceWordMode)
-        if (!progress.practiceWordMode) {
+        const resolvedPracticeWordMode = guidedCourseActiveRef.current ? false : progress.practiceWordMode
+        setPracticeWordMode(resolvedPracticeWordMode)
+        if (!resolvedPracticeWordMode) {
           setPracticeWpm(null)
         }
-        if (progress.practiceWordMode) {
+        if (resolvedPracticeWordMode) {
           const nextLetters = getLettersForLevel(resolvedMaxLevel)
           setPracticeWordFromList(getWordsForLetters(nextLetters))
         }
       }
     },
-    [setNextLetterForLevel, setNextListenLetter, setPracticeWordFromList],
+    [setNextLetterForLevel, setNextListenLetter, setPracticeWordFromList, syncGuidedLevel],
   )
   const {
     progressUpdatedAt,
@@ -2173,12 +2465,14 @@ export default function App() {
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
   const hintVisible =
-    !isFreestyle && !isListen && (showHint || (isNuxActive && nuxStep === 'exercise'))
+    !isFreestyle && !isListen && (showHint || isGuidedPracticeActive)
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
   const showMorseHint = introHintStep === 'morse' && !isListen && !isNuxActive
   const showSettingsHint = introHintStep === 'settings' && !isListen && !isNuxActive
-  const ifrActive = !isFreestyle && !isListen && !isNuxActive && practiceIfrMode
+  const ifrActive =
+    !isFreestyle && !isListen && !isNuxActive && !guidedCourseActive && practiceIfrMode
   const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked()
+  const guidedTeachRemaining = Math.max(0, 2 - (guidedProgress.teachCounts[letter] ?? 0))
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -2189,6 +2483,17 @@ export default function App() {
       : mnemonicVisible
       ? MORSE_DATA[letter].mnemonic
       : ' '
+  const guidedPracticeStatusText = isGuidedPracticeActive
+    ? status === 'success'
+      ? guidedPhase === 'teach'
+        ? `${letter} locked in`
+        : 'Correct'
+      : status === 'error'
+      ? `Listen and try ${letter} again`
+      : guidedPhase === 'teach'
+      ? `Send ${letter} ${guidedTeachRemaining} more ${guidedTeachRemaining === 1 ? 'time' : 'times'}`
+      : `Practice pack ${guidedPackIndex + 1}: ${guidedCurrentPack.join(' ')}`
+    : null
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -2199,12 +2504,18 @@ export default function App() {
     practiceWord
       ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
       : null
-  const practiceStatusText = practiceProgressText ?? baseStatusText
+  const practiceStatusText = guidedPracticeStatusText ?? practiceProgressText ?? baseStatusText
   const practiceWpmText =
-    !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
+    isGuidedPracticeActive
+      ? `Pack ${guidedPackIndex + 1}/${BEGINNER_COURSE_PACKS.length} · ${guidedPhase}`
+      : !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
       ? `${formatWpm(practiceWpm)} WPM`
       : null
-  const listenTtrText = isListen && listenRecognitionText ? listenRecognitionText : null
+  const listenTtrText = isGuidedListenActive
+    ? listenRecognitionText ?? `Pack ${guidedPackIndex + 1}/${BEGINNER_COURSE_PACKS.length} · listen`
+    : isListen && listenRecognitionText
+    ? listenRecognitionText
+    : null
   const isInputOnTrack = !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
   const highlightCount =
     status === 'success' ? targetSymbols.length : isInputOnTrack ? input.length : 0
@@ -2239,9 +2550,13 @@ export default function App() {
     listenStatus === 'success'
       ? 'Correct'
       : listenStatus === 'error'
-      ? 'Incorrect'
+      ? isGuidedListenActive
+        ? `It was ${listenReveal ?? letter}`
+        : 'Incorrect'
       : listenHasSubmittedAnswer
       ? ' '
+      : isGuidedListenActive
+      ? `Type what you hear · ${guidedCurrentPack.join(' ')}`
       : 'Type what you hear'
   const listenDisplay = listenReveal ?? '?'
   const statusText = isFreestyle
@@ -2286,6 +2601,7 @@ export default function App() {
               practiceLearnMode={practiceLearnMode}
               practiceIfrMode={practiceIfrMode}
               practiceReviewMisses={practiceReviewMisses}
+              guidedCourseActive={guidedCourseActive}
               listenCharacterWpm={listenWpm}
               listenCharacterWpmMin={LISTEN_WPM_MIN}
               listenCharacterWpmMax={LISTEN_WPM_MAX}
@@ -2309,7 +2625,7 @@ export default function App() {
               onSignInWithGoogle={handleSignInWithGoogle}
               onSignOut={signOut}
               onDeleteAccount={handleDeleteAccount}
-              onReplayNux={__DEV__ ? handleReplayNux : undefined}
+              onReplayNux={handleReplayNux}
             />
           ) : null}
           {showReference ? (
@@ -2351,6 +2667,25 @@ export default function App() {
           ) : null}
           {!isNuxActive ? (
             <View style={styles.controls}>
+              {isGuidedLessonModeMismatch ? (
+                <DitButton
+                  onPress={() => {
+                    moveIntoGuidedLesson(
+                      guidedPhaseRef.current,
+                      guidedPackIndexRef.current,
+                      guidedProgressRef.current,
+                    )
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Return to guided lesson"
+                  style={{ marginBottom: 12 }}
+                  textStyle={{ fontSize: 14 }}
+                  radius={24}
+                  paddingHorizontal={16}
+                  paddingVertical={10}
+                  text="Return to lesson"
+                />
+              ) : null}
               {isListen ? (
                 <ListenControls
                   listenStatus={listenStatus}
@@ -2404,13 +2739,14 @@ export default function App() {
                 </>
               )}
             </View>
-          ) : isNuxActive && nuxStep === 'exercise' ? (
+          ) : isNuxActive && nuxStep === 'button_tutorial' ? (
             <View style={styles.nuxExerciseControls}>
               <MorseButton
                 disabled={isMorseDisabled}
                 isPressing={isPressing}
                 onPressIn={handleIntroPressIn}
                 onPressOut={handlePressOut}
+                showTapHint={!didCompleteTutorialTap && !didCompleteTutorialHold}
               />
             </View>
           ) : null}
@@ -2418,21 +2754,19 @@ export default function App() {
         {isNuxActive ? (
           <NuxModal
             step={nuxStep}
-            status={status}
-            index={nuxIndex}
-            total={NUX_LETTERS.length}
-            result={nuxResult}
-            avgMs={nuxAvgMs}
-            letter={letter}
-            onSplashDone={handleNuxSplashDone}
-            onNext={handleNuxAdvance}
-            onPlaySymbol={handleNuxPlaySymbol}
-            onReplayLetter={handleNuxReplayLetter}
-            onStart={handleNuxStart}
-            onSkip={handleNuxSkip}
-            onSkipExercise={handleNuxSkipExercise}
-            onFinish={handleNuxFinish}
-            onChoosePreset={handleNuxPresetSelect}
+            learnerProfile={learnerProfile}
+            soundChecked={didCompleteSoundCheck}
+            didCompleteTutorialTap={didCompleteTutorialTap}
+            didCompleteTutorialHold={didCompleteTutorialHold}
+            currentPack={getBeginnerCoursePack(0)}
+            onChooseProfile={handleNuxChooseProfile}
+            onPlaySoundCheck={handleNuxPlaySoundCheck}
+            onContinueFromSoundCheck={handleNuxContinueFromSoundCheck}
+            onPlayDitDemo={handleNuxPlayDitDemo}
+            onPlayDahDemo={handleNuxPlayDahDemo}
+            onCompleteButtonTutorial={handleNuxCompleteButtonTutorial}
+            onFinishKnownTour={handleFinishKnownTour}
+            onStartBeginnerCourse={handleStartBeginnerCourse}
           />
         ) : null}
       </View>

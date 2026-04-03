@@ -1,6 +1,26 @@
 export { MORSE_DATA } from './data/morse'
 export { PRACTICE_WORDS } from './data/practiceWords'
 export {
+  BEGINNER_COURSE_PACKS,
+  BEGINNER_LISTEN_ATTEMPTS,
+  BEGINNER_LISTEN_MIN_CORRECT,
+  BEGINNER_LISTEN_PER_LETTER_MIN_CORRECT,
+  BEGINNER_PRACTICE_ATTEMPTS,
+  BEGINNER_PRACTICE_MIN_CORRECT,
+  BEGINNER_PRACTICE_PER_LETTER_MIN_CORRECT,
+  BEGINNER_TEACH_TARGET_REPEATS,
+  createGuidedLessonProgress,
+  getBeginnerCoursePack,
+  getBeginnerUnlockedLetters,
+  incrementGuidedLetterCount,
+  isGuidedListenComplete,
+  isGuidedPracticeComplete,
+  isGuidedTeachComplete,
+  recordGuidedListenResult,
+  recordGuidedPracticeResult,
+  recordGuidedTeachSuccess,
+} from './utils/beginnerCourse'
+export {
   applyScoreDelta,
   clamp,
   formatWpm,
@@ -20,6 +40,7 @@ export {
   createProgressPayload,
   progressPathForUser,
 } from './firebase/progress'
+export { useFirebaseSync } from './hooks/useFirebaseSync'
 export {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
@@ -35,6 +56,10 @@ export {
 } from './constants'
 export type { Letter } from './data/morse'
 export type {
+  GuidedLetterCounts,
+  GuidedLessonProgress,
+  GuidedPhase,
+  LearnerProfile,
   ListenTtrEntry,
   ListenTtrRecord,
   ParseProgressOptions,
@@ -42,4 +67,9 @@ export type {
   ProgressSnapshot,
   ScoreRecord,
 } from './types'
+export type {
+  FirebaseSignInMethod,
+  FirebaseSyncService,
+  FirebaseUser,
+} from './firebase'
 export type { FirebaseProgressAdapter, ProgressPayload } from './firebase/progress'

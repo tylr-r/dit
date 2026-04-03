@@ -1,6 +1,10 @@
 import { MORSE_DATA, type Letter } from '../data/morse'
 import { PRACTICE_WORDS } from '../data/practiceWords'
 import type {
+  GuidedLetterCounts,
+  GuidedLessonProgress,
+  GuidedPhase,
+  LearnerProfile,
   ListenTtrRecord,
   ParseProgressOptions,
   Progress,
@@ -202,6 +206,75 @@ const parseListenTtr = (value: unknown) => {
   return hasEntry ? next : null
 }
 
+const parseLearnerProfile = (value: unknown): LearnerProfile | null => {
+  if (value === 'beginner' || value === 'known') {
+    return value
+  }
+  return null
+}
+
+const parseGuidedPhase = (value: unknown): GuidedPhase | null => {
+  if (value === 'teach' || value === 'practice' || value === 'listen' || value === 'complete') {
+    return value
+  }
+  return null
+}
+
+const parseGuidedLetterCounts = (value: unknown): GuidedLetterCounts | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const next: GuidedLetterCounts = {}
+  let hasEntry = false
+  LETTERS.forEach((letter) => {
+    const entry = record[letter]
+    if (typeof entry !== 'number' || !Number.isFinite(entry)) {
+      return
+    }
+    next[letter] = Math.max(0, Math.round(entry))
+    hasEntry = true
+  })
+  return hasEntry ? next : null
+}
+
+const parseGuidedProgress = (value: unknown): GuidedLessonProgress | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const teachCounts = parseGuidedLetterCounts(record.teachCounts) ?? {}
+  const practiceLetterCorrect = parseGuidedLetterCounts(record.practiceLetterCorrect) ?? {}
+  const listenLetterCorrect = parseGuidedLetterCounts(record.listenLetterCorrect) ?? {}
+  const practiceAttempts = record.practiceAttempts
+  const practiceCorrect = record.practiceCorrect
+  const listenAttempts = record.listenAttempts
+  const listenCorrect = record.listenCorrect
+
+  if (
+    typeof practiceAttempts !== 'number' ||
+    !Number.isFinite(practiceAttempts) ||
+    typeof practiceCorrect !== 'number' ||
+    !Number.isFinite(practiceCorrect) ||
+    typeof listenAttempts !== 'number' ||
+    !Number.isFinite(listenAttempts) ||
+    typeof listenCorrect !== 'number' ||
+    !Number.isFinite(listenCorrect)
+  ) {
+    return null
+  }
+
+  return {
+    teachCounts,
+    practiceAttempts: Math.max(0, Math.round(practiceAttempts)),
+    practiceCorrect: Math.max(0, Math.round(practiceCorrect)),
+    practiceLetterCorrect,
+    listenAttempts: Math.max(0, Math.round(listenAttempts)),
+    listenCorrect: Math.max(0, Math.round(listenCorrect)),
+    listenLetterCorrect,
+  }
+}
+
 export const parseProgress = (
   value: unknown,
   {
@@ -235,6 +308,24 @@ export const parseProgress = (
   }
   if (typeof record.practiceReviewMisses === 'boolean') {
     progress.practiceReviewMisses = record.practiceReviewMisses
+  }
+  const learnerProfile = parseLearnerProfile(record.learnerProfile)
+  if (learnerProfile) {
+    progress.learnerProfile = learnerProfile
+  }
+  if (typeof record.guidedCourseActive === 'boolean') {
+    progress.guidedCourseActive = record.guidedCourseActive
+  }
+  if (typeof record.guidedPackIndex === 'number' && Number.isFinite(record.guidedPackIndex)) {
+    progress.guidedPackIndex = Math.max(0, Math.round(record.guidedPackIndex))
+  }
+  const guidedPhase = parseGuidedPhase(record.guidedPhase)
+  if (guidedPhase) {
+    progress.guidedPhase = guidedPhase
+  }
+  const guidedProgress = parseGuidedProgress(record.guidedProgress)
+  if (guidedProgress) {
+    progress.guidedProgress = guidedProgress
   }
   if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
     progress.maxLevel = clamp(record.maxLevel, levelMin, levelMax)
