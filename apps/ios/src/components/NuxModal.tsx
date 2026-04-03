@@ -318,17 +318,50 @@ export function NuxModal({
         {step === 'beginner_intro' ? (
           <>
             <View style={styles.copyBlock}>
-              <Text style={styles.headline}>You&apos;ll learn in short packs</Text>
+              <Text style={styles.headline}>Your first letters</Text>
               <Text style={styles.subtext}>
-                Dit will teach new letters, mix them in practice, then check them in listen mode
-                before unlocking more.
+                Each pack introduces a few letters at a time through three stages.
               </Text>
             </View>
-            <View style={styles.card}>
-              <Text style={styles.bullet}>Teach: copy the newest letters until they stick</Text>
-              <Text style={styles.bullet}>Practice: mix old and new letters together</Text>
-              <Text style={styles.bullet}>Listen: identify the new letters by ear</Text>
-              <Text style={styles.startLine}>First pack: {currentPack.join(' ')}</Text>
+            <View style={styles.stepsColumn}>
+              <View style={styles.stepRow}>
+                <View style={styles.stepBadge}>
+                  <Text style={styles.stepNumber}>1</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Listen</Text>
+                  <Text style={styles.stepDesc}>Hear each letter and copy the sound</Text>
+                </View>
+              </View>
+              <View style={styles.stepRow}>
+                <View style={styles.stepBadge}>
+                  <Text style={styles.stepNumber}>2</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Practice</Text>
+                  <Text style={styles.stepDesc}>Mix old and new letters by ear</Text>
+                </View>
+              </View>
+              <View style={styles.stepRow}>
+                <View style={styles.stepBadge}>
+                  <Text style={styles.stepNumber}>3</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Recall</Text>
+                  <Text style={styles.stepDesc}>Hear a letter, tap the matching sound</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.packPreview}>
+              <Text style={styles.packLabel}>Starting with</Text>
+              <View style={styles.packChips}>
+                {currentPack.map((letter) => (
+                  <View key={letter} style={styles.packChip}>
+                    <Text style={styles.chipLetter}>{letter}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.packHint}>Tap a letter in-app to hear it</Text>
             </View>
             <View style={styles.bottomBlock}>
               <DitButton
@@ -507,10 +540,78 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: colors.text.primary90,
   },
-  startLine: {
+  stepsColumn: {
+    gap: spacing.lg,
+    alignSelf: 'center',
+    width: '100%' as unknown as number,
+    maxWidth: 280,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  stepBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface.input,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text.primary60,
+  },
+  stepContent: {
+    flex: 1,
+    gap: 2,
+  },
+  stepTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text.primary,
+  },
+  stepDesc: {
+    fontSize: 13,
+    color: colors.text.primary40,
+  },
+  packPreview: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  packLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary40,
+  },
+  packChips: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  packChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.panelStrong,
+    gap: 4,
+  },
+  chipLetter: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text.primary,
+  },
+  packHint: {
+    fontSize: 13,
+    color: colors.text.primary40,
+    fontStyle: 'italic',
   },
   bottomBlock: {
     gap: spacing.md,
