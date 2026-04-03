@@ -26,6 +26,7 @@ type SettingsModalProps = {
   practiceLearnMode: boolean
   practiceIfrMode: boolean
   practiceReviewMisses: boolean
+  guidedCourseActive: boolean
   listenCharacterWpm: number
   listenCharacterWpmMin: number
   listenCharacterWpmMax: number
@@ -151,6 +152,7 @@ export function SettingsModal({
   practiceLearnMode,
   practiceIfrMode,
   practiceReviewMisses,
+  guidedCourseActive,
   listenCharacterWpm,
   listenCharacterWpmMin,
   listenCharacterWpmMax,
@@ -556,10 +558,13 @@ export function SettingsModal({
                       <ToggleRow
                         label="Practice Words"
                         value={practiceWordMode}
+                        disabled={guidedCourseActive && isPractice}
                         onValueChange={onPracticeWordModeChange}
                       />
                       <Text style={styles.helperText}>
-                        Practice full words instead of single characters.
+                        {guidedCourseActive && isPractice
+                          ? 'Unavailable while the guided beginner course is active.'
+                          : 'Practice full words instead of single characters.'}
                       </Text>
                       <View style={styles.separator} />
                       <ToggleRow
@@ -570,18 +575,22 @@ export function SettingsModal({
                       <Text style={styles.helperText}>
                         Automatically plays the current Practice target.
                       </Text>
-                      <View style={styles.separator} />
-                      <ToggleRow
-                        label="Learn mode"
-                        value={practiceLearnMode}
-                        disabled={practiceWordMode}
-                        onValueChange={onPracticeLearnModeChange}
-                      />
-                      <Text style={styles.helperText}>
-                        {practiceWordMode
-                          ? 'Unavailable while Practice Words is on.'
-                          : 'Shows characters in a fixed learning order instead of random selection.'}
-                      </Text>
+                      {!guidedCourseActive ? (
+                        <>
+                          <View style={styles.separator} />
+                          <ToggleRow
+                            label="Sequential order"
+                            value={practiceLearnMode}
+                            disabled={practiceWordMode}
+                            onValueChange={onPracticeLearnModeChange}
+                          />
+                          <Text style={styles.helperText}>
+                            {practiceWordMode
+                              ? 'Unavailable while Practice Words is on.'
+                              : 'Cycles letters in order. It does not unlock new letters.'}
+                          </Text>
+                        </>
+                      ) : null}
                       <View style={styles.separator} />
                       <ToggleRow
                         label="Immediate flow recovery"

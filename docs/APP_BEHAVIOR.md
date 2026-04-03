@@ -12,12 +12,12 @@ This document captures the intended, shared behavior across web and iOS.
 
 ### NUX (New User Experience)
 
-- On first launch, a welcome modal offers a quick personalization exercise.
-- The exercise presents a small set of easy letters for the user to match as fast as they can using the Morse key.
-- Based on response speed, the app suggests a preset: beginner (hints on, level 1) or advanced (hints off, higher starting level).
-- The user can accept the suggested preset, choose the other, or skip entirely.
-- NUX status (`pending`, `completed`, `skipped`) is persisted via AsyncStorage so it only runs once.
-- Settings chosen during NUX can always be changed later.
+- On first launch, the app asks whether the user is new to Morse or already knows it.
+- Both paths begin with a sound check and a short input tutorial that explicitly teaches the big Morse key.
+- The button tutorial requires one short tap (dit) and one long press (dah) before continuing.
+- Known users see a short app tour, then enter the normal app flow.
+- Beginner users enter a guided course that introduces letters in small packs and advances automatically.
+- NUX status (`pending`, `completed`, `skipped`) is persisted so it only runs once unless replayed from settings.
 
 ### Practice
 
@@ -28,6 +28,10 @@ This document captures the intended, shared behavior across web and iOS.
 - Optional hints and mnemonics which are activated in the settings panel.
 - Word mode shows a full word, highlights progress, and computes WPM on completion.
 - Character algorithm prioritizes less proficient characters ahead of well-known ones.
+- During the guided beginner course, Practice runs in fixed lesson phases:
+  - Teach: repeat the new letters until each is answered correctly enough times.
+  - Practice: mix the current pack with already unlocked letters.
+  - On misses, the app keeps the same target, replays feedback, and does not silently advance.
 
 ### Freestyle
 

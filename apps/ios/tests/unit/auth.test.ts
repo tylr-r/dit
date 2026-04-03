@@ -150,7 +150,6 @@ describe('auth service', () => {
   })
 
   it('prepares Apple account deletion before deleting an Apple user', async () => {
-    const appleCredential = { provider: 'apple' }
     const user = {
       uid: 'apple-user-123',
       providerData: [{ providerId: 'apple.com' }],
@@ -161,24 +160,17 @@ describe('auth service', () => {
       rawNonce: 'raw-nonce',
       authorizationCode: 'auth-code',
     })
-    mockOAuthCredential.mockReturnValue(appleCredential)
 
     await prepareCurrentUserAccountDeletion(user)
 
     expect(mockPrepareAppleAccountDeletion).toHaveBeenCalledWith('apple-user-123')
-    expect(MockOAuthProvider).toHaveBeenCalledWith('apple.com')
-    expect(mockOAuthCredential).toHaveBeenCalledWith({
-      idToken: 'apple-id-token',
-      rawNonce: 'raw-nonce',
-    })
-    expect(mockReauthenticateWithCredential).toHaveBeenCalledWith(
-      user,
-      appleCredential,
-    )
     expect(mockRevokeAppleTokenForAccountDeletion).toHaveBeenCalledWith(
       'auth-code',
       'apple-user-123',
     )
+    expect(MockOAuthProvider).not.toHaveBeenCalled()
+    expect(mockOAuthCredential).not.toHaveBeenCalled()
+    expect(mockReauthenticateWithCredential).not.toHaveBeenCalled()
     expect(mockDeleteUser).not.toHaveBeenCalled()
   })
 

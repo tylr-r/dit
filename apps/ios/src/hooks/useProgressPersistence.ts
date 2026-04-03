@@ -62,6 +62,11 @@ const mergeProgressSnapshot = (
   practiceIfrMode: progress.practiceIfrMode ?? base.practiceIfrMode,
   practiceReviewMisses:
     progress.practiceReviewMisses ?? base.practiceReviewMisses,
+  learnerProfile: progress.learnerProfile ?? base.learnerProfile,
+  guidedCourseActive: progress.guidedCourseActive ?? base.guidedCourseActive,
+  guidedPackIndex: progress.guidedPackIndex ?? base.guidedPackIndex,
+  guidedPhase: progress.guidedPhase ?? base.guidedPhase,
+  guidedProgress: progress.guidedProgress ?? base.guidedProgress,
   scores: progress.scores ?? base.scores,
   showHint: progress.showHint ?? base.showHint,
   showMnemonic: progress.showMnemonic ?? base.showMnemonic,

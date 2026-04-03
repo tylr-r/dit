@@ -19,7 +19,7 @@ import {
   DEBOUNCE_DELAY,
   INTER_LETTER_UNITS,
   INTER_WORD_UNITS,
-  MORSE_CODE,
+  MORSE_DATA,
   UNIT_TIME_MS,
   WPM_RANGE,
   applyScoreDelta,
@@ -47,7 +47,7 @@ import {
 import { vibrate } from './platform/haptics'
 import { readStorageItem } from './platform/storage'
 
-const LETTERS = Object.keys(MORSE_CODE) as Letter[]
+const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const LEVELS = [1, 2, 3, 4] as const
 const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter))
 const REFERENCE_NUMBERS: Letter[] = [
@@ -64,7 +64,8 @@ const REFERENCE_NUMBERS: Letter[] = [
 ]
 const DOT_THRESHOLD_MS = DASH_THRESHOLD
 const UNIT_MS = UNIT_TIME_MS
-const [LISTEN_WPM_MIN, LISTEN_WPM_MAX] = WPM_RANGE
+const LISTEN_WPM_MIN = WPM_RANGE.min
+const LISTEN_WPM_MAX = WPM_RANGE.max
 const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS
 const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
@@ -522,7 +523,7 @@ function MainApp() {
           ? letter
           : getRandomWeightedLetter(availableLetters, scores)
         setLetter(nextLetter)
-        void playListenSequence(MORSE_CODE[nextLetter].code)
+        void playListenSequence(MORSE_DATA[nextLetter].code)
         return
       }
       if (practiceWordModeRef.current) {
@@ -643,7 +644,7 @@ function MainApp() {
         : getRandomWeightedLetter(nextLetters, scores)
       setLetter(nextLetter)
       if (isListen) {
-        void playListenSequence(MORSE_CODE[nextLetter].code)
+        void playListenSequence(MORSE_DATA[nextLetter].code)
       }
     },
     [
@@ -757,7 +758,7 @@ function MainApp() {
         setFreestyleResult('No input')
         return
       }
-      const match = Object.entries(MORSE_CODE).find(
+      const match = (Object.entries(MORSE_DATA) as [Letter, (typeof MORSE_DATA)[Letter]][]).find(
         ([, data]) => data.code === value,
       )
       const result = match ? match[0] : 'No match'
@@ -787,7 +788,7 @@ function MainApp() {
         }
         clearTimer(errorTimeoutRef)
         clearTimer(successTimeoutRef)
-        const target = MORSE_CODE[letterRef.current].code
+        const target = MORSE_DATA[letterRef.current].code
         const isCorrect = attempt === target
         if (isCorrect) {
           if (canScoreAttempt()) {
@@ -951,7 +952,7 @@ function MainApp() {
           setListenStatus('idle')
           setListenReveal(null)
           setLetter(nextLetter)
-          void playListenSequence(MORSE_CODE[nextLetter].code)
+          void playListenSequence(MORSE_DATA[nextLetter].code)
         },
         isCorrect ? 650 : ERROR_LOCKOUT_MS,
       )
@@ -977,7 +978,7 @@ function MainApp() {
     if (useCustomKeyboard) {
       triggerHaptics(12)
     }
-    void playListenSequence(MORSE_CODE[letter].code)
+    void playListenSequence(MORSE_DATA[letter].code)
   }, [
     letter,
     listenStatus,
@@ -1194,8 +1195,8 @@ function MainApp() {
 
   const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
-  const target = MORSE_CODE[letter].code
-  const mnemonic = MORSE_CODE[letter].mnemonic
+  const target = MORSE_DATA[letter].code
+  const mnemonic = MORSE_DATA[letter].mnemonic
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -1228,7 +1229,7 @@ function MainApp() {
       : isInputOnTrack
         ? input.length
         : 0
-  const pips = targetSymbols.map((symbol, index) => {
+  const pips = targetSymbols.map((symbol: string, index: number) => {
     const isHit = index < highlightCount
     return (
       <span
@@ -1425,7 +1426,7 @@ function MainApp() {
       {showReference ? (
         <ReferenceModal
           letters={REFERENCE_LETTERS}
-          morseData={MORSE_CODE}
+          morseData={MORSE_DATA}
           numbers={REFERENCE_NUMBERS}
           onClose={() => setShowReference(false)}
           onResetScores={handleResetScores}

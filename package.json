@@ -8,6 +8,8 @@
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "sim": "pnpm --filter @dit/ios ios",
+    "device": "pnpm --filter @dit/ios ios --device",
     "preview": "turbo run preview",
     "deploy": "pnpm --filter @dit/web build && firebase deploy",
     "test:unit": "turbo run test:unit",

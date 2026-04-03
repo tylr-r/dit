@@ -108,6 +108,19 @@ describe('morse utils', () => {
         practiceWordMode: true,
         practiceIfrMode: false,
         practiceReviewMisses: true,
+        learnerProfile: 'beginner',
+        guidedCourseActive: true,
+        guidedPackIndex: 2.7,
+        guidedPhase: 'practice',
+        guidedProgress: {
+          teachCounts: { E: 2.2 },
+          practiceAttempts: 10.4,
+          practiceCorrect: 8.2,
+          practiceLetterCorrect: { A: 2.1 },
+          listenAttempts: 6.9,
+          listenCorrect: 4.1,
+          listenLetterCorrect: { N: 1.2 },
+        },
         listenTtr: {
           A: { averageMs: 1234.6, samples: 4.2 },
           B: { averageMs: -100, samples: 0 },
@@ -130,6 +143,19 @@ describe('morse utils', () => {
     expect(progress?.showHint).toBe(true)
     expect(progress?.practiceIfrMode).toBe(false)
     expect(progress?.practiceReviewMisses).toBe(true)
+    expect(progress?.learnerProfile).toBe('beginner')
+    expect(progress?.guidedCourseActive).toBe(true)
+    expect(progress?.guidedPackIndex).toBe(3)
+    expect(progress?.guidedPhase).toBe('practice')
+    expect(progress?.guidedProgress).toEqual({
+      teachCounts: { E: 2 },
+      practiceAttempts: 10,
+      practiceCorrect: 8,
+      practiceLetterCorrect: { A: 2 },
+      listenAttempts: 7,
+      listenCorrect: 4,
+      listenLetterCorrect: { N: 1 },
+    })
     expect(progress?.listenTtr?.A).toEqual({ averageMs: 1235, samples: 4 })
     expect(progress?.listenTtr?.B).toEqual({ averageMs: 0, samples: 1 })
     expect(progress?.scores?.A).toBe(3)
