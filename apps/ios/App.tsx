@@ -118,6 +118,7 @@ const LISTEN_TTR_MAX_SAMPLES = 300
 const LISTEN_OVERLEARN_THRESHOLD_MS = 1200
 const LISTEN_OVERLEARN_STRONG_THRESHOLD_MS = 2200
 const LISTEN_OVERLEARN_MAX_QUEUE_SIZE = 24
+const GUIDED_TEACH_SUCCESS_COPY = ['Got it', 'Nice', 'Good', "That's it", 'Nailed it'] as const
 const LISTEN_MAX_CONSECUTIVE_SAME = 3
 const REFERENCE_WPM = 20
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
@@ -180,6 +181,8 @@ const getLevelForLetters = (letters: readonly Letter[]) => {
   )
   return clamp(highestLevel, LEVELS[0], LEVELS[LEVELS.length - 1]) as (typeof LEVELS)[number]
 }
+
+const formatLetterTargets = (letters: readonly Letter[]) => letters.join(' ')
 
 const getGuidedPracticePool = (packIndex: number) => {
   const currentPack = getBeginnerCoursePack(packIndex)
@@ -613,6 +616,7 @@ export default function App() {
   const isReferencePanelActive = showReference
   const availableLetters = useMemo(() => getLettersForLevel(maxLevel), [maxLevel])
   const activeLetters = guidedCourseActive ? guidedUnlockedLetters : availableLetters
+  const activeLetterSet = useMemo(() => new Set(activeLetters), [activeLetters])
   const availablePracticeWords = useMemo(
     () => getWordsForLetters(activeLetters),
     [activeLetters],
@@ -1321,7 +1325,7 @@ export default function App() {
       return
     }
     const nextPack = getBeginnerCoursePack(nextPackIndex)
-    Alert.alert('New letters unlocked', nextPack.join(' '))
+    Alert.alert('New letters unlocked', formatLetterTargets(nextPack))
     moveIntoGuidedLesson('teach', nextPackIndex, createGuidedLessonProgress())
   }, [moveIntoGuidedLesson])
 
@@ -1473,6 +1477,9 @@ export default function App() {
       if (!/^[A-Z0-9]$/.test(value)) {
         return
       }
+      if (!activeLetterSet.has(value)) {
+        return
+      }
       setListenHasSubmittedAnswer(true)
       void triggerHaptics(10)
       clearTimer(listenTimeoutRef)
@@ -1568,6 +1575,7 @@ export default function App() {
     },
     [
       activeLetters,
+      activeLetterSet,
       bumpScore,
       listenStatus,
       playListenSequence,
@@ -1663,7 +1671,7 @@ export default function App() {
                     listenCorrect: 0,
                     listenLetterCorrect: {},
                   }
-                  Alert.alert('Next up', `Practice ${currentPack.join(' ')} in mixed order.`)
+                  Alert.alert('Next up', `Practice ${formatLetterTargets(currentPack)} in mixed order.`)
                   moveIntoGuidedLesson('practice', guidedPackIndexRef.current, practiceProgress)
                   return
                 }
@@ -1689,7 +1697,10 @@ export default function App() {
                   listenCorrect: 0,
                   listenLetterCorrect: {},
                 }
-                Alert.alert('Ready to listen', `Hear and identify ${currentPack.join(' ')}.`)
+                Alert.alert(
+                  'Ready to listen',
+                  `Hear and identify ${formatLetterTargets(currentPack)}.`,
+                )
                 moveIntoGuidedLesson('listen', guidedPackIndexRef.current, listenProgress)
                 return
               }
@@ -2473,6 +2484,14 @@ export default function App() {
     !isFreestyle && !isListen && !isNuxActive && !guidedCourseActive && practiceIfrMode
   const isMorseDisabled = !isFreestyle && !isListen && isErrorLocked()
   const guidedTeachRemaining = Math.max(0, 2 - (guidedProgress.teachCounts[letter] ?? 0))
+  const guidedTeachSuccessCount = guidedCurrentPack.reduce(
+    (total, currentLetter) => total + (guidedProgress.teachCounts[currentLetter] ?? 0),
+    0,
+  )
+  const guidedTeachSuccessText =
+    GUIDED_TEACH_SUCCESS_COPY[
+      Math.max(0, Math.round(guidedTeachSuccessCount) - 1) % GUIDED_TEACH_SUCCESS_COPY.length
+    ]
   const baseStatusText =
     status === 'success'
       ? 'Correct'
@@ -2486,14 +2505,22 @@ export default function App() {
   const guidedPracticeStatusText = isGuidedPracticeActive
     ? status === 'success'
       ? guidedPhase === 'teach'
-        ? `${letter} locked in`
+        ? guidedTeachSuccessText
         : 'Correct'
       : status === 'error'
-      ? `Listen and try ${letter} again`
+      ? guidedPhase === 'teach'
+        ? 'Try again'
+        : 'Listen and try again'
       : guidedPhase === 'teach'
-      ? `Send ${letter} ${guidedTeachRemaining} more ${guidedTeachRemaining === 1 ? 'time' : 'times'}`
+      ? 'Send it again'
       : ' '
     : null
+  const guidedPracticeStatusDetailText =
+    isGuidedPracticeActive &&
+    guidedPhase === 'teach' &&
+    status !== 'success'
+      ? `${guidedTeachRemaining} remaining`
+      : null
   const practiceProgressText =
     !isFreestyle &&
     !isListen &&
@@ -2553,8 +2580,14 @@ export default function App() {
       : listenHasSubmittedAnswer
       ? ' '
       : isGuidedListenActive
-      ? `Type what you hear · ${guidedCurrentPack.join(' ')}`
+      ? 'Type what you hear'
       : 'Type what you hear'
+  const listenStatusDetailTokens =
+    listenStatus === 'idle' &&
+    !listenHasSubmittedAnswer &&
+    isGuidedListenActive
+      ? guidedCurrentPack
+      : null
   const listenDisplay = listenReveal ?? '?'
   const statusText = isFreestyle
     ? freestyleStatus
@@ -2584,7 +2617,7 @@ export default function App() {
               onPressReference={handleShowReference}
               onSettingsPress={handleSettingsToggle}
               showSettingsHint={showSettingsHint}
-              courseChipText={guidedCourseActive ? `Pack ${guidedPackIndex + 1} · ${guidedPhase}` : null}
+              courseChipText={guidedCourseActive ? `Pack ${guidedPackIndex + 1}` : null}
             />
           ) : null}
           {showAbout ? <AboutModal onClose={() => setShowAbout(false)} /> : null}
@@ -2654,6 +2687,12 @@ export default function App() {
             <StageDisplay
               letter={stageLetter}
               statusText={statusText}
+              statusDetailText={!isListen ? guidedPracticeStatusDetailText : null}
+              statusDetailTokens={
+                isListen
+                  ? listenStatusDetailTokens
+                  : null
+              }
               pips={stagePips}
               hintVisible={hintVisible}
               letterPlaceholder={letterPlaceholder}
@@ -2692,6 +2731,7 @@ export default function App() {
               ) : null}
               {isListen ? (
                 <ListenControls
+                  availableLetters={activeLetters}
                   listenStatus={listenStatus}
                   onReplay={handleListenReplay}
                   onSubmitAnswer={submitListenAnswer}

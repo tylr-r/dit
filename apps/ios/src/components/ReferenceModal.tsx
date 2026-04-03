@@ -77,6 +77,9 @@ const getScoreTint = (scoreValue: number) => {
   return { borderColor: tint }
 }
 
+const formatLetterTargets = (letters: readonly string[]) =>
+  letters.map((letter) => `"${letter}"`).join(' ')
+
 /** Modal panel with the Morse reference grid and scores. */
 export function ReferenceModal({
   letters,
@@ -251,7 +254,7 @@ export function ReferenceModal({
                 Pack {courseProgress.packIndex + 1}/{courseProgress.totalPacks} · {courseProgress.phase}
               </Text>
               <Text style={styles.courseBannerLetters}>
-                {courseProgress.packLetters.join('  ')}
+                {formatLetterTargets(courseProgress.packLetters)}
               </Text>
             </View>
           ) : null}

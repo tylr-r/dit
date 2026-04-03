@@ -19,22 +19,24 @@ export type StagePip = {
 };
 
 type StageDisplayProps = {
-  letter: string;
-  statusText: string;
-  pips: StagePip[];
-  hintVisible?: boolean;
-  letterPlaceholder?: boolean;
-  isListen?: boolean;
-  listenStatus?: 'idle' | 'success' | 'error';
-  listenWavePlayback?: ListenWavePlayback | null;
-  freestyleToneActive?: boolean;
-  practiceWpmText?: string | null;
-  listenTtrText?: string | null;
-  practiceWordMode?: boolean;
-  practiceWord?: string | null;
-  practiceWordIndex?: number;
-  isFreestyle?: boolean;
-};
+  letter: string
+  statusText: string
+  statusDetailText?: string | null
+  statusDetailTokens?: string[] | null
+  pips: StagePip[]
+  hintVisible?: boolean
+  letterPlaceholder?: boolean
+  isListen?: boolean
+  listenStatus?: 'idle' | 'success' | 'error'
+  listenWavePlayback?: ListenWavePlayback | null
+  freestyleToneActive?: boolean
+  practiceWpmText?: string | null
+  listenTtrText?: string | null
+  practiceWordMode?: boolean
+  practiceWord?: string | null
+  practiceWordIndex?: number
+  isFreestyle?: boolean
+}
 
 const getFreestyleLetterStyle = (value: string) => {
   const length = Math.max(1, value.length)
@@ -51,6 +53,8 @@ const getFreestyleLetterStyle = (value: string) => {
 export function StageDisplay({
   letter,
   statusText,
+  statusDetailText = null,
+  statusDetailTokens = null,
   pips,
   hintVisible = true,
   letterPlaceholder = false,
@@ -234,20 +238,41 @@ export function StageDisplay({
       )}
       <View style={styles.statusTextWrap}>
         {isListen ? (
-          <Animated.Text
-            key={`listen-status-${listenStatus}-${statusText}`}
-            entering={FadeIn.duration(100).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(100).easing(Easing.in(Easing.quad))}
-            style={[
-              styles.statusText,
-              listenStatus === 'success' && listenSuccessTintStyle,
-              listenStatus === 'error' && listenErrorTintStyle,
-            ]}
-          >
-            {statusText}
-          </Animated.Text>
+          <>
+            <Animated.Text
+              key={`listen-status-${listenStatus}-${statusText}`}
+              entering={FadeIn.duration(100).easing(Easing.out(Easing.cubic))}
+              exiting={FadeOut.duration(100).easing(Easing.in(Easing.quad))}
+              style={[
+                styles.statusText,
+                listenStatus === 'success' && listenSuccessTintStyle,
+                listenStatus === 'error' && listenErrorTintStyle,
+              ]}
+            >
+              {statusText}
+            </Animated.Text>
+            {statusDetailTokens?.length ? (
+              <Animated.View
+                key={`listen-detail-${statusDetailTokens.join('-')}`}
+                entering={FadeIn.duration(180).easing(Easing.out(Easing.cubic))}
+                exiting={FadeOut.duration(100).easing(Easing.in(Easing.quad))}
+                style={styles.statusDetailRow}
+              >
+                {statusDetailTokens.map((token) => (
+                  <View key={token} style={styles.statusDetailToken}>
+                    <Text style={styles.statusDetailTokenText}>{token}</Text>
+                  </View>
+                ))}
+              </Animated.View>
+            ) : null}
+          </>
         ) : (
-          <Text style={styles.statusText}>{statusText}</Text>
+          <>
+            <Text style={styles.statusText}>{statusText}</Text>
+            {statusDetailText ? (
+              <Text style={styles.statusMetaText}>{statusDetailText}</Text>
+            ) : null}
+          </>
         )}
       </View>
       <View style={styles.metricSlot}>
@@ -367,8 +392,9 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   statusTextWrap: {
-    minHeight: 18,
+    minHeight: 64,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   metricSlot: {
     minHeight: 16,
@@ -380,7 +406,43 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: colors.text.primary60,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  statusMetaText: {
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 0.6,
+    color: colors.text.primary40,
+    textAlign: 'center',
+  },
+  statusDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: 4,
+  },
+  statusDetailToken: {
+    minWidth: 54,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.text.primary20,
+    backgroundColor: colors.surface.input,
+    shadowColor: colors.accent.wave,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  statusDetailTokenText: {
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: '700',
+    letterSpacing: 4,
+    color: colors.text.primary,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   wpmText: {
     fontSize: 12,

@@ -8,6 +8,7 @@ const meta: Meta<typeof StageDisplay> = {
   argTypes: {
     letter: { control: 'text' },
     statusText: { control: 'text' },
+    statusDetailText: { control: 'text' },
     hintVisible: { control: 'boolean' },
     letterPlaceholder: { control: 'boolean' },
     isListen: { control: 'boolean' },
@@ -76,6 +77,8 @@ export const Placeholder: Story = {
   args: {
     letter: '?',
     statusText: 'Get ready',
+    statusDetailText: '2 remaining',
+    statusDetailTokens: ['A', 'N'],
     hintVisible: false,
     pips: [],
     letterPlaceholder: true,
