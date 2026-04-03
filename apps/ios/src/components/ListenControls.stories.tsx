@@ -27,13 +27,22 @@ export default meta
 type Story = StoryObj<typeof ListenControls>
 
 export const Idle: Story = {
-  args: { listenStatus: 'idle' },
+  args: {
+    availableLetters: ['K', 'M', 'R', 'S', 'U', 'A', 'P', 'T'],
+    listenStatus: 'idle',
+  },
 }
 
 export const AfterSuccess: Story = {
-  args: { listenStatus: 'success' },
+  args: {
+    availableLetters: ['K', 'M', 'R', 'S', 'U', 'A', 'P', 'T'],
+    listenStatus: 'success',
+  },
 }
 
 export const AfterError: Story = {
-  args: { listenStatus: 'error' },
+  args: {
+    availableLetters: ['K', 'M', 'R', 'S', 'U', 'A', 'P', 'T'],
+    listenStatus: 'error',
+  },
 }

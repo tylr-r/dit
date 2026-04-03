@@ -12,18 +12,21 @@ const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
 ]
 
 type ListenControlsProps = {
-  listenStatus: 'idle' | 'success' | 'error';
-  onReplay: () => void;
-  onSubmitAnswer: (value: Letter) => void;
-};
+  availableLetters: readonly Letter[]
+  listenStatus: 'idle' | 'success' | 'error'
+  onReplay: () => void
+  onSubmitAnswer: (value: Letter) => void
+}
 
 /** Listen mode controls with replay and an on-screen keyboard. */
 export function ListenControls({
+  availableLetters,
   listenStatus,
   onReplay,
   onSubmitAnswer,
 }: ListenControlsProps) {
   const isIdle = listenStatus === 'idle'
+  const availableLetterSet = new Set(availableLetters)
 
   return (
     <View style={styles.container}>
@@ -49,21 +52,33 @@ export function ListenControls({
             key={`row-${rowIndex}`}
             style={styles.keyboardRow}
           >
-            {row.map((key) => (
-              <DitButton
-                key={key}
-                text={key}
-                onPress={() => onSubmitAnswer(key)}
-                accessibilityLabel={`Type ${key}`}
-                accessibilityHint={`Submits the letter ${key}`}
-                disabled={!isIdle}
-                size={36}
-                radius={radii.sm}
-                textStyle={styles.keyText}
-                paddingHorizontal={2}
-                paddingVertical={2}
-              />
-            ))}
+            {row.map((key) => {
+              const isAvailable = availableLetterSet.has(key)
+              const isDisabled = !isIdle || !isAvailable
+
+              return (
+                <DitButton
+                  key={key}
+                  text={key}
+                  onPress={() => onSubmitAnswer(key)}
+                  accessibilityLabel={`Type ${key}`}
+                  accessibilityHint={
+                    !isAvailable
+                      ? `${key} is not available in this pack`
+                      : !isIdle
+                        ? 'Wait for the next letter'
+                        : `Submits the letter ${key}`
+                  }
+                  disabled={isDisabled}
+                  style={!isAvailable ? styles.keyUnavailable : undefined}
+                  size={36}
+                  radius={radii.sm}
+                  textStyle={isAvailable ? styles.keyText : styles.keyTextUnavailable}
+                  paddingHorizontal={2}
+                  paddingVertical={2}
+                />
+              )
+            })}
           </GlassContainer>
         ))}
       </View>
@@ -88,11 +103,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     gap: spacing.xs,
   },
-  keyDisabled: {
-    opacity: 0.4,
+  keyUnavailable: {
+    opacity: 0.28,
   },
   keyText: {
     fontSize: 18,
     color: colors.text.primary,
+  },
+  keyTextUnavailable: {
+    fontSize: 18,
+    color: colors.text.primary60,
   },
 })
