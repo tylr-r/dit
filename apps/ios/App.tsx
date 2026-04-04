@@ -1,25 +1,18 @@
 import {
   BEGINNER_COURSE_PACKS,
   applyScoreDelta,
-  clamp,
   createGuidedLessonProgress,
-  DASH_THRESHOLD,
-  DEBOUNCE_DELAY,
   DEFAULT_CHARACTER_WPM,
-  DEFAULT_EFFECTIVE_WPM,
-  EFFECTIVE_WPM_RANGE,
   formatWpm,
   getBeginnerCoursePack,
   getBeginnerUnlockedLetters,
   getLettersForLevel,
   getRandomLatencyAwareLetter,
   getRandomLetter,
-  getRandomWeightedLetter,
   getRandomWord,
+  getRandomWeightedLetter,
   getWordsForLetters,
   initializeScores,
-  INTER_LETTER_UNITS,
-  INTER_WORD_UNITS,
   isGuidedListenComplete,
   isGuidedPracticeComplete,
   isGuidedTeachComplete,
@@ -27,8 +20,6 @@ import {
   recordGuidedListenResult,
   recordGuidedPracticeResult,
   recordGuidedTeachSuccess,
-  UNIT_TIME_MS,
-  WPM_RANGE,
   type GuidedLessonProgress,
   type GuidedPhase,
   type Letter,
@@ -37,30 +28,34 @@ import {
   type Progress,
   type ProgressSnapshot,
 } from '@dit/core'
-import { addLowPowerModeListener, getLowPowerModeEnabled, triggerHaptics } from '@dit/dit-native'
+import { triggerHaptics } from '@dit/dit-native'
 import type { User } from '@firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Alert, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg'
 import { AboutModal } from './src/components/AboutModal'
+import { BackgroundGlow } from './src/components/BackgroundGlow'
 import { DitButton } from './src/components/DitButton'
 import { ListenControls } from './src/components/ListenControls'
 import { type Mode } from './src/components/ModeSwitcher'
 import { MorseButton } from './src/components/MorseButton'
 import { MorseLiquidSurface } from './src/components/MorseLiquidSurface'
 import { NuxModal } from './src/components/NuxModal'
-import { PhaseModal, type PhaseModalContent } from './src/components/PhaseModal'
+import { PhaseModal } from './src/components/PhaseModal'
 import { ReferenceModalSheet } from './src/components/ReferenceModalSheet'
 import { SettingsModal } from './src/components/SettingsModal'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
 import { database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
+import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
 import { useFirebaseSync } from './src/hooks/useFirebaseSync'
+import { useOnboardingState } from './src/hooks/useOnboardingState'
+import { usePhaseModalState } from './src/hooks/usePhaseModalState'
 import { useProgressPersistence } from './src/hooks/useProgressPersistence'
+import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
 import {
   deleteCurrentUserAccount,
   prepareCurrentUserAccountDeletion,
@@ -90,377 +85,102 @@ import {
   stopMorseTone,
   stopTone,
 } from './src/utils/tone'
-
-const LEVELS = [1, 2, 3, 4] as const
-const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3
-const DEFAULT_LISTEN_WPM = DEFAULT_CHARACTER_WPM
-const DEFAULT_LISTEN_EFFECTIVE_WPM = DEFAULT_EFFECTIVE_WPM
-const DEFAULT_LISTEN_AUTO_TIGHTENING = true
-const DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT = 0
-const DOT_THRESHOLD_MS = DASH_THRESHOLD
-const INTER_CHAR_GAP_MS = UNIT_TIME_MS * INTER_LETTER_UNITS
-const ERROR_LOCKOUT_MS = 1000
-const LISTEN_REVEAL_EXTRA_MS = 1000
-const LISTEN_REVEAL_FADE_OUT_MS = 320
-const LISTEN_POST_REVEAL_PAUSE_MS = 220
-const LISTEN_RECOGNITION_DISPLAY_MS = 2600
-const PRACTICE_NEXT_LETTER_DELAY_MS = 1000
-const PRACTICE_WORD_UNITS = 5
-const WORD_GAP_MS = UNIT_TIME_MS * INTER_WORD_UNITS
-const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
-const LISTEN_WPM_MIN = WPM_RANGE.min
-const LISTEN_WPM_MAX = WPM_RANGE.max
-const LISTEN_EFFECTIVE_WPM_MIN = EFFECTIVE_WPM_RANGE.min
-const LISTEN_EFFECTIVE_WPM_MAX = EFFECTIVE_WPM_RANGE.max
-const LISTEN_MIN_UNIT_MS = 40
-const LISTEN_TTR_EMA_ALPHA = 0.25
-const LISTEN_TTR_MAX_MS = 10000
-const LISTEN_TTR_MAX_SAMPLES = 300
-const LISTEN_OVERLEARN_THRESHOLD_MS = 1200
-const LISTEN_OVERLEARN_STRONG_THRESHOLD_MS = 2200
-const LISTEN_OVERLEARN_MAX_QUEUE_SIZE = 24
-const GUIDED_TEACH_SUCCESS_COPY = ['Got it 👍', 'Nice ✨', 'Good 🙌', "That's it 👏", 'Nailed it 🎯'] as const
-const LISTEN_MAX_CONSECUTIVE_SAME = 3
-const REFERENCE_WPM = 20
-const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
-const INTRO_HINTS_KEY = 'dit-intro-hint-step'
-const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
-const NUX_STATUS_KEY = 'dit-nux-status'
-const LOCAL_PROGRESS_KEY = 'dit-progress'
-const BACKGROUND_IDLE_TIMEOUT_MS = 10000
-const DEFAULT_PRACTICE_IFR_MODE = true
-const DEFAULT_PRACTICE_REVIEW_MISSES = true
-const PRACTICE_REVIEW_DELAY_STEPS = 3
-const PRACTICE_REVIEW_MAX_SIZE = 24
-
-type IntroHintStep = 'morse' | 'settings' | 'done'
-type NuxStatus = 'pending' | 'completed' | 'skipped'
-type NuxStep =
-  | 'profile'
-  | 'sound_check'
-  | 'button_tutorial'
-  | 'known_tour'
-  | 'beginner_intro'
-type ListenPromptTiming = {
-  targetLetter: Letter
-  expectedEndAt: number
-}
-const REFERENCE_LETTERS = (Object.keys(MORSE_DATA) as Letter[]).filter((letter) =>
-  /^[A-Z]$/.test(letter),
-)
-const REFERENCE_NUMBERS: Letter[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-
-type TimeoutHandle = ReturnType<typeof setTimeout>
-
-const clearTimer = (ref: { current: TimeoutHandle | null }) => {
-  if (ref.current !== null) {
-    clearTimeout(ref.current)
-    ref.current = null
-  }
-}
-
-const now = () => Date.now()
-
-const getNextOrderedLetter = (letters: Letter[], current: Letter): Letter => {
-  if (letters.length === 0) {
-    return current
-  }
-  const currentIndex = letters.indexOf(current)
-  if (currentIndex < 0) {
-    return letters[0]
-  }
-  return letters[(currentIndex + 1) % letters.length]
-}
-
-const getLevelForLetters = (letters: readonly Letter[]) => {
-  if (letters.length === 0) {
-    return LEVELS[0]
-  }
-  const highestLevel = letters.reduce(
-    (maxLevel, letter) => Math.max(maxLevel, MORSE_DATA[letter].level),
-    1,
-  )
-  return clamp(highestLevel, LEVELS[0], LEVELS[LEVELS.length - 1]) as (typeof LEVELS)[number]
-}
-
-
-const getGuidedPracticePool = (packIndex: number) => {
-  const currentPack = getBeginnerCoursePack(packIndex)
-  const unlockedLetters = getBeginnerUnlockedLetters(packIndex)
-  const reviewPool = unlockedLetters.filter((letter) => !currentPack.includes(letter))
-  return {
-    currentPack,
-    unlockedLetters,
-    reviewPool,
-  }
-}
-
-const clampListenTtrMs = (value: number) =>
-  Math.max(0, Math.min(LISTEN_TTR_MAX_MS, Math.round(value)))
-
-const applyListenTtrSample = (
-  current: ListenTtrRecord,
-  letter: Letter,
-  sampleMs: number,
-  sampleWeight: number = 1,
-) => {
-  if (!Number.isFinite(sampleMs) || sampleWeight <= 0) {
-    return current
-  }
-  const normalizedSampleMs = clampListenTtrMs(sampleMs)
-  const normalizedWeight = Math.max(1, Math.round(sampleWeight))
-  const existing = current[letter]
-  if (!existing) {
-    return {
-      ...current,
-      [letter]: {
-        averageMs: normalizedSampleMs,
-        samples: normalizedWeight,
-      },
-    }
-  }
-  const alpha = Math.min(0.85, LISTEN_TTR_EMA_ALPHA * normalizedWeight)
-  const averageMs = clampListenTtrMs(existing.averageMs * (1 - alpha) + normalizedSampleMs * alpha)
-  const samples = Math.min(LISTEN_TTR_MAX_SAMPLES, existing.samples + normalizedWeight)
-  return {
-    ...current,
-    [letter]: {
-      averageMs,
-      samples,
-    },
-  }
-}
-
-const getListenOverlearnRepeats = (averageMs: number) => {
-  if (averageMs >= LISTEN_OVERLEARN_STRONG_THRESHOLD_MS) {
-    return 2
-  }
-  if (averageMs >= LISTEN_OVERLEARN_THRESHOLD_MS) {
-    return 1
-  }
-  return 0
-}
-
-const enqueueListenOverlearnLetters = (
-  queue: Letter[],
-  letter: Letter,
-  repeats: number,
-  maxSize: number,
-) => {
-  if (repeats <= 0 || queue.length >= maxSize) {
-    return queue
-  }
-  const nextQueue = [...queue]
-  for (let count = 0; count < repeats && nextQueue.length < maxSize; count += 1) {
-    nextQueue.push(letter)
-  }
-  return nextQueue
-}
-
-const pullNextListenOverlearnLetter = (
-  queue: Letter[],
-  availableLetters: Letter[],
-  previousLetter: Letter,
-) => {
-  if (queue.length === 0) {
-    return {
-      nextQueue: queue,
-      reviewLetter: null as Letter | null,
-    }
-  }
-  const allowed = new Set(availableLetters)
-  const filteredQueue = queue.filter((letter) => allowed.has(letter))
-  if (filteredQueue.length === 0) {
-    return {
-      nextQueue: filteredQueue,
-      reviewLetter: null as Letter | null,
-    }
-  }
-  const nextIndex = filteredQueue.findIndex((letter) => letter !== previousLetter)
-  const resolvedIndex = nextIndex >= 0 ? nextIndex : 0
-  const reviewLetter = filteredQueue[resolvedIndex]
-  return {
-    nextQueue: filteredQueue.filter((_, index) => index !== resolvedIndex),
-    reviewLetter,
-  }
-}
-
-const createInitialPracticeConfig = () => {
-  const availableLetters = getLettersForLevel(DEFAULT_MAX_LEVEL)
-  const practiceWord = getRandomWord(getWordsForLetters(availableLetters))
-  return {
-    letter: getRandomLetter(availableLetters),
-    practiceWord,
-  }
-}
-
-const initialConfig = createInitialPracticeConfig()
-
-const getDeleteAccountErrorMessage = (error: unknown) => {
-  const code =
-    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
-      ? error.code
-      : null
-
-  if (code === 'ERR_APPLE_ACCOUNT_DELETION_USER_MISMATCH') {
-    return 'Sign in with the same Apple account tied to this Dit account, then try again.'
-  }
-
-  if (code?.includes('user-mismatch')) {
-    return 'Sign in with the same account you used for Dit, then try again.'
-  }
-
-  if (code?.includes('requires-recent-login')) {
-    return 'For security, sign in again and retry account deletion.'
-  }
-
-  if (code?.includes('network-request-failed')) {
-    return 'A network error interrupted account deletion. Try again on a stable connection.'
-  }
-
-  return 'We could not delete your account. Please try again.'
-}
-
-const isErrorWithCode = (error: unknown, code: string) =>
-  Boolean(error && typeof error === 'object' && 'code' in error && error.code === code)
-
-const getSignInErrorMessage = (error: unknown) => {
-  if (isErrorWithCode(error, 'auth/account-exists-with-different-credential')) {
-    return 'An account already exists with a different sign-in method for this email address.'
-  }
-
-  if (isErrorWithCode(error, 'auth/network-request-failed')) {
-    return 'A network error interrupted sign-in. Try again on a stable connection.'
-  }
-
-  return 'We could not sign you in. Please try again.'
-}
-
-const BackgroundGlow = () => {
-  const { width, height } = useWindowDimensions()
-
-  if (width === 0 || height === 0) {
-    return null
-  }
-
-  const glowStops = useMemo(
-    () => [
-      {
-        id: 'bgGlow1',
-        cx: width * 0.25,
-        cy: height * 0.85,
-        rx: 700,
-        ry: 500,
-        color: { r: 168, g: 192, b: 255, a: 0.08 },
-        fade: 0.6,
-      },
-      {
-        id: 'bgGlow2',
-        cx: width * 0.75,
-        cy: height * 0.15,
-        rx: 600,
-        ry: 450,
-        color: { r: 196, g: 181, b: 253, a: 0.06 },
-        fade: 0.65,
-      },
-      {
-        id: 'bgGlow3',
-        cx: width * 0.5,
-        cy: height * 0.5,
-        rx: 500,
-        ry: 400,
-        color: { r: 245, g: 199, b: 247, a: 0.04 },
-        fade: 0.7,
-      },
-    ],
-    [width, height],
-  )
-
-  return (
-    <View pointerEvents="none" style={styles.backgroundGlow}>
-      <Svg width={width} height={height}>
-        <Defs>
-          {glowStops.map((glow) => (
-            <RadialGradient
-              key={glow.id}
-              id={glow.id}
-              cx={glow.cx}
-              cy={glow.cy}
-              r={1}
-              gradientUnits="userSpaceOnUse"
-              gradientTransform={`translate(${glow.cx} ${glow.cy}) scale(${glow.rx} ${
-                glow.ry
-              }) translate(${-glow.cx} ${-glow.cy})`}
-            >
-              <Stop
-                offset="0%"
-                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
-                stopOpacity={glow.color.a}
-              />
-              <Stop
-                offset={`${glow.fade * 100}%`}
-                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
-                stopOpacity={0}
-              />
-              <Stop
-                offset="100%"
-                stopColor={`rgb(${glow.color.r}, ${glow.color.g}, ${glow.color.b})`}
-                stopOpacity={0}
-              />
-            </RadialGradient>
-          ))}
-        </Defs>
-        {glowStops.map((glow) => (
-          <Rect key={`${glow.id}-rect`} width={width} height={height} fill={`url(#${glow.id})`} />
-        ))}
-      </Svg>
-    </View>
-  )
-}
+import {
+  DEFAULT_LISTEN_AUTO_TIGHTENING,
+  DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT,
+  DEFAULT_LISTEN_EFFECTIVE_WPM,
+  DEFAULT_LISTEN_WPM,
+  DEFAULT_MAX_LEVEL,
+  DEFAULT_PRACTICE_IFR_MODE,
+  DEFAULT_PRACTICE_REVIEW_MISSES,
+  DOT_THRESHOLD_MS,
+  ERROR_LOCKOUT_MS,
+  GUIDED_TEACH_SUCCESS_COPY,
+  INTER_CHAR_GAP_MS,
+  LEVELS,
+  LISTEN_EFFECTIVE_WPM_MAX,
+  LISTEN_EFFECTIVE_WPM_MIN,
+  LISTEN_MAX_CONSECUTIVE_SAME,
+  LISTEN_MIN_UNIT_MS,
+  LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
+  LISTEN_POST_REVEAL_PAUSE_MS,
+  LISTEN_RECOGNITION_DISPLAY_MS,
+  LISTEN_REVEAL_EXTRA_MS,
+  LISTEN_REVEAL_FADE_OUT_MS,
+  LISTEN_WPM_MAX,
+  LISTEN_WPM_MIN,
+  PRACTICE_NEXT_LETTER_DELAY_MS,
+  PRACTICE_REVIEW_DELAY_STEPS,
+  PRACTICE_REVIEW_MAX_SIZE,
+  PRACTICE_WORD_UNITS,
+  PROGRESS_SAVE_DEBOUNCE_MS,
+  NUX_STATUS_KEY,
+  REFERENCE_LETTERS,
+  REFERENCE_NUMBERS,
+  REFERENCE_WPM,
+  WORD_GAP_EXTRA_MS,
+  applyListenTtrSample,
+  clearTimer,
+  createInitialPracticeConfig,
+  enqueueListenOverlearnLetters,
+  getDeleteAccountErrorMessage,
+  getGuidedPracticePool,
+  getLevelForLetters,
+  getListenOverlearnRepeats,
+  getNextOrderedLetter,
+  getSignInErrorMessage,
+  initialConfig,
+  isErrorWithCode,
+  now,
+  pullNextListenOverlearnLetter,
+  type ListenPromptTiming,
+  type TimeoutHandle,
+} from './src/utils/appState'
 
 /** Primary app entry for Dit iOS. */
 export default function App() {
   const { user } = useAuth()
+  const { phaseModal, showPhaseModal, handlePhaseModalDismiss } = usePhaseModalState()
+  const {
+    introHintStep,
+    dismissMorseHint,
+    dismissSettingsHint,
+    nuxStatus,
+    setNuxStatus,
+    persistIntroHintStep,
+    persistNuxStatus,
+    nuxStep,
+    setNuxStep,
+    nuxReady,
+    learnerProfile,
+    setLearnerProfile,
+    didCompleteSoundCheck,
+    setDidCompleteSoundCheck,
+    didCompleteTutorialTap,
+    setDidCompleteTutorialTap,
+    didCompleteTutorialHold,
+    setDidCompleteTutorialHold,
+  } = useOnboardingState()
+  const isSystemLowPowerModeEnabled = useSystemLowPowerMode()
+  const { isBackgroundIdle, handleRootTouchStart } = useBackgroundIdle()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [isPressing, setIsPressing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
-  const [phaseModal, setPhaseModal] = useState<PhaseModalContent | null>(null)
-  const phaseModalOnDismissRef = useRef<(() => void) | null>(null)
-  const showPhaseModal = useCallback((content: PhaseModalContent, onDismiss?: () => void) => {
-    phaseModalOnDismissRef.current = onDismiss ?? null
-    setPhaseModal(content)
-  }, [])
-  const handlePhaseModalDismiss = useCallback(() => {
-    setPhaseModal(null)
-    const pending = phaseModalOnDismissRef.current
-    phaseModalOnDismissRef.current = null
-    pending?.()
-  }, [])
   const [mode, setMode] = useState<Mode>('practice')
-  const [isSystemLowPowerModeEnabled, setIsSystemLowPowerModeEnabled] = useState(false)
-  const [isBackgroundIdle, setIsBackgroundIdle] = useState(false)
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
   const [practiceIfrMode, setPracticeIfrMode] = useState(DEFAULT_PRACTICE_IFR_MODE)
   const [practiceReviewMisses, setPracticeReviewMisses] = useState(DEFAULT_PRACTICE_REVIEW_MISSES)
-  const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
-  const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
-  const [nuxStep, setNuxStep] = useState<NuxStep>('profile')
-  const [nuxReady, setNuxReady] = useState(false)
-  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null)
   const [guidedCourseActive, setGuidedCourseActive] = useState(false)
   const [guidedPackIndex, setGuidedPackIndex] = useState(0)
   const [guidedPhase, setGuidedPhase] = useState<GuidedPhase>('teach')
   const [guidedProgress, setGuidedProgress] = useState<GuidedLessonProgress>(
     createGuidedLessonProgress(),
   )
-  const [didCompleteSoundCheck, setDidCompleteSoundCheck] = useState(false)
-  const [didCompleteTutorialTap, setDidCompleteTutorialTap] = useState(false)
-  const [didCompleteTutorialHold, setDidCompleteTutorialHold] = useState(false)
   const [maxLevel, setMaxLevel] = useState(DEFAULT_MAX_LEVEL)
   const [practiceWordMode, setPracticeWordMode] = useState(false)
   const [letter, setLetter] = useState<Letter>(initialConfig.letter)
@@ -491,118 +211,6 @@ export default function App() {
   const guidedPackIndexRef = useRef(guidedPackIndex)
   const guidedPhaseRef = useRef<GuidedPhase>(guidedPhase)
   const guidedProgressRef = useRef<GuidedLessonProgress>(guidedProgress)
-  useEffect(() => {
-    let isActive = true
-    const loadIntroHints = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(INTRO_HINTS_KEY)
-        if (!isActive) {
-          return
-        }
-        if (stored === 'morse' || stored === 'settings' || stored === 'done') {
-          setIntroHintStep(stored)
-          return
-        }
-        const legacy = await AsyncStorage.getItem(LEGACY_INTRO_HINTS_KEY)
-        if (legacy === 'true') {
-          setIntroHintStep('done')
-          void AsyncStorage.setItem(INTRO_HINTS_KEY, 'done')
-          return
-        }
-        setIntroHintStep('morse')
-      } catch (error) {
-        console.error('Failed to load intro hints', error)
-      }
-    }
-    void loadIntroHints()
-    return () => {
-      isActive = false
-    }
-  }, [])
-  useEffect(() => {
-    let isActive = true
-    const loadNuxStatus = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(NUX_STATUS_KEY)
-        if (!isActive) {
-          return
-        }
-        if (stored === 'completed' || stored === 'skipped') {
-          setNuxStatus(stored)
-          return
-        }
-        const progressStored = await AsyncStorage.getItem(LOCAL_PROGRESS_KEY)
-        if (!isActive) {
-          return
-        }
-        if (progressStored) {
-          setNuxStatus('skipped')
-          void AsyncStorage.setItem(NUX_STATUS_KEY, 'skipped')
-          return
-        }
-        setNuxStatus('pending')
-      } catch (error) {
-        console.error('Failed to load NUX status', error)
-        setNuxStatus('pending')
-      } finally {
-        if (isActive) {
-          setNuxReady(true)
-        }
-      }
-    }
-    void loadNuxStatus()
-    return () => {
-      isActive = false
-    }
-  }, [])
-  const persistIntroHintStep = useCallback((next: IntroHintStep) => {
-    setIntroHintStep(next)
-    interface AsyncStorageError {
-      message?: string
-      name?: string
-      stack?: string
-      [key: string]: unknown
-    }
-    void AsyncStorage.setItem(INTRO_HINTS_KEY, next).catch((error: AsyncStorageError) => {
-      console.error('Failed to save intro hints', error)
-    })
-  }, [])
-  const persistNuxStatus = useCallback((next: NuxStatus) => {
-    setNuxStatus(next)
-    void AsyncStorage.setItem(NUX_STATUS_KEY, next).catch((error) => {
-      console.error('Failed to save NUX status', error)
-    })
-  }, [])
-  const dismissMorseHint = useCallback(() => {
-    if (introHintStep !== 'morse') {
-      return
-    }
-    persistIntroHintStep('settings')
-  }, [introHintStep, persistIntroHintStep])
-  const dismissSettingsHint = useCallback(() => {
-    if (introHintStep !== 'settings') {
-      return
-    }
-    persistIntroHintStep('done')
-  }, [introHintStep, persistIntroHintStep])
-  useEffect(() => {
-    let isMounted = true
-
-    void getLowPowerModeEnabled().then((enabled) => {
-      if (isMounted) {
-        setIsSystemLowPowerModeEnabled(enabled)
-      }
-    })
-
-    const subscription = addLowPowerModeListener((enabled) => {
-      setIsSystemLowPowerModeEnabled(enabled)
-    })
-
-    return () => {
-      isMounted = false
-      subscription.remove()
-    }
-  }, [])
   const isFreestyle = mode === 'freestyle'
   const isListen = mode === 'listen'
   const isBackgroundAnimationPaused =
@@ -709,33 +317,6 @@ export default function App() {
   const errorTimeoutRef = useRef<TimeoutHandle | null>(null)
   const listenTimeoutRef = useRef<TimeoutHandle | null>(null)
   const listenRecognitionTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const backgroundIdleTimeoutRef = useRef<TimeoutHandle | null>(null)
-  const isBackgroundIdleRef = useRef(false)
-  const scheduleBackgroundIdle = useCallback(() => {
-    clearTimer(backgroundIdleTimeoutRef)
-    backgroundIdleTimeoutRef.current = setTimeout(() => {
-      isBackgroundIdleRef.current = true
-      setIsBackgroundIdle(true)
-    }, BACKGROUND_IDLE_TIMEOUT_MS)
-  }, [])
-  const registerAppInteraction = useCallback(() => {
-    if (isBackgroundIdleRef.current) {
-      isBackgroundIdleRef.current = false
-      setIsBackgroundIdle(false)
-    }
-    scheduleBackgroundIdle()
-  }, [scheduleBackgroundIdle])
-  const handleRootTouchStart = useCallback(() => {
-    registerAppInteraction()
-    return false
-  }, [registerAppInteraction])
-
-  useEffect(() => {
-    registerAppInteraction()
-    return () => {
-      clearTimer(backgroundIdleTimeoutRef)
-    }
-  }, [registerAppInteraction])
 
   const setPracticeWordFromList = useCallback((words: string[], avoidWord?: string) => {
     const nextWord = getRandomWord(words, avoidWord)
@@ -2846,10 +2427,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0c12',
     overflow: 'hidden',
-  },
-  backgroundGlow: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
   },
   liquidBackground: {
     ...StyleSheet.absoluteFillObject,
