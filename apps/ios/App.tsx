@@ -25,7 +25,6 @@ import {
   type Letter,
   type LearnerProfile,
   type ListenTtrRecord,
-  type Progress,
   type ProgressSnapshot,
 } from '@dit/core'
 import { triggerHaptics } from '@dit/dit-native'
@@ -51,10 +50,9 @@ import { TopBar } from './src/components/TopBar'
 import { database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
 import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
-import { useFirebaseSync } from './src/hooks/useFirebaseSync'
 import { useOnboardingState } from './src/hooks/useOnboardingState'
 import { usePhaseModalState } from './src/hooks/usePhaseModalState'
-import { useProgressPersistence } from './src/hooks/useProgressPersistence'
+import { useProgressSyncController } from './src/hooks/useProgressSyncController'
 import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
 import {
   deleteCurrentUserAccount,
@@ -98,8 +96,6 @@ import {
   GUIDED_TEACH_SUCCESS_COPY,
   INTER_CHAR_GAP_MS,
   LEVELS,
-  LISTEN_EFFECTIVE_WPM_MAX,
-  LISTEN_EFFECTIVE_WPM_MIN,
   LISTEN_MAX_CONSECUTIVE_SAME,
   LISTEN_MIN_UNIT_MS,
   LISTEN_OVERLEARN_MAX_QUEUE_SIZE,
@@ -113,7 +109,6 @@ import {
   PRACTICE_REVIEW_DELAY_STEPS,
   PRACTICE_REVIEW_MAX_SIZE,
   PRACTICE_WORD_UNITS,
-  PROGRESS_SAVE_DEBOUNCE_MS,
   NUX_STATUS_KEY,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
@@ -1808,204 +1803,69 @@ export default function App() {
     ],
   )
 
-  const applyParsedProgress = useCallback(
-    (progress: Progress) => {
-      const resolvedMaxLevel =
-        typeof progress.maxLevel === 'number' ? progress.maxLevel : maxLevelRef.current
-
-      if (progress.scores) {
-        scoresRef.current = progress.scores
-        setScores(progress.scores)
-      }
-      if (progress.listenTtr) {
-        listenTtrRef.current = progress.listenTtr
-        setListenTtr(progress.listenTtr)
-      }
-      if (typeof progress.showHint === 'boolean') {
-        setShowHint(progress.showHint)
-      }
-      if (typeof progress.showMnemonic === 'boolean') {
-        setShowMnemonic(progress.showMnemonic)
-      }
-      if (typeof progress.practiceIfrMode === 'boolean') {
-        practiceIfrModeRef.current = progress.practiceIfrMode
-        setPracticeIfrMode(progress.practiceIfrMode)
-        if (!progress.practiceIfrMode) {
-          practiceReviewQueueRef.current = []
-        } else {
-          errorLockoutUntilRef.current = 0
-        }
-      }
-      if (typeof progress.practiceReviewMisses === 'boolean') {
-        practiceReviewMissesRef.current = progress.practiceReviewMisses
-        setPracticeReviewMisses(progress.practiceReviewMisses)
-        if (!progress.practiceReviewMisses) {
-          practiceReviewQueueRef.current = []
-        }
-      }
-      if (progress.learnerProfile) {
-        learnerProfileRef.current = progress.learnerProfile
-        setLearnerProfile(progress.learnerProfile)
-      }
-      if (typeof progress.guidedCourseActive === 'boolean') {
-        guidedCourseActiveRef.current = progress.guidedCourseActive
-        setGuidedCourseActive(progress.guidedCourseActive)
-      }
-      if (typeof progress.guidedPackIndex === 'number') {
-        guidedPackIndexRef.current = progress.guidedPackIndex
-        setGuidedPackIndex(progress.guidedPackIndex)
-        syncGuidedLevel(progress.guidedPackIndex)
-      }
-      if (progress.guidedPhase) {
-        guidedPhaseRef.current = progress.guidedPhase
-        setGuidedPhase(progress.guidedPhase)
-      }
-      if (progress.guidedProgress) {
-        guidedProgressRef.current = progress.guidedProgress
-        setGuidedProgress(progress.guidedProgress)
-      }
-      if (typeof progress.wordMode === 'boolean') {
-        if (freestyleWordModeRef.current !== progress.wordMode) {
-          freestyleWordModeRef.current = progress.wordMode
-          clearTimer(wordSpaceTimeoutRef)
-          setFreestyleWordMode(progress.wordMode)
-          setFreestyleResult(null)
-          setFreestyleInput('')
-          setFreestyleWord('')
-        }
-      }
-      let resolvedListenWpm = listenWpmRef.current
-      let resolvedListenEffectiveWpm = listenEffectiveWpmRef.current
-      let hasListenSpeedUpdate = false
-      const incomingListenWpm = typeof progress.listenWpm === 'number' ? progress.listenWpm : null
-      const incomingListenEffectiveWpm =
-        typeof progress.listenEffectiveWpm === 'number' ? progress.listenEffectiveWpm : null
-      if (
-        incomingListenWpm !== null ||
-        incomingListenEffectiveWpm !== null ||
-        resolvedListenEffectiveWpm > resolvedListenWpm
-      ) {
-        const normalizedListenSpeeds = normalizeListenSpeeds(
-          incomingListenWpm ?? resolvedListenWpm,
-          incomingListenEffectiveWpm ?? resolvedListenEffectiveWpm,
-        )
-        resolvedListenWpm = normalizedListenSpeeds.characterWpm
-        resolvedListenEffectiveWpm = normalizedListenSpeeds.effectiveWpm
-        if (resolvedListenWpm !== listenWpmRef.current) {
-          setListenWpm(resolvedListenWpm)
-          listenWpmRef.current = resolvedListenWpm
-          hasListenSpeedUpdate = true
-        }
-        if (resolvedListenEffectiveWpm !== listenEffectiveWpmRef.current) {
-          setListenEffectiveWpm(resolvedListenEffectiveWpm)
-          listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
-          hasListenSpeedUpdate = true
-        }
-      }
-      if (typeof progress.listenAutoTightening === 'boolean') {
-        setListenAutoTightening(progress.listenAutoTightening)
-        listenAutoTighteningRef.current = progress.listenAutoTightening
-      }
-      if (typeof progress.listenAutoTighteningCorrectCount === 'number') {
-        const nextCorrectCount = Math.max(0, Math.round(progress.listenAutoTighteningCorrectCount))
-        setListenAutoTighteningCorrectCount(nextCorrectCount)
-        listenAutoTighteningCorrectCountRef.current = nextCorrectCount
-      }
-      if (
-        hasListenSpeedUpdate &&
-        modeRef.current === 'listen' &&
-        listenStatusRef.current === 'idle'
-      ) {
-        playListenSequenceRef.current(MORSE_DATA[letterRef.current].code, {
-          characterWpm: resolvedListenWpm,
-          effectiveWpm: resolvedListenEffectiveWpm,
-        })
-      }
-      if (listenAutoTighteningRef.current) {
-        const autoEffectiveWpm = getAutoEffectiveWpm(
-          resolvedListenWpm,
-          listenAutoTighteningCorrectCountRef.current,
-        )
-        if (autoEffectiveWpm !== listenEffectiveWpmRef.current) {
-          setListenEffectiveWpm(autoEffectiveWpm)
-          listenEffectiveWpmRef.current = autoEffectiveWpm
-          if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
-            playListenSequenceRef.current(MORSE_DATA[letterRef.current].code, {
-              characterWpm: resolvedListenWpm,
-              effectiveWpm: autoEffectiveWpm,
-            })
-          }
-        }
-      }
-      if (typeof progress.maxLevel === 'number' && !progress.guidedCourseActive) {
-        maxLevelRef.current = progress.maxLevel as (typeof LEVELS)[number]
-        const nextLetters = getLettersForLevel(progress.maxLevel)
-        practiceReviewQueueRef.current = filterReviewQueue(
-          practiceReviewQueueRef.current,
-          nextLetters,
-        )
-        const nextLetter =
-          modeRef.current === 'listen'
-            ? setNextListenLetter(nextLetters, letterRef.current)
-            : setNextLetterForLevel(nextLetters, letterRef.current)
-        setMaxLevel(progress.maxLevel as (typeof LEVELS)[number])
-        if (modeRef.current === 'listen' && listenStatusRef.current === 'idle') {
-          playListenSequenceRef.current(MORSE_DATA[nextLetter].code)
-        }
-      }
-      if (typeof progress.practiceWordMode === 'boolean') {
-        practiceWordModeRef.current = progress.practiceWordMode
-        practiceWordStartRef.current = null
-        const resolvedPracticeWordMode = guidedCourseActiveRef.current ? false : progress.practiceWordMode
-        setPracticeWordMode(resolvedPracticeWordMode)
-        if (!resolvedPracticeWordMode) {
-          setPracticeWpm(null)
-        }
-        if (resolvedPracticeWordMode) {
-          const nextLetters = getLettersForLevel(resolvedMaxLevel)
-          setPracticeWordFromList(getWordsForLetters(nextLetters))
-        }
-      }
-    },
-    [setNextLetterForLevel, setNextListenLetter, setPracticeWordFromList, syncGuidedLevel],
-  )
-  const {
-    progressUpdatedAt,
-    onRemoteProgress,
-    pendingRemoteSyncTick,
-    consumePendingRemoteSync,
-    clearLocalProgress,
-  } = useProgressPersistence({
-    progressSnapshot,
-    progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
-    applyProgress: applyParsedProgress,
-    listenWpmMin: LISTEN_WPM_MIN,
-    listenWpmMax: LISTEN_WPM_MAX,
-    listenEffectiveWpmMin: LISTEN_EFFECTIVE_WPM_MIN,
-    listenEffectiveWpmMax: LISTEN_EFFECTIVE_WPM_MAX,
-    levelMin: LEVELS[0],
-    levelMax: LEVELS[LEVELS.length - 1],
-  })
-
-  const { remoteLoaded, saveNow, deleteRemoteProgress } = useFirebaseSync({
+  const { clearLocalProgress, deleteRemoteProgress } = useProgressSyncController({
     database,
     user: userForSync,
-    onRemoteProgress,
-    progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
     progressSnapshot,
-    progressUpdatedAt,
+    state: {
+      setScores,
+      setListenTtr,
+      setShowHint,
+      setShowMnemonic,
+      setPracticeIfrMode,
+      setPracticeReviewMisses,
+      setLearnerProfile,
+      setGuidedCourseActive,
+      setGuidedPackIndex,
+      setGuidedPhase,
+      setGuidedProgress,
+      setFreestyleWordMode,
+      setFreestyleResult,
+      setFreestyleInput,
+      setFreestyleWord,
+      setListenWpm,
+      setListenEffectiveWpm,
+      setListenAutoTightening,
+      setListenAutoTighteningCorrectCount,
+      setMaxLevel,
+      setPracticeWordMode,
+      setPracticeWpm,
+    },
+    refs: {
+      scoresRef,
+      listenTtrRef,
+      practiceIfrModeRef,
+      practiceReviewMissesRef,
+      practiceReviewQueueRef,
+      errorLockoutUntilRef,
+      learnerProfileRef,
+      guidedCourseActiveRef,
+      guidedPackIndexRef,
+      guidedPhaseRef,
+      guidedProgressRef,
+      freestyleWordModeRef,
+      wordSpaceTimeoutRef,
+      listenWpmRef,
+      listenEffectiveWpmRef,
+      listenAutoTighteningRef,
+      listenAutoTighteningCorrectCountRef,
+      modeRef,
+      listenStatusRef,
+      maxLevelRef,
+      practiceWordModeRef,
+      practiceWordStartRef,
+      letterRef,
+    },
+    helpers: {
+      syncGuidedLevel,
+      setNextListenLetter,
+      setNextLetterForLevel,
+      setPracticeWordFromList,
+      playListenSequenceForLetter: (targetLetter, overrides) => {
+        playListenSequenceRef.current(MORSE_DATA[targetLetter].code, overrides)
+      },
+    },
   })
-
-  useEffect(() => {
-    if (!remoteLoaded || !userForSync) {
-      return
-    }
-    const payload = consumePendingRemoteSync()
-    if (!payload) {
-      return
-    }
-    saveNow(payload, payload.updatedAt)
-  }, [consumePendingRemoteSync, pendingRemoteSyncTick, remoteLoaded, saveNow, userForSync])
 
   const performAccountDeletion = useCallback(
     async (currentUser: User) => {
