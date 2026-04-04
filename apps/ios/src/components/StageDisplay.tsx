@@ -14,9 +14,9 @@ import type { ListenWavePlayback } from '../utils/listenWave'
 import { ListenSineWave } from './ListenSineWave'
 
 export type StagePip = {
-  type: 'dot' | 'dah';
-  state?: 'expected' | 'hit';
-};
+  type: 'dot' | 'dah'
+  state?: 'expected' | 'hit'
+}
 
 type StageDisplayProps = {
   letter: string
@@ -72,11 +72,9 @@ export function StageDisplay({
   const displayLetter = letter || '?'
   const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter)
   const freestylePatternVisible = /^[.-]+$/.test(letter)
-  const showFreestyleOverlayLetter =
-    Boolean(letter) && letter !== '?' && !freestylePatternVisible
+  const showFreestyleOverlayLetter = Boolean(letter) && letter !== '?' && !freestylePatternVisible
   const shouldDimWave =
-    (isListen && !letterPlaceholder) ||
-    (isFreestyle && showFreestyleOverlayLetter)
+    (isListen && !letterPlaceholder) || (isFreestyle && showFreestyleOverlayLetter)
   const listenWaveOpacity = useSharedValue(shouldDimWave ? 0.3 : 1)
   const listenTintProgress = useSharedValue(0)
 
@@ -168,9 +166,7 @@ export function StageDisplay({
       {practiceWordMode ? (
         <View
           style={styles.wordDisplay}
-          accessibilityLabel={
-            practiceWord ? `Word ${practiceWord}` : 'Practice word'
-          }
+          accessibilityLabel={practiceWord ? `Word ${practiceWord}` : 'Practice word'}
         >
           {wordCharacters.map((char, index) => {
             const isDone = index < practiceWordIndex
@@ -196,10 +192,7 @@ export function StageDisplay({
             accessibilityRole="image"
             accessibilityLabel="Morse waveform"
           >
-            <ListenSineWave
-              playback={listenWavePlayback}
-              tintStatus={listenStatus}
-            />
+            <ListenSineWave playback={listenWavePlayback} tintStatus={listenStatus} />
           </Animated.View>
           {!letterPlaceholder ? (
             <Animated.Text
@@ -256,11 +249,11 @@ export function StageDisplay({
                 key={`listen-detail-${statusDetailTokens.join('-')}`}
                 entering={FadeIn.duration(180).easing(Easing.out(Easing.cubic))}
                 exiting={FadeOut.duration(100).easing(Easing.in(Easing.quad))}
-                style={styles.statusDetailRow}
+                style={styles.listenTokenRow}
               >
                 {statusDetailTokens.map((token) => (
-                  <View key={token} style={styles.statusDetailToken}>
-                    <Text style={styles.statusDetailTokenText}>{token}</Text>
+                  <View key={token} style={styles.listenToken}>
+                    <Text style={styles.listenTokenText}>{token}</Text>
                   </View>
                 ))}
               </Animated.View>
@@ -308,6 +301,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textTransform: 'uppercase',
     color: colors.text.primary,
+    marginLeft: spacing.sm,
     marginBottom: spacing.md,
     textAlign: 'center',
     paddingLeft: 8,
@@ -416,31 +410,26 @@ const styles = StyleSheet.create({
     color: colors.text.primary40,
     textAlign: 'center',
   },
-  statusDetailRow: {
+  listenTokenRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginTop: 4,
+    marginTop: spacing.sm,
   },
-  statusDetailToken: {
-    minWidth: 54,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.text.primary20,
+  listenToken: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
     backgroundColor: colors.surface.input,
-    shadowColor: colors.accent.wave,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 0 },
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statusDetailTokenText: {
-    fontSize: 28,
-    lineHeight: 30,
-    fontWeight: '700',
-    letterSpacing: 4,
-    color: colors.text.primary,
+  listenTokenText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary80,
     textAlign: 'center',
     textTransform: 'uppercase',
   },

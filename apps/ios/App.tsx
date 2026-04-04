@@ -52,6 +52,7 @@ import { type Mode } from './src/components/ModeSwitcher'
 import { MorseButton } from './src/components/MorseButton'
 import { MorseLiquidSurface } from './src/components/MorseLiquidSurface'
 import { NuxModal } from './src/components/NuxModal'
+import { PhaseModal, type PhaseModalContent } from './src/components/PhaseModal'
 import { ReferenceModalSheet } from './src/components/ReferenceModalSheet'
 import { SettingsModal } from './src/components/SettingsModal'
 import { StageDisplay, type StagePip } from './src/components/StageDisplay'
@@ -118,7 +119,7 @@ const LISTEN_TTR_MAX_SAMPLES = 300
 const LISTEN_OVERLEARN_THRESHOLD_MS = 1200
 const LISTEN_OVERLEARN_STRONG_THRESHOLD_MS = 2200
 const LISTEN_OVERLEARN_MAX_QUEUE_SIZE = 24
-const GUIDED_TEACH_SUCCESS_COPY = ['Got it', 'Nice', 'Good', "That's it", 'Nailed it'] as const
+const GUIDED_TEACH_SUCCESS_COPY = ['Got it 👍', 'Nice ✨', 'Good 🙌', "That's it 👏", 'Nailed it 🎯'] as const
 const LISTEN_MAX_CONSECUTIVE_SAME = 3
 const REFERENCE_WPM = 20
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
@@ -182,7 +183,6 @@ const getLevelForLetters = (letters: readonly Letter[]) => {
   return clamp(highestLevel, LEVELS[0], LEVELS[LEVELS.length - 1]) as (typeof LEVELS)[number]
 }
 
-const formatLetterTargets = (letters: readonly Letter[]) => letters.join(' ')
 
 const getGuidedPracticePool = (packIndex: number) => {
   const currentPack = getBeginnerCoursePack(packIndex)
@@ -426,6 +426,18 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
+  const [phaseModal, setPhaseModal] = useState<PhaseModalContent | null>(null)
+  const phaseModalOnDismissRef = useRef<(() => void) | null>(null)
+  const showPhaseModal = useCallback((content: PhaseModalContent, onDismiss?: () => void) => {
+    phaseModalOnDismissRef.current = onDismiss ?? null
+    setPhaseModal(content)
+  }, [])
+  const handlePhaseModalDismiss = useCallback(() => {
+    setPhaseModal(null)
+    const pending = phaseModalOnDismissRef.current
+    phaseModalOnDismissRef.current = null
+    pending?.()
+  }, [])
   const [mode, setMode] = useState<Mode>('practice')
   const [isSystemLowPowerModeEnabled, setIsSystemLowPowerModeEnabled] = useState(false)
   const [isBackgroundIdle, setIsBackgroundIdle] = useState(false)
@@ -1321,12 +1333,13 @@ export default function App() {
       setGuidedCourseActive(false)
       setGuidedPhase('complete')
       setGuidedProgress(completedProgress)
-      Alert.alert('Course complete', 'You unlocked all beginner letter packs.')
+      showPhaseModal({ title: 'Course complete', subtitle: 'You unlocked all beginner letter packs.' })
       return
     }
     const nextPack = getBeginnerCoursePack(nextPackIndex)
-    Alert.alert('New letters unlocked', formatLetterTargets(nextPack))
-    moveIntoGuidedLesson('teach', nextPackIndex, createGuidedLessonProgress())
+    showPhaseModal({ title: 'New letters unlocked', letters: nextPack }, () => {
+      moveIntoGuidedLesson('teach', nextPackIndex, createGuidedLessonProgress())
+    })
   }, [moveIntoGuidedLesson])
 
   const retryGuidedPractice = useCallback(() => {
@@ -1339,8 +1352,10 @@ export default function App() {
       listenCorrect: 0,
       listenLetterCorrect: {},
     }
-    Alert.alert('Keep going', 'One more practice round before new letters.')
-    moveIntoGuidedLesson('practice', guidedPackIndexRef.current, nextProgress)
+    const packIndex = guidedPackIndexRef.current
+    showPhaseModal({ title: 'Keep going', subtitle: 'One more practice round before new letters.' }, () => {
+      moveIntoGuidedLesson('practice', packIndex, nextProgress)
+    })
   }, [moveIntoGuidedLesson])
 
   const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
@@ -1671,8 +1686,10 @@ export default function App() {
                     listenCorrect: 0,
                     listenLetterCorrect: {},
                   }
-                  Alert.alert('Next up', `Practice ${formatLetterTargets(currentPack)} in mixed order.`)
-                  moveIntoGuidedLesson('practice', guidedPackIndexRef.current, practiceProgress)
+                  const packIdx = guidedPackIndexRef.current
+                  showPhaseModal({ title: 'Next up', subtitle: 'Practice in mixed order.', letters: currentPack }, () => {
+                    moveIntoGuidedLesson('practice', packIdx, practiceProgress)
+                  })
                   return
                 }
                 setNextPracticeLetter(activeLetters, targetLetter)
@@ -1697,11 +1714,10 @@ export default function App() {
                   listenCorrect: 0,
                   listenLetterCorrect: {},
                 }
-                Alert.alert(
-                  'Ready to listen',
-                  `Hear and identify ${formatLetterTargets(currentPack)}.`,
-                )
-                moveIntoGuidedLesson('listen', guidedPackIndexRef.current, listenProgress)
+                const listenPackIdx = guidedPackIndexRef.current
+                showPhaseModal({ title: 'Ready to listen', subtitle: 'Hear and identify these letters.', letters: currentPack }, () => {
+                  moveIntoGuidedLesson('listen', listenPackIdx, listenProgress)
+                })
                 return
               }
               setNextPracticeLetter(activeLetters, targetLetter)
@@ -2512,7 +2528,7 @@ export default function App() {
         ? 'Try again'
         : 'Listen and try again'
       : guidedPhase === 'teach'
-      ? 'Send it again'
+      ? 'Tap what you hear'
       : ' '
     : null
   const guidedPracticeStatusDetailText =
@@ -2795,6 +2811,12 @@ export default function App() {
             </View>
           ) : null}
         </SafeAreaView>
+        {phaseModal ? (
+          <PhaseModal
+            content={phaseModal}
+            onDismiss={handlePhaseModalDismiss}
+          />
+        ) : null}
         {isNuxActive ? (
           <NuxModal
             step={nuxStep}
