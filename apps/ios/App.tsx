@@ -2,7 +2,6 @@ import {
   BEGINNER_COURSE_PACKS,
   applyScoreDelta,
   createGuidedLessonProgress,
-  DEFAULT_CHARACTER_WPM,
   formatWpm,
   getBeginnerCoursePack,
   getBeginnerUnlockedLetters,
@@ -28,11 +27,9 @@ import {
   type ProgressSnapshot,
 } from '@dit/core'
 import { triggerHaptics } from '@dit/dit-native'
-import type { User } from '@firebase/auth'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AboutModal } from './src/components/AboutModal'
 import { BackgroundGlow } from './src/components/BackgroundGlow'
@@ -49,18 +46,14 @@ import { StageDisplay, type StagePip } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
 import { database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
+import { useAccountActions } from './src/hooks/useAccountActions'
 import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
 import { useOnboardingState } from './src/hooks/useOnboardingState'
+import { useOnboardingActions } from './src/hooks/useOnboardingActions'
 import { usePhaseModalState } from './src/hooks/usePhaseModalState'
 import { useProgressSyncController } from './src/hooks/useProgressSyncController'
 import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
-import {
-  deleteCurrentUserAccount,
-  prepareCurrentUserAccountDeletion,
-  signInWithApple,
-  signInWithGoogle,
-  signOut,
-} from './src/services/auth'
+import { signOut } from './src/services/auth'
 import {
   getAutoEffectiveWpm,
   normalizeListenSpeeds,
@@ -109,7 +102,6 @@ import {
   PRACTICE_REVIEW_DELAY_STEPS,
   PRACTICE_REVIEW_MAX_SIZE,
   PRACTICE_WORD_UNITS,
-  NUX_STATUS_KEY,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
   REFERENCE_WPM,
@@ -118,14 +110,11 @@ import {
   clearTimer,
   createInitialPracticeConfig,
   enqueueListenOverlearnLetters,
-  getDeleteAccountErrorMessage,
   getGuidedPracticePool,
   getLevelForLetters,
   getListenOverlearnRepeats,
   getNextOrderedLetter,
-  getSignInErrorMessage,
   initialConfig,
-  isErrorWithCode,
   now,
   pullNextListenOverlearnLetter,
   type ListenPromptTiming,
@@ -754,28 +743,6 @@ export default function App() {
     setShowAbout(true)
   }, [])
 
-  const handleSignInWithApple = useCallback(async () => {
-    try {
-      await signInWithApple()
-    } catch (error) {
-      if (isErrorWithCode(error, 'ERR_APPLE_SIGN_IN_CANCELLED')) {
-        return
-      }
-
-      console.error('Failed to sign in with Apple', error)
-      Alert.alert('Could Not Sign In', getSignInErrorMessage(error))
-    }
-  }, [])
-
-  const handleSignInWithGoogle = useCallback(async () => {
-    try {
-      await signInWithGoogle()
-    } catch (error) {
-      console.error('Failed to sign in with Google', error)
-      Alert.alert('Could Not Sign In', getSignInErrorMessage(error))
-    }
-  }, [])
-
   const handleSettingsToggle = useCallback(() => {
     setShowAbout(false)
     setShowReference(false)
@@ -934,95 +901,51 @@ export default function App() {
     })
   }, [moveIntoGuidedLesson])
 
-  const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
-    setLearnerProfile(profile)
-    learnerProfileRef.current = profile
-    setNuxStep('sound_check')
-  }, [])
-
-  const handleNuxPlaySoundCheck = useCallback(() => {
-    void playMorseTone({
-      code: '.',
-      characterWpm: DEFAULT_CHARACTER_WPM,
-      effectiveWpm: DEFAULT_CHARACTER_WPM,
-      minUnitMs: LISTEN_MIN_UNIT_MS,
-    })
-    void triggerHaptics(10)
-    setDidCompleteSoundCheck(true)
-  }, [])
-
-  const handleNuxPlayDitDemo = useCallback(() => {
-    void playMorseTone({
-      code: '.',
-      characterWpm: DEFAULT_CHARACTER_WPM,
-      effectiveWpm: DEFAULT_CHARACTER_WPM,
-      minUnitMs: LISTEN_MIN_UNIT_MS,
-    })
-    void triggerHaptics(10)
-  }, [])
-
-  const handleNuxPlayDahDemo = useCallback(() => {
-    void playMorseTone({
-      code: '-',
-      characterWpm: DEFAULT_CHARACTER_WPM,
-      effectiveWpm: DEFAULT_CHARACTER_WPM,
-      minUnitMs: LISTEN_MIN_UNIT_MS,
-    })
-    void triggerHaptics(10)
-  }, [])
-
-  const handleNuxContinueFromSoundCheck = useCallback(() => {
-    if (!didCompleteSoundCheck) {
-      return
-    }
-    setNuxStep('button_tutorial')
-  }, [didCompleteSoundCheck])
-
-  const handleNuxCompleteButtonTutorial = useCallback(() => {
-    if (!didCompleteTutorialTap || !didCompleteTutorialHold) {
-      return
-    }
-    setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_intro')
-  }, [didCompleteTutorialHold, didCompleteTutorialTap])
-
-  const finishOnboarding = useCallback(() => {
-    persistNuxStatus('completed')
-    persistIntroHintStep('done')
-    setNuxStep('profile')
-    setDidCompleteSoundCheck(false)
-    setDidCompleteTutorialTap(false)
-    setDidCompleteTutorialHold(false)
-  }, [persistIntroHintStep, persistNuxStatus])
-
-  const handleFinishKnownTour = useCallback(() => {
-    applyKnownLearnerDefaults()
-    learnerProfileRef.current = 'known'
-    setLearnerProfile('known')
-    guidedCourseActiveRef.current = false
-    guidedPhaseRef.current = 'complete'
-    guidedProgressRef.current = createGuidedLessonProgress()
-    setGuidedCourseActive(false)
-    setGuidedPhase('complete')
-    setGuidedProgress(createGuidedLessonProgress())
-    finishOnboarding()
-  }, [applyKnownLearnerDefaults, finishOnboarding])
-
-  const handleStartBeginnerCourse = useCallback(() => {
-    learnerProfileRef.current = 'beginner'
-    setLearnerProfile('beginner')
-    setShowHint(false)
-    setShowMnemonic(false)
-    setPracticeAutoPlay(true)
-    setPracticeLearnMode(false)
-    practiceLearnModeRef.current = false
-    setPracticeIfrMode(false)
-    practiceIfrModeRef.current = false
-    practiceReviewQueueRef.current = []
-    setPracticeReviewMisses(false)
-    practiceReviewMissesRef.current = false
-    finishOnboarding()
-    moveIntoGuidedLesson('teach', 0, createGuidedLessonProgress())
-  }, [finishOnboarding, moveIntoGuidedLesson])
+  const {
+    handleNuxChooseProfile,
+    handleNuxPlaySoundCheck,
+    handleNuxPlayDitDemo,
+    handleNuxPlayDahDemo,
+    handleNuxContinueFromSoundCheck,
+    handleNuxCompleteButtonTutorial,
+    handleFinishKnownTour,
+    handleStartBeginnerCourse,
+    handleReplayNux,
+  } = useOnboardingActions({
+    didCompleteSoundCheck,
+    didCompleteTutorialTap,
+    didCompleteTutorialHold,
+    persistIntroHintStep,
+    persistNuxStatus,
+    setNuxStatus,
+    setNuxStep,
+    setLearnerProfile,
+    setDidCompleteSoundCheck,
+    setDidCompleteTutorialTap,
+    setDidCompleteTutorialHold,
+    setShowSettings,
+    setShowAbout,
+    setShowReference,
+    setShowHint,
+    setShowMnemonic,
+    setPracticeAutoPlay,
+    setPracticeLearnMode,
+    setPracticeIfrMode,
+    setPracticeReviewMisses,
+    setGuidedCourseActive,
+    setGuidedPhase,
+    setGuidedProgress,
+    learnerProfileRef,
+    guidedCourseActiveRef,
+    guidedPhaseRef,
+    guidedProgressRef,
+    practiceLearnModeRef,
+    practiceIfrModeRef,
+    practiceReviewMissesRef,
+    practiceReviewQueueRef,
+    applyKnownLearnerDefaults,
+    moveIntoGuidedLesson,
+  })
 
   const scheduleWordSpace = useCallback(() => {
     clearTimer(wordSpaceTimeoutRef)
@@ -1524,18 +1447,6 @@ export default function App() {
     ],
   )
 
-  const handleReplayNux = useCallback(() => {
-    setShowSettings(false)
-    setShowAbout(false)
-    setShowReference(false)
-    setNuxStatus('pending')
-    setNuxStep('profile')
-    setLearnerProfile(null)
-    setDidCompleteSoundCheck(false)
-    setDidCompleteTutorialTap(false)
-    setDidCompleteTutorialHold(false)
-    void AsyncStorage.setItem(NUX_STATUS_KEY, 'pending')
-  }, [])
 
   const handlePracticeWordModeChange = useCallback(
     (value: boolean) => {
@@ -1866,69 +1777,16 @@ export default function App() {
       },
     },
   })
-
-  const performAccountDeletion = useCallback(
-    async (currentUser: User) => {
-      if (isDeletingAccount) {
-        return
-      }
-
-      setIsDeletingAccount(true)
-      let accountDeleted = false
-
-      try {
-        setShowSettings(false)
-        await prepareCurrentUserAccountDeletion(currentUser)
-        await deleteRemoteProgress(currentUser.uid)
-        await deleteCurrentUserAccount(currentUser)
-        accountDeleted = true
-        await clearLocalProgress()
-        resetProgressState()
-      } catch (error) {
-        if (isErrorWithCode(error, 'ERR_APPLE_ACCOUNT_DELETION_CANCELLED')) {
-          return
-        }
-
-        if (accountDeleted) {
-          resetProgressState()
-          Alert.alert(
-            'Account Deleted',
-            'Your account was deleted, but local cleanup did not finish cleanly. Relaunch the app if any old progress remains.',
-          )
-          return
-        }
-
-        Alert.alert('Could Not Delete Account', getDeleteAccountErrorMessage(error))
-      } finally {
-        setIsDeletingAccount(false)
-      }
-    },
-    [clearLocalProgress, deleteRemoteProgress, isDeletingAccount, resetProgressState],
-  )
-
-  const handleDeleteAccount = useCallback(() => {
-    if (!user || isDeletingAccount) {
-      return
-    }
-
-    Alert.alert(
-      'Delete account?',
-      'This permanently deletes your Dit account, synced progress, and local progress on this device.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete Account',
-          style: 'destructive',
-          onPress: () => {
-            void performAccountDeletion(user)
-          },
-        },
-      ],
-    )
-  }, [isDeletingAccount, performAccountDeletion, user])
+  const { handleSignInWithApple, handleSignInWithGoogle, handleDeleteAccount } =
+    useAccountActions({
+      user,
+      isDeletingAccount,
+      setIsDeletingAccount,
+      setShowSettings,
+      clearLocalProgress,
+      deleteRemoteProgress,
+      resetProgressState,
+    })
 
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
