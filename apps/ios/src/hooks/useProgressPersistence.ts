@@ -97,6 +97,7 @@ export const useProgressPersistence = ({
   const [localReady, setLocalReady] = useState(false)
   const [pendingRemoteSyncTick, setPendingRemoteSyncTick] = useState(0)
   const progressSnapshotRef = useRef(progressSnapshot)
+  const applyProgressRef = useRef(applyProgress)
   const localProgressRef = useRef<ProgressPayload | null>(null)
   const pendingRemoteProgressRef = useRef<unknown | null>(null)
   const pendingRemoteSyncRef = useRef(false)
@@ -109,6 +110,10 @@ export const useProgressPersistence = ({
   useEffect(() => {
     progressSnapshotRef.current = progressSnapshot
   }, [progressSnapshot])
+
+  useEffect(() => {
+    applyProgressRef.current = applyProgress
+  }, [applyProgress])
 
   const parseIncomingProgress = useCallback(
     (raw: unknown) => {
@@ -159,7 +164,7 @@ export const useProgressPersistence = ({
         return
       }
       pendingPersistUpdatedAtRef.current = updatedAt
-      applyProgress(progress)
+      applyProgressRef.current(progress)
       const nextSnapshot = mergeProgressSnapshot(
         progress,
         progressSnapshotRef.current,
@@ -171,7 +176,7 @@ export const useProgressPersistence = ({
       }
       setProgressUpdatedAt(resolvedUpdatedAt)
     },
-    [applyProgress, localReady, parseIncomingProgress],
+    [localReady, parseIncomingProgress],
   )
 
   useEffect(() => {
@@ -189,7 +194,7 @@ export const useProgressPersistence = ({
         }
         const { progress, updatedAt } = parsed
         pendingPersistUpdatedAtRef.current = updatedAt
-        applyProgress(progress)
+        applyProgressRef.current(progress)
         const nextSnapshot = mergeProgressSnapshot(
           progress,
           progressSnapshotRef.current,
@@ -213,7 +218,7 @@ export const useProgressPersistence = ({
     return () => {
       isActive = false
     }
-  }, [applyProgress, parseIncomingProgress])
+  }, [parseIncomingProgress])
 
   useEffect(() => {
     if (!localReady) {
