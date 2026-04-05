@@ -58,7 +58,8 @@ export default function App() {
   })
 
   const { state, setters, derived, handlers } = session
-  const isNuxActive = onboarding.nuxReady && onboarding.nuxStatus === 'pending'
+  const { dismissSettingsHint, nuxReady, nuxStatus } = onboarding
+  const isNuxActive = nuxReady && nuxStatus === 'pending'
   const isBackgroundAnimationPaused =
     !isNuxActive && (isSystemLowPowerModeEnabled || isBackgroundIdle)
 
@@ -76,9 +77,9 @@ export default function App() {
   const handleSettingsToggle = useCallback(() => {
     setShowAbout(false)
     setShowReference(false)
-    onboarding.dismissSettingsHint()
+    dismissSettingsHint()
     setShowSettings((prev) => !prev)
-  }, [onboarding])
+  }, [dismissSettingsHint])
 
   return (
     <SafeAreaProvider>

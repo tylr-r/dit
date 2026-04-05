@@ -40,6 +40,7 @@ export const useFirebaseSync = ({
   const [remoteLoaded, setRemoteLoaded] = useState(false)
   const saveTimeoutRef = useRef<TimeoutHandle | null>(null)
   const retryTimeoutRef = useRef<TimeoutHandle | null>(null)
+  const onRemoteProgressRef = useRef(onRemoteProgress)
   const pendingSnapshotRef = useRef<ProgressSnapshot | null>(null)
   const pendingUpdatedAtRef = useRef<number | null>(null)
   const attemptSaveRef = useRef<
@@ -57,6 +58,10 @@ export const useFirebaseSync = ({
     }
     return createFirebaseProgressService(adapter)
   }, [database])
+
+  useEffect(() => {
+    onRemoteProgressRef.current = onRemoteProgress
+  }, [onRemoteProgress])
 
   const clearPendingSaves = useCallback(() => {
     clearTimer(saveTimeoutRef)
@@ -97,7 +102,7 @@ export const useFirebaseSync = ({
         if (!isActive || data === null || data === undefined) {
           return
         }
-        onRemoteProgress(data)
+        onRemoteProgressRef.current(data)
       })
       .catch((error) => {
         console.error('Failed to load progress', error)
@@ -110,7 +115,7 @@ export const useFirebaseSync = ({
     return () => {
       isActive = false
     }
-  }, [onRemoteProgress, service, user])
+  }, [service, user])
 
   useEffect(() => {
     attemptSaveRef.current = (snapshot, updatedAt) => {
