@@ -121,7 +121,10 @@ export default function App() {
               showHint={state.showHint}
               showMnemonic={state.showMnemonic}
               isDeletingAccount={isDeletingAccount}
-              onClose={() => setShowSettings(false)}
+              onClose={() => {
+                setters.flushPendingSave()
+                setShowSettings(false)
+              }}
               onMaxLevelChange={handlers.handleMaxLevelChange}
               onPracticeWordModeChange={handlers.handlePracticeWordModeChange}
               onPracticeAutoPlayChange={setters.setPracticeAutoPlay}

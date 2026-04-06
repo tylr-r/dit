@@ -27,6 +27,7 @@ type UseProgressPersistenceResult = {
   pendingRemoteSyncTick: number
   consumePendingRemoteSync: () => ProgressPayload | null
   clearLocalProgress: () => Promise<void>
+  flushPendingSave: () => void
 }
 
 type TimeoutHandle = ReturnType<typeof setTimeout>
@@ -59,6 +60,8 @@ const mergeProgressSnapshot = (
   listenTtr: progress.listenTtr ?? base.listenTtr,
   maxLevel: progress.maxLevel ?? base.maxLevel,
   practiceWordMode: progress.practiceWordMode ?? base.practiceWordMode,
+  practiceAutoPlay: progress.practiceAutoPlay ?? base.practiceAutoPlay,
+  practiceLearnMode: progress.practiceLearnMode ?? base.practiceLearnMode,
   practiceIfrMode: progress.practiceIfrMode ?? base.practiceIfrMode,
   practiceReviewMisses:
     progress.practiceReviewMisses ?? base.practiceReviewMisses,
@@ -232,6 +235,37 @@ export const useProgressPersistence = ({
     onRemoteProgress(pendingRemote)
   }, [localReady, onRemoteProgress])
 
+  const persistSnapshot = useCallback((source?: string) => {
+    const snapshot = pendingLocalSnapshotRef.current
+    const updatedAt = pendingLocalUpdatedAtRef.current
+    if (!snapshot || updatedAt === null) {
+      return
+    }
+    clearTimer(localSaveTimeoutRef)
+    const payload: ProgressPayload = {
+      ...snapshot,
+      updatedAt,
+    }
+    pendingLocalSnapshotRef.current = null
+    pendingLocalUpdatedAtRef.current = null
+    lastPersistedSnapshotRef.current = JSON.stringify(snapshot)
+    localProgressRef.current = payload
+    setProgressUpdatedAt(updatedAt)
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && source) {
+      console.log(`[progress] save (${source})`)
+    }
+    void AsyncStorage.setItem(
+      LOCAL_PROGRESS_KEY,
+      JSON.stringify(payload),
+    ).catch((error: unknown) => {
+      console.error('Failed to save local progress', error)
+    })
+  }, [])
+
+  const flushPendingSave = useCallback(() => {
+    persistSnapshot('flush')
+  }, [persistSnapshot])
+
   useEffect(() => {
     if (!localReady) {
       return
@@ -246,30 +280,13 @@ export const useProgressPersistence = ({
     pendingPersistUpdatedAtRef.current = null
     clearTimer(localSaveTimeoutRef)
     localSaveTimeoutRef.current = setTimeout(() => {
-      const snapshot = pendingLocalSnapshotRef.current
-      const updatedAt = pendingLocalUpdatedAtRef.current
-      if (!snapshot || updatedAt === null) {
-        return
-      }
-      const payload: ProgressPayload = {
-        ...snapshot,
-        updatedAt,
-      }
-      lastPersistedSnapshotRef.current = JSON.stringify(snapshot)
-      localProgressRef.current = payload
-      setProgressUpdatedAt(updatedAt)
-      void AsyncStorage.setItem(
-        LOCAL_PROGRESS_KEY,
-        JSON.stringify(payload),
-      ).catch((error: unknown) => {
-        console.error('Failed to save local progress', error)
-      })
+      persistSnapshot('debounce')
     }, progressSaveDebounceMs)
 
     return () => {
       clearTimer(localSaveTimeoutRef)
     }
-  }, [localReady, progressSaveDebounceMs, progressSnapshot])
+  }, [localReady, persistSnapshot, progressSaveDebounceMs, progressSnapshot])
 
   const consumePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) {
@@ -298,5 +315,6 @@ export const useProgressPersistence = ({
     pendingRemoteSyncTick,
     consumePendingRemoteSync,
     clearLocalProgress,
+    flushPendingSave,
   }
 }

@@ -303,6 +303,12 @@ export const parseProgress = (
   if (typeof record.practiceWordMode === 'boolean') {
     progress.practiceWordMode = record.practiceWordMode
   }
+  if (typeof record.practiceAutoPlay === 'boolean') {
+    progress.practiceAutoPlay = record.practiceAutoPlay
+  }
+  if (typeof record.practiceLearnMode === 'boolean') {
+    progress.practiceLearnMode = record.practiceLearnMode
+  }
   if (typeof record.practiceIfrMode === 'boolean') {
     progress.practiceIfrMode = record.practiceIfrMode
   }

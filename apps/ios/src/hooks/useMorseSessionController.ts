@@ -29,6 +29,7 @@ import {
 import { triggerHaptics } from '@dit/dit-native'
 import type { User } from '@firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { AppState } from 'react-native'
 import type { PhaseModalContent } from '../components/PhaseModal'
 import { type Mode } from '../components/ModeSwitcher'
 import type { StagePip } from '../components/StageDisplay'
@@ -240,6 +241,8 @@ export const useMorseSessionController = ({
       listenTtr,
       maxLevel,
       practiceWordMode,
+      practiceAutoPlay,
+      practiceLearnMode,
       practiceIfrMode,
       practiceReviewMisses,
       learnerProfile: learnerProfile ?? undefined,
@@ -265,7 +268,9 @@ export const useMorseSessionController = ({
       listenTtr,
       listenWpm,
       maxLevel,
+      practiceAutoPlay,
       practiceIfrMode,
+      practiceLearnMode,
       practiceReviewMisses,
       practiceWordMode,
       scores,
@@ -281,6 +286,7 @@ export const useMorseSessionController = ({
   const practiceWordRef = useRef(practiceWord)
   const practiceWordIndexRef = useRef(practiceWordIndex)
   const practiceWordModeRef = useRef(practiceWordMode)
+  const practiceAutoPlayRef = useRef(practiceAutoPlay)
   const practiceLearnModeRef = useRef(practiceLearnMode)
   const practiceIfrModeRef = useRef(practiceIfrMode)
   const practiceReviewMissesRef = useRef(practiceReviewMisses)
@@ -1703,7 +1709,7 @@ export const useMorseSessionController = ({
     ],
   )
 
-  const { clearLocalProgress, deleteRemoteProgress } = useProgressSyncController({
+  const { clearLocalProgress, deleteRemoteProgress, flushPendingSave } = useProgressSyncController({
     database,
     user: userForSync,
     progressSnapshot,
@@ -1719,6 +1725,8 @@ export const useMorseSessionController = ({
       setGuidedPackIndex,
       setGuidedPhase,
       setGuidedProgress,
+      setPracticeAutoPlay,
+      setPracticeLearnMode,
       setFreestyleWordMode,
       setFreestyleResult,
       setFreestyleInput,
@@ -1734,6 +1742,8 @@ export const useMorseSessionController = ({
     refs: {
       scoresRef,
       listenTtrRef,
+      practiceAutoPlayRef,
+      practiceLearnModeRef,
       practiceIfrModeRef,
       practiceReviewMissesRef,
       practiceReviewQueueRef,
@@ -1766,6 +1776,20 @@ export const useMorseSessionController = ({
       },
     },
   })
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        if (__DEV__) {
+          console.log('[progress] app going to background, flushing pending save')
+        }
+        flushPendingSave()
+      }
+    })
+    return () => {
+      subscription.remove()
+    }
+  }, [flushPendingSave])
 
   const accountActions = useAccountActions({
     user,
@@ -1919,6 +1943,7 @@ export const useMorseSessionController = ({
       setShowHint,
       setShowMnemonic,
       setPracticeAutoPlay,
+      flushPendingSave,
     },
     derived: {
       isFreestyle,

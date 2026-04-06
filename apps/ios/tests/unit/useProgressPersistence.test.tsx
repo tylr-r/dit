@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createGuidedLessonProgress, initializeScores, type Progress } from '@dit/core'
 import React from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useProgressPersistence } from '../../src/hooks/useProgressPersistence'
 
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean })
@@ -17,6 +17,8 @@ const baseProps = {
     listenTtr: {},
     maxLevel: 1,
     practiceWordMode: false,
+    practiceAutoPlay: true,
+    practiceLearnMode: true,
     practiceIfrMode: false,
     practiceReviewMisses: false,
     guidedCourseActive: false,
@@ -38,8 +40,22 @@ const baseProps = {
 }
 
 describe('useProgressPersistence', () => {
+  let mockGetItem: ReturnType<typeof vi.fn>
+  let mockSetItem: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    AsyncStorage.getItem = vi.fn()
+    AsyncStorage.setItem = vi.fn()
+    mockGetItem = vi.mocked(AsyncStorage.getItem)
+    mockSetItem = vi.mocked(AsyncStorage.setItem)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('restores practiceAutoPlay and practiceLearnMode from storage', async () => {
-    const mockGetItem = vi.mocked(AsyncStorage.getItem)
     mockGetItem.mockResolvedValue(
       JSON.stringify({
         practiceAutoPlay: false,
@@ -51,7 +67,7 @@ describe('useProgressPersistence', () => {
     const applyProgress = vi.fn()
 
     const flushEffects = async () => {
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
       await Promise.resolve()
     }
 
@@ -75,10 +91,6 @@ describe('useProgressPersistence', () => {
   })
 
   it('persists practiceAutoPlay and practiceLearnMode to storage', async () => {
-    vi.useFakeTimers()
-
-    const mockGetItem = vi.mocked(AsyncStorage.getItem)
-    const mockSetItem = vi.mocked(AsyncStorage.setItem)
     mockGetItem.mockResolvedValue(null)
     mockSetItem.mockResolvedValue(undefined)
 
@@ -116,12 +128,59 @@ describe('useProgressPersistence', () => {
     const savedPayload = JSON.parse(mockSetItem.mock.calls[0][1]) as Record<string, unknown>
     expect(savedPayload.practiceAutoPlay).toBe(false)
     expect(savedPayload.practiceLearnMode).toBe(false)
+  })
 
-    vi.useRealTimers()
+  it('flushes pending save on background', async () => {
+    mockGetItem.mockResolvedValue(null)
+    mockSetItem.mockResolvedValue(undefined)
+
+    const applyProgress = vi.fn()
+
+    const flushEffects = async () => {
+      await vi.advanceTimersByTimeAsync(0)
+      await Promise.resolve()
+    }
+
+    let hookResult: ReturnType<typeof useProgressPersistence> | null = null
+
+    const TestHarness = ({ showHint }: { showHint: boolean }) => {
+      hookResult = useProgressPersistence({
+        ...baseProps,
+        progressSnapshot: {
+          ...baseProps.progressSnapshot,
+          showHint,
+        },
+        applyProgress,
+      })
+      return null
+    }
+
+    let testRenderer: ReactTestRenderer | null = null
+    await act(async () => {
+      testRenderer = create(<TestHarness showHint={false} />)
+      await flushEffects()
+    })
+
+    // Change a setting — this schedules a debounced save
+    await act(async () => {
+      testRenderer?.update(<TestHarness showHint={true} />)
+      await flushEffects()
+    })
+
+    // Before debounce fires, nothing should be saved yet
+    expect(mockSetItem).not.toHaveBeenCalled()
+
+    // Simulate going to background — should flush immediately
+    act(() => {
+      hookResult!.flushPendingSave()
+    })
+
+    expect(mockSetItem).toHaveBeenCalledTimes(1)
+    const savedPayload = JSON.parse(mockSetItem.mock.calls[0][1]) as Record<string, unknown>
+    expect(savedPayload.showHint).toBe(true)
   })
 
   it('does not reload local progress when applyProgress identity changes', async () => {
-    const mockGetItem = vi.mocked(AsyncStorage.getItem)
     mockGetItem.mockResolvedValue(
       JSON.stringify({
         showHint: true,
@@ -133,7 +192,7 @@ describe('useProgressPersistence', () => {
     let testRenderer: ReactTestRenderer | null = null
 
     const flushEffects = async () => {
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
       await Promise.resolve()
     }
 

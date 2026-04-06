@@ -14,3 +14,4 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     clear: vi.fn(),
   },
 }))
+

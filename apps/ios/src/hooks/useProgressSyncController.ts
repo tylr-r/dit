@@ -49,6 +49,8 @@ type UseProgressSyncControllerOptions = {
     setGuidedPackIndex: Setter<number>
     setGuidedPhase: Setter<GuidedPhase>
     setGuidedProgress: Setter<GuidedLessonProgress>
+    setPracticeAutoPlay: Setter<boolean>
+    setPracticeLearnMode: Setter<boolean>
     setFreestyleWordMode: Setter<boolean>
     setFreestyleResult: Setter<string | null>
     setFreestyleInput: Setter<string>
@@ -64,6 +66,8 @@ type UseProgressSyncControllerOptions = {
   refs: {
     scoresRef: RefValue<ProgressSnapshot['scores']>
     listenTtrRef: RefValue<ListenTtrRecord>
+    practiceAutoPlayRef: RefValue<boolean>
+    practiceLearnModeRef: RefValue<boolean>
     practiceIfrModeRef: RefValue<boolean>
     practiceReviewMissesRef: RefValue<boolean>
     practiceReviewQueueRef: RefValue<PracticeReviewItem[]>
@@ -131,6 +135,16 @@ export const useProgressSyncController = ({
 
       if (typeof progress.showMnemonic === 'boolean') {
         state.setShowMnemonic(progress.showMnemonic)
+      }
+
+      if (typeof progress.practiceAutoPlay === 'boolean') {
+        refs.practiceAutoPlayRef.current = progress.practiceAutoPlay
+        state.setPracticeAutoPlay(progress.practiceAutoPlay)
+      }
+
+      if (typeof progress.practiceLearnMode === 'boolean') {
+        refs.practiceLearnModeRef.current = progress.practiceLearnMode
+        state.setPracticeLearnMode(progress.practiceLearnMode)
       }
 
       if (typeof progress.practiceIfrMode === 'boolean') {
@@ -312,6 +326,8 @@ export const useProgressSyncController = ({
       refs.listenStatusRef,
       refs.listenTtrRef,
       refs.listenWpmRef,
+      refs.practiceAutoPlayRef,
+      refs.practiceLearnModeRef,
       refs.maxLevelRef,
       refs.modeRef,
       refs.practiceIfrModeRef,
@@ -336,7 +352,9 @@ export const useProgressSyncController = ({
       state.setListenTtr,
       state.setListenWpm,
       state.setMaxLevel,
+      state.setPracticeAutoPlay,
       state.setPracticeIfrMode,
+      state.setPracticeLearnMode,
       state.setPracticeReviewMisses,
       state.setPracticeWordMode,
       state.setPracticeWpm,
@@ -352,6 +370,7 @@ export const useProgressSyncController = ({
     pendingRemoteSyncTick,
     consumePendingRemoteSync,
     clearLocalProgress,
+    flushPendingSave,
   } = useProgressPersistence({
     progressSnapshot,
     progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
@@ -387,5 +406,6 @@ export const useProgressSyncController = ({
   return {
     clearLocalProgress,
     deleteRemoteProgress,
+    flushPendingSave,
   }
 }
