@@ -38,6 +38,88 @@ const baseProps = {
 }
 
 describe('useProgressPersistence', () => {
+  it('restores practiceAutoPlay and practiceLearnMode from storage', async () => {
+    const mockGetItem = vi.mocked(AsyncStorage.getItem)
+    mockGetItem.mockResolvedValue(
+      JSON.stringify({
+        practiceAutoPlay: false,
+        practiceLearnMode: false,
+        updatedAt: 100,
+      }),
+    )
+
+    const applyProgress = vi.fn()
+
+    const flushEffects = async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    const TestHarness = () => {
+      useProgressPersistence({
+        ...baseProps,
+        applyProgress,
+      })
+      return null
+    }
+
+    await act(async () => {
+      create(<TestHarness />)
+      await flushEffects()
+    })
+
+    expect(applyProgress).toHaveBeenCalledTimes(1)
+    const applied = applyProgress.mock.calls[0][0] as Progress
+    expect(applied.practiceAutoPlay).toBe(false)
+    expect(applied.practiceLearnMode).toBe(false)
+  })
+
+  it('persists practiceAutoPlay and practiceLearnMode to storage', async () => {
+    vi.useFakeTimers()
+
+    const mockGetItem = vi.mocked(AsyncStorage.getItem)
+    const mockSetItem = vi.mocked(AsyncStorage.setItem)
+    mockGetItem.mockResolvedValue(null)
+    mockSetItem.mockResolvedValue(undefined)
+
+    const applyProgress = vi.fn()
+
+    const flushEffects = async () => {
+      await vi.advanceTimersByTimeAsync(0)
+      await Promise.resolve()
+    }
+
+    const TestHarness = ({ autoPlay, learnMode }: { autoPlay: boolean; learnMode: boolean }) => {
+      useProgressPersistence({
+        ...baseProps,
+        progressSnapshot: {
+          ...baseProps.progressSnapshot,
+          practiceAutoPlay: autoPlay,
+          practiceLearnMode: learnMode,
+        },
+        applyProgress,
+      })
+      return null
+    }
+
+    await act(async () => {
+      create(<TestHarness autoPlay={false} learnMode={false} />)
+      await flushEffects()
+    })
+
+    // Advance past the debounce timer
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(baseProps.progressSaveDebounceMs + 10)
+    })
+
+    expect(mockSetItem).toHaveBeenCalled()
+    const savedPayload = JSON.parse(mockSetItem.mock.calls[0][1]) as Record<string, unknown>
+    expect(savedPayload.practiceAutoPlay).toBe(false)
+    expect(savedPayload.practiceLearnMode).toBe(false)
+
+    vi.useRealTimers()
+  })
+
   it('does not reload local progress when applyProgress identity changes', async () => {
     const mockGetItem = vi.mocked(AsyncStorage.getItem)
     mockGetItem.mockResolvedValue(
