@@ -34,6 +34,8 @@ export type Progress = {
   maxLevel?: number
   showMnemonic?: boolean
   practiceWordMode?: boolean
+  practiceAutoPlay?: boolean
+  practiceLearnMode?: boolean
   practiceIfrMode?: boolean
   practiceReviewMisses?: boolean
   learnerProfile?: LearnerProfile
@@ -54,6 +56,8 @@ export type ProgressSnapshot = {
   listenTtr?: ListenTtrRecord
   maxLevel: number
   practiceWordMode: boolean
+  practiceAutoPlay?: boolean
+  practiceLearnMode?: boolean
   practiceIfrMode?: boolean
   practiceReviewMisses?: boolean
   scores: ScoreRecord
