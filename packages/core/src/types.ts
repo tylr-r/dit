@@ -26,6 +26,7 @@ export type ListenTtrEntry = {
 export type ListenTtrRecord = Partial<Record<Letter, ListenTtrEntry>>
 
 export type Progress = {
+  toneFrequency?: number
   listenWpm?: number
   listenEffectiveWpm?: number
   listenAutoTightening?: boolean
@@ -49,6 +50,7 @@ export type Progress = {
 }
 
 export type ProgressSnapshot = {
+  toneFrequency?: number
   listenWpm: number
   listenEffectiveWpm?: number
   listenAutoTightening?: boolean

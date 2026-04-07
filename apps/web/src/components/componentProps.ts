@@ -55,6 +55,11 @@ export interface SettingsPanelProps {
   listenWpmMin: number
   maxLevel: number
   practiceWordMode: boolean
+  toneFrequency: number
+  toneFrequencyMin: number
+  toneFrequencyMax: number
+  toneFrequencyStep: number
+  onToneFrequencyChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void

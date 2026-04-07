@@ -15,7 +15,9 @@ import {
   isGuidedListenComplete,
   isGuidedPracticeComplete,
   isGuidedTeachComplete,
+  AUDIO_FREQUENCY,
   MORSE_DATA,
+  TONE_FREQUENCY_RANGE,
   recordGuidedListenResult,
   recordGuidedPracticeResult,
   recordGuidedTeachSuccess,
@@ -190,6 +192,7 @@ export const useMorseSessionController = ({
   const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
   const [freestyleWordMode, setFreestyleWordMode] = useState(false)
   const [freestyleWord, setFreestyleWord] = useState('')
+  const [toneFrequency, setToneFrequency] = useState(AUDIO_FREQUENCY)
   const [listenWpm, setListenWpm] = useState(DEFAULT_LISTEN_WPM)
   const [listenEffectiveWpm, setListenEffectiveWpm] = useState(DEFAULT_LISTEN_EFFECTIVE_WPM)
   const [listenAutoTightening, setListenAutoTightening] = useState(DEFAULT_LISTEN_AUTO_TIGHTENING)
@@ -234,6 +237,7 @@ export const useMorseSessionController = ({
 
   const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
+      toneFrequency,
       listenWpm,
       listenEffectiveWpm,
       listenAutoTightening,
@@ -267,6 +271,7 @@ export const useMorseSessionController = ({
       listenEffectiveWpm,
       listenTtr,
       listenWpm,
+      toneFrequency,
       maxLevel,
       practiceAutoPlay,
       practiceIfrMode,
@@ -608,8 +613,8 @@ export const useMorseSessionController = ({
   }, [])
 
   const startTonePlayback = useCallback(() => {
-    void startTone()
-  }, [])
+    void startTone({ frequency: toneFrequency })
+  }, [toneFrequency])
 
   const stopListenPlayback = useCallback(() => {
     void stopMorseTone()
@@ -654,9 +659,10 @@ export const useMorseSessionController = ({
         characterWpm: resolvedCharacterWpm,
         effectiveWpm: resolvedEffectiveWpm,
         minUnitMs: LISTEN_MIN_UNIT_MS,
+        frequency: toneFrequency,
       })
     },
-    [stopListenPlayback],
+    [stopListenPlayback, toneFrequency],
   )
 
   const playListenSequenceRef = useRef(playListenSequence)
@@ -910,6 +916,7 @@ export const useMorseSessionController = ({
   }, [moveIntoGuidedLesson, showPhaseModal])
 
   const onboardingActions = useOnboardingActions({
+    toneFrequency,
     didCompleteSoundCheck,
     didCompleteTutorialTap,
     didCompleteTutorialHold,
@@ -1117,8 +1124,9 @@ export const useMorseSessionController = ({
       characterWpm: listenWpm,
       effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
+      frequency: toneFrequency,
     })
-  }, [isFreestyle, isListen, listenEffectiveWpm, listenWpm, stopListenPlayback])
+  }, [isFreestyle, isListen, listenEffectiveWpm, listenWpm, stopListenPlayback, toneFrequency])
 
   useEffect(() => {
     if (mode !== 'practice' || !practiceAutoPlay || isNuxActive) {
@@ -1130,8 +1138,9 @@ export const useMorseSessionController = ({
       characterWpm: listenWpm,
       effectiveWpm: listenEffectiveWpm,
       minUnitMs: LISTEN_MIN_UNIT_MS,
+      frequency: toneFrequency,
     })
-  }, [isNuxActive, letter, listenEffectiveWpm, listenWpm, mode, practiceAutoPlay, stopListenPlayback])
+  }, [isNuxActive, letter, listenEffectiveWpm, listenWpm, mode, practiceAutoPlay, stopListenPlayback, toneFrequency])
 
   const scheduleLetterReset = useCallback(
     (nextMode: 'practice' | 'freestyle') => {
@@ -1254,6 +1263,7 @@ export const useMorseSessionController = ({
             characterWpm: listenWpmRef.current,
             effectiveWpm: listenEffectiveWpmRef.current,
             minUnitMs: LISTEN_MIN_UNIT_MS,
+            frequency: toneFrequency,
           })
           errorTimeoutRef.current = setTimeout(() => {
             setStatus('idle')
@@ -1504,6 +1514,17 @@ export const useMorseSessionController = ({
     [isListen, listenStatus, playListenSequence],
   )
 
+  const handleToneFrequencyChange = useCallback(
+    (value: number) => {
+      const clamped = Math.round(
+        Math.min(TONE_FREQUENCY_RANGE.max, Math.max(TONE_FREQUENCY_RANGE.min, value)) /
+          TONE_FREQUENCY_RANGE.step,
+      ) * TONE_FREQUENCY_RANGE.step
+      setToneFrequency(clamped)
+    },
+    [],
+  )
+
   const handlePracticeLearnModeChange = useCallback(
     (value: boolean) => {
       if (guidedCourseActiveRef.current) {
@@ -1731,6 +1752,7 @@ export const useMorseSessionController = ({
       setFreestyleResult,
       setFreestyleInput,
       setFreestyleWord,
+      setToneFrequency,
       setListenWpm,
       setListenEffectiveWpm,
       setListenAutoTightening,
@@ -1929,6 +1951,7 @@ export const useMorseSessionController = ({
       practiceWord,
       practiceWordIndex,
       freestyleWordMode,
+      toneFrequency,
       listenWpm,
       listenStatus,
       listenWavePlayback,
@@ -1977,6 +2000,7 @@ export const useMorseSessionController = ({
       handlePracticeIfrModeChange,
       handlePracticeReviewMissesChange,
       handleListenWpmChange,
+      handleToneFrequencyChange,
       handleUseRecommended,
       handleListenReplay,
       submitListenAnswer,

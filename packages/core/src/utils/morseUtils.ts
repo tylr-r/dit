@@ -333,6 +333,12 @@ export const parseProgress = (
   if (guidedProgress) {
     progress.guidedProgress = guidedProgress
   }
+  if (
+    typeof record.toneFrequency === 'number' &&
+    Number.isFinite(record.toneFrequency)
+  ) {
+    progress.toneFrequency = clamp(record.toneFrequency, 400, 800)
+  }
   if (typeof record.maxLevel === 'number' && Number.isFinite(record.maxLevel)) {
     progress.maxLevel = clamp(record.maxLevel, levelMin, levelMax)
   }

@@ -55,6 +55,7 @@ type UseProgressSyncControllerOptions = {
     setFreestyleResult: Setter<string | null>
     setFreestyleInput: Setter<string>
     setFreestyleWord: Setter<string>
+    setToneFrequency: Setter<number>
     setListenWpm: Setter<number>
     setListenEffectiveWpm: Setter<number>
     setListenAutoTightening: Setter<boolean>
@@ -232,6 +233,10 @@ export const useProgressSyncController = ({
           refs.listenEffectiveWpmRef.current = resolvedListenEffectiveWpm
           hasListenSpeedUpdate = true
         }
+      }
+
+      if (typeof progress.toneFrequency === 'number') {
+        state.setToneFrequency(progress.toneFrequency)
       }
 
       if (typeof progress.listenAutoTightening === 'boolean') {

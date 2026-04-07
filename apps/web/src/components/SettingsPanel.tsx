@@ -11,6 +11,11 @@ export function SettingsPanel({
   listenWpmMin,
   maxLevel,
   practiceWordMode,
+  toneFrequency,
+  toneFrequencyMin,
+  toneFrequencyMax,
+  toneFrequencyStep,
+  onToneFrequencyChange,
   onListenWpmChange,
   onMaxLevelChange,
   onPracticeWordModeChange,
@@ -104,6 +109,30 @@ export function SettingsPanel({
           ) : null}
         </div>
       ) : null}
+      <div className="panel-group">
+        <label className="toggle">
+          <span className="toggle-label">Tone pitch</span>
+          <select
+            className="panel-select"
+            value={toneFrequency}
+            onChange={onToneFrequencyChange}
+          >
+            {Array.from(
+              {
+                length:
+                  Math.round(
+                    (toneFrequencyMax - toneFrequencyMin) / toneFrequencyStep,
+                  ) + 1,
+              },
+              (_, index) => toneFrequencyMin + index * toneFrequencyStep,
+            ).map((freq) => (
+              <option key={freq} value={freq}>
+                {freq} Hz
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       {isFreestyle ? (
         <label className="toggle">
           <span className="toggle-label">Word mode</span>

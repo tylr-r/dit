@@ -50,6 +50,7 @@ const mergeProgressSnapshot = (
   progress: Progress,
   base: ProgressSnapshot,
 ): ProgressSnapshot => ({
+  toneFrequency: progress.toneFrequency ?? base.toneFrequency,
   listenWpm: progress.listenWpm ?? base.listenWpm,
   listenEffectiveWpm: progress.listenEffectiveWpm ?? base.listenEffectiveWpm,
   listenAutoTightening:

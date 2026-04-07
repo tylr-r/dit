@@ -19,6 +19,7 @@ type RefValue<T> = {
 }
 
 type UseOnboardingActionsOptions = {
+  toneFrequency: number
   didCompleteSoundCheck: boolean
   didCompleteTutorialTap: boolean
   didCompleteTutorialHold: boolean
@@ -60,6 +61,7 @@ type UseOnboardingActionsOptions = {
 
 /** Builds onboarding flow handlers while keeping App.tsx focused on composition. */
 export const useOnboardingActions = ({
+  toneFrequency,
   didCompleteSoundCheck,
   didCompleteTutorialTap,
   didCompleteTutorialHold,
@@ -100,9 +102,10 @@ export const useOnboardingActions = ({
       characterWpm: DEFAULT_CHARACTER_WPM,
       effectiveWpm: DEFAULT_CHARACTER_WPM,
       minUnitMs: LISTEN_MIN_UNIT_MS,
+      frequency: toneFrequency,
     })
     void triggerHaptics(10)
-  }, [])
+  }, [toneFrequency])
 
   const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
     setLearnerProfile(profile)

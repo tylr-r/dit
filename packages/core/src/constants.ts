@@ -2,7 +2,12 @@ export const DASH_THRESHOLD = 200
 export const UNIT_TIME_MS = DASH_THRESHOLD
 export const INTER_LETTER_UNITS = 1
 export const INTER_WORD_UNITS = 7
-export const AUDIO_FREQUENCY = 640
+export const AUDIO_FREQUENCY = 600
+export const TONE_FREQUENCY_RANGE = {
+  min: 400,
+  max: 800,
+  step: 20,
+} as const
 export const AUDIO_VOLUME = 0.06
 export const DEBOUNCE_DELAY = 800
 export const DEFAULT_CHARACTER_WPM = 12
