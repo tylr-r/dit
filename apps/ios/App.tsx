@@ -297,6 +297,7 @@ export default function App() {
             didCompleteTutorialTap={state.didCompleteTutorialTap}
             didCompleteTutorialHold={state.didCompleteTutorialHold}
             currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
+            onWelcomeDone={handlers.handleNuxWelcomeDone}
             onChooseProfile={handlers.handleNuxChooseProfile}
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
             onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}

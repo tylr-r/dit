@@ -15,7 +15,7 @@ import {
 export const useOnboardingState = () => {
   const [introHintStep, setIntroHintStep] = useState<IntroHintStep>('morse')
   const [nuxStatus, setNuxStatus] = useState<NuxStatus>('pending')
-  const [nuxStep, setNuxStep] = useState<NuxStep>('profile')
+  const [nuxStep, setNuxStep] = useState<NuxStep>('welcome')
   const [nuxReady, setNuxReady] = useState(false)
   const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null)
   const [didCompleteSoundCheck, setDidCompleteSoundCheck] = useState(false)

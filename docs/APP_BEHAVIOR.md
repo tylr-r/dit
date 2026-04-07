@@ -12,6 +12,7 @@ This document captures the intended, shared behavior across web and iOS.
 
 ### NUX (New User Experience)
 
+- On first launch, a welcome screen shows the Dit logo and "Welcome to Dit" before advancing to onboarding. This screen must be preserved — it is the app's first impression and brand moment.
 - On first launch, the app asks whether the user is new to Morse or already knows it.
 - Both paths begin with a sound check and a short input tutorial that explicitly teaches the big Morse key.
 - The button tutorial requires one short tap (dit) and one long press (dah) before continuing.
