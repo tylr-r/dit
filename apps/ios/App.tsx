@@ -1,4 +1,4 @@
-import { BEGINNER_COURSE_PACKS, MORSE_DATA } from '@dit/core'
+import { BEGINNER_COURSE_PACKS, MORSE_DATA, TONE_FREQUENCY_RANGE } from '@dit/core'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -115,6 +115,10 @@ export default function App() {
               practiceIfrMode={state.practiceIfrMode}
               practiceReviewMisses={state.practiceReviewMisses}
               guidedCourseActive={state.guidedCourseActive}
+              toneFrequency={state.toneFrequency}
+              toneFrequencyMin={TONE_FREQUENCY_RANGE.min}
+              toneFrequencyMax={TONE_FREQUENCY_RANGE.max}
+              toneFrequencyStep={TONE_FREQUENCY_RANGE.step}
               listenCharacterWpm={state.listenWpm}
               listenCharacterWpmMin={LISTEN_WPM_MIN}
               listenCharacterWpmMax={LISTEN_WPM_MAX}
@@ -131,6 +135,7 @@ export default function App() {
               onPracticeLearnModeChange={handlers.handlePracticeLearnModeChange}
               onPracticeIfrModeChange={handlers.handlePracticeIfrModeChange}
               onPracticeReviewMissesChange={handlers.handlePracticeReviewMissesChange}
+              onToneFrequencyChange={handlers.handleToneFrequencyChange}
               onListenCharacterWpmChange={handlers.handleListenWpmChange}
               onShowHintChange={setters.setShowHint}
               onShowMnemonicChange={setters.setShowMnemonic}
@@ -168,6 +173,7 @@ export default function App() {
                   characterWpm: REFERENCE_WPM,
                   effectiveWpm: REFERENCE_WPM,
                   minUnitMs: LISTEN_MIN_UNIT_MS,
+                  frequency: state.toneFrequency,
                 })
               }}
             />

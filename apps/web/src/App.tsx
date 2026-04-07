@@ -15,6 +15,7 @@ import { StageDisplay } from './components/StageDisplay'
 import {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
+  TONE_FREQUENCY_RANGE,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   INTER_LETTER_UNITS,
@@ -70,7 +71,7 @@ const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS
 const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS
 const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
 const PRACTICE_WORD_UNITS = 5
-const TONE_FREQUENCY = AUDIO_FREQUENCY
+const DEFAULT_TONE_FREQUENCY = AUDIO_FREQUENCY
 const TONE_GAIN = AUDIO_VOLUME
 const ERROR_LOCKOUT_MS = 1000
 const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
@@ -178,6 +179,7 @@ function MainApp() {
       LISTEN_WPM_MAX,
     ),
   )
+  const [toneFrequency, setToneFrequency] = useState(DEFAULT_TONE_FREQUENCY)
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
   const [listenStatus, setListenStatus] = useState<
     'idle' | 'success' | 'error'
@@ -217,6 +219,7 @@ function MainApp() {
   )
   const progressSnapshot = useMemo<ProgressSnapshot>(
     () => ({
+      toneFrequency,
       listenWpm,
       maxLevel,
       practiceWordMode,
@@ -233,6 +236,7 @@ function MainApp() {
       scores,
       showHint,
       showMnemonic,
+      toneFrequency,
     ],
   )
   const triggerHaptics = useCallback((pattern: number | number[]) => {
@@ -287,7 +291,7 @@ function MainApp() {
     listenWpm,
     onHaptics: triggerHaptics,
     onTrackEvent: trackEvent,
-    toneFrequency: TONE_FREQUENCY,
+    toneFrequency,
     toneGain: TONE_GAIN,
     useCustomKeyboard,
   })
@@ -667,6 +671,13 @@ function MainApp() {
   const handleListenWpmChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
       setListenWpm(Number(event.target.value))
+    },
+    [],
+  )
+
+  const handleToneFrequencyChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      setToneFrequency(Number(event.target.value))
     },
     [],
   )
@@ -1345,6 +1356,11 @@ function MainApp() {
               listenWpmMax={LISTEN_WPM_MAX}
               onShowAbout={handleShowAbout}
               onListenWpmChange={handleListenWpmChange}
+              toneFrequency={toneFrequency}
+              toneFrequencyMin={TONE_FREQUENCY_RANGE.min}
+              toneFrequencyMax={TONE_FREQUENCY_RANGE.max}
+              toneFrequencyStep={TONE_FREQUENCY_RANGE.step}
+              onToneFrequencyChange={handleToneFrequencyChange}
               freestyleWordMode={freestyleWordMode}
               onWordModeChange={handleWordModeToggle}
               onSoundCheck={handleSoundCheck}

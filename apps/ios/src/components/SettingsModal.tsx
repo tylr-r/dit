@@ -27,6 +27,10 @@ type SettingsModalProps = {
   practiceIfrMode: boolean
   practiceReviewMisses: boolean
   guidedCourseActive: boolean
+  toneFrequency: number
+  toneFrequencyMin: number
+  toneFrequencyMax: number
+  toneFrequencyStep: number
   listenCharacterWpm: number
   listenCharacterWpmMin: number
   listenCharacterWpmMax: number
@@ -41,6 +45,7 @@ type SettingsModalProps = {
   onPracticeLearnModeChange: (value: boolean) => void
   onPracticeIfrModeChange: (value: boolean) => void
   onPracticeReviewMissesChange: (value: boolean) => void
+  onToneFrequencyChange: (value: number) => void
   onListenCharacterWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
@@ -153,6 +158,10 @@ export function SettingsModal({
   practiceIfrMode,
   practiceReviewMisses,
   guidedCourseActive,
+  toneFrequency,
+  toneFrequencyMin,
+  toneFrequencyMax,
+  toneFrequencyStep,
   listenCharacterWpm,
   listenCharacterWpmMin,
   listenCharacterWpmMax,
@@ -167,6 +176,7 @@ export function SettingsModal({
   onPracticeLearnModeChange,
   onPracticeIfrModeChange,
   onPracticeReviewMissesChange,
+  onToneFrequencyChange,
   onListenCharacterWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
@@ -517,6 +527,63 @@ export function SettingsModal({
                       dits and dahs.
                     </Text>
                     {/* TODO: Restore a playback spacing control when word playback ships. */}
+                    <View style={styles.separator} />
+                    <View style={styles.row}>
+                      <View style={styles.stepperInfo}>
+                        <Text style={styles.rowLabel}>Tone pitch</Text>
+                        <Text style={styles.stepperValue}>
+                          {toneFrequency} Hz
+                        </Text>
+                      </View>
+                      <View style={styles.stepperGroup} accessible={false}>
+                        <Pressable
+                          onPress={() =>
+                            onToneFrequencyChange(
+                              toneFrequency - toneFrequencyStep,
+                            )
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Decrease tone pitch"
+                          accessibilityHint={`Changes tone pitch to ${
+                            toneFrequency - toneFrequencyStep
+                          } hertz`}
+                          disabled={toneFrequency <= toneFrequencyMin}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            toneFrequency <= toneFrequencyMin &&
+                              styles.stepperButtonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.stepperButtonText}>-</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() =>
+                            onToneFrequencyChange(
+                              toneFrequency + toneFrequencyStep,
+                            )
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Increase tone pitch"
+                          accessibilityHint={`Changes tone pitch to ${
+                            toneFrequency + toneFrequencyStep
+                          } hertz`}
+                          disabled={toneFrequency >= toneFrequencyMax}
+                          style={({ pressed }) => [
+                            styles.stepperButton,
+                            pressed && styles.stepperButtonPressed,
+                            toneFrequency >= toneFrequencyMax &&
+                              styles.stepperButtonDisabled,
+                          ]}
+                        >
+                          <Text style={styles.stepperButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <Text style={styles.helperText}>
+                      The frequency of the CW sidetone. Lower is deeper, higher
+                      is sharper.
+                    </Text>
                   </>
                 </SettingsGroup>
 
