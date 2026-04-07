@@ -1,13 +1,15 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { SymbolView } from 'expo-symbols'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { normalizeColorForNative } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
+import DitLogo from './DitLogo'
 
 type NuxStep =
+  | 'welcome'
   | 'profile'
   | 'sound_check'
   | 'button_tutorial'
@@ -21,6 +23,7 @@ type NuxModalProps = {
   didCompleteTutorialTap: boolean
   didCompleteTutorialHold: boolean
   currentPack: string[]
+  onWelcomeDone: () => void
   onChooseProfile: (profile: 'beginner' | 'known') => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
@@ -32,6 +35,7 @@ type NuxModalProps = {
 }
 
 const progressIndexByStep: Record<NuxStep, number> = {
+  welcome: -1,
   profile: 0,
   sound_check: 1,
   button_tutorial: 2,
@@ -100,6 +104,7 @@ export function NuxModal({
   didCompleteTutorialTap,
   didCompleteTutorialHold,
   currentPack,
+  onWelcomeDone,
   onChooseProfile,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
@@ -113,6 +118,28 @@ export function NuxModal({
   const paddingTop = insets.top + spacing.xl
   const paddingBottom = insets.bottom + spacing.xl
   const isTutorial = step === 'button_tutorial'
+
+  useEffect(() => {
+    if (step !== 'welcome') return
+    const timer = setTimeout(onWelcomeDone, 2200)
+    return () => clearTimeout(timer)
+  }, [step, onWelcomeDone])
+
+  if (step === 'welcome') {
+    return (
+      <Pressable
+        style={styles.overlay}
+        onPress={onWelcomeDone}
+        accessibilityViewIsModal
+        accessibilityLabel="Welcome to Dit"
+      >
+        <View style={[styles.welcomeScreen, { paddingTop, paddingBottom }]}>
+          <DitLogo size={120} opacity={0.9} animated />
+          <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
+        </View>
+      </Pressable>
+    )
+  }
 
   return (
     <View
@@ -383,6 +410,18 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 20,
+  },
+  welcomeScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+  },
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: colors.text.primary,
+    textAlign: 'center',
   },
   content: {
     flex: 1,

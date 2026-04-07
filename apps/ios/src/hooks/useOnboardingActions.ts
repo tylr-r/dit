@@ -26,7 +26,7 @@ type UseOnboardingActionsOptions = {
   persistIntroHintStep: (step: 'morse' | 'settings' | 'done') => void
   persistNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
   setNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
-  setNuxStep: (step: 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_intro') => void
+  setNuxStep: (step: 'welcome' | 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_intro') => void
   setLearnerProfile: (profile: LearnerProfile | null) => void
   setDidCompleteSoundCheck: (value: boolean) => void
   setDidCompleteTutorialTap: (value: boolean) => void
@@ -107,6 +107,10 @@ export const useOnboardingActions = ({
     void triggerHaptics(10)
   }, [toneFrequency])
 
+  const handleNuxWelcomeDone = useCallback(() => {
+    setNuxStep('profile')
+  }, [setNuxStep])
+
   const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
     setLearnerProfile(profile)
     learnerProfileRef.current = profile
@@ -143,7 +147,7 @@ export const useOnboardingActions = ({
   const finishOnboarding = useCallback(() => {
     persistNuxStatus('completed')
     persistIntroHintStep('done')
-    setNuxStep('profile')
+    setNuxStep('welcome')
     setDidCompleteSoundCheck(false)
     setDidCompleteTutorialTap(false)
     setDidCompleteTutorialHold(false)
@@ -217,7 +221,7 @@ export const useOnboardingActions = ({
     setShowAbout(false)
     setShowReference(false)
     setNuxStatus('pending')
-    setNuxStep('profile')
+    setNuxStep('welcome')
     setLearnerProfile(null)
     setDidCompleteSoundCheck(false)
     setDidCompleteTutorialTap(false)
@@ -236,6 +240,7 @@ export const useOnboardingActions = ({
   ])
 
   return {
+    handleNuxWelcomeDone,
     handleNuxChooseProfile,
     handleNuxPlaySoundCheck,
     handleNuxPlayDitDemo,

@@ -72,6 +72,7 @@ export const PRACTICE_REVIEW_MAX_SIZE = 24
 export type IntroHintStep = 'morse' | 'settings' | 'done'
 export type NuxStatus = 'pending' | 'completed' | 'skipped'
 export type NuxStep =
+  | 'welcome'
   | 'profile'
   | 'sound_check'
   | 'button_tutorial'
