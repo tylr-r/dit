@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { SymbolView } from 'expo-symbols'
-import React, { useEffect } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { normalizeColorForNative } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
@@ -34,6 +34,118 @@ type NuxModalProps = {
   onStartBeginnerCourse: () => void
 }
 
+// ─── Custom easing curves ─────────────────────────────────────────────────────
+// Stronger than built-in quad — gives animations that punchy, intentional feel.
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1)
+const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1)
+
+// ─── Step body transition ─────────────────────────────────────────────────────
+// Only animates the step body content — ProgressDots stay static as a spatial
+// anchor so the user always knows where they are.
+
+function useStepTransition(step: NuxStep) {
+  const [displayedStep, setDisplayedStep] = useState<NuxStep>(step)
+  const fadeAnim = useRef(new Animated.Value(1)).current
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const prevStep = useRef(step)
+
+  useEffect(() => {
+    if (prevStep.current === step) return
+    prevStep.current = step
+
+    // Exit: quick fade + slight scale up (content recedes)
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 120,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1.04,
+        duration: 120,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setDisplayedStep(step)
+      scaleAnim.setValue(0.96)
+      fadeAnim.setValue(0)
+
+      // Enter: spring scale from 0.96 → 1.0 + fade in
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 280,
+          easing: EASE_OUT,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 280,
+          friction: 24,
+          useNativeDriver: true,
+        }),
+      ]).start()
+    })
+  }, [step, fadeAnim, scaleAnim])
+
+  return { displayedStep, fadeAnim, scaleAnim }
+}
+
+// ─── Stagger entrance ─────────────────────────────────────────────────────────
+// Each element in a step staggers in with a subtle translateY + fade.
+
+function useStaggerEntrance(count: number, trigger: string) {
+  const anims = useRef<Animated.Value[]>([])
+  const yAnims = useRef<Animated.Value[]>([])
+
+  if (anims.current.length !== count) {
+    anims.current = Array.from({ length: count }, () => new Animated.Value(0))
+    yAnims.current = Array.from({ length: count }, () => new Animated.Value(8))
+  }
+
+  useEffect(() => {
+    // Reset all values
+    anims.current.forEach((a) => a.setValue(0))
+    yAnims.current.forEach((a) => a.setValue(8))
+
+    const animations = anims.current.map((anim, i) =>
+      Animated.parallel([
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 340,
+          delay: i * 50,
+          easing: EASE_OUT,
+          useNativeDriver: true,
+        }),
+        Animated.timing(yAnims.current[i], {
+          toValue: 0,
+          duration: 340,
+          delay: i * 50,
+          easing: EASE_OUT,
+          useNativeDriver: true,
+        }),
+      ]),
+    )
+
+    Animated.stagger(0, animations).start()
+  }, [trigger])
+
+  return useMemo(
+    () =>
+      anims.current.map((opacity, i) => ({
+        opacity,
+        transform: [{ translateY: yAnims.current[i] }],
+        overflow: 'visible' as const,
+      })),
+    [trigger, count],
+  )
+}
+
+// ─── Progress dots ────────────────────────────────────────────────────────────
+// Animated width + color transitions so dots feel alive without moving position.
+
 const progressIndexByStep: Record<NuxStep, number> = {
   welcome: -1,
   profile: 0,
@@ -43,36 +155,213 @@ const progressIndexByStep: Record<NuxStep, number> = {
   beginner_intro: 3,
 }
 
+function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean }) {
+  const widthAnim = useRef(new Animated.Value(isActive ? 20 : 7)).current
+  const colorAnim = useRef(new Animated.Value(isDone ? 1 : isActive ? 0.5 : 0)).current
+
+  useEffect(() => {
+    Animated.spring(widthAnim, {
+      toValue: isActive ? 20 : 7,
+      tension: 300,
+      friction: 22,
+      useNativeDriver: false,
+    }).start()
+
+    Animated.timing(colorAnim, {
+      toValue: isDone ? 1 : isActive ? 0.5 : 0,
+      duration: 250,
+      easing: EASE_IN_OUT,
+      useNativeDriver: false,
+    }).start()
+  }, [isActive, isDone, widthAnim, colorAnim])
+
+  const backgroundColor = colorAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [colors.text.primary20, colors.text.primary, colors.feedback.success],
+  })
+
+  return (
+    <Animated.View
+      style={[
+        styles.progressDot,
+        { width: widthAnim, backgroundColor },
+      ]}
+    />
+  )
+}
+
 function ProgressDots({ step }: { step: NuxStep }) {
   const total = 4
   const activeIndex = progressIndexByStep[step]
 
   return (
     <View style={styles.progressRow}>
-      {Array.from({ length: total }).map((_, index) => {
-        const isDone = index < activeIndex
-        const isActive = index === activeIndex
-        return (
-          <View
-            key={index}
-            style={[
-              styles.progressDot,
-              isDone && styles.progressDotDone,
-              isActive && styles.progressDotActive,
-            ]}
-          />
-        )
-      })}
+      {Array.from({ length: total }).map((_, index) => (
+        <AnimatedDot
+          key={index}
+          isDone={index < activeIndex}
+          isActive={index === activeIndex}
+        />
+      ))}
     </View>
+  )
+}
+
+// ─── Animated check dot ───────────────────────────────────────────────────────
+
+function AnimatedCheckDot({ complete }: { complete: boolean }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const fillAnim = useRef(new Animated.Value(complete ? 1 : 0)).current
+  const prevComplete = useRef(complete)
+
+  useEffect(() => {
+    if (complete && !prevComplete.current) {
+      // Pop on completion
+      scaleAnim.setValue(0.5)
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 400,
+        friction: 12,
+        useNativeDriver: true,
+      }).start()
+
+      Animated.timing(fillAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: EASE_OUT,
+        useNativeDriver: false,
+      }).start()
+    }
+    prevComplete.current = complete
+  }, [complete, scaleAnim, fillAnim])
+
+  const backgroundColor = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', colors.feedback.success],
+  })
+  const borderColor = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.text.primary20, colors.feedback.success],
+  })
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Animated.View
+        style={[
+          styles.checkDot,
+          { backgroundColor, borderColor },
+        ]}
+      />
+    </Animated.View>
   )
 }
 
 const ChecklistRow = ({ label, complete }: { label: string; complete: boolean }) => (
   <View style={styles.checkRow}>
-    <View style={[styles.checkDot, complete && styles.checkDotComplete]} />
+    <AnimatedCheckDot complete={complete} />
     <Text style={styles.checkText}>{label}</Text>
   </View>
 )
+
+// ─── Welcome screen entrance ──────────────────────────────────────────────────
+
+function WelcomeScreen({ onWelcomeDone }: { onWelcomeDone: () => void }) {
+  const logoOpacity = useRef(new Animated.Value(0)).current
+  const logoScale = useRef(new Animated.Value(0.9)).current
+  const titleOpacity = useRef(new Animated.Value(0)).current
+  const titleY = useRef(new Animated.Value(12)).current
+
+  useEffect(() => {
+    // Logo fades in first
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 600,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: 120,
+        friction: 14,
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    // Title follows after a beat
+    Animated.parallel([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 500,
+        delay: 300,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleY, {
+        toValue: 0,
+        duration: 500,
+        delay: 300,
+        easing: EASE_OUT,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [logoOpacity, logoScale, titleOpacity, titleY])
+
+  return (
+    <Pressable
+      style={styles.welcomeScreen}
+      onPress={onWelcomeDone}
+      accessibilityLabel="Welcome to Dit"
+    >
+      <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
+        <DitLogo size={120} opacity={0.9} animated />
+      </Animated.View>
+      <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleY }] }}>
+        <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
+      </Animated.View>
+    </Pressable>
+  )
+}
+
+// ─── Sound check icon ─────────────────────────────────────────────────────────
+
+function SoundCheckIcon({ checked }: { checked: boolean }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const prevChecked = useRef(checked)
+
+  useEffect(() => {
+    if (checked && !prevChecked.current) {
+      scaleAnim.setValue(0.6)
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 300,
+        friction: 10,
+        useNativeDriver: true,
+      }).start()
+    }
+    prevChecked.current = checked
+  }, [checked, scaleAnim])
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      {checked ? (
+        <NuxIcon
+          sfName="checkmark.circle.fill"
+          materialName="check-circle"
+          size={36}
+          color={colors.feedback.success}
+        />
+      ) : (
+        <NuxIcon
+          sfName="speaker.wave.2.fill"
+          materialName="volume-up"
+          size={36}
+          color={colors.text.primary}
+        />
+      )}
+    </Animated.View>
+  )
+}
 
 function NuxIcon({ sfName, materialName, size, color }: {
   sfName: string
@@ -93,6 +382,67 @@ function NuxIcon({ sfName, materialName, size, color }: {
         }
       />
     </View>
+  )
+}
+
+// ─── Pressable with scale feedback ────────────────────────────────────────────
+
+function ScalePressable({
+  onPress,
+  style,
+  children,
+  accessibilityRole,
+  accessibilityLabel,
+}: {
+  onPress: () => void
+  style?: any
+  children: React.ReactNode
+  accessibilityRole?: string
+  accessibilityLabel?: string
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current
+
+  const onPressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 120,
+      easing: EASE_OUT,
+      useNativeDriver: true,
+    }).start()
+  }, [scaleAnim])
+
+  const onPressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 300,
+      friction: 20,
+      useNativeDriver: true,
+    }).start()
+  }, [scaleAnim])
+
+  // Pull flex out so the outer Pressable fills its slot in flex rows
+  const flat = StyleSheet.flatten(style) || {}
+  const { flex, flexGrow, flexShrink, flexBasis, alignSelf, ...innerStyle } = flat as any
+  const outerFlex: any = {}
+  if (flex != null) outerFlex.flex = flex
+  if (flexGrow != null) outerFlex.flexGrow = flexGrow
+  if (flexShrink != null) outerFlex.flexShrink = flexShrink
+  if (flexBasis != null) outerFlex.flexBasis = flexBasis
+  if (alignSelf != null) outerFlex.alignSelf = alignSelf
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={outerFlex}
+      accessibilityRole={accessibilityRole as any}
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Animated.View style={[innerStyle, { transform: [{ scale: scaleAnim }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
   )
 }
 
@@ -119,27 +469,28 @@ export function NuxModal({
   const paddingBottom = insets.bottom + spacing.xl
   const isTutorial = step === 'button_tutorial'
 
+  const { displayedStep, fadeAnim, scaleAnim } = useStepTransition(step)
+  const bodyAnimStyle = { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+
+  // Stagger counts per step
+  const staggerCounts: Record<NuxStep, number> = {
+    welcome: 0,
+    profile: 2,
+    sound_check: 2,
+    button_tutorial: 2,
+    known_tour: 2,
+    beginner_intro: 3,
+  }
+  const stagger = useStaggerEntrance(
+    staggerCounts[displayedStep],
+    displayedStep,
+  )
+
   useEffect(() => {
     if (step !== 'welcome') return
     const timer = setTimeout(onWelcomeDone, 2200)
     return () => clearTimeout(timer)
   }, [step, onWelcomeDone])
-
-  if (step === 'welcome') {
-    return (
-      <Pressable
-        style={styles.overlay}
-        onPress={onWelcomeDone}
-        accessibilityViewIsModal
-        accessibilityLabel="Welcome to Dit"
-      >
-        <View style={[styles.welcomeScreen, { paddingTop, paddingBottom }]}>
-          <DitLogo size={120} opacity={0.9} animated />
-          <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
-        </View>
-      </Pressable>
-    )
-  }
 
   return (
     <View
@@ -147,28 +498,37 @@ export function NuxModal({
       pointerEvents={isTutorial ? 'box-none' : undefined}
       accessibilityViewIsModal={!isTutorial}
     >
-      <View
-        style={[
-          styles.content,
-          { paddingTop, paddingBottom },
-          isTutorial && styles.contentTutorial,
-        ]}
-        pointerEvents={isTutorial ? 'box-none' : undefined}
-      >
-        <ProgressDots step={step} />
+      {displayedStep === 'welcome' ? (
+        <WelcomeScreen onWelcomeDone={onWelcomeDone} />
+      ) : (
+        <View
+          style={[styles.content, { paddingTop, paddingBottom }]}
+          pointerEvents={isTutorial ? 'box-none' : undefined}
+        >
+          {/* ProgressDots stay OUTSIDE the body transition — spatial anchor */}
+          <ProgressDots step={displayedStep} />
 
-        {step === 'profile' ? (
+          <Animated.View
+            style={[
+              styles.stepBody,
+              isTutorial && styles.stepBodyTutorial,
+              bodyAnimStyle,
+            ]}
+            pointerEvents={isTutorial ? 'box-none' : undefined}
+          >
+
+        {displayedStep === 'profile' ? (
           <>
-            <View style={styles.copyBlock}>
+            <Animated.View style={[styles.copyBlock, stagger[0]]}>
               <Text style={styles.headline}>Choose your path</Text>
               <Text style={styles.subtext}>
                 Pick the option that fits your experience.
               </Text>
-            </View>
-            <View style={styles.optionColumn}>
-              <Pressable
+            </Animated.View>
+            <Animated.View style={[styles.optionColumn, stagger[1]]}>
+              <ScalePressable
                 onPress={() => onChooseProfile('beginner')}
-                style={({ pressed }) => [styles.optionCard, pressed && styles.optionCardPressed]}
+                style={styles.optionCard}
               >
                 <View style={styles.optionHeader}>
                   <NuxIcon
@@ -182,10 +542,10 @@ export function NuxModal({
                 <Text style={styles.optionBody}>
                   Start from the basics and build up.
                 </Text>
-              </Pressable>
-              <Pressable
+              </ScalePressable>
+              <ScalePressable
                 onPress={() => onChooseProfile('known')}
-                style={({ pressed }) => [styles.optionCard, pressed && styles.optionCardPressed]}
+                style={styles.optionCard}
               >
                 <View style={styles.optionHeader}>
                   <NuxIcon
@@ -199,51 +559,40 @@ export function NuxModal({
                 <Text style={styles.optionBody}>
                   Quick tour, then dive right in.
                 </Text>
-              </Pressable>
-            </View>
+              </ScalePressable>
+            </Animated.View>
+            {/* Empty spacer to maintain layout */}
+            <View />
           </>
         ) : null}
 
-        {step === 'sound_check' ? (
+        {displayedStep === 'sound_check' ? (
           <>
-            <View style={styles.copyBlock}>
+            <Animated.View style={[styles.copyBlock, stagger[0]]}>
               <Text style={styles.headline}>Check your sound</Text>
               <Text style={styles.subtext}>
                 Turn your volume up, then tap below to confirm you can hear the tones.
               </Text>
-            </View>
-            <Pressable
-              onPress={onPlaySoundCheck}
-              style={({ pressed }) => [
-                styles.soundButton,
-                soundChecked && styles.soundButtonComplete,
-                pressed && styles.optionCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Test sound"
-            >
-              {soundChecked ? (
-                <NuxIcon
-                  sfName="checkmark.circle.fill"
-                  materialName="check-circle"
-                  size={36}
-                  color={colors.feedback.success}
-                />
-              ) : (
-                <NuxIcon
-                  sfName="speaker.wave.2.fill"
-                  materialName="volume-up"
-                  size={36}
-                  color={colors.text.primary}
-                />
-              )}
-              <Text style={[
-                styles.soundButtonText,
-                soundChecked && { color: colors.feedback.success, fontSize: 16 },
-              ]}>
-                {soundChecked ? 'Sound works' : 'Test sound'}
-              </Text>
-            </Pressable>
+            </Animated.View>
+            <Animated.View style={stagger[1]}>
+              <ScalePressable
+                onPress={onPlaySoundCheck}
+                style={[
+                  styles.soundButton,
+                  soundChecked && styles.soundButtonComplete,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Test sound"
+              >
+                <SoundCheckIcon checked={soundChecked} />
+                <Text style={[
+                  styles.soundButtonText,
+                  soundChecked && { color: colors.feedback.success, fontSize: 16 },
+                ]}>
+                  {soundChecked ? 'Sound works' : 'Test sound'}
+                </Text>
+              </ScalePressable>
+            </Animated.View>
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Continue"
@@ -257,79 +606,79 @@ export function NuxModal({
           </>
         ) : null}
 
-        {step === 'button_tutorial' ? (
+        {displayedStep === 'button_tutorial' ? (
           <>
-            <View style={styles.copyBlock}>
+            <Animated.View style={[styles.copyBlock, stagger[0]]}>
               <Text style={styles.headline}>Meet the Morse key</Text>
               <Text style={styles.subtext}>
                 The large key below is how you tap answers. Listen to the
                 difference, then try each one.
               </Text>
-            </View>
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>Listen first</Text>
-              <View style={styles.demoRow}>
-                <Pressable
-                  onPress={onPlayDitDemo}
-                  style={({ pressed }) => [
-                    styles.demoButton,
-                    pressed && styles.optionCardPressed,
-                  ]}
-                >
-                  <NuxIcon
-                    sfName="play.fill"
-                    materialName="play-arrow"
-                    size={16}
-                    color={colors.text.primary90}
-                  />
-                  <Text style={styles.demoButtonText}>Short tap (dit)</Text>
-                </Pressable>
-                <Pressable
-                  onPress={onPlayDahDemo}
-                  style={({ pressed }) => [
-                    styles.demoButton,
-                    pressed && styles.optionCardPressed,
-                  ]}
-                >
-                  <NuxIcon
-                    sfName="play.fill"
-                    materialName="play-arrow"
-                    size={16}
-                    color={colors.text.primary90}
-                  />
-                  <Text style={styles.demoButtonText}>Long hold (dah)</Text>
-                </Pressable>
+            </Animated.View>
+            <View style={styles.tutorialCenter}>
+            <View style={styles.tutorialMiddle}>
+              <Animated.View style={[styles.card, stagger[1]]}>
+                <Text style={styles.cardLabel}>Listen first</Text>
+                <View style={styles.demoRow}>
+                  <ScalePressable
+                    onPress={onPlayDitDemo}
+                    style={styles.demoButton}
+                  >
+                    <NuxIcon
+                      sfName="play.fill"
+                      materialName="play-arrow"
+                      size={16}
+                      color={colors.text.primary90}
+                    />
+                    <Text style={styles.demoButtonText}>Short tap (dit)</Text>
+                  </ScalePressable>
+                  <ScalePressable
+                    onPress={onPlayDahDemo}
+                    style={styles.demoButton}
+                  >
+                    <NuxIcon
+                      sfName="play.fill"
+                      materialName="play-arrow"
+                      size={16}
+                      color={colors.text.primary90}
+                    />
+                    <Text style={styles.demoButtonText}>Long hold (dah)</Text>
+                  </ScalePressable>
+                </View>
+                <View style={styles.cardDivider} />
+                <Text style={styles.cardLabel}>Now you try</Text>
+                <ChecklistRow label="Short tap (dit)" complete={didCompleteTutorialTap} />
+                <ChecklistRow label="Long hold (dah)" complete={didCompleteTutorialHold} />
+              </Animated.View>
+              <View>
+                <DitButton
+                  text={learnerProfile === 'known' ? 'Show me the app' : 'Start learning'}
+                  onPress={onCompleteButtonTutorial}
+                  disabled={!didCompleteTutorialTap || !didCompleteTutorialHold}
+                  style={styles.ctaButton}
+                  radius={radii.pill}
+                  paddingVertical={16}
+                />
               </View>
-              <View style={styles.cardDivider} />
-              <Text style={styles.cardLabel}>Now you try</Text>
-              <ChecklistRow label="Short tap (dit)" complete={didCompleteTutorialTap} />
-              <ChecklistRow label="Long hold (dah)" complete={didCompleteTutorialHold} />
             </View>
-            <DitButton
-              text={learnerProfile === 'known' ? 'Show me the app' : 'Start learning'}
-              onPress={onCompleteButtonTutorial}
-              disabled={!didCompleteTutorialTap || !didCompleteTutorialHold}
-              style={styles.ctaButton}
-              radius={radii.pill}
-              paddingVertical={16}
-            />
+            </View>
           </>
         ) : null}
 
-        {step === 'known_tour' ? (
+        {displayedStep === 'known_tour' ? (
           <>
-            <View style={styles.copyBlock}>
+            <Animated.View style={[styles.copyBlock, stagger[0]]}>
               <Text style={styles.headline}>Quick app tour</Text>
               <Text style={styles.subtext}>
                 Practice shows the target, Play replays it, the logo opens reference, and Settings
                 handles helpers, speed, and sync.
               </Text>
-            </View>
-            <View style={styles.card}>
+            </Animated.View>
+            <Animated.View style={[styles.card, stagger[1]]}>
               <Text style={styles.bullet}>Practice: send the shown character</Text>
               <Text style={styles.bullet}>Freestyle: tap whatever you want and decode it</Text>
               <Text style={styles.bullet}>Listen: hear a letter and type the answer</Text>
-            </View>
+            </Animated.View>
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Start practicing"
@@ -342,15 +691,15 @@ export function NuxModal({
           </>
         ) : null}
 
-        {step === 'beginner_intro' ? (
+        {displayedStep === 'beginner_intro' ? (
           <>
-            <View style={styles.copyBlock}>
+            <Animated.View style={[styles.copyBlock, stagger[0]]}>
               <Text style={styles.headline}>Your first letters</Text>
               <Text style={styles.subtext}>
                 Each pack introduces a few letters at a time through three stages.
               </Text>
-            </View>
-            <View style={styles.stepsColumn}>
+            </Animated.View>
+            <Animated.View style={[styles.stepsColumn, stagger[1]]}>
               <View style={styles.stepRow}>
                 <View style={styles.stepBadge}>
                   <Text style={styles.stepNumber}>1</Text>
@@ -378,8 +727,8 @@ export function NuxModal({
                   <Text style={styles.stepDesc}>Hear a letter, tap the matching sound</Text>
                 </View>
               </View>
-            </View>
-            <View style={styles.packPreview}>
+            </Animated.View>
+            <Animated.View style={[styles.packPreview, stagger[2]]}>
               <Text style={styles.packLabel}>Starting with</Text>
               <View style={styles.packChips}>
                 {currentPack.map((letter) => (
@@ -389,7 +738,7 @@ export function NuxModal({
                 ))}
               </View>
               <Text style={styles.packHint}>Tap a letter in-app to hear it</Text>
-            </View>
+            </Animated.View>
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Start first lesson"
@@ -401,7 +750,9 @@ export function NuxModal({
             </View>
           </>
         ) : null}
-      </View>
+          </Animated.View>
+        </View>
+      )}
     </View>
   )
 }
@@ -425,30 +776,36 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
   },
-  contentTutorial: {
+  stepBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: spacing.lg,
+  },
+  stepBodyTutorial: {
     justifyContent: 'flex-start',
+    gap: 0,
+    paddingTop: spacing.lg,
+  },
+  tutorialCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    overflow: 'visible' as const,
+  },
+  tutorialMiddle: {
     gap: spacing.xl,
+    overflow: 'visible' as const,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
+    marginBottom: spacing.lg,
   },
   progressDot: {
-    width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: colors.text.primary20,
-  },
-  progressDotActive: {
-    width: 20,
-    backgroundColor: colors.text.primary,
-  },
-  progressDotDone: {
-    backgroundColor: colors.feedback.success,
   },
   copyBlock: {
     gap: spacing.md,
@@ -476,9 +833,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.panelStrong,
     padding: spacing.xl,
     gap: spacing.sm,
-  },
-  optionCardPressed: {
-    opacity: 0.75,
   },
   optionHeader: {
     flexDirection: 'row',
@@ -565,10 +919,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.text.primary20,
-  },
-  checkDotComplete: {
-    backgroundColor: colors.feedback.success,
-    borderColor: colors.feedback.success,
   },
   checkText: {
     fontSize: 15,
