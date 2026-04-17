@@ -20,8 +20,8 @@ type NuxModalProps = {
   step: NuxStep
   learnerProfile: 'beginner' | 'known' | null
   soundChecked: boolean
-  didCompleteTutorialTap: boolean
-  didCompleteTutorialHold: boolean
+  tutorialTapCount: number
+  tutorialHoldCount: number
   currentPack: string[]
   onWelcomeDone: () => void
   onChooseProfile: (profile: 'beginner' | 'known') => void
@@ -180,14 +180,7 @@ function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean 
     outputRange: [colors.text.primary20, colors.text.primary, colors.feedback.success],
   })
 
-  return (
-    <Animated.View
-      style={[
-        styles.progressDot,
-        { width: widthAnim, backgroundColor },
-      ]}
-    />
-  )
+  return <Animated.View style={[styles.progressDot, { width: widthAnim, backgroundColor }]} />
 }
 
 function ProgressDots({ step }: { step: NuxStep }) {
@@ -197,27 +190,23 @@ function ProgressDots({ step }: { step: NuxStep }) {
   return (
     <View style={styles.progressRow}>
       {Array.from({ length: total }).map((_, index) => (
-        <AnimatedDot
-          key={index}
-          isDone={index < activeIndex}
-          isActive={index === activeIndex}
-        />
+        <AnimatedDot key={index} isDone={index < activeIndex} isActive={index === activeIndex} />
       ))}
     </View>
   )
 }
 
-// ─── Animated check dot ───────────────────────────────────────────────────────
+// ─── Tutorial progress dots ──────────────────────────────────────────────────
+// Shows N small dots that fill with a pop as each rep completes.
 
-function AnimatedCheckDot({ complete }: { complete: boolean }) {
+function TutorialProgressDot({ filled }: { filled: boolean }) {
   const scaleAnim = useRef(new Animated.Value(1)).current
-  const fillAnim = useRef(new Animated.Value(complete ? 1 : 0)).current
-  const prevComplete = useRef(complete)
+  const fillAnim = useRef(new Animated.Value(filled ? 1 : 0)).current
+  const prevFilled = useRef(filled)
 
   useEffect(() => {
-    if (complete && !prevComplete.current) {
-      // Pop on completion
-      scaleAnim.setValue(0.5)
+    if (filled && !prevFilled.current) {
+      scaleAnim.setValue(0.4)
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 400,
@@ -232,8 +221,8 @@ function AnimatedCheckDot({ complete }: { complete: boolean }) {
         useNativeDriver: false,
       }).start()
     }
-    prevComplete.current = complete
-  }, [complete, scaleAnim, fillAnim])
+    prevFilled.current = filled
+  }, [filled, scaleAnim, fillAnim])
 
   const backgroundColor = fillAnim.interpolate({
     inputRange: [0, 1],
@@ -246,22 +235,20 @@ function AnimatedCheckDot({ complete }: { complete: boolean }) {
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Animated.View
-        style={[
-          styles.checkDot,
-          { backgroundColor, borderColor },
-        ]}
-      />
+      <Animated.View style={[styles.progressPip, { backgroundColor, borderColor }]} />
     </Animated.View>
   )
 }
 
-const ChecklistRow = ({ label, complete }: { label: string; complete: boolean }) => (
-  <View style={styles.checkRow}>
-    <AnimatedCheckDot complete={complete} />
-    <Text style={styles.checkText}>{label}</Text>
-  </View>
-)
+function TutorialProgress({ count, required }: { count: number; required: number }) {
+  return (
+    <View style={styles.progressPips}>
+      {Array.from({ length: required }).map((_, i) => (
+        <TutorialProgressDot key={i} filled={i < count} />
+      ))}
+    </View>
+  )
+}
 
 // ─── Welcome screen entrance ──────────────────────────────────────────────────
 
@@ -363,7 +350,12 @@ function SoundCheckIcon({ checked }: { checked: boolean }) {
   )
 }
 
-function NuxIcon({ sfName, materialName, size, color }: {
+function NuxIcon({
+  sfName,
+  materialName,
+  size,
+  color,
+}: {
   sfName: string
   materialName: string
   size: number
@@ -377,9 +369,7 @@ function NuxIcon({ sfName, materialName, size, color }: {
         size={1}
         tintColor={tint}
         style={{ width: size, height: size }}
-        fallback={
-          <MaterialIcons name={materialName as any} size={size} color={tint} />
-        }
+        fallback={<MaterialIcons name={materialName as any} size={size} color={tint} />}
       />
     </View>
   )
@@ -449,10 +439,9 @@ function ScalePressable({
 /** Full-screen first-run flow for profile selection and basic app teaching. */
 export function NuxModal({
   step,
-  learnerProfile,
   soundChecked,
-  didCompleteTutorialTap,
-  didCompleteTutorialHold,
+  tutorialTapCount,
+  tutorialHoldCount,
   currentPack,
   onWelcomeDone,
   onChooseProfile,
@@ -481,16 +470,22 @@ export function NuxModal({
     known_tour: 2,
     beginner_intro: 3,
   }
-  const stagger = useStaggerEntrance(
-    staggerCounts[displayedStep],
-    displayedStep,
-  )
+  const stagger = useStaggerEntrance(staggerCounts[displayedStep], displayedStep)
 
   useEffect(() => {
     if (step !== 'welcome') return
     const timer = setTimeout(onWelcomeDone, 2200)
     return () => clearTimeout(timer)
   }, [step, onWelcomeDone])
+
+  const TUTORIAL_REQUIRED = 3
+  // Auto-advance once both tutorial inputs are completed
+  useEffect(() => {
+    if (step !== 'button_tutorial') return
+    if (tutorialTapCount < TUTORIAL_REQUIRED || tutorialHoldCount < TUTORIAL_REQUIRED) return
+    const timer = setTimeout(onCompleteButtonTutorial, 600)
+    return () => clearTimeout(timer)
+  }, [step, tutorialTapCount, tutorialHoldCount, onCompleteButtonTutorial])
 
   return (
     <View
@@ -509,90 +504,208 @@ export function NuxModal({
           <ProgressDots step={displayedStep} />
 
           <Animated.View
-            style={[
-              styles.stepBody,
-              isTutorial && styles.stepBodyTutorial,
-              bodyAnimStyle,
-            ]}
+            style={[styles.stepBody, bodyAnimStyle]}
             pointerEvents={isTutorial ? 'box-none' : undefined}
           >
-
-        {displayedStep === 'profile' ? (
-          <>
-            <Animated.View style={[styles.copyBlock, stagger[0]]}>
-              <Text style={styles.headline}>Choose your path</Text>
-              <Text style={styles.subtext}>
-                Pick the option that fits your experience.
-              </Text>
-            </Animated.View>
-            <Animated.View style={[styles.optionColumn, stagger[1]]}>
-              <ScalePressable
-                onPress={() => onChooseProfile('beginner')}
-                style={styles.optionCard}
-              >
-                <View style={styles.optionHeader}>
-                  <NuxIcon
-                    sfName="graduationcap.fill"
-                    materialName="school"
-                    size={22}
-                    color={colors.text.primary}
-                  />
-                  <Text style={styles.optionTitle}>Learn Morse</Text>
+            {displayedStep === 'profile' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Choose your path</Text>
+                  <Text style={styles.subtext}>Pick the option that fits your experience.</Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={[styles.optionColumn, stagger[1]]}>
+                    <ScalePressable
+                      onPress={() => onChooseProfile('beginner')}
+                      style={styles.optionCard}
+                    >
+                      <View style={styles.optionHeader}>
+                        <NuxIcon
+                          sfName="graduationcap.fill"
+                          materialName="school"
+                          size={22}
+                          color={colors.text.primary}
+                        />
+                        <Text style={styles.optionTitle}>Learn Morse</Text>
+                      </View>
+                      <Text style={styles.optionBody}>Start from the basics and build up.</Text>
+                    </ScalePressable>
+                    <ScalePressable
+                      onPress={() => onChooseProfile('known')}
+                      style={styles.optionCard}
+                    >
+                      <View style={styles.optionHeader}>
+                        <NuxIcon
+                          sfName="bolt.fill"
+                          materialName="flash-on"
+                          size={22}
+                          color={colors.text.primary}
+                        />
+                        <Text style={styles.optionTitle}>I know Morse</Text>
+                      </View>
+                      <Text style={styles.optionBody}>Quick tour, then dive right in.</Text>
+                    </ScalePressable>
+                  </Animated.View>
                 </View>
-                <Text style={styles.optionBody}>
-                  Start from the basics and build up.
-                </Text>
-              </ScalePressable>
-              <ScalePressable
-                onPress={() => onChooseProfile('known')}
-                style={styles.optionCard}
-              >
-                <View style={styles.optionHeader}>
-                  <NuxIcon
-                    sfName="bolt.fill"
-                    materialName="flash-on"
-                    size={22}
-                    color={colors.text.primary}
-                  />
-                  <Text style={styles.optionTitle}>I know Morse</Text>
-                </View>
-                <Text style={styles.optionBody}>
-                  Quick tour, then dive right in.
-                </Text>
-              </ScalePressable>
-            </Animated.View>
-            {/* Empty spacer to maintain layout */}
-            <View />
-          </>
-        ) : null}
+              </>
+            ) : null}
 
-        {displayedStep === 'sound_check' ? (
-          <>
-            <Animated.View style={[styles.copyBlock, stagger[0]]}>
-              <Text style={styles.headline}>Check your sound</Text>
-              <Text style={styles.subtext}>
-                Turn your volume up, then tap below to confirm you can hear the tones.
-              </Text>
-            </Animated.View>
-            <Animated.View style={stagger[1]}>
-              <ScalePressable
-                onPress={onPlaySoundCheck}
-                style={[
-                  styles.soundButton,
-                  soundChecked && styles.soundButtonComplete,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Test sound"
-              >
-                <SoundCheckIcon checked={soundChecked} />
-                <Text style={[
-                  styles.soundButtonText,
-                  soundChecked && { color: colors.feedback.success, fontSize: 16 },
-                ]}>
-                  {soundChecked ? 'Sound works' : 'Test sound'}
-                </Text>
-              </ScalePressable>
-            </Animated.View>
+            {displayedStep === 'sound_check' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Check your sound</Text>
+                  <Text style={styles.subtext}>
+                    Turn your volume up, then tap below to confirm you can hear the tones.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={stagger[1]}>
+                    <ScalePressable
+                      onPress={onPlaySoundCheck}
+                      style={[styles.soundButton, soundChecked && styles.soundButtonComplete]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Test sound"
+                    >
+                      <SoundCheckIcon checked={soundChecked} />
+                      <Text
+                        style={[
+                          styles.soundButtonText,
+                          soundChecked && { color: colors.feedback.success, fontSize: 16 },
+                        ]}
+                      >
+                        {soundChecked ? 'Sound works' : 'Test sound'}
+                      </Text>
+                    </ScalePressable>
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
+            {displayedStep === 'button_tutorial' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Meet the Morse key</Text>
+                  <Text style={styles.subtext}>
+                    Listen to each sound, then try it on the key below.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={[styles.tutorialRows, stagger[1]]}>
+                    <View style={styles.tutorialRow}>
+                      <ScalePressable
+                        onPress={onPlayDitDemo}
+                        style={styles.tutorialPlayButton}
+                        accessibilityLabel="Play dit sound"
+                      >
+                        <NuxIcon
+                          sfName="play.fill"
+                          materialName="play-arrow"
+                          size={14}
+                          color={colors.text.primary}
+                        />
+                      </ScalePressable>
+                      <Text style={styles.tutorialLabel}>Short tap (dit)</Text>
+                      <TutorialProgress count={tutorialTapCount} required={TUTORIAL_REQUIRED} />
+                    </View>
+                    <View style={styles.tutorialRow}>
+                      <ScalePressable
+                        onPress={onPlayDahDemo}
+                        style={styles.tutorialPlayButton}
+                        accessibilityLabel="Play dah sound"
+                      >
+                        <NuxIcon
+                          sfName="play.fill"
+                          materialName="play-arrow"
+                          size={14}
+                          color={colors.text.primary}
+                        />
+                      </ScalePressable>
+                      <Text style={styles.tutorialLabel}>Long hold (dah)</Text>
+                      <TutorialProgress count={tutorialHoldCount} required={TUTORIAL_REQUIRED} />
+                    </View>
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
+            {displayedStep === 'known_tour' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Quick app tour</Text>
+                  <Text style={styles.subtext}>
+                    Practice shows the target, Play replays it, the logo opens reference, and
+                    Settings handles helpers, speed, and sync.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={[styles.card, stagger[1]]}>
+                    <Text style={styles.bullet}>Practice: send the shown character</Text>
+                    <Text style={styles.bullet}>
+                      Freestyle: tap whatever you want and decode it
+                    </Text>
+                    <Text style={styles.bullet}>Listen: hear a letter and type the answer</Text>
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
+            {displayedStep === 'beginner_intro' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Your first letters</Text>
+                  <Text style={styles.subtext}>
+                    Each pack introduces a few letters at a time through three stages.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={[styles.stepsColumn, stagger[1]]}>
+                    <View style={styles.stepRow}>
+                      <View style={styles.stepBadge}>
+                        <Text style={styles.stepNumber}>1</Text>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>Listen</Text>
+                        <Text style={styles.stepDesc}>Hear each letter and copy the sound</Text>
+                      </View>
+                    </View>
+                    <View style={styles.stepRow}>
+                      <View style={styles.stepBadge}>
+                        <Text style={styles.stepNumber}>2</Text>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>Practice</Text>
+                        <Text style={styles.stepDesc}>Mix old and new letters by ear</Text>
+                      </View>
+                    </View>
+                    <View style={styles.stepRow}>
+                      <View style={styles.stepBadge}>
+                        <Text style={styles.stepNumber}>3</Text>
+                      </View>
+                      <View style={styles.stepContent}>
+                        <Text style={styles.stepTitle}>Recall</Text>
+                        <Text style={styles.stepDesc}>Hear a letter, tap the matching sound</Text>
+                      </View>
+                    </View>
+                  </Animated.View>
+                  <Animated.View style={[styles.packPreview, stagger[2]]}>
+                    <Text style={styles.packLabel}>Starting with</Text>
+                    <View style={styles.packChips}>
+                      {currentPack.map((letter) => (
+                        <View key={letter} style={styles.packChip}>
+                          <Text style={styles.chipLetter}>{letter}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={styles.packHint}>Tap a letter in-app to hear it</Text>
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+          </Animated.View>
+
+          {/* CTA buttons live outside the animated step body — UIVisualEffectView
+              (GlassView) breaks when any ancestor has animated opacity. */}
+          {displayedStep === 'sound_check' && (
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Continue"
@@ -603,82 +716,8 @@ export function NuxModal({
                 paddingVertical={16}
               />
             </View>
-          </>
-        ) : null}
-
-        {displayedStep === 'button_tutorial' ? (
-          <>
-            <Animated.View style={[styles.copyBlock, stagger[0]]}>
-              <Text style={styles.headline}>Meet the Morse key</Text>
-              <Text style={styles.subtext}>
-                The large key below is how you tap answers. Listen to the
-                difference, then try each one.
-              </Text>
-            </Animated.View>
-            <View style={styles.tutorialCenter}>
-            <View style={styles.tutorialMiddle}>
-              <Animated.View style={[styles.card, stagger[1]]}>
-                <Text style={styles.cardLabel}>Listen first</Text>
-                <View style={styles.demoRow}>
-                  <ScalePressable
-                    onPress={onPlayDitDemo}
-                    style={styles.demoButton}
-                  >
-                    <NuxIcon
-                      sfName="play.fill"
-                      materialName="play-arrow"
-                      size={16}
-                      color={colors.text.primary90}
-                    />
-                    <Text style={styles.demoButtonText}>Short tap (dit)</Text>
-                  </ScalePressable>
-                  <ScalePressable
-                    onPress={onPlayDahDemo}
-                    style={styles.demoButton}
-                  >
-                    <NuxIcon
-                      sfName="play.fill"
-                      materialName="play-arrow"
-                      size={16}
-                      color={colors.text.primary90}
-                    />
-                    <Text style={styles.demoButtonText}>Long hold (dah)</Text>
-                  </ScalePressable>
-                </View>
-                <View style={styles.cardDivider} />
-                <Text style={styles.cardLabel}>Now you try</Text>
-                <ChecklistRow label="Short tap (dit)" complete={didCompleteTutorialTap} />
-                <ChecklistRow label="Long hold (dah)" complete={didCompleteTutorialHold} />
-              </Animated.View>
-              <View>
-                <DitButton
-                  text={learnerProfile === 'known' ? 'Show me the app' : 'Start learning'}
-                  onPress={onCompleteButtonTutorial}
-                  disabled={!didCompleteTutorialTap || !didCompleteTutorialHold}
-                  style={styles.ctaButton}
-                  radius={radii.pill}
-                  paddingVertical={16}
-                />
-              </View>
-            </View>
-            </View>
-          </>
-        ) : null}
-
-        {displayedStep === 'known_tour' ? (
-          <>
-            <Animated.View style={[styles.copyBlock, stagger[0]]}>
-              <Text style={styles.headline}>Quick app tour</Text>
-              <Text style={styles.subtext}>
-                Practice shows the target, Play replays it, the logo opens reference, and Settings
-                handles helpers, speed, and sync.
-              </Text>
-            </Animated.View>
-            <Animated.View style={[styles.card, stagger[1]]}>
-              <Text style={styles.bullet}>Practice: send the shown character</Text>
-              <Text style={styles.bullet}>Freestyle: tap whatever you want and decode it</Text>
-              <Text style={styles.bullet}>Listen: hear a letter and type the answer</Text>
-            </Animated.View>
+          )}
+          {displayedStep === 'known_tour' && (
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Start practicing"
@@ -688,57 +727,8 @@ export function NuxModal({
                 paddingVertical={16}
               />
             </View>
-          </>
-        ) : null}
-
-        {displayedStep === 'beginner_intro' ? (
-          <>
-            <Animated.View style={[styles.copyBlock, stagger[0]]}>
-              <Text style={styles.headline}>Your first letters</Text>
-              <Text style={styles.subtext}>
-                Each pack introduces a few letters at a time through three stages.
-              </Text>
-            </Animated.View>
-            <Animated.View style={[styles.stepsColumn, stagger[1]]}>
-              <View style={styles.stepRow}>
-                <View style={styles.stepBadge}>
-                  <Text style={styles.stepNumber}>1</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Listen</Text>
-                  <Text style={styles.stepDesc}>Hear each letter and copy the sound</Text>
-                </View>
-              </View>
-              <View style={styles.stepRow}>
-                <View style={styles.stepBadge}>
-                  <Text style={styles.stepNumber}>2</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Practice</Text>
-                  <Text style={styles.stepDesc}>Mix old and new letters by ear</Text>
-                </View>
-              </View>
-              <View style={styles.stepRow}>
-                <View style={styles.stepBadge}>
-                  <Text style={styles.stepNumber}>3</Text>
-                </View>
-                <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Recall</Text>
-                  <Text style={styles.stepDesc}>Hear a letter, tap the matching sound</Text>
-                </View>
-              </View>
-            </Animated.View>
-            <Animated.View style={[styles.packPreview, stagger[2]]}>
-              <Text style={styles.packLabel}>Starting with</Text>
-              <View style={styles.packChips}>
-                {currentPack.map((letter) => (
-                  <View key={letter} style={styles.packChip}>
-                    <Text style={styles.chipLetter}>{letter}</Text>
-                  </View>
-                ))}
-              </View>
-              <Text style={styles.packHint}>Tap a letter in-app to hear it</Text>
-            </Animated.View>
+          )}
+          {displayedStep === 'beginner_intro' && (
             <View style={styles.bottomBlock}>
               <DitButton
                 text="Start first lesson"
@@ -748,9 +738,7 @@ export function NuxModal({
                 paddingVertical={16}
               />
             </View>
-          </>
-        ) : null}
-          </Animated.View>
+          )}
         </View>
       )}
     </View>
@@ -780,22 +768,13 @@ const styles = StyleSheet.create({
   },
   stepBody: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingTop: spacing.lg,
   },
-  stepBodyTutorial: {
-    justifyContent: 'flex-start',
-    gap: 0,
-    paddingTop: spacing.lg,
-  },
-  tutorialCenter: {
+  stepFill: {
     flex: 1,
     justifyContent: 'center',
-    overflow: 'visible' as const,
-  },
-  tutorialMiddle: {
     gap: spacing.xl,
-    overflow: 'visible' as const,
+    marginTop: spacing.xl,
   },
   progressRow: {
     flexDirection: 'row',
@@ -806,6 +785,16 @@ const styles = StyleSheet.create({
   progressDot: {
     height: 7,
     borderRadius: 4,
+  },
+  progressPips: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  progressPip: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
   },
   copyBlock: {
     gap: spacing.md,
@@ -877,53 +866,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.md,
   },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: colors.text.primary40,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
-    marginVertical: spacing.xs,
-  },
-  demoRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  demoButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radii.sm,
-    backgroundColor: colors.surface.input,
-  },
-  demoButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text.primary90,
-  },
-  checkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  checkDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.text.primary20,
-  },
-  checkText: {
-    fontSize: 15,
-    color: colors.text.primary90,
-  },
   bullet: {
     fontSize: 14,
     lineHeight: 21,
@@ -969,6 +911,7 @@ const styles = StyleSheet.create({
   packPreview: {
     alignItems: 'center',
     gap: spacing.md,
+    marginTop: 32,
   },
   packLabel: {
     fontSize: 12,
@@ -1001,6 +944,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.primary40,
     fontStyle: 'italic',
+  },
+  tutorialRows: {
+    gap: spacing.md,
+  },
+  tutorialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface.input,
+    borderRadius: radii.md,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+  },
+  tutorialPlayButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface.inputPressed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tutorialLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text.primary90,
   },
   bottomBlock: {
     gap: spacing.md,

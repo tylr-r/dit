@@ -21,16 +21,16 @@ type RefValue<T> = {
 type UseOnboardingActionsOptions = {
   toneFrequency: number
   didCompleteSoundCheck: boolean
-  didCompleteTutorialTap: boolean
-  didCompleteTutorialHold: boolean
+  tutorialTapCount: number
+  tutorialHoldCount: number
   persistIntroHintStep: (step: 'morse' | 'settings' | 'done') => void
   persistNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
   setNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
   setNuxStep: (step: 'welcome' | 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_intro') => void
   setLearnerProfile: (profile: LearnerProfile | null) => void
   setDidCompleteSoundCheck: (value: boolean) => void
-  setDidCompleteTutorialTap: (value: boolean) => void
-  setDidCompleteTutorialHold: (value: boolean) => void
+  setTutorialTapCount: (value: number) => void
+  setTutorialHoldCount: (value: number) => void
   setShowSettings: (value: boolean) => void
   setShowAbout: (value: boolean) => void
   setShowReference: (value: boolean) => void
@@ -63,16 +63,16 @@ type UseOnboardingActionsOptions = {
 export const useOnboardingActions = ({
   toneFrequency,
   didCompleteSoundCheck,
-  didCompleteTutorialTap,
-  didCompleteTutorialHold,
+  tutorialTapCount,
+  tutorialHoldCount,
   persistIntroHintStep,
   persistNuxStatus,
   setNuxStatus,
   setNuxStep,
   setLearnerProfile,
   setDidCompleteSoundCheck,
-  setDidCompleteTutorialTap,
-  setDidCompleteTutorialHold,
+  setTutorialTapCount,
+  setTutorialHoldCount,
   setShowSettings,
   setShowAbout,
   setShowReference,
@@ -138,25 +138,25 @@ export const useOnboardingActions = ({
   }, [didCompleteSoundCheck, setNuxStep])
 
   const handleNuxCompleteButtonTutorial = useCallback(() => {
-    if (!didCompleteTutorialTap || !didCompleteTutorialHold) {
+    if (tutorialTapCount < 3 || tutorialHoldCount < 3) {
       return
     }
     setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_intro')
-  }, [didCompleteTutorialHold, didCompleteTutorialTap, learnerProfileRef, setNuxStep])
+  }, [tutorialHoldCount, tutorialTapCount, learnerProfileRef, setNuxStep])
 
   const finishOnboarding = useCallback(() => {
     persistNuxStatus('completed')
     persistIntroHintStep('done')
     setNuxStep('welcome')
     setDidCompleteSoundCheck(false)
-    setDidCompleteTutorialTap(false)
-    setDidCompleteTutorialHold(false)
+    setTutorialTapCount(0)
+    setTutorialHoldCount(0)
   }, [
     persistIntroHintStep,
     persistNuxStatus,
     setDidCompleteSoundCheck,
-    setDidCompleteTutorialHold,
-    setDidCompleteTutorialTap,
+    setTutorialHoldCount,
+    setTutorialTapCount,
     setNuxStep,
   ])
 
@@ -224,13 +224,13 @@ export const useOnboardingActions = ({
     setNuxStep('welcome')
     setLearnerProfile(null)
     setDidCompleteSoundCheck(false)
-    setDidCompleteTutorialTap(false)
-    setDidCompleteTutorialHold(false)
+    setTutorialTapCount(0)
+    setTutorialHoldCount(0)
     void AsyncStorage.setItem(NUX_STATUS_KEY, 'pending')
   }, [
     setDidCompleteSoundCheck,
-    setDidCompleteTutorialHold,
-    setDidCompleteTutorialTap,
+    setTutorialHoldCount,
+    setTutorialTapCount,
     setLearnerProfile,
     setNuxStatus,
     setNuxStep,

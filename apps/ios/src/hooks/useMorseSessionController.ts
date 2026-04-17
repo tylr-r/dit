@@ -121,10 +121,10 @@ type UseMorseSessionControllerOptions = {
     setLearnerProfile: Setter<LearnerProfile | null>
     didCompleteSoundCheck: boolean
     setDidCompleteSoundCheck: Setter<boolean>
-    didCompleteTutorialTap: boolean
-    setDidCompleteTutorialTap: Setter<boolean>
-    didCompleteTutorialHold: boolean
-    setDidCompleteTutorialHold: Setter<boolean>
+    tutorialTapCount: number
+    setTutorialTapCount: Setter<number>
+    tutorialHoldCount: number
+    setTutorialHoldCount: Setter<number>
     persistIntroHintStep: (next: IntroHintStep) => void
     persistNuxStatus: (next: NuxStatus) => void
     dismissMorseHint: () => void
@@ -155,10 +155,10 @@ export const useMorseSessionController = ({
     setLearnerProfile,
     didCompleteSoundCheck,
     setDidCompleteSoundCheck,
-    didCompleteTutorialTap,
-    setDidCompleteTutorialTap,
-    didCompleteTutorialHold,
-    setDidCompleteTutorialHold,
+    tutorialTapCount,
+    setTutorialTapCount,
+    tutorialHoldCount,
+    setTutorialHoldCount,
     persistIntroHintStep,
     persistNuxStatus,
     dismissMorseHint,
@@ -781,8 +781,8 @@ export const useMorseSessionController = ({
     setGuidedPhase('teach')
     setGuidedProgress(createGuidedLessonProgress())
     setDidCompleteSoundCheck(false)
-    setDidCompleteTutorialTap(false)
-    setDidCompleteTutorialHold(false)
+    setTutorialTapCount(0)
+    setTutorialHoldCount(0)
     setMaxLevel(DEFAULT_MAX_LEVEL)
     setPracticeWordMode(false)
     setLetter(nextConfig.letter)
@@ -841,8 +841,8 @@ export const useMorseSessionController = ({
     errorLockoutUntilRef.current = 0
   }, [
     setDidCompleteSoundCheck,
-    setDidCompleteTutorialHold,
-    setDidCompleteTutorialTap,
+    setTutorialHoldCount,
+    setTutorialTapCount,
     setIsPressing,
     setLearnerProfile,
     setShowAbout,
@@ -918,16 +918,16 @@ export const useMorseSessionController = ({
   const onboardingActions = useOnboardingActions({
     toneFrequency,
     didCompleteSoundCheck,
-    didCompleteTutorialTap,
-    didCompleteTutorialHold,
+    tutorialTapCount,
+    tutorialHoldCount,
     persistIntroHintStep,
     persistNuxStatus,
     setNuxStatus,
     setNuxStep,
     setLearnerProfile,
     setDidCompleteSoundCheck,
-    setDidCompleteTutorialTap,
-    setDidCompleteTutorialHold,
+    setTutorialTapCount,
+    setTutorialHoldCount,
     setShowSettings,
     setShowAbout,
     setShowReference,
@@ -1348,9 +1348,9 @@ export const useMorseSessionController = ({
 
       if (isNuxActive && nuxStep === 'button_tutorial') {
         if (symbol === '.') {
-          setDidCompleteTutorialTap(true)
+          setTutorialTapCount((c) => c + 1)
         } else {
-          setDidCompleteTutorialHold(true)
+          setTutorialHoldCount((c) => c + 1)
         }
         return
       }
@@ -1374,8 +1374,8 @@ export const useMorseSessionController = ({
       isNuxActive,
       nuxStep,
       scheduleLetterReset,
-      setDidCompleteTutorialHold,
-      setDidCompleteTutorialTap,
+      setTutorialHoldCount,
+      setTutorialTapCount,
     ],
   )
 
@@ -1957,8 +1957,8 @@ export const useMorseSessionController = ({
       listenWavePlayback,
       scores,
       isPressing,
-      didCompleteTutorialTap,
-      didCompleteTutorialHold,
+      tutorialTapCount,
+      tutorialHoldCount,
       learnerProfile,
       didCompleteSoundCheck,
     },
