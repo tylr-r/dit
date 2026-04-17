@@ -41,3 +41,4 @@ apps/web/test-results/
 /app.json
 apps/ios/GoogleService-Info.plist
 apps/ios/build/
+docs/USER_REVIEWS.md
