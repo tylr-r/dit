@@ -3,7 +3,6 @@ import {
   requireOptionalNativeModule,
   type EventSubscription,
 } from 'expo-modules-core'
-import { Vibration } from 'react-native'
 
 type DitNativeEvents = {
   onLowPowerModeChanged: (event: {
@@ -14,7 +13,6 @@ type DitNativeEvents = {
 export type DitNativeModule = {
   getHello?: () => string
   getLowPowerModeEnabled?: () => boolean | Promise<boolean>
-  triggerHaptics?: (pattern: number | number[]) => boolean | Promise<boolean>
   startTone?: (frequency: number, volume: number) => boolean | Promise<boolean>
   stopTone?: () => boolean | Promise<boolean>
   signInWithApple?: () => Promise<{
@@ -74,19 +72,6 @@ export const addLowPowerModeListener = (
   return emitter.addListener('onLowPowerModeChanged', (event) => {
     listener(Boolean(event.isLowPowerModeEnabled))
   })
-}
-
-export const triggerHaptics = async (pattern: number | number[]) => {
-  if (DitNative?.triggerHaptics) {
-    const payload = Array.isArray(pattern) ? pattern : [pattern]
-    const handled = await DitNative.triggerHaptics(payload)
-    if (handled) {
-      return true
-    }
-  }
-
-  Vibration.vibrate(pattern)
-  return true
 }
 
 export const playTone = async (

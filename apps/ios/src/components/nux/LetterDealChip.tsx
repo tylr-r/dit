@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { StyleSheet, Text } from 'react-native'
 import Reanimated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -10,7 +9,6 @@ import Reanimated, {
 } from 'react-native-reanimated'
 import { colors, radii } from '../../design/tokens'
 import { RSPRING } from './animationTokens'
-import { nuxHaptics } from './nuxHaptics'
 
 type Props = {
   letter: string
@@ -19,19 +17,12 @@ type Props = {
 }
 
 /** One pack chip that flips into place like a dealt card: starts rotated 90°
- *  around Y with reduced scale and no opacity, then springs flat. Haptic tick
- *  lands as it settles. Under reduced motion, fades in without motion. */
+ *  around Y with reduced scale and no opacity, then springs flat. Under
+ *  reduced motion, fades in without motion. */
 export function LetterDealChip({ letter, delay, reduceMotion = false }: Props) {
   const rotateY = useSharedValue(reduceMotion ? 0 : 90)
   const scale = useSharedValue(reduceMotion ? 1 : 0.7)
   const opacity = useSharedValue(reduceMotion ? 1 : 0)
-  const firedRef = useRef(false)
-
-  const fireTick = () => {
-    if (firedRef.current) return
-    firedRef.current = true
-    nuxHaptics.tick()
-  }
 
   useEffect(() => {
     if (reduceMotion) {
@@ -40,13 +31,7 @@ export function LetterDealChip({ letter, delay, reduceMotion = false }: Props) {
     }
     opacity.value = withDelay(delay, withTiming(1, { duration: 280 }))
     rotateY.value = withDelay(delay, withSpring(0, RSPRING.soft))
-    scale.value = withDelay(
-      delay,
-      withSpring(1, RSPRING.soft, (finished) => {
-        'worklet'
-        if (finished) runOnJS(fireTick)()
-      }),
-    )
+    scale.value = withDelay(delay, withSpring(1, RSPRING.soft))
   }, [delay, reduceMotion, rotateY, scale, opacity])
 
   const animStyle = useAnimatedStyle(() => ({

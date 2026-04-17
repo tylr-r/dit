@@ -9,7 +9,6 @@ export type DitNativeModule = {
   startTone?: () => Promise<void>
   stopTone?: () => Promise<void>
   playTone?: (durationMs: number) => Promise<void>
-  triggerHaptic?: (kind: 'dot' | 'dash' | 'success') => Promise<void>
 }
 
 export const DitNative =

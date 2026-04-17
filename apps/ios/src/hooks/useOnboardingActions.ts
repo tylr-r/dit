@@ -5,7 +5,6 @@ import {
   type GuidedPhase,
   type LearnerProfile,
 } from '@dit/core'
-import { triggerHaptics } from '@dit/dit-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback } from 'react'
 import {
@@ -104,7 +103,6 @@ export const useOnboardingActions = ({
       minUnitMs: LISTEN_MIN_UNIT_MS,
       frequency: toneFrequency,
     })
-    void triggerHaptics(10)
   }, [toneFrequency])
 
   const handleNuxWelcomeDone = useCallback(() => {

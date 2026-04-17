@@ -3,7 +3,6 @@ import { Animated, StyleSheet, Text, View } from 'react-native'
 import Svg, { Circle } from 'react-native-svg'
 import { colors } from '../../design/tokens'
 import { EASE, TIMING } from './animationTokens'
-import { nuxHaptics } from './nuxHaptics'
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -35,7 +34,6 @@ export function StageCard({
     new Animated.Value(reduceMotion ? 0 : CIRCUMFERENCE),
   ).current
   const colorAnim = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current
-  const firedRef = useRef(false)
 
   useEffect(() => {
     if (reduceMotion) return
@@ -55,12 +53,7 @@ export function StageCard({
         useNativeDriver: false,
       }),
     ])
-    anim.start(({ finished }) => {
-      if (finished && !firedRef.current) {
-        firedRef.current = true
-        nuxHaptics.tick()
-      }
-    })
+    anim.start()
     return () => anim.stop()
   }, [dashOffset, colorAnim, drawDelay, reduceMotion])
 

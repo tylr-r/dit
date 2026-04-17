@@ -1,5 +1,6 @@
 import AVFoundation
 import AuthenticationServices
+import CoreHaptics
 import CryptoKit
 import ExpoModulesCore
 import FirebaseAuth
@@ -313,8 +314,147 @@ private final class ToneGenerator {
   }
 }
 
+/// Mirrors Morse audio with tactile feedback. Dit tones produce a dit-length
+/// haptic; dah tones produce a dah-length haptic; silence is silence. Uses
+/// CoreHaptics continuous events so a dah feels meaningfully longer than a
+/// dit — not a transient buzz.
+private final class HapticController {
+  private var engine: CHHapticEngine?
+  private var activePlayer: CHHapticPatternPlayer?
+  private var keyingPlayer: CHHapticPatternPlayer?
+  private let supportsHaptics: Bool
+
+  init() {
+    supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+  }
+
+  private func ensureEngine() -> CHHapticEngine? {
+    guard supportsHaptics else { return nil }
+    if let engine { return engine }
+    do {
+      let created = try CHHapticEngine()
+      created.isAutoShutdownEnabled = true
+      created.resetHandler = { [weak self] in
+        guard let self else { return }
+        try? self.engine?.start()
+      }
+      created.stoppedHandler = { _ in }
+      try created.start()
+      engine = created
+      return created
+    } catch {
+      return nil
+    }
+  }
+
+  /// Start a continuous haptic that lasts until `stopKeying` is called.
+  /// Used when the user is holding the Morse key so the buzz tracks the tone.
+  func startKeying() {
+    guard let engine = ensureEngine() else { return }
+    stopKeying()
+    let event = CHHapticEvent(
+      eventType: .hapticContinuous,
+      parameters: [
+        CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+        CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5),
+      ],
+      relativeTime: 0,
+      duration: 30
+    )
+    do {
+      let pattern = try CHHapticPattern(events: [event], parameters: [])
+      let player = try engine.makePlayer(with: pattern)
+      try player.start(atTime: CHHapticTimeImmediate)
+      keyingPlayer = player
+    } catch {
+      keyingPlayer = nil
+    }
+  }
+
+  func stopKeying() {
+    guard let player = keyingPlayer else { return }
+    try? player.stop(atTime: CHHapticTimeImmediate)
+    keyingPlayer = nil
+  }
+
+  /// Play a haptic pattern that mirrors a parsed Morse code string. Uses the
+  /// same character/effective unit durations as the audio so symbols stay
+  /// aligned with their tones frame-for-frame at the listener's ear.
+  func playMorseSequence(
+    code: String,
+    characterUnitMs: Double,
+    effectiveUnitMs: Double
+  ) {
+    guard let engine = ensureEngine() else { return }
+    guard characterUnitMs > 0, effectiveUnitMs > 0 else { return }
+    stopSequence()
+
+    let characterUnit = characterUnitMs / 1000
+    let effectiveUnit = effectiveUnitMs / 1000
+    let interCharGap = max(characterUnit * 3, effectiveUnit * 3)
+    let interWordGap = max(characterUnit * 7, effectiveUnit * 7)
+
+    var events: [CHHapticEvent] = []
+    var cursor: TimeInterval = 0
+    let tokens = code.split(separator: " ", omittingEmptySubsequences: true)
+      .filter { $0 == "/" || $0.contains(where: { $0 == "." || $0 == "-" }) }
+
+    for (tokenIndex, token) in tokens.enumerated() {
+      if token == "/" {
+        cursor += interWordGap
+        continue
+      }
+      let symbols = Array(token).filter { $0 == "." || $0 == "-" }
+      for (symbolIndex, symbol) in symbols.enumerated() {
+        let duration = symbol == "." ? characterUnit : characterUnit * 3
+        events.append(
+          CHHapticEvent(
+            eventType: .hapticContinuous,
+            parameters: [
+              CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+              CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5),
+            ],
+            relativeTime: cursor,
+            duration: duration
+          )
+        )
+        cursor += duration
+        if symbolIndex < symbols.count - 1 {
+          cursor += characterUnit
+        }
+      }
+      if tokenIndex < tokens.count - 1 {
+        let next = tokens[tokenIndex + 1]
+        cursor += next == "/" ? interWordGap : interCharGap
+      }
+    }
+
+    guard !events.isEmpty else { return }
+    do {
+      let pattern = try CHHapticPattern(events: events, parameters: [])
+      let player = try engine.makePlayer(with: pattern)
+      try player.start(atTime: CHHapticTimeImmediate)
+      activePlayer = player
+    } catch {
+      activePlayer = nil
+    }
+  }
+
+  func stopSequence() {
+    guard let player = activePlayer else { return }
+    try? player.stop(atTime: CHHapticTimeImmediate)
+    activePlayer = nil
+  }
+
+  func stopAll() {
+    stopKeying()
+    stopSequence()
+  }
+}
+
 public final class DitNativeModule: Module {
   private let toneGenerator = ToneGenerator()
+  private let hapticController = HapticController()
   private var appleAuthorizationCoordinator: AppleAuthorizationCoordinator?
   private var lowPowerModeObserver: NSObjectProtocol?
 
@@ -609,15 +749,16 @@ public final class DitNativeModule: Module {
       ProcessInfo.processInfo.isLowPowerModeEnabled
     }
 
-    AsyncFunction("triggerHaptics") { (_ pattern: [Int]) -> Bool in
-      return false
-    }
-
     AsyncFunction("startTone") { (frequency: Double, volume: Double) -> Bool in
-      return self.toneGenerator.start(frequency: frequency, volume: volume)
+      let started = self.toneGenerator.start(frequency: frequency, volume: volume)
+      if started {
+        self.hapticController.startKeying()
+      }
+      return started
     }
 
     AsyncFunction("stopTone") { () -> Bool in
+      self.hapticController.stopKeying()
       return self.toneGenerator.stop()
     }
 
@@ -634,16 +775,25 @@ public final class DitNativeModule: Module {
     }
 
     AsyncFunction("playMorseSequence") { (code: String, characterUnitMs: Double, effectiveUnitMs: Double, frequency: Double, volume: Double) -> Bool in
-      return self.toneGenerator.playMorseSequence(
+      let started = self.toneGenerator.playMorseSequence(
         code: code,
         characterUnitMs: characterUnitMs,
         effectiveUnitMs: effectiveUnitMs,
         frequency: frequency,
         volume: volume
       )
+      if started {
+        self.hapticController.playMorseSequence(
+          code: code,
+          characterUnitMs: characterUnitMs,
+          effectiveUnitMs: effectiveUnitMs
+        )
+      }
+      return started
     }
 
     AsyncFunction("stopMorseSequence") { () -> Bool in
+      self.hapticController.stopSequence()
       return self.toneGenerator.stopMorseSequence()
     }
 
