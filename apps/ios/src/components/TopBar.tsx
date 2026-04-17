@@ -30,8 +30,8 @@ export function TopBar({
           <Pressable
             onPress={onPressReference}
             accessibilityRole="button"
-            accessibilityLabel="Open reference chart"
-            accessibilityHint="Shows the Morse code reference chart"
+            accessibilityLabel="Open progress"
+            accessibilityHint="Shows your progress and the Morse code reference chart"
             style={styles.logoButton}
           >
             <DitLogo />

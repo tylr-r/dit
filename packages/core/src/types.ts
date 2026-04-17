@@ -25,6 +25,32 @@ export type ListenTtrEntry = {
 
 export type ListenTtrRecord = Partial<Record<Letter, ListenTtrEntry>>
 
+export type ActivityMode = 'practice' | 'listen'
+
+export type DailyActivityEntry = {
+  correct: number
+  modes: ActivityMode[]
+}
+
+export type DailyActivity = Record<string, DailyActivityEntry>
+
+export type StreakState = {
+  current: number
+  longest: number
+  lastCountedDate: string | null
+}
+
+export type LetterAccuracyEntry = {
+  recent: boolean[]
+}
+
+export type LetterAccuracyRecord = Partial<Record<Letter, LetterAccuracyEntry>>
+
+export type ReminderSettings = {
+  enabled: boolean
+  time: string
+}
+
 export type Progress = {
   toneFrequency?: number
   listenWpm?: number
@@ -47,6 +73,11 @@ export type Progress = {
   scores?: ScoreRecord
   showHint?: boolean
   wordMode?: boolean
+  dailyActivity?: DailyActivity
+  streak?: StreakState
+  letterAccuracy?: LetterAccuracyRecord
+  bestWpm?: number
+  reminder?: ReminderSettings
 }
 
 export type ProgressSnapshot = {
@@ -71,6 +102,11 @@ export type ProgressSnapshot = {
   guidedPackIndex?: number
   guidedPhase?: GuidedPhase
   guidedProgress?: GuidedLessonProgress
+  dailyActivity?: DailyActivity
+  streak?: StreakState
+  letterAccuracy?: LetterAccuracyRecord
+  bestWpm?: number
+  reminder?: ReminderSettings
 }
 
 export type ParseProgressOptions = {

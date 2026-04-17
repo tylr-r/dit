@@ -1,14 +1,19 @@
 import { MORSE_DATA, type Letter } from '../data/morse'
 import { PRACTICE_WORDS } from '../data/practiceWords'
 import type {
+  ActivityMode,
+  DailyActivity,
   GuidedLetterCounts,
   GuidedLessonProgress,
   GuidedPhase,
   LearnerProfile,
+  LetterAccuracyRecord,
   ListenTtrRecord,
   ParseProgressOptions,
   Progress,
+  ReminderSettings,
   ScoreRecord,
+  StreakState,
 } from '../types'
 
 const LETTERS = Object.keys(MORSE_DATA) as Letter[]
@@ -275,6 +280,114 @@ const parseGuidedProgress = (value: unknown): GuidedLessonProgress | null => {
   }
 }
 
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/
+const TIME_HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+const parseActivityMode = (value: unknown): ActivityMode | null => {
+  return value === 'practice' || value === 'listen' ? value : null
+}
+
+const parseDailyActivity = (value: unknown): DailyActivity | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const next: DailyActivity = {}
+  let hasEntry = false
+  Object.keys(record).forEach((key) => {
+    if (!DATE_KEY_RE.test(key)) {
+      return
+    }
+    const entry = record[key]
+    if (!entry || typeof entry !== 'object') {
+      return
+    }
+    const entryRecord = entry as Record<string, unknown>
+    const correct = entryRecord.correct
+    if (typeof correct !== 'number' || !Number.isFinite(correct)) {
+      return
+    }
+    const modes: ActivityMode[] = []
+    if (Array.isArray(entryRecord.modes)) {
+      entryRecord.modes.forEach((mode) => {
+        const parsed = parseActivityMode(mode)
+        if (parsed && !modes.includes(parsed)) {
+          modes.push(parsed)
+        }
+      })
+    }
+    next[key] = { correct: Math.max(0, Math.round(correct)), modes }
+    hasEntry = true
+  })
+  return hasEntry ? next : null
+}
+
+const parseStreakState = (value: unknown): StreakState | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const current = record.current
+  const longest = record.longest
+  if (
+    typeof current !== 'number' ||
+    !Number.isFinite(current) ||
+    typeof longest !== 'number' ||
+    !Number.isFinite(longest)
+  ) {
+    return null
+  }
+  const lastCountedDate =
+    typeof record.lastCountedDate === 'string' &&
+    DATE_KEY_RE.test(record.lastCountedDate)
+      ? record.lastCountedDate
+      : null
+  return {
+    current: Math.max(0, Math.round(current)),
+    longest: Math.max(0, Math.round(longest)),
+    lastCountedDate,
+  }
+}
+
+const parseLetterAccuracy = (value: unknown): LetterAccuracyRecord | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const next: LetterAccuracyRecord = {}
+  let hasEntry = false
+  LETTERS.forEach((letter) => {
+    const entry = record[letter]
+    if (!entry || typeof entry !== 'object') {
+      return
+    }
+    const recent = (entry as Record<string, unknown>).recent
+    if (!Array.isArray(recent)) {
+      return
+    }
+    const bools = recent
+      .filter((v): v is boolean => typeof v === 'boolean')
+      .slice(-10)
+    next[letter] = { recent: bools }
+    hasEntry = true
+  })
+  return hasEntry ? next : null
+}
+
+const parseReminder = (value: unknown): ReminderSettings | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  if (typeof record.enabled !== 'boolean') {
+    return null
+  }
+  if (typeof record.time !== 'string' || !TIME_HHMM_RE.test(record.time)) {
+    return null
+  }
+  return { enabled: record.enabled, time: record.time }
+}
+
 export const parseProgress = (
   value: unknown,
   {
@@ -384,6 +497,25 @@ export const parseProgress = (
   const listenTtr = parseListenTtr(record.listenTtr)
   if (listenTtr) {
     progress.listenTtr = listenTtr
+  }
+  const dailyActivity = parseDailyActivity(record.dailyActivity)
+  if (dailyActivity) {
+    progress.dailyActivity = dailyActivity
+  }
+  const streak = parseStreakState(record.streak)
+  if (streak) {
+    progress.streak = streak
+  }
+  const letterAccuracy = parseLetterAccuracy(record.letterAccuracy)
+  if (letterAccuracy) {
+    progress.letterAccuracy = letterAccuracy
+  }
+  if (typeof record.bestWpm === 'number' && Number.isFinite(record.bestWpm)) {
+    progress.bestWpm = Math.max(0, Math.round(record.bestWpm))
+  }
+  const reminder = parseReminder(record.reminder)
+  if (reminder) {
+    progress.reminder = reminder
   }
   return progress
 }

@@ -1,6 +1,7 @@
 import {
   BEGINNER_COURSE_PACKS,
   applyScoreDelta,
+  countsAnswer,
   createGuidedLessonProgress,
   formatWpm,
   getBeginnerCoursePack,
@@ -18,15 +19,23 @@ import {
   AUDIO_FREQUENCY,
   MORSE_DATA,
   TONE_FREQUENCY_RANGE,
+  recordCorrectAnswer,
   recordGuidedListenResult,
   recordGuidedPracticeResult,
   recordGuidedTeachSuccess,
+  recordLetterAttempt,
+  updateBestWpm,
+  type ActivityMode,
+  type DailyActivity,
   type GuidedLessonProgress,
   type GuidedPhase,
   type Letter,
   type LearnerProfile,
+  type LetterAccuracyRecord,
   type ListenTtrRecord,
+  type Progress,
   type ProgressSnapshot,
+  type StreakState,
 } from '@dit/core'
 import type { User } from '@firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
@@ -203,6 +212,10 @@ export const useMorseSessionController = ({
   const [listenWavePlayback, setListenWavePlayback] = useState<ListenWavePlayback | null>(null)
   const [scores, setScores] = useState(() => initializeScores())
   const [listenTtr, setListenTtr] = useState<ListenTtrRecord>({})
+  const [dailyActivity, setDailyActivity] = useState<DailyActivity>({})
+  const [streak, setStreak] = useState<StreakState | undefined>(undefined)
+  const [letterAccuracy, setLetterAccuracy] = useState<LetterAccuracyRecord>({})
+  const [bestWpm, setBestWpm] = useState<number | undefined>(undefined)
   const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
   const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(null)
 
@@ -257,14 +270,21 @@ export const useMorseSessionController = ({
       showHint,
       showMnemonic,
       wordMode: freestyleWordMode,
+      dailyActivity,
+      streak,
+      letterAccuracy,
+      bestWpm,
     }),
     [
+      bestWpm,
+      dailyActivity,
       freestyleWordMode,
       guidedCourseActive,
       guidedPackIndex,
       guidedPhase,
       guidedProgress,
       learnerProfile,
+      letterAccuracy,
       listenAutoTightening,
       listenAutoTighteningCorrectCount,
       listenEffectiveWpm,
@@ -280,6 +300,7 @@ export const useMorseSessionController = ({
       scores,
       showHint,
       showMnemonic,
+      streak,
     ],
   )
 
@@ -543,6 +564,10 @@ export const useMorseSessionController = ({
         if (elapsedMs > 0) {
           const nextWpm = (currentWord.length / PRACTICE_WORD_UNITS) * (60000 / elapsedMs)
           setPracticeWpm(Math.round(nextWpm * 10) / 10)
+          setBestWpm((prev) => {
+            const next = updateBestWpm({ bestWpm: prev }, nextWpm)
+            return next.bestWpm
+          })
         }
       }
       setPracticeWordFromList(availablePracticeWords, currentWord)
@@ -741,6 +766,52 @@ export const useMorseSessionController = ({
     setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
   }, [])
 
+  const dailyActivityRef = useRef(dailyActivity)
+  const streakRef = useRef(streak)
+  const letterAccuracyRef = useRef(letterAccuracy)
+  useEffect(() => {
+    dailyActivityRef.current = dailyActivity
+  }, [dailyActivity])
+  useEffect(() => {
+    streakRef.current = streak
+  }, [streak])
+  useEffect(() => {
+    letterAccuracyRef.current = letterAccuracy
+  }, [letterAccuracy])
+
+  const recordRetentionAttempt = useCallback(
+    (targetLetter: Letter, mode: ActivityMode, isCorrect: boolean) => {
+      if (countsAnswer(mode, isCorrect)) {
+        const base: Progress = {
+          dailyActivity: dailyActivityRef.current,
+          streak: streakRef.current,
+          letterAccuracy: letterAccuracyRef.current,
+        }
+        const next = recordCorrectAnswer(base, { letter: targetLetter, mode })
+        const nextDaily = next.dailyActivity ?? {}
+        const nextAccuracy = next.letterAccuracy ?? {}
+        dailyActivityRef.current = nextDaily
+        letterAccuracyRef.current = nextAccuracy
+        setDailyActivity(nextDaily)
+        setLetterAccuracy(nextAccuracy)
+        if (next.streak && next.streak !== streakRef.current) {
+          streakRef.current = next.streak
+          setStreak(next.streak)
+        }
+        return
+      }
+      const next = recordLetterAttempt(
+        { letterAccuracy: letterAccuracyRef.current },
+        targetLetter,
+        isCorrect,
+      )
+      const nextAccuracy = next.letterAccuracy ?? letterAccuracyRef.current
+      letterAccuracyRef.current = nextAccuracy
+      setLetterAccuracy(nextAccuracy)
+    },
+    [],
+  )
+
   const isErrorLocked = useCallback(() => now() < errorLockoutUntilRef.current, [])
 
   const startErrorLockout = useCallback(() => {
@@ -803,6 +874,13 @@ export const useMorseSessionController = ({
     setListenWavePlayback(null)
     setScores(nextScores)
     setListenTtr({})
+    setDailyActivity({})
+    setStreak(undefined)
+    setLetterAccuracy({})
+    setBestWpm(undefined)
+    dailyActivityRef.current = {}
+    streakRef.current = undefined
+    letterAccuracyRef.current = {}
     setListenHasSubmittedAnswer(false)
     setListenRecognitionText(null)
 
@@ -1008,6 +1086,7 @@ export const useMorseSessionController = ({
       setListenStatus(isCorrect ? 'success' : 'error')
       setListenReveal(targetLetter)
       bumpScore(targetLetter, isCorrect ? 1 : -1)
+      recordRetentionAttempt(targetLetter, 'listen', isCorrect)
       const isGuidedListenAttempt =
         guidedCourseActiveRef.current &&
         guidedPhaseRef.current === 'listen' &&
@@ -1090,6 +1169,7 @@ export const useMorseSessionController = ({
       bumpScore,
       listenStatus,
       playListenSequence,
+      recordRetentionAttempt,
       retryGuidedPractice,
       setNextListenLetter,
       stopListenPlayback,
@@ -1195,6 +1275,7 @@ export const useMorseSessionController = ({
               return
             }
             bumpScore(targetLetter, 1)
+            recordRetentionAttempt(targetLetter, 'practice', true)
             const nextGuidedProgress = recordGuidedPracticeResult(
               guidedProgressRef.current,
               targetLetter,
@@ -1227,6 +1308,7 @@ export const useMorseSessionController = ({
           }
           if (canScoreAttempt()) {
             bumpScore(targetLetter, 1)
+            recordRetentionAttempt(targetLetter, 'practice', true)
           }
           setInput('')
           if (practiceWordModeRef.current) {
@@ -1244,6 +1326,7 @@ export const useMorseSessionController = ({
         if (isGuidedPracticeAttempt) {
           if (guidedPhaseRef.current === 'practice') {
             bumpScore(targetLetter, -1)
+            recordRetentionAttempt(targetLetter, 'practice', false)
             const nextGuidedProgress = recordGuidedPracticeResult(
               guidedProgressRef.current,
               targetLetter,
@@ -1268,6 +1351,7 @@ export const useMorseSessionController = ({
         }
         if (canScoreAttempt()) {
           bumpScore(targetLetter, -1)
+          recordRetentionAttempt(targetLetter, 'practice', false)
         }
         setInput('')
         if (ifrEnabled) {
@@ -1308,6 +1392,7 @@ export const useMorseSessionController = ({
       canScoreAttempt,
       isNuxActive,
       moveIntoGuidedLesson,
+      recordRetentionAttempt,
       setNextPracticeLetter,
       showPhaseModal,
       startErrorLockout,
@@ -1756,10 +1841,17 @@ export const useMorseSessionController = ({
       setMaxLevel,
       setPracticeWordMode,
       setPracticeWpm,
+      setDailyActivity,
+      setStreak,
+      setLetterAccuracy,
+      setBestWpm,
     },
     refs: {
       scoresRef,
       listenTtrRef,
+      dailyActivityRef,
+      streakRef,
+      letterAccuracyRef,
       practiceAutoPlayRef,
       practiceLearnModeRef,
       practiceIfrModeRef,
@@ -1957,6 +2049,10 @@ export const useMorseSessionController = ({
       tutorialHoldCount,
       learnerProfile,
       didCompleteSoundCheck,
+      dailyActivity,
+      streak,
+      letterAccuracy,
+      bestWpm,
     },
     setters: {
       setShowHint,
