@@ -1,5 +1,15 @@
-import type { Letter, ScoreRecord } from '@dit/core'
-import { MORSE_DATA } from '@dit/core'
+import type {
+  HeroMetric,
+  Letter,
+  LetterAccuracyRecord,
+  ScoreRecord,
+  StreakState,
+} from '@dit/core'
+import {
+  MORSE_DATA,
+  STREAK_DAILY_GOAL,
+  isMastered,
+} from '@dit/core'
 import { BlurView } from 'expo-blur'
 import { GlassContainer } from 'expo-glass-effect'
 import React from 'react'
@@ -27,6 +37,10 @@ type ReferenceModalProps = {
   numbers: Letter[]
   morseData: Record<Letter, { code: string }>
   scores: ScoreRecord
+  hero: HeroMetric
+  streak?: StreakState
+  todayCorrect: number
+  letterAccuracy?: LetterAccuracyRecord
   courseProgress?: CourseProgress | null
   onClose: () => void
   onResetScores: () => void
@@ -80,18 +94,83 @@ const getScoreTint = (scoreValue: number) => {
 const formatLetterTargets = (letters: readonly string[]) =>
   letters.map((letter) => `"${letter}"`).join(' ')
 
-/** Modal panel with the Morse reference grid and scores. */
+function ProgressHero({ hero }: { hero: HeroMetric }) {
+  if (hero.kind === 'wpm') {
+    const display = hero.value > 0 ? hero.value.toFixed(1) : '—'
+    return (
+      <View style={styles.heroRow}>
+        <Text style={styles.heroValue}>{display}</Text>
+        <Text style={styles.heroLabel}>Best WPM</Text>
+      </View>
+    )
+  }
+  return (
+    <View style={styles.heroRow}>
+      <Text style={styles.heroValue}>
+        {hero.count}
+        <Text style={styles.heroValueMuted}> / {hero.total}</Text>
+      </Text>
+      <Text style={styles.heroLabel}>Letters mastered</Text>
+    </View>
+  )
+}
+
+function StreakRow({
+  streak,
+  todayCorrect,
+  goal,
+}: {
+  streak?: StreakState
+  todayCorrect: number
+  goal: number
+}) {
+  const current = streak?.current ?? 0
+  const filled = Math.min(todayCorrect, goal)
+  const ratio = goal > 0 ? filled / goal : 0
+  const streakText =
+    current > 0 ? `${current}-day streak` : 'No active streak'
+  const detailText =
+    todayCorrect >= goal
+      ? 'Today counted'
+      : `${todayCorrect} / ${goal} today`
+  return (
+    <View style={styles.streakRow}>
+      <View style={styles.streakHeader}>
+        <Text style={styles.streakText}>{streakText}</Text>
+        <Text style={styles.streakDetail}>{detailText}</Text>
+      </View>
+      <View style={styles.streakTrack}>
+        <View
+          style={[
+            styles.streakFill,
+            { width: `${Math.round(ratio * 100)}%` },
+          ]}
+        />
+      </View>
+    </View>
+  )
+}
+
+/** Progress modal with hero metric, streak, and the Morse reference grid. */
 export function ReferenceModal({
   letters,
   numbers,
   morseData,
   scores,
+  hero,
+  streak,
+  todayCorrect,
+  letterAccuracy,
   courseProgress,
   onClose,
   onResetScores,
   onPlaySound,
   paddingVertical,
 }: ReferenceModalProps) {
+  const masteryProgress = React.useMemo(
+    () => ({ scores, letterAccuracy }),
+    [scores, letterAccuracy],
+  )
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0)
   const [exiting, setExiting] = React.useState(false)
@@ -132,6 +211,7 @@ export function ReferenceModal({
   function ReferenceCard({ char }: { char: Letter }) {
     const scoreValue = scores[char] ?? 0
     const scoreTint = getScoreTint(scoreValue)
+    const mastered = isMastered(masteryProgress, char)
     const code = morseData[char].code
     const canPlaySound = typeof onPlaySound === 'function'
     const scoreStyle =
@@ -162,6 +242,7 @@ export function ReferenceModal({
       <Animated.View
         style={[
           styles.card,
+          mastered ? styles.cardMastered : null,
           animatedStyle,
           { overflow: 'hidden', borderRadius: radii.md },
         ]}
@@ -226,7 +307,7 @@ export function ReferenceModal({
         style={StyleSheet.absoluteFillObject}
       />
       <View style={styles.header}>
-        <Text style={styles.title}>Reference</Text>
+        <Text style={styles.title}>Progress</Text>
         <GlassContainer spacing={spacing.sm} style={styles.actions}>
           <DitButton
             text="Reset"
@@ -248,6 +329,12 @@ export function ReferenceModal({
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
         >
+          <ProgressHero hero={hero} />
+          <StreakRow
+            streak={streak}
+            todayCorrect={todayCorrect}
+            goal={STREAK_DAILY_GOAL}
+          />
           {courseProgress ? (
             <View style={styles.courseBanner}>
               <Text style={styles.courseBannerTitle}>
@@ -456,5 +543,64 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 4,
     color: colors.text.primary,
+  },
+  heroRow: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+  },
+  heroValue: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: colors.text.primary,
+    letterSpacing: 1,
+  },
+  heroValueMuted: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: colors.text.primary40,
+  },
+  heroLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary60,
+  },
+  streakRow: {
+    width: '100%',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  streakHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  streakDetail: {
+    fontSize: 12,
+    color: colors.text.primary60,
+  },
+  streakTrack: {
+    width: '100%',
+    height: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface.input,
+    overflow: 'hidden',
+  },
+  streakFill: {
+    height: '100%',
+    backgroundColor: colors.accent.wave,
+    borderRadius: radii.pill,
+  },
+  cardMastered: {
+    borderColor: colors.border.subtle,
+    borderWidth: 2,
   },
 })

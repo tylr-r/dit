@@ -57,17 +57,39 @@ export {
 } from './constants'
 export type { Letter } from './data/morse'
 export type {
+  ActivityMode,
+  DailyActivity,
+  DailyActivityEntry,
   GuidedLetterCounts,
   GuidedLessonProgress,
   GuidedPhase,
   LearnerProfile,
+  LetterAccuracyEntry,
+  LetterAccuracyRecord,
   ListenTtrEntry,
   ListenTtrRecord,
   ParseProgressOptions,
   Progress,
   ProgressSnapshot,
+  ReminderSettings,
   ScoreRecord,
+  StreakState,
 } from './types'
+export {
+  computeHero,
+  countsAnswer,
+  dateKey,
+  isMastered,
+  MASTERY_ACCURACY_MIN,
+  MASTERY_RECENT_WINDOW,
+  MASTERY_SCORE_MIN,
+  recordCorrectAnswer,
+  recordLetterAttempt,
+  STREAK_DAILY_GOAL,
+  todayStreakContribution,
+  updateBestWpm,
+} from './utils/retention'
+export type { HeroMetric, RecordAnswerInput } from './utils/retention'
 export type {
   FirebaseSignInMethod,
   FirebaseSyncService,

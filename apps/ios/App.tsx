@@ -1,4 +1,10 @@
-import { BEGINNER_COURSE_PACKS, MORSE_DATA, TONE_FREQUENCY_RANGE } from '@dit/core'
+import {
+  BEGINNER_COURSE_PACKS,
+  MORSE_DATA,
+  TONE_FREQUENCY_RANGE,
+  computeHero,
+  todayStreakContribution,
+} from '@dit/core'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
@@ -155,6 +161,20 @@ export default function App() {
               numbers={REFERENCE_NUMBERS}
               morseData={MORSE_DATA}
               scores={state.scores}
+              hero={computeHero({
+                learnerProfile: state.learnerProfile ?? undefined,
+                scores: state.scores,
+                letterAccuracy: state.letterAccuracy,
+                bestWpm: state.bestWpm,
+              })}
+              streak={state.streak}
+              todayCorrect={
+                todayStreakContribution({
+                  dailyActivity: state.dailyActivity,
+                  streak: state.streak,
+                }).correct
+              }
+              letterAccuracy={state.letterAccuracy}
               courseProgress={
                 state.guidedCourseActive
                   ? {

@@ -1,13 +1,16 @@
 import {
   getLettersForLevel,
   getWordsForLetters,
+  type DailyActivity,
   type GuidedLessonProgress,
   type GuidedPhase,
   type Letter,
   type LearnerProfile,
+  type LetterAccuracyRecord,
   type ListenTtrRecord,
   type Progress,
   type ProgressSnapshot,
+  type StreakState,
 } from '@dit/core'
 import type { User } from '@firebase/auth'
 import type { Database } from '@firebase/database'
@@ -63,10 +66,17 @@ type UseProgressSyncControllerOptions = {
     setMaxLevel: Setter<(typeof LEVELS)[number]>
     setPracticeWordMode: Setter<boolean>
     setPracticeWpm: Setter<number | null>
+    setDailyActivity: Setter<DailyActivity>
+    setStreak: Setter<StreakState | undefined>
+    setLetterAccuracy: Setter<LetterAccuracyRecord>
+    setBestWpm: Setter<number | undefined>
   }
   refs: {
     scoresRef: RefValue<ProgressSnapshot['scores']>
     listenTtrRef: RefValue<ListenTtrRecord>
+    dailyActivityRef: RefValue<DailyActivity>
+    streakRef: RefValue<StreakState | undefined>
+    letterAccuracyRef: RefValue<LetterAccuracyRecord>
     practiceAutoPlayRef: RefValue<boolean>
     practiceLearnModeRef: RefValue<boolean>
     practiceIfrModeRef: RefValue<boolean>
@@ -295,6 +305,25 @@ export const useProgressSyncController = ({
         }
       }
 
+      if (progress.dailyActivity) {
+        refs.dailyActivityRef.current = progress.dailyActivity
+        state.setDailyActivity(progress.dailyActivity)
+      }
+
+      if (progress.streak) {
+        refs.streakRef.current = progress.streak
+        state.setStreak(progress.streak)
+      }
+
+      if (progress.letterAccuracy) {
+        refs.letterAccuracyRef.current = progress.letterAccuracy
+        state.setLetterAccuracy(progress.letterAccuracy)
+      }
+
+      if (typeof progress.bestWpm === 'number') {
+        state.setBestWpm(progress.bestWpm)
+      }
+
       if (typeof progress.practiceWordMode === 'boolean') {
         refs.practiceWordModeRef.current = progress.practiceWordMode
         refs.practiceWordStartRef.current = null
@@ -342,6 +371,9 @@ export const useProgressSyncController = ({
       refs.practiceWordStartRef,
       refs.scoresRef,
       refs.wordSpaceTimeoutRef,
+      refs.dailyActivityRef,
+      refs.streakRef,
+      refs.letterAccuracyRef,
       state.setFreestyleInput,
       state.setFreestyleResult,
       state.setFreestyleWord,
@@ -366,6 +398,10 @@ export const useProgressSyncController = ({
       state.setScores,
       state.setShowHint,
       state.setShowMnemonic,
+      state.setDailyActivity,
+      state.setStreak,
+      state.setLetterAccuracy,
+      state.setBestWpm,
     ],
   )
 
