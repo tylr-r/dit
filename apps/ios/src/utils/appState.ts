@@ -62,6 +62,7 @@ export const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
 export const INTRO_HINTS_KEY = 'dit-intro-hint-step'
 export const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
 export const NUX_STATUS_KEY = 'dit-nux-status'
+export const NUX_STATE_KEY = 'dit-nux-state'
 export const LOCAL_PROGRESS_KEY = 'dit-progress'
 export const BACKGROUND_IDLE_TIMEOUT_MS = 10000
 export const DEFAULT_PRACTICE_IFR_MODE = true

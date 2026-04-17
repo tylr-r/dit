@@ -6,8 +6,34 @@ const LOCAL_PROGRESS_KEY = 'dit-progress'
 
 type NuxStatus = 'pending' | 'completed' | 'skipped';
 
+const hasMeaningfulProgress = (raw: string | null) => {
+  if (!raw) {
+    return false
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (parsed.learnerProfile === 'known' || parsed.learnerProfile === 'beginner') {
+      return true
+    }
+    if (parsed.guidedCourseActive === true) {
+      return true
+    }
+    const scores = parsed.scores
+    if (scores && typeof scores === 'object') {
+      for (const value of Object.values(scores as Record<string, unknown>)) {
+        if (typeof value === 'number' && value > 0) {
+          return true
+        }
+      }
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
 /**
- * Simulates the loadNuxStatus logic from App.tsx
+ * Simulates the loadNuxStatus logic from useOnboardingState.
  */
 async function loadNuxStatus(): Promise<{
   nuxStatus: NuxStatus;
@@ -20,9 +46,13 @@ async function loadNuxStatus(): Promise<{
       return { nuxStatus: stored, nuxReady: true }
     }
 
+    if (stored === 'pending') {
+      return { nuxStatus: 'pending', nuxReady: true }
+    }
+
     const progressStored = await AsyncStorage.getItem(LOCAL_PROGRESS_KEY)
 
-    if (progressStored) {
+    if (hasMeaningfulProgress(progressStored)) {
       await AsyncStorage.setItem(NUX_STATUS_KEY, 'skipped')
       return { nuxStatus: 'skipped', nuxReady: true }
     }
@@ -68,14 +98,14 @@ describe('App - NUX Status Loading', () => {
     expect(mockGetItem).toHaveBeenCalledWith(NUX_STATUS_KEY)
   })
 
-  it('migrates existing users with local progress to skipped status', async () => {
+  it('migrates pre-NUX users with real practice progress to skipped', async () => {
     const mockGetItem = vi.mocked(AsyncStorage.getItem)
     const mockSetItem = vi.mocked(AsyncStorage.setItem)
 
     mockGetItem.mockImplementation(async (key: string) => {
       if (key === NUX_STATUS_KEY) return null
       if (key === LOCAL_PROGRESS_KEY)
-        return JSON.stringify({ maxLevel: 3, scores: {} })
+        return JSON.stringify({ maxLevel: 3, scores: { A: 5, B: 3 } })
       return null
     })
 
@@ -86,6 +116,45 @@ describe('App - NUX Status Loading', () => {
     expect(mockGetItem).toHaveBeenCalledWith(NUX_STATUS_KEY)
     expect(mockGetItem).toHaveBeenCalledWith(LOCAL_PROGRESS_KEY)
     expect(mockSetItem).toHaveBeenCalledWith(NUX_STATUS_KEY, 'skipped')
+  })
+
+  it('keeps NUX pending on replay even when prior progress exists', async () => {
+    const mockGetItem = vi.mocked(AsyncStorage.getItem)
+    const mockSetItem = vi.mocked(AsyncStorage.setItem)
+
+    mockGetItem.mockImplementation(async (key: string) => {
+      if (key === NUX_STATUS_KEY) return 'pending'
+      if (key === LOCAL_PROGRESS_KEY)
+        return JSON.stringify({
+          learnerProfile: 'beginner',
+          scores: { A: 7, B: 4 },
+        })
+      return null
+    })
+
+    const result = await loadNuxStatus()
+
+    expect(result.nuxStatus).toBe('pending')
+    expect(result.nuxReady).toBe(true)
+    expect(mockSetItem).not.toHaveBeenCalledWith(NUX_STATUS_KEY, 'skipped')
+  })
+
+  it('does not skip NUX for the defaults-only snapshot written on first launch', async () => {
+    const mockGetItem = vi.mocked(AsyncStorage.getItem)
+    const mockSetItem = vi.mocked(AsyncStorage.setItem)
+
+    mockGetItem.mockImplementation(async (key: string) => {
+      if (key === NUX_STATUS_KEY) return null
+      if (key === LOCAL_PROGRESS_KEY)
+        return JSON.stringify({ maxLevel: 3, scores: { A: 0, B: 0, C: 0 } })
+      return null
+    })
+
+    const result = await loadNuxStatus()
+
+    expect(result.nuxStatus).toBe('pending')
+    expect(result.nuxReady).toBe(true)
+    expect(mockSetItem).not.toHaveBeenCalledWith(NUX_STATUS_KEY, 'skipped')
   })
 
   it('shows NUX for fresh installs', async () => {
