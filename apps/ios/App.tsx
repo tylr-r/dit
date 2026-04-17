@@ -305,6 +305,7 @@ export default function App() {
             onPlayDahDemo={handlers.handleNuxPlayDahDemo}
             onCompleteButtonTutorial={handlers.handleNuxCompleteButtonTutorial}
             onFinishKnownTour={handlers.handleFinishKnownTour}
+            onContinueFromStages={handlers.handleNuxContinueFromStages}
             onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
           />
         ) : null}

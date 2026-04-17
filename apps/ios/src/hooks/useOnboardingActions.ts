@@ -26,7 +26,7 @@ type UseOnboardingActionsOptions = {
   persistIntroHintStep: (step: 'morse' | 'settings' | 'done') => void
   persistNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
   setNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
-  setNuxStep: (step: 'welcome' | 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_intro') => void
+  setNuxStep: (step: 'welcome' | 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_stages' | 'beginner_intro') => void
   setLearnerProfile: (profile: LearnerProfile | null) => void
   setDidCompleteSoundCheck: (value: boolean) => void
   setTutorialTapCount: (value: number) => void
@@ -141,8 +141,12 @@ export const useOnboardingActions = ({
     if (tutorialTapCount < 3 || tutorialHoldCount < 3) {
       return
     }
-    setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_intro')
+    setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_stages')
   }, [tutorialHoldCount, tutorialTapCount, learnerProfileRef, setNuxStep])
+
+  const handleNuxContinueFromStages = useCallback(() => {
+    setNuxStep('beginner_intro')
+  }, [setNuxStep])
 
   const finishOnboarding = useCallback(() => {
     persistNuxStatus('completed')
@@ -247,6 +251,7 @@ export const useOnboardingActions = ({
     handleNuxPlayDahDemo,
     handleNuxContinueFromSoundCheck,
     handleNuxCompleteButtonTutorial,
+    handleNuxContinueFromStages,
     handleFinishKnownTour,
     handleStartBeginnerCourse,
     handleReplayNux,
