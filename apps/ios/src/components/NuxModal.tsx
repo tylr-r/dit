@@ -41,6 +41,11 @@ type NuxModalProps = {
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1)
 const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1)
 
+// Reserved footer height so stepBody keeps the same available space across
+// steps that do and don't render a CTA — matches DitButton intrinsic height
+// with paddingVertical=16 + 11pt text.
+const CTA_SLOT_HEIGHT = 48
+
 // ─── Step body transition ─────────────────────────────────────────────────────
 // Only animates the step body content — ProgressDots stay static as a spatial
 // anchor so the user always knows where they are.
@@ -711,7 +716,7 @@ export function NuxModal({
                 </Animated.View>
                 <View style={styles.stepFill}>
                   <Animated.View style={[styles.packPreview, stagger[1]]}>
-                    <Text style={styles.packLabel}>Starting with</Text>
+                    <Text style={styles.packLabel}>We'll start with</Text>
                     <View style={styles.packChips}>
                       {currentPack.map((letter) => (
                         <View key={letter} style={styles.packChip}>
@@ -719,17 +724,18 @@ export function NuxModal({
                         </View>
                       ))}
                     </View>
-                    <Text style={styles.packHint}>Tap a letter in-app to hear it</Text>
                   </Animated.View>
                 </View>
               </>
             ) : null}
           </Animated.View>
 
-          {/* CTA buttons live outside the animated step body — UIVisualEffectView
-              (GlassView) breaks when any ancestor has animated opacity. */}
-          {displayedStep === 'sound_check' && (
-            <View style={styles.bottomBlock}>
+          {/* CTA slot is always rendered with a fixed height so stepBody has
+              the same available space on every step — keeps vertical centering
+              consistent whether or not the step has a button. GlassView can't
+              live inside the animated body (animated opacity breaks it). */}
+          <View style={styles.ctaSlot}>
+            {displayedStep === 'sound_check' ? (
               <DitButton
                 text="Continue"
                 onPress={onContinueFromSoundCheck}
@@ -738,10 +744,8 @@ export function NuxModal({
                 radius={radii.pill}
                 paddingVertical={16}
               />
-            </View>
-          )}
-          {displayedStep === 'known_tour' && (
-            <View style={styles.bottomBlock}>
+            ) : null}
+            {displayedStep === 'known_tour' ? (
               <DitButton
                 text="Start practicing"
                 onPress={onFinishKnownTour}
@@ -749,10 +753,8 @@ export function NuxModal({
                 radius={radii.pill}
                 paddingVertical={16}
               />
-            </View>
-          )}
-          {displayedStep === 'beginner_stages' && (
-            <View style={styles.bottomBlock}>
+            ) : null}
+            {displayedStep === 'beginner_stages' ? (
               <DitButton
                 text="Continue"
                 onPress={onContinueFromStages}
@@ -760,10 +762,8 @@ export function NuxModal({
                 radius={radii.pill}
                 paddingVertical={16}
               />
-            </View>
-          )}
-          {displayedStep === 'beginner_intro' && (
-            <View style={styles.bottomBlock}>
+            ) : null}
+            {displayedStep === 'beginner_intro' ? (
               <DitButton
                 text="Start first lesson"
                 onPress={onStartBeginnerCourse}
@@ -771,8 +771,8 @@ export function NuxModal({
                 radius={radii.pill}
                 paddingVertical={16}
               />
-            </View>
-          )}
+            ) : null}
+          </View>
         </View>
       )}
     </View>
@@ -995,8 +995,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.text.primary90,
   },
-  bottomBlock: {
-    gap: spacing.md,
+  ctaSlot: {
+    height: CTA_SLOT_HEIGHT,
+    justifyContent: 'center',
   },
   ctaButton: {
     width: '100%' as unknown as number,
