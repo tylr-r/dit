@@ -77,6 +77,7 @@ export type NuxStep =
   | 'sound_check'
   | 'button_tutorial'
   | 'known_tour'
+  | 'beginner_stages'
   | 'beginner_intro'
 export type ListenPromptTiming = {
   targetLetter: Letter

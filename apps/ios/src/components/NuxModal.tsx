@@ -14,6 +14,7 @@ type NuxStep =
   | 'sound_check'
   | 'button_tutorial'
   | 'known_tour'
+  | 'beginner_stages'
   | 'beginner_intro'
 
 type NuxModalProps = {
@@ -31,6 +32,7 @@ type NuxModalProps = {
   onPlayDahDemo: () => void
   onCompleteButtonTutorial: () => void
   onFinishKnownTour: () => void
+  onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
 }
 
@@ -96,33 +98,38 @@ function useStepTransition(step: NuxStep) {
 // ─── Stagger entrance ─────────────────────────────────────────────────────────
 // Each element in a step staggers in with a subtle translateY + fade.
 
-function useStaggerEntrance(count: number, trigger: string) {
+function useStaggerEntrance(
+  count: number,
+  trigger: string,
+  options?: { stepDelay?: number; duration?: number; startY?: number },
+) {
+  const { stepDelay = 50, duration = 340, startY = 8 } = options ?? {}
   const anims = useRef<Animated.Value[]>([])
   const yAnims = useRef<Animated.Value[]>([])
 
   if (anims.current.length !== count) {
     anims.current = Array.from({ length: count }, () => new Animated.Value(0))
-    yAnims.current = Array.from({ length: count }, () => new Animated.Value(8))
+    yAnims.current = Array.from({ length: count }, () => new Animated.Value(startY))
   }
 
   useEffect(() => {
     // Reset all values
     anims.current.forEach((a) => a.setValue(0))
-    yAnims.current.forEach((a) => a.setValue(8))
+    yAnims.current.forEach((a) => a.setValue(startY))
 
     const animations = anims.current.map((anim, i) =>
       Animated.parallel([
         Animated.timing(anim, {
           toValue: 1,
-          duration: 340,
-          delay: i * 50,
+          duration,
+          delay: i * stepDelay,
           easing: EASE_OUT,
           useNativeDriver: true,
         }),
         Animated.timing(yAnims.current[i], {
           toValue: 0,
-          duration: 340,
-          delay: i * 50,
+          duration,
+          delay: i * stepDelay,
           easing: EASE_OUT,
           useNativeDriver: true,
         }),
@@ -130,7 +137,7 @@ function useStaggerEntrance(count: number, trigger: string) {
     )
 
     Animated.stagger(0, animations).start()
-  }, [trigger])
+  }, [trigger, stepDelay, duration, startY])
 
   return useMemo(
     () =>
@@ -152,6 +159,7 @@ const progressIndexByStep: Record<NuxStep, number> = {
   sound_check: 1,
   button_tutorial: 2,
   known_tour: 3,
+  beginner_stages: 3,
   beginner_intro: 3,
 }
 
@@ -451,6 +459,7 @@ export function NuxModal({
   onPlayDahDemo,
   onCompleteButtonTutorial,
   onFinishKnownTour,
+  onContinueFromStages,
   onStartBeginnerCourse,
 }: NuxModalProps) {
   const insets = useSafeAreaInsets()
@@ -468,9 +477,18 @@ export function NuxModal({
     sound_check: 2,
     button_tutorial: 2,
     known_tour: 2,
-    beginner_intro: 3,
+    beginner_stages: 4,
+    beginner_intro: 2,
   }
-  const stagger = useStaggerEntrance(staggerCounts[displayedStep], displayedStep)
+  const staggerOptions =
+    displayedStep === 'beginner_stages'
+      ? { stepDelay: 650, duration: 780, startY: 22 }
+      : undefined
+  const stagger = useStaggerEntrance(
+    staggerCounts[displayedStep],
+    displayedStep,
+    staggerOptions,
+  )
 
   useEffect(() => {
     if (step !== 'welcome') return
@@ -649,45 +667,50 @@ export function NuxModal({
               </>
             ) : null}
 
+            {displayedStep === 'beginner_stages' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>How you'll learn</Text>
+                  <Text style={styles.subtext}>
+                    Each pack moves through three stages.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stagesFill}>
+                  <Animated.View style={[styles.stageCard, stagger[1]]}>
+                    <Text style={styles.stageNumberLarge}>1</Text>
+                    <Text style={styles.stageTitleLarge}>Listen</Text>
+                    <Text style={styles.stageDescLarge}>
+                      Hear each letter and copy the sound
+                    </Text>
+                  </Animated.View>
+                  <Animated.View style={[styles.stageCard, stagger[2]]}>
+                    <Text style={styles.stageNumberLarge}>2</Text>
+                    <Text style={styles.stageTitleLarge}>Practice</Text>
+                    <Text style={styles.stageDescLarge}>
+                      Mix old and new letters by ear
+                    </Text>
+                  </Animated.View>
+                  <Animated.View style={[styles.stageCard, stagger[3]]}>
+                    <Text style={styles.stageNumberLarge}>3</Text>
+                    <Text style={styles.stageTitleLarge}>Recall</Text>
+                    <Text style={styles.stageDescLarge}>
+                      Hear a letter, tap the matching sound
+                    </Text>
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
             {displayedStep === 'beginner_intro' ? (
               <>
                 <Animated.View style={[styles.copyBlock, stagger[0]]}>
                   <Text style={styles.headline}>Your first letters</Text>
                   <Text style={styles.subtext}>
-                    Each pack introduces a few letters at a time through three stages.
+                    You'll start with two letters and build from there.
                   </Text>
                 </Animated.View>
                 <View style={styles.stepFill}>
-                  <Animated.View style={[styles.stepsColumn, stagger[1]]}>
-                    <View style={styles.stepRow}>
-                      <View style={styles.stepBadge}>
-                        <Text style={styles.stepNumber}>1</Text>
-                      </View>
-                      <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Listen</Text>
-                        <Text style={styles.stepDesc}>Hear each letter and copy the sound</Text>
-                      </View>
-                    </View>
-                    <View style={styles.stepRow}>
-                      <View style={styles.stepBadge}>
-                        <Text style={styles.stepNumber}>2</Text>
-                      </View>
-                      <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Practice</Text>
-                        <Text style={styles.stepDesc}>Mix old and new letters by ear</Text>
-                      </View>
-                    </View>
-                    <View style={styles.stepRow}>
-                      <View style={styles.stepBadge}>
-                        <Text style={styles.stepNumber}>3</Text>
-                      </View>
-                      <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>Recall</Text>
-                        <Text style={styles.stepDesc}>Hear a letter, tap the matching sound</Text>
-                      </View>
-                    </View>
-                  </Animated.View>
-                  <Animated.View style={[styles.packPreview, stagger[2]]}>
+                  <Animated.View style={[styles.packPreview, stagger[1]]}>
                     <Text style={styles.packLabel}>Starting with</Text>
                     <View style={styles.packChips}>
                       {currentPack.map((letter) => (
@@ -722,6 +745,17 @@ export function NuxModal({
               <DitButton
                 text="Start practicing"
                 onPress={onFinishKnownTour}
+                style={styles.ctaButton}
+                radius={radii.pill}
+                paddingVertical={16}
+              />
+            </View>
+          )}
+          {displayedStep === 'beginner_stages' && (
+            <View style={styles.bottomBlock}>
+              <DitButton
+                text="Continue"
+                onPress={onContinueFromStages}
                 style={styles.ctaButton}
                 radius={radii.pill}
                 paddingVertical={16}
@@ -871,47 +905,37 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     color: colors.text.primary90,
   },
-  stepsColumn: {
-    gap: spacing.lg,
-    alignSelf: 'center',
-    width: '100%' as unknown as number,
-    maxWidth: 280,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  stepBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surface.input,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text.primary60,
-  },
-  stepContent: {
+  stagesFill: {
     flex: 1,
-    gap: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 44,
   },
-  stepTitle: {
+  stageCard: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  stageNumberLarge: {
     fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: colors.text.primary40,
+  },
+  stageTitleLarge: {
+    fontSize: 32,
     fontWeight: '600',
     color: colors.text.primary,
+    textAlign: 'center',
   },
-  stepDesc: {
-    fontSize: 13,
-    color: colors.text.primary40,
+  stageDescLarge: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text.primary60,
+    textAlign: 'center',
   },
   packPreview: {
     alignItems: 'center',
     gap: spacing.md,
-    marginTop: 32,
   },
   packLabel: {
     fontSize: 12,
