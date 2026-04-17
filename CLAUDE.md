@@ -54,6 +54,7 @@ pnpm --filter @dit/ios test:unit
 ## Key Behavioral References
 
 - `docs/APP_BEHAVIOR.md` — canonical source for how modes, input, scoring, and NUX should work across platforms. **Read this before changing app logic.**
+- `design.md` — visual, motion, and interaction direction. **Read this before any UI, animation, or onboarding change.** Records what we tried and removed, so you don't re-add it.
 - `docs/STYLE_GUIDE.md` — code style, naming, and UI design principles
 - `docs/NATIVE_IOS.md` — iOS native module architecture
 
