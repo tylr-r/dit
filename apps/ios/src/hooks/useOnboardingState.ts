@@ -19,8 +19,8 @@ export const useOnboardingState = () => {
   const [nuxReady, setNuxReady] = useState(false)
   const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null)
   const [didCompleteSoundCheck, setDidCompleteSoundCheck] = useState(false)
-  const [didCompleteTutorialTap, setDidCompleteTutorialTap] = useState(false)
-  const [didCompleteTutorialHold, setDidCompleteTutorialHold] = useState(false)
+  const [tutorialTapCount, setTutorialTapCount] = useState(0)
+  const [tutorialHoldCount, setTutorialHoldCount] = useState(0)
 
   useEffect(() => {
     let isActive = true
@@ -142,9 +142,9 @@ export const useOnboardingState = () => {
     setLearnerProfile,
     didCompleteSoundCheck,
     setDidCompleteSoundCheck,
-    didCompleteTutorialTap,
-    setDidCompleteTutorialTap,
-    didCompleteTutorialHold,
-    setDidCompleteTutorialHold,
+    tutorialTapCount,
+    setTutorialTapCount,
+    tutorialHoldCount,
+    setTutorialHoldCount,
   }
 }

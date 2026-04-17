@@ -281,7 +281,7 @@ export default function App() {
                 isPressing={state.isPressing}
                 onPressIn={handlers.handleIntroPressIn}
                 onPressOut={handlers.handlePressOut}
-                showTapHint={!state.didCompleteTutorialTap && !state.didCompleteTutorialHold}
+                showTapHint={state.tutorialTapCount === 0 && state.tutorialHoldCount === 0}
               />
             </View>
           ) : null}
@@ -294,8 +294,8 @@ export default function App() {
             step={onboarding.nuxStep}
             learnerProfile={state.learnerProfile}
             soundChecked={state.didCompleteSoundCheck}
-            didCompleteTutorialTap={state.didCompleteTutorialTap}
-            didCompleteTutorialHold={state.didCompleteTutorialHold}
+            tutorialTapCount={state.tutorialTapCount}
+            tutorialHoldCount={state.tutorialHoldCount}
             currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
             onWelcomeDone={handlers.handleNuxWelcomeDone}
             onChooseProfile={handlers.handleNuxChooseProfile}
