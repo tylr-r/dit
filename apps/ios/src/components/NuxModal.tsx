@@ -29,7 +29,6 @@ import {
   RSPRING,
   TIMING,
 } from './nux/animationTokens'
-import { nuxHaptics } from './nux/nuxHaptics'
 import { useReduceMotion } from './nux/useReduceMotion'
 
 type NuxStep =
@@ -313,8 +312,6 @@ function WelcomeScreen({
   const logoScale = useSharedValue(reduceMotion ? 1 : 0.9)
   const titleOpacity = useRef(new Animated.Value(0)).current
   const titleY = useRef(new Animated.Value(12)).current
-  const tickedRef = useRef(false)
-
   useEffect(() => {
     Animated.timing(logoOpacity, {
       toValue: 1,
@@ -357,12 +354,7 @@ function WelcomeScreen({
         easing: EASE.out,
         useNativeDriver: true,
       }),
-    ]).start(({ finished }) => {
-      if (finished && !tickedRef.current) {
-        tickedRef.current = true
-        nuxHaptics.tick()
-      }
-    })
+    ]).start()
 
     return () => {
       cancelAnimation(logoScale)
@@ -671,7 +663,6 @@ export function NuxModal({
     (profile: 'beginner' | 'known') => {
       if (profileSelection) return
       setProfileSelection(profile)
-      nuxHaptics.soft()
       const delay = reduceMotion ? 0 : 220
       setTimeout(() => onChooseProfile(profile), delay)
     },
@@ -698,7 +689,6 @@ export function NuxModal({
 
   useEffect(() => {
     if (soundChecked && !prevSoundChecked.current) {
-      nuxHaptics.success()
       setSoundRippleActive(false)
     }
     prevSoundChecked.current = soundChecked
@@ -737,7 +727,6 @@ export function NuxModal({
       }
       setMorphSource({ x, y, w, h, radius: Math.min(h / 2, 28) })
       setMorphActive(true)
-      nuxHaptics.morph()
       const stepDelay = Math.round(TIMING.morph * 0.55)
       setTimeout(onContinueFromSoundCheck, stepDelay)
     })
@@ -746,7 +735,6 @@ export function NuxModal({
   const handleMorphComplete = useCallback(() => {
     setMorphActive(false)
     setMorphSource(null)
-    nuxHaptics.tick()
   }, [])
 
   // Exit transition from the final onboarding step into the first lesson.
@@ -762,7 +750,6 @@ export function NuxModal({
   const handleStartBeginnerCourse = useCallback(() => {
     if (exitingRef.current) return
     exitingRef.current = true
-    nuxHaptics.success()
     if (reduceMotion) {
       onStartBeginnerCourse()
       return
@@ -775,7 +762,6 @@ export function NuxModal({
   }, [onStartBeginnerCourse, reduceMotion, exitProgress])
 
   const handleContinueFromStages = useCallback(() => {
-    nuxHaptics.soft()
     onContinueFromStages()
   }, [onContinueFromStages])
 
@@ -822,21 +808,6 @@ export function NuxModal({
     const timer = setTimeout(onCompleteButtonTutorial, 600)
     return () => clearTimeout(timer)
   }, [step, tutorialTapCount, tutorialHoldCount, onCompleteButtonTutorial])
-
-  // Confirm each rep with a soft haptic tick — pairs with the pip fill pop.
-  const prevTapCount = useRef(tutorialTapCount)
-  const prevHoldCount = useRef(tutorialHoldCount)
-  useEffect(() => {
-    if (step !== 'button_tutorial') {
-      prevTapCount.current = tutorialTapCount
-      prevHoldCount.current = tutorialHoldCount
-      return
-    }
-    if (tutorialTapCount > prevTapCount.current) nuxHaptics.tick()
-    if (tutorialHoldCount > prevHoldCount.current) nuxHaptics.tick()
-    prevTapCount.current = tutorialTapCount
-    prevHoldCount.current = tutorialHoldCount
-  }, [step, tutorialTapCount, tutorialHoldCount])
 
   return (
     <Reanimated.View

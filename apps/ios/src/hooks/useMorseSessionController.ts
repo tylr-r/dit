@@ -28,7 +28,6 @@ import {
   type ListenTtrRecord,
   type ProgressSnapshot,
 } from '@dit/core'
-import { triggerHaptics } from '@dit/dit-native'
 import type { User } from '@firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { AppState } from 'react-native'
@@ -994,7 +993,6 @@ export const useMorseSessionController = ({
         return
       }
       setListenHasSubmittedAnswer(true)
-      void triggerHaptics(10)
       clearTimer(listenTimeoutRef)
       const targetLetter = letterRef.current
       const responseAt = now()
@@ -1104,7 +1102,6 @@ export const useMorseSessionController = ({
       return
     }
     setListenReveal(null)
-    void triggerHaptics(12)
     playListenSequence(MORSE_DATA[letterRef.current].code)
   }, [listenStatus, playListenSequence])
 
@@ -1118,7 +1115,6 @@ export const useMorseSessionController = ({
     setInput('')
     setStatus('idle')
     stopListenPlayback()
-    void triggerHaptics(12)
     void playMorseTone({
       code: MORSE_DATA[letterRef.current].code,
       characterWpm: listenWpm,
@@ -1859,7 +1855,7 @@ export const useMorseSessionController = ({
           ? 'Try again'
           : 'Listen and try again'
         : guidedPhase === 'teach'
-          ? 'Tap out what you heard'
+          ? 'Repeat what you heard'
           : ' '
     : null
   const guidedPracticeStatusDetailText =
