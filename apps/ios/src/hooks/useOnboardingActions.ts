@@ -122,14 +122,6 @@ export const useOnboardingActions = ({
     setDidCompleteSoundCheck(true)
   }, [playOnboardingCode, setDidCompleteSoundCheck])
 
-  const handleNuxPlayDitDemo = useCallback(() => {
-    playOnboardingCode('.')
-  }, [playOnboardingCode])
-
-  const handleNuxPlayDahDemo = useCallback(() => {
-    playOnboardingCode('-')
-  }, [playOnboardingCode])
-
   const handleNuxContinueFromSoundCheck = useCallback(() => {
     if (!didCompleteSoundCheck) {
       return
@@ -247,8 +239,6 @@ export const useOnboardingActions = ({
     handleNuxWelcomeDone,
     handleNuxChooseProfile,
     handleNuxPlaySoundCheck,
-    handleNuxPlayDitDemo,
-    handleNuxPlayDahDemo,
     handleNuxContinueFromSoundCheck,
     handleNuxCompleteButtonTutorial,
     handleNuxContinueFromStages,

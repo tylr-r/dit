@@ -1,12 +1,36 @@
 import { MaterialIcons } from '@expo/vector-icons'
 import { SymbolView } from 'expo-symbols'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import Reanimated, {
+  Easing as REasing,
+  cancelAnimation,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { normalizeColorForNative } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import DitLogo from './DitLogo'
+import { LetterDealChip } from './nux/LetterDealChip'
+import { MorphGhost, type MorphRect } from './nux/MorphGhost'
+import { SonarRipple } from './nux/SonarRipple'
+import { StageCard } from './nux/StageCard'
+import { StageConnector } from './nux/StageConnector'
+import {
+  BEZIER,
+  CTA_SLOT_HEIGHT,
+  EASE,
+  RSPRING,
+  TIMING,
+} from './nux/animationTokens'
+import { nuxHaptics } from './nux/nuxHaptics'
+import { useReduceMotion } from './nux/useReduceMotion'
 
 type NuxStep =
   | 'welcome'
@@ -28,76 +52,82 @@ type NuxModalProps = {
   onChooseProfile: (profile: 'beginner' | 'known') => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
-  onPlayDitDemo: () => void
-  onPlayDahDemo: () => void
   onCompleteButtonTutorial: () => void
   onFinishKnownTour: () => void
   onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
 }
 
-// ─── Custom easing curves ─────────────────────────────────────────────────────
-// Stronger than built-in quad — gives animations that punchy, intentional feel.
-const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1)
-const EASE_IN_OUT = Easing.bezier(0.77, 0, 0.175, 1)
-
-// Reserved footer height so stepBody keeps the same available space across
-// steps that do and don't render a CTA — matches DitButton intrinsic height
-// with paddingVertical=16 + 11pt text.
-const CTA_SLOT_HEIGHT = 48
-
 // ─── Step body transition ─────────────────────────────────────────────────────
-// Only animates the step body content — ProgressDots stay static as a spatial
-// anchor so the user always knows where they are.
+// Directional spatial slide using Reanimated — exits leftward, enters from the
+// right, giving a sense of forward movement. ProgressDots stay static as the
+// spatial anchor (rendered outside this animated container).
 
-function useStepTransition(step: NuxStep) {
+function useStepTransition(step: NuxStep, reduceMotion: boolean) {
   const [displayedStep, setDisplayedStep] = useState<NuxStep>(step)
-  const fadeAnim = useRef(new Animated.Value(1)).current
-  const scaleAnim = useRef(new Animated.Value(1)).current
+  const opacity = useSharedValue(1)
+  const translateX = useSharedValue(0)
+  const scale = useSharedValue(1)
   const prevStep = useRef(step)
 
   useEffect(() => {
     if (prevStep.current === step) return
     prevStep.current = step
 
-    // Exit: quick fade + slight scale up (content recedes)
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 120,
-        easing: EASE_OUT,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1.04,
-        duration: 120,
-        easing: EASE_OUT,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    // Swap content + start enter animation on the UI thread via the exit's
+    // completion callback so there's no setTimeout/worklet race. A JS setTimeout
+    // can fire a frame before/after the opacity hits zero, which flashes the
+    // new content. Atomic sequencing here eliminates that gap.
+    const swapAndEnter = () => {
       setDisplayedStep(step)
-      scaleAnim.setValue(0.96)
-      fadeAnim.setValue(0)
+    }
 
-      // Enter: spring scale from 0.96 → 1.0 + fade in
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 280,
-          easing: EASE_OUT,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 280,
-          friction: 24,
-          useNativeDriver: true,
-        }),
-      ]).start()
+    if (reduceMotion) {
+      opacity.value = withTiming(
+        0,
+        { duration: 140, easing: REasing.bezier(...BEZIER.out) },
+        (finished) => {
+          'worklet'
+          if (!finished) return
+          runOnJS(swapAndEnter)()
+          opacity.value = withTiming(1, { duration: 200 })
+        },
+      )
+      return
+    }
+
+    opacity.value = withTiming(
+      0,
+      { duration: TIMING.exit, easing: REasing.bezier(...BEZIER.out) },
+      (finished) => {
+        'worklet'
+        if (!finished) return
+        runOnJS(swapAndEnter)()
+        translateX.value = 16
+        scale.value = 0.97
+        opacity.value = withTiming(1, {
+          duration: TIMING.medium,
+          easing: REasing.bezier(...BEZIER.out),
+        })
+        translateX.value = withTiming(0, {
+          duration: TIMING.medium,
+          easing: REasing.bezier(...BEZIER.out),
+        })
+        scale.value = withSpring(1, RSPRING.snappy)
+      },
+    )
+    translateX.value = withTiming(-16, {
+      duration: TIMING.exit,
+      easing: REasing.bezier(...BEZIER.out),
     })
-  }, [step, fadeAnim, scaleAnim])
+  }, [step, reduceMotion, opacity, translateX, scale])
 
-  return { displayedStep, fadeAnim, scaleAnim }
+  const bodyAnimStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: translateX.value }, { scale: scale.value }],
+  }))
+
+  return { displayedStep, bodyAnimStyle }
 }
 
 // ─── Stagger entrance ─────────────────────────────────────────────────────────
@@ -111,31 +141,38 @@ function useStaggerEntrance(
   const { stepDelay = 50, duration = 340, startY = 8 } = options ?? {}
   const anims = useRef<Animated.Value[]>([])
   const yAnims = useRef<Animated.Value[]>([])
+  const prevTrigger = useRef(trigger)
 
   if (anims.current.length !== count) {
     anims.current = Array.from({ length: count }, () => new Animated.Value(0))
     yAnims.current = Array.from({ length: count }, () => new Animated.Value(startY))
   }
 
-  useEffect(() => {
-    // Reset all values
+  // Reset values during render (before children mount with the new trigger) so
+  // new content never paints a frame at previous-completion values. Resetting
+  // in useEffect instead creates a one-frame flash while the parent fade is
+  // already ramping back up.
+  if (prevTrigger.current !== trigger) {
+    prevTrigger.current = trigger
     anims.current.forEach((a) => a.setValue(0))
     yAnims.current.forEach((a) => a.setValue(startY))
+  }
 
+  useEffect(() => {
     const animations = anims.current.map((anim, i) =>
       Animated.parallel([
         Animated.timing(anim, {
           toValue: 1,
           duration,
           delay: i * stepDelay,
-          easing: EASE_OUT,
+          easing: EASE.out,
           useNativeDriver: true,
         }),
         Animated.timing(yAnims.current[i], {
           toValue: 0,
           duration,
           delay: i * stepDelay,
-          easing: EASE_OUT,
+          easing: EASE.out,
           useNativeDriver: true,
         }),
       ]),
@@ -183,7 +220,7 @@ function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean 
     Animated.timing(colorAnim, {
       toValue: isDone ? 1 : isActive ? 0.5 : 0,
       duration: 250,
-      easing: EASE_IN_OUT,
+      easing: EASE.inOut,
       useNativeDriver: false,
     }).start()
   }, [isActive, isDone, widthAnim, colorAnim])
@@ -230,7 +267,7 @@ function TutorialProgressDot({ filled }: { filled: boolean }) {
       Animated.timing(fillAnim, {
         toValue: 1,
         duration: 200,
-        easing: EASE_OUT,
+        easing: EASE.out,
         useNativeDriver: false,
       }).start()
     }
@@ -265,47 +302,76 @@ function TutorialProgress({ count, required }: { count: number; required: number
 
 // ─── Welcome screen entrance ──────────────────────────────────────────────────
 
-function WelcomeScreen({ onWelcomeDone }: { onWelcomeDone: () => void }) {
+function WelcomeScreen({
+  onWelcomeDone,
+  reduceMotion,
+}: {
+  onWelcomeDone: () => void
+  reduceMotion: boolean
+}) {
   const logoOpacity = useRef(new Animated.Value(0)).current
-  const logoScale = useRef(new Animated.Value(0.9)).current
+  const logoScale = useSharedValue(reduceMotion ? 1 : 0.9)
   const titleOpacity = useRef(new Animated.Value(0)).current
   const titleY = useRef(new Animated.Value(12)).current
+  const tickedRef = useRef(false)
 
   useEffect(() => {
-    // Logo fades in first
-    Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 600,
-        easing: EASE_OUT,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 120,
-        friction: 14,
-        useNativeDriver: true,
-      }),
-    ]).start()
+    Animated.timing(logoOpacity, {
+      toValue: 1,
+      duration: 600,
+      easing: EASE.out,
+      useNativeDriver: true,
+    }).start()
 
-    // Title follows after a beat
+    // Spring into place, then start the breathing loop. The callback runs on
+    // the UI thread so it's safe to chain another animation from there.
+    logoScale.value = withTiming(
+      1,
+      { duration: 700, easing: REasing.bezier(...BEZIER.out) },
+      (finished) => {
+        'worklet'
+        if (!finished || reduceMotion) return
+        logoScale.value = withRepeat(
+          withTiming(1.015, {
+            duration: TIMING.breath,
+            easing: REasing.bezier(...BEZIER.inOut),
+          }),
+          -1,
+          true,
+        )
+      },
+    )
+
     Animated.parallel([
       Animated.timing(titleOpacity, {
         toValue: 1,
         duration: 500,
         delay: 300,
-        easing: EASE_OUT,
+        easing: EASE.out,
         useNativeDriver: true,
       }),
       Animated.timing(titleY, {
         toValue: 0,
         duration: 500,
         delay: 300,
-        easing: EASE_OUT,
+        easing: EASE.out,
         useNativeDriver: true,
       }),
-    ]).start()
-  }, [logoOpacity, logoScale, titleOpacity, titleY])
+    ]).start(({ finished }) => {
+      if (finished && !tickedRef.current) {
+        tickedRef.current = true
+        nuxHaptics.tick()
+      }
+    })
+
+    return () => {
+      cancelAnimation(logoScale)
+    }
+  }, [logoOpacity, logoScale, titleOpacity, titleY, reduceMotion])
+
+  const logoStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoScale.value }],
+  }))
 
   return (
     <Pressable
@@ -313,13 +379,85 @@ function WelcomeScreen({ onWelcomeDone }: { onWelcomeDone: () => void }) {
       onPress={onWelcomeDone}
       accessibilityLabel="Welcome to Dit"
     >
-      <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
-        <DitLogo size={120} opacity={0.9} animated />
+      <Animated.View style={{ opacity: logoOpacity }}>
+        <Reanimated.View style={logoStyle}>
+          <DitLogo size={120} opacity={0.9} animated />
+        </Reanimated.View>
       </Animated.View>
       <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleY }] }}>
         <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
       </Animated.View>
     </Pressable>
+  )
+}
+
+// ─── Tutorial instruction crossfade ───────────────────────────────────────────
+// When the tutorial phase switches from tap → hold, the instruction line fades
+// out, the text swaps, then it rises back in. Small directional swap keeps the
+// user oriented without a disruptive full-screen change.
+
+function TutorialInstruction({
+  phase,
+  reduceMotion,
+}: {
+  phase: 'tap' | 'hold'
+  reduceMotion: boolean
+}) {
+  const [displayedPhase, setDisplayedPhase] = useState(phase)
+  const opacity = useSharedValue(1)
+  const translateY = useSharedValue(0)
+  const prevPhase = useRef(phase)
+
+  useEffect(() => {
+    if (phase === prevPhase.current) return
+    prevPhase.current = phase
+
+    if (reduceMotion) {
+      opacity.value = withTiming(0, { duration: 120 }, (finished) => {
+        'worklet'
+        if (!finished) return
+        opacity.value = withTiming(1, { duration: 200 })
+      })
+      setTimeout(() => setDisplayedPhase(phase), 120)
+      return
+    }
+
+    opacity.value = withTiming(0, {
+      duration: 160,
+      easing: REasing.bezier(...BEZIER.out),
+    })
+    translateY.value = withTiming(-8, {
+      duration: 160,
+      easing: REasing.bezier(...BEZIER.out),
+    })
+
+    const swapTimer = setTimeout(() => {
+      setDisplayedPhase(phase)
+      translateY.value = 8
+      opacity.value = withTiming(1, {
+        duration: 280,
+        easing: REasing.bezier(...BEZIER.out),
+      })
+      translateY.value = withTiming(0, {
+        duration: 280,
+        easing: REasing.bezier(...BEZIER.out),
+      })
+    }, 160)
+
+    return () => clearTimeout(swapTimer)
+  }, [phase, reduceMotion, opacity, translateY])
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }))
+
+  return (
+    <Reanimated.View style={animStyle}>
+      <Text style={styles.tutorialInstruction}>
+        {displayedPhase === 'tap' ? 'Tap 3 times on the key' : 'Now hold 3 times'}
+      </Text>
+    </Reanimated.View>
   )
 }
 
@@ -409,7 +547,7 @@ function ScalePressable({
     Animated.timing(scaleAnim, {
       toValue: 0.97,
       duration: 120,
-      easing: EASE_OUT,
+      easing: EASE.out,
       useNativeDriver: true,
     }).start()
   }, [scaleAnim])
@@ -449,6 +587,58 @@ function ScalePressable({
   )
 }
 
+// ─── Profile card with subtle selected lift ───────────────────────────────────
+// On selection, the card scales up a hair before the step advances.
+// No glow — the room change is what confirms the choice.
+
+function ProfileCard({
+  onSelect,
+  isSelected,
+  accessibilityLabel,
+  children,
+  reduceMotion,
+}: {
+  onSelect: () => void
+  isSelected: boolean
+  accessibilityLabel?: string
+  reduceMotion: boolean
+  children: React.ReactNode
+}) {
+  const lift = useSharedValue(0)
+
+  useEffect(() => {
+    if (!isSelected) {
+      lift.value = 0
+      return
+    }
+    if (reduceMotion) {
+      lift.value = 1
+      return
+    }
+    lift.value = withTiming(1, {
+      duration: 200,
+      easing: REasing.bezier(...BEZIER.out),
+    })
+  }, [isSelected, lift, reduceMotion])
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + lift.value * 0.02 }],
+  }))
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected: isSelected }}
+    >
+      <Reanimated.View style={[styles.optionCard, animatedStyle]}>
+        {children}
+      </Reanimated.View>
+    </Pressable>
+  )
+}
+
 /** Full-screen first-run flow for profile selection and basic app teaching. */
 export function NuxModal({
   step,
@@ -460,20 +650,138 @@ export function NuxModal({
   onChooseProfile,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
-  onPlayDitDemo,
-  onPlayDahDemo,
   onCompleteButtonTutorial,
   onFinishKnownTour,
   onContinueFromStages,
   onStartBeginnerCourse,
 }: NuxModalProps) {
   const insets = useSafeAreaInsets()
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions()
   const paddingTop = insets.top + spacing.xl
   const paddingBottom = insets.bottom + spacing.xl
   const isTutorial = step === 'button_tutorial'
 
-  const { displayedStep, fadeAnim, scaleAnim } = useStepTransition(step)
-  const bodyAnimStyle = { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+  const reduceMotion = useReduceMotion()
+  const { displayedStep, bodyAnimStyle } = useStepTransition(step, reduceMotion)
+  const [profileSelection, setProfileSelection] = useState<'beginner' | 'known' | null>(
+    null,
+  )
+
+  const handleProfileSelect = useCallback(
+    (profile: 'beginner' | 'known') => {
+      if (profileSelection) return
+      setProfileSelection(profile)
+      nuxHaptics.soft()
+      const delay = reduceMotion ? 0 : 220
+      setTimeout(() => onChooseProfile(profile), delay)
+    },
+    [profileSelection, onChooseProfile, reduceMotion],
+  )
+
+  // Sound-check ripples fire while the tone is audible. We don't have a direct
+  // "tone playing" signal, so a short window approximates it — long enough to
+  // feel like the rings are tracking the sound, short enough to stop soon
+  // after it ends.
+  const [soundRippleActive, setSoundRippleActive] = useState(false)
+  const prevSoundChecked = useRef(soundChecked)
+
+  const handlePlaySoundCheck = useCallback(() => {
+    setSoundRippleActive(true)
+    onPlaySoundCheck()
+  }, [onPlaySoundCheck])
+
+  useEffect(() => {
+    if (!soundRippleActive) return
+    const timer = setTimeout(() => setSoundRippleActive(false), 1800)
+    return () => clearTimeout(timer)
+  }, [soundRippleActive])
+
+  useEffect(() => {
+    if (soundChecked && !prevSoundChecked.current) {
+      nuxHaptics.success()
+      setSoundRippleActive(false)
+    }
+    prevSoundChecked.current = soundChecked
+  }, [soundChecked])
+
+  // Continue → Morse key morph. On tap we capture the Continue pill's rect,
+  // spawn a ghost that tweens toward the MorseButton's known geometry, and
+  // fire the step change partway through so the real key is mounted before
+  // the ghost fades out.
+  const ctaSlotRef = useRef<View | null>(null)
+  const [morphSource, setMorphSource] = useState<MorphRect | null>(null)
+  const [morphActive, setMorphActive] = useState(false)
+
+  const morphTarget = useMemo<MorphRect>(() => {
+    const w = Math.min(windowWidth - 48, 480)
+    const h = 96
+    return {
+      x: (windowWidth - w) / 2,
+      y: windowHeight - 24 - h,
+      w,
+      h,
+      radius: 48,
+    }
+  }, [windowWidth, windowHeight])
+
+  const handleContinueFromSoundCheck = useCallback(() => {
+    if (morphActive) return
+    if (reduceMotion) {
+      onContinueFromSoundCheck()
+      return
+    }
+    ctaSlotRef.current?.measureInWindow((x, y, w, h) => {
+      if (!w || !h) {
+        onContinueFromSoundCheck()
+        return
+      }
+      setMorphSource({ x, y, w, h, radius: Math.min(h / 2, 28) })
+      setMorphActive(true)
+      nuxHaptics.morph()
+      const stepDelay = Math.round(TIMING.morph * 0.55)
+      setTimeout(onContinueFromSoundCheck, stepDelay)
+    })
+  }, [morphActive, reduceMotion, onContinueFromSoundCheck])
+
+  const handleMorphComplete = useCallback(() => {
+    setMorphActive(false)
+    setMorphSource(null)
+    nuxHaptics.tick()
+  }, [])
+
+  // Exit transition from the final onboarding step into the first lesson.
+  // Fades the modal out and drifts it forward a touch while the lesson screen
+  // (already mounted underneath) comes into focus — avoids the abrupt unmount.
+  const exitProgress = useSharedValue(0)
+  const exitingRef = useRef(false)
+  const exitStyle = useAnimatedStyle(() => ({
+    opacity: 1 - exitProgress.value,
+    transform: [{ scale: 1 + exitProgress.value * 0.04 }],
+  }))
+
+  const handleStartBeginnerCourse = useCallback(() => {
+    if (exitingRef.current) return
+    exitingRef.current = true
+    nuxHaptics.success()
+    if (reduceMotion) {
+      onStartBeginnerCourse()
+      return
+    }
+    exitProgress.value = withTiming(1, {
+      duration: 360,
+      easing: REasing.bezier(...BEZIER.out),
+    })
+    setTimeout(onStartBeginnerCourse, 280)
+  }, [onStartBeginnerCourse, reduceMotion, exitProgress])
+
+  const handleContinueFromStages = useCallback(() => {
+    nuxHaptics.soft()
+    onContinueFromStages()
+  }, [onContinueFromStages])
+
+  useEffect(() => {
+    if (step !== 'profile') setProfileSelection(null)
+  }, [step])
 
   // Stagger counts per step
   const staggerCounts: Record<NuxStep, number> = {
@@ -501,6 +809,11 @@ export function NuxModal({
     return () => clearTimeout(timer)
   }, [step, onWelcomeDone])
 
+  // Connectors animate inline with the card stagger so the list feels like one
+  // continuous draw rather than "all cards, then all lines". Each connector's
+  // internal delay lines it up with the next card's entrance.
+  const stagesActive = displayedStep === 'beginner_stages'
+
   const TUTORIAL_REQUIRED = 3
   // Auto-advance once both tutorial inputs are completed
   useEffect(() => {
@@ -510,14 +823,29 @@ export function NuxModal({
     return () => clearTimeout(timer)
   }, [step, tutorialTapCount, tutorialHoldCount, onCompleteButtonTutorial])
 
+  // Confirm each rep with a soft haptic tick — pairs with the pip fill pop.
+  const prevTapCount = useRef(tutorialTapCount)
+  const prevHoldCount = useRef(tutorialHoldCount)
+  useEffect(() => {
+    if (step !== 'button_tutorial') {
+      prevTapCount.current = tutorialTapCount
+      prevHoldCount.current = tutorialHoldCount
+      return
+    }
+    if (tutorialTapCount > prevTapCount.current) nuxHaptics.tick()
+    if (tutorialHoldCount > prevHoldCount.current) nuxHaptics.tick()
+    prevTapCount.current = tutorialTapCount
+    prevHoldCount.current = tutorialHoldCount
+  }, [step, tutorialTapCount, tutorialHoldCount])
+
   return (
-    <View
-      style={styles.overlay}
+    <Reanimated.View
+      style={[styles.overlay, exitStyle]}
       pointerEvents={isTutorial ? 'box-none' : undefined}
       accessibilityViewIsModal={!isTutorial}
     >
       {displayedStep === 'welcome' ? (
-        <WelcomeScreen onWelcomeDone={onWelcomeDone} />
+        <WelcomeScreen onWelcomeDone={onWelcomeDone} reduceMotion={reduceMotion} />
       ) : (
         <View
           style={[styles.content, { paddingTop, paddingBottom }]}
@@ -526,7 +854,7 @@ export function NuxModal({
           {/* ProgressDots stay OUTSIDE the body transition — spatial anchor */}
           <ProgressDots step={displayedStep} />
 
-          <Animated.View
+          <Reanimated.View
             style={[styles.stepBody, bodyAnimStyle]}
             pointerEvents={isTutorial ? 'box-none' : undefined}
           >
@@ -538,9 +866,11 @@ export function NuxModal({
                 </Animated.View>
                 <View style={styles.stepFill}>
                   <Animated.View style={[styles.optionColumn, stagger[1]]}>
-                    <ScalePressable
-                      onPress={() => onChooseProfile('beginner')}
-                      style={styles.optionCard}
+                    <ProfileCard
+                      onSelect={() => handleProfileSelect('beginner')}
+                      isSelected={profileSelection === 'beginner'}
+                      accessibilityLabel="Learn Morse from the basics"
+                      reduceMotion={reduceMotion}
                     >
                       <View style={styles.optionHeader}>
                         <NuxIcon
@@ -552,10 +882,12 @@ export function NuxModal({
                         <Text style={styles.optionTitle}>Learn Morse</Text>
                       </View>
                       <Text style={styles.optionBody}>Start from the basics and build up.</Text>
-                    </ScalePressable>
-                    <ScalePressable
-                      onPress={() => onChooseProfile('known')}
-                      style={styles.optionCard}
+                    </ProfileCard>
+                    <ProfileCard
+                      onSelect={() => handleProfileSelect('known')}
+                      isSelected={profileSelection === 'known'}
+                      accessibilityLabel="Quick tour for experienced users"
+                      reduceMotion={reduceMotion}
                     >
                       <View style={styles.optionHeader}>
                         <NuxIcon
@@ -567,7 +899,7 @@ export function NuxModal({
                         <Text style={styles.optionTitle}>I know Morse</Text>
                       </View>
                       <Text style={styles.optionBody}>Quick tour, then dive right in.</Text>
-                    </ScalePressable>
+                    </ProfileCard>
                   </Animated.View>
                 </View>
               </>
@@ -584,11 +916,17 @@ export function NuxModal({
                 <View style={styles.stepFill}>
                   <Animated.View style={stagger[1]}>
                     <ScalePressable
-                      onPress={onPlaySoundCheck}
+                      onPress={handlePlaySoundCheck}
                       style={[styles.soundButton, soundChecked && styles.soundButtonComplete]}
                       accessibilityRole="button"
                       accessibilityLabel="Test sound"
                     >
+                      <SonarRipple
+                        size={160}
+                        color={colors.accent.wave}
+                        active={soundRippleActive && !soundChecked}
+                        reduceMotion={reduceMotion}
+                      />
                       <SoundCheckIcon checked={soundChecked} />
                       <Text
                         style={[
@@ -609,41 +947,25 @@ export function NuxModal({
                 <Animated.View style={[styles.copyBlock, stagger[0]]}>
                   <Text style={styles.headline}>Meet the Morse key</Text>
                   <Text style={styles.subtext}>
-                    Listen to each sound, then try it on the key below.
+                    Try it on the key below — short taps are dits, long holds are dahs.
                   </Text>
                 </Animated.View>
                 <View style={styles.stepFill}>
-                  <Animated.View style={[styles.tutorialRows, stagger[1]]}>
-                    <View style={styles.tutorialRow}>
-                      <ScalePressable
-                        onPress={onPlayDitDemo}
-                        style={styles.tutorialPlayButton}
-                        accessibilityLabel="Play dit sound"
-                      >
-                        <NuxIcon
-                          sfName="play.fill"
-                          materialName="play-arrow"
-                          size={14}
-                          color={colors.text.primary}
-                        />
-                      </ScalePressable>
-                      <Text style={styles.tutorialLabel}>Short tap (dit)</Text>
+                  <Animated.View style={[styles.tutorialBlock, stagger[1]]}>
+                    <TutorialInstruction
+                      phase={tutorialTapCount < TUTORIAL_REQUIRED ? 'tap' : 'hold'}
+                      reduceMotion={reduceMotion}
+                    />
+                    <View style={styles.tutorialPipRow}>
+                      <Text style={styles.tutorialPipLabel}>
+                        Tap <Text style={styles.tutorialPipHint}>(dit)</Text>
+                      </Text>
                       <TutorialProgress count={tutorialTapCount} required={TUTORIAL_REQUIRED} />
                     </View>
-                    <View style={styles.tutorialRow}>
-                      <ScalePressable
-                        onPress={onPlayDahDemo}
-                        style={styles.tutorialPlayButton}
-                        accessibilityLabel="Play dah sound"
-                      >
-                        <NuxIcon
-                          sfName="play.fill"
-                          materialName="play-arrow"
-                          size={14}
-                          color={colors.text.primary}
-                        />
-                      </ScalePressable>
-                      <Text style={styles.tutorialLabel}>Long hold (dah)</Text>
+                    <View style={styles.tutorialPipRow}>
+                      <Text style={styles.tutorialPipLabel}>
+                        Hold <Text style={styles.tutorialPipHint}>(dah)</Text>
+                      </Text>
                       <TutorialProgress count={tutorialHoldCount} required={TUTORIAL_REQUIRED} />
                     </View>
                   </Animated.View>
@@ -681,26 +1003,42 @@ export function NuxModal({
                   </Text>
                 </Animated.View>
                 <View style={styles.stagesFill}>
-                  <Animated.View style={[styles.stageCard, stagger[1]]}>
-                    <Text style={styles.stageNumberLarge}>1</Text>
-                    <Text style={styles.stageTitleLarge}>Listen</Text>
-                    <Text style={styles.stageDescLarge}>
-                      Hear each letter and copy the sound
-                    </Text>
+                  <Animated.View style={stagger[1]}>
+                    <StageCard
+                      number={1}
+                      title="Listen"
+                      description="Hear each letter and copy the sound"
+                      drawDelay={780}
+                      reduceMotion={reduceMotion}
+                    />
                   </Animated.View>
-                  <Animated.View style={[styles.stageCard, stagger[2]]}>
-                    <Text style={styles.stageNumberLarge}>2</Text>
-                    <Text style={styles.stageTitleLarge}>Practice</Text>
-                    <Text style={styles.stageDescLarge}>
-                      Mix old and new letters by ear
-                    </Text>
+                  <StageConnector
+                    active={stagesActive}
+                    delay={650}
+                    reduceMotion={reduceMotion}
+                  />
+                  <Animated.View style={stagger[2]}>
+                    <StageCard
+                      number={2}
+                      title="Practice"
+                      description="Mix old and new letters by ear"
+                      drawDelay={1430}
+                      reduceMotion={reduceMotion}
+                    />
                   </Animated.View>
-                  <Animated.View style={[styles.stageCard, stagger[3]]}>
-                    <Text style={styles.stageNumberLarge}>3</Text>
-                    <Text style={styles.stageTitleLarge}>Recall</Text>
-                    <Text style={styles.stageDescLarge}>
-                      Hear a letter, tap the matching sound
-                    </Text>
+                  <StageConnector
+                    active={stagesActive}
+                    delay={1300}
+                    reduceMotion={reduceMotion}
+                  />
+                  <Animated.View style={stagger[3]}>
+                    <StageCard
+                      number={3}
+                      title="Recall"
+                      description="Hear a letter, tap the matching sound"
+                      drawDelay={2080}
+                      reduceMotion={reduceMotion}
+                    />
                   </Animated.View>
                 </View>
               </>
@@ -715,20 +1053,25 @@ export function NuxModal({
                   </Text>
                 </Animated.View>
                 <View style={styles.stepFill}>
-                  <Animated.View style={[styles.packPreview, stagger[1]]}>
-                    <Text style={styles.packLabel}>We'll start with</Text>
+                  <View style={styles.packPreview}>
+                    <Animated.Text style={[styles.packLabel, stagger[1]]}>
+                      We'll start with
+                    </Animated.Text>
                     <View style={styles.packChips}>
-                      {currentPack.map((letter) => (
-                        <View key={letter} style={styles.packChip}>
-                          <Text style={styles.chipLetter}>{letter}</Text>
-                        </View>
+                      {currentPack.map((letter, i) => (
+                        <LetterDealChip
+                          key={letter}
+                          letter={letter}
+                          delay={200 + i * 120}
+                          reduceMotion={reduceMotion}
+                        />
                       ))}
                     </View>
-                  </Animated.View>
+                  </View>
                 </View>
               </>
             ) : null}
-          </Animated.View>
+          </Reanimated.View>
 
           {/* CTA slot is always rendered with a fixed height so stepBody has
               the same available space on every step — keeps vertical centering
@@ -736,14 +1079,20 @@ export function NuxModal({
               live inside the animated body (animated opacity breaks it). */}
           <View style={styles.ctaSlot}>
             {displayedStep === 'sound_check' ? (
-              <DitButton
-                text="Continue"
-                onPress={onContinueFromSoundCheck}
-                disabled={!soundChecked}
-                style={styles.ctaButton}
-                radius={radii.pill}
-                paddingVertical={16}
-              />
+              <View
+                ref={ctaSlotRef}
+                collapsable={false}
+                style={morphActive ? styles.ctaSlotHidden : undefined}
+              >
+                <DitButton
+                  text="Continue"
+                  onPress={handleContinueFromSoundCheck}
+                  disabled={!soundChecked}
+                  style={styles.ctaButton}
+                  radius={radii.pill}
+                  paddingVertical={16}
+                />
+              </View>
             ) : null}
             {displayedStep === 'known_tour' ? (
               <DitButton
@@ -757,7 +1106,7 @@ export function NuxModal({
             {displayedStep === 'beginner_stages' ? (
               <DitButton
                 text="Continue"
-                onPress={onContinueFromStages}
+                onPress={handleContinueFromStages}
                 style={styles.ctaButton}
                 radius={radii.pill}
                 paddingVertical={16}
@@ -766,7 +1115,7 @@ export function NuxModal({
             {displayedStep === 'beginner_intro' ? (
               <DitButton
                 text="Start first lesson"
-                onPress={onStartBeginnerCourse}
+                onPress={handleStartBeginnerCourse}
                 style={styles.ctaButton}
                 radius={radii.pill}
                 paddingVertical={16}
@@ -775,7 +1124,14 @@ export function NuxModal({
           </View>
         </View>
       )}
-    </View>
+      <MorphGhost
+        source={morphSource}
+        target={morphTarget}
+        active={morphActive}
+        onComplete={handleMorphComplete}
+        reduceMotion={reduceMotion}
+      />
+    </Reanimated.View>
   )
 }
 
@@ -909,29 +1265,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 44,
-  },
-  stageCard: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  stageNumberLarge: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    color: colors.text.primary40,
-  },
-  stageTitleLarge: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  stageDescLarge: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.text.primary60,
-    textAlign: 'center',
   },
   packPreview: {
     alignItems: 'center',
@@ -948,56 +1281,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
-  packChip: {
+  tutorialBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 72,
-    height: 72,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.panelStrong,
-    gap: 4,
+    gap: spacing.lg,
   },
-  chipLetter: {
-    fontSize: 26,
-    fontWeight: '700',
+  tutorialInstruction: {
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text.primary,
+    textAlign: 'center',
   },
-  packHint: {
-    fontSize: 13,
-    color: colors.text.primary40,
-    fontStyle: 'italic',
-  },
-  tutorialRows: {
-    gap: spacing.md,
-  },
-  tutorialRow: {
+  tutorialPipRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface.input,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
+    minWidth: 120,
+    justifyContent: 'space-between',
   },
-  tutorialPlayButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface.inputPressed,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tutorialPipLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary40,
   },
-  tutorialLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text.primary90,
+  tutorialPipHint: {
+    fontWeight: '400',
+    letterSpacing: 0.4,
+    color: colors.text.primary40,
   },
   ctaSlot: {
     height: CTA_SLOT_HEIGHT,
     justifyContent: 'center',
+  },
+  ctaSlotHidden: {
+    opacity: 0,
   },
   ctaButton: {
     width: '100%' as unknown as number,
