@@ -10,6 +10,7 @@ import {
   type ListenTtrRecord,
   type Progress,
   type ProgressSnapshot,
+  type ReminderSettings,
   type StreakState,
 } from '@dit/core'
 import type { User } from '@firebase/auth'
@@ -70,6 +71,7 @@ type UseProgressSyncControllerOptions = {
     setStreak: Setter<StreakState | undefined>
     setLetterAccuracy: Setter<LetterAccuracyRecord>
     setBestWpm: Setter<number | undefined>
+    setReminder: Setter<ReminderSettings | undefined>
   }
   refs: {
     scoresRef: RefValue<ProgressSnapshot['scores']>
@@ -324,6 +326,10 @@ export const useProgressSyncController = ({
         state.setBestWpm(progress.bestWpm)
       }
 
+      if (progress.reminder) {
+        state.setReminder(progress.reminder)
+      }
+
       if (typeof progress.practiceWordMode === 'boolean') {
         refs.practiceWordModeRef.current = progress.practiceWordMode
         refs.practiceWordStartRef.current = null
@@ -402,6 +408,7 @@ export const useProgressSyncController = ({
       state.setStreak,
       state.setLetterAccuracy,
       state.setBestWpm,
+      state.setReminder,
     ],
   )
 

@@ -35,6 +35,7 @@ import {
   type ListenTtrRecord,
   type Progress,
   type ProgressSnapshot,
+  type ReminderSettings,
   type StreakState,
 } from '@dit/core'
 import type { User } from '@firebase/auth'
@@ -216,6 +217,7 @@ export const useMorseSessionController = ({
   const [streak, setStreak] = useState<StreakState | undefined>(undefined)
   const [letterAccuracy, setLetterAccuracy] = useState<LetterAccuracyRecord>({})
   const [bestWpm, setBestWpm] = useState<number | undefined>(undefined)
+  const [reminder, setReminder] = useState<ReminderSettings | undefined>(undefined)
   const [listenHasSubmittedAnswer, setListenHasSubmittedAnswer] = useState(false)
   const [listenRecognitionText, setListenRecognitionText] = useState<string | null>(null)
 
@@ -274,9 +276,11 @@ export const useMorseSessionController = ({
       streak,
       letterAccuracy,
       bestWpm,
+      reminder,
     }),
     [
       bestWpm,
+      reminder,
       dailyActivity,
       freestyleWordMode,
       guidedCourseActive,
@@ -878,6 +882,7 @@ export const useMorseSessionController = ({
     setStreak(undefined)
     setLetterAccuracy({})
     setBestWpm(undefined)
+    setReminder(undefined)
     dailyActivityRef.current = {}
     streakRef.current = undefined
     letterAccuracyRef.current = {}
@@ -1027,6 +1032,7 @@ export const useMorseSessionController = ({
     practiceReviewQueueRef,
     applyKnownLearnerDefaults,
     moveIntoGuidedLesson,
+    onReminderChange: setReminder,
   })
 
   const scheduleWordSpace = useCallback(() => {
@@ -1606,6 +1612,13 @@ export const useMorseSessionController = ({
     [],
   )
 
+  const handleReminderChange = useCallback(
+    (next: ReminderSettings | undefined) => {
+      setReminder(next)
+    },
+    [],
+  )
+
   const handlePracticeLearnModeChange = useCallback(
     (value: boolean) => {
       if (guidedCourseActiveRef.current) {
@@ -1845,6 +1858,7 @@ export const useMorseSessionController = ({
       setStreak,
       setLetterAccuracy,
       setBestWpm,
+      setReminder,
     },
     refs: {
       scoresRef,
@@ -2053,6 +2067,7 @@ export const useMorseSessionController = ({
       streak,
       letterAccuracy,
       bestWpm,
+      reminder,
     },
     setters: {
       setShowHint,
@@ -2093,6 +2108,7 @@ export const useMorseSessionController = ({
       handlePracticeReviewMissesChange,
       handleListenWpmChange,
       handleToneFrequencyChange,
+      handleReminderChange,
       handleUseRecommended,
       handleListenReplay,
       submitListenAnswer,

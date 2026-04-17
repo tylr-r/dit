@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons'
+import { DateTimePicker, Host } from '@expo/ui/swift-ui'
 import { SymbolView } from 'expo-symbols'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
@@ -39,6 +40,7 @@ type NuxStep =
   | 'known_tour'
   | 'beginner_stages'
   | 'beginner_intro'
+  | 'reminder'
 
 type NuxModalProps = {
   step: NuxStep
@@ -55,6 +57,8 @@ type NuxModalProps = {
   onFinishKnownTour: () => void
   onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
+  onSetReminder: (time: string) => void
+  onSkipReminder: () => void
 }
 
 // ─── Step body transition ─────────────────────────────────────────────────────
@@ -202,6 +206,7 @@ const progressIndexByStep: Record<NuxStep, number> = {
   known_tour: 3,
   beginner_stages: 3,
   beginner_intro: 3,
+  reminder: 4,
 }
 
 function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean }) {
@@ -233,7 +238,7 @@ function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean 
 }
 
 function ProgressDots({ step }: { step: NuxStep }) {
-  const total = 4
+  const total = 5
   const activeIndex = progressIndexByStep[step]
 
   return (
@@ -646,6 +651,8 @@ export function NuxModal({
   onFinishKnownTour,
   onContinueFromStages,
   onStartBeginnerCourse,
+  onSetReminder,
+  onSkipReminder,
 }: NuxModalProps) {
   const insets = useSafeAreaInsets()
   const { width: windowWidth, height: windowHeight } = useWindowDimensions()
@@ -658,6 +665,21 @@ export function NuxModal({
   const [profileSelection, setProfileSelection] = useState<'beginner' | 'known' | null>(
     null,
   )
+  const [reminderTime, setReminderTime] = useState('19:00')
+  const reminderInitialIso = useMemo(() => {
+    const now = new Date()
+    now.setHours(19, 0, 0, 0)
+    return now.toISOString()
+  }, [])
+  const formatClockTime = useCallback((time: string) => {
+    const match = /^(\d{2}):(\d{2})$/.exec(time)
+    if (!match) return time
+    const hour = Number(match[1])
+    const minute = Number(match[2])
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
+  }, [])
 
   const handleProfileSelect = useCallback(
     (profile: 'beginner' | 'known') => {
@@ -778,6 +800,7 @@ export function NuxModal({
     known_tour: 2,
     beginner_stages: 4,
     beginner_intro: 2,
+    reminder: 2,
   }
   const staggerOptions =
     displayedStep === 'beginner_stages'
@@ -1042,6 +1065,51 @@ export function NuxModal({
                 </View>
               </>
             ) : null}
+
+            {displayedStep === 'reminder' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Daily nudge</Text>
+                  <Text style={styles.subtext}>
+                    Pick a time and we'll remind you to practice. Change or
+                    turn it off anytime in Settings.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={[styles.reminderPickerCard, stagger[1]]}>
+                    <Text style={styles.reminderTimeLabel}>
+                      {formatClockTime(reminderTime)}
+                    </Text>
+                    <Host matchContents>
+                      <DateTimePicker
+                        initialDate={reminderInitialIso}
+                        displayedComponents="hourAndMinute"
+                        variant="wheel"
+                        onDateSelected={(date) => {
+                          const hh = date.getHours().toString().padStart(2, '0')
+                          const mm = date
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, '0')
+                          setReminderTime(`${hh}:${mm}`)
+                        }}
+                      />
+                    </Host>
+                  </Animated.View>
+                  <Pressable
+                    onPress={onSkipReminder}
+                    accessibilityRole="button"
+                    accessibilityLabel="Skip reminder"
+                    style={({ pressed }) => [
+                      styles.reminderSkip,
+                      pressed && styles.reminderSkipPressed,
+                    ]}
+                  >
+                    <Text style={styles.reminderSkipText}>Not now</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
           </Reanimated.View>
 
           {/* CTA slot is always rendered with a fixed height so stepBody has
@@ -1087,6 +1155,15 @@ export function NuxModal({
               <DitButton
                 text="Start first lesson"
                 onPress={handleStartBeginnerCourse}
+                style={styles.ctaButton}
+                radius={radii.pill}
+                paddingVertical={16}
+              />
+            ) : null}
+            {displayedStep === 'reminder' ? (
+              <DitButton
+                text="Turn on reminder"
+                onPress={() => onSetReminder(reminderTime)}
                 style={styles.ctaButton}
                 radius={radii.pill}
                 paddingVertical={16}
@@ -1290,5 +1367,34 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     width: '100%' as unknown as number,
+  },
+  reminderPickerCard: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.panelStrong,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  reminderTimeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary60,
+  },
+  reminderSkip: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  reminderSkipPressed: {
+    opacity: 0.6,
+  },
+  reminderSkipText: {
+    fontSize: 15,
+    color: colors.text.primary60,
   },
 })

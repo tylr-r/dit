@@ -6,8 +6,8 @@ import {
   todayStreakContribution,
 } from '@dit/core'
 import { StatusBar } from 'expo-status-bar'
-import { useCallback, useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AppState, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AboutModal } from './src/components/AboutModal'
 import { BackgroundGlow } from './src/components/BackgroundGlow'
@@ -27,6 +27,8 @@ import { useMorseSessionController } from './src/hooks/useMorseSessionController
 import { useOnboardingState } from './src/hooks/useOnboardingState'
 import { usePhaseModalState } from './src/hooks/usePhaseModalState'
 import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
+import { rescheduleReminder } from './src/notifications/reminder'
+import { publishProgressToWidget } from './src/widgets/publish'
 import { signOut } from './src/services/auth'
 import {
   LEVELS,
@@ -87,6 +89,52 @@ export default function App() {
     setShowSettings((prev) => !prev)
   }, [dismissSettingsHint])
 
+  const {
+    reminder,
+    streak,
+    dailyActivity,
+    learnerProfile,
+    scores,
+    letterAccuracy,
+    bestWpm,
+  } = state
+  const progressForSideEffects = useMemo(
+    () => ({
+      reminder,
+      streak,
+      dailyActivity,
+      learnerProfile: learnerProfile ?? undefined,
+      scores,
+      letterAccuracy,
+      bestWpm,
+    }),
+    [
+      reminder,
+      streak,
+      dailyActivity,
+      learnerProfile,
+      scores,
+      letterAccuracy,
+      bestWpm,
+    ],
+  )
+  useEffect(() => {
+    void rescheduleReminder(progressForSideEffects)
+    publishProgressToWidget(progressForSideEffects)
+  }, [progressForSideEffects])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        void rescheduleReminder(progressForSideEffects)
+        publishProgressToWidget(progressForSideEffects)
+      }
+    })
+    return () => {
+      subscription.remove()
+    }
+  }, [progressForSideEffects])
+
   return (
     <SafeAreaProvider>
       <View style={styles.container} onStartShouldSetResponderCapture={handleRootTouchStart}>
@@ -130,6 +178,7 @@ export default function App() {
               listenCharacterWpmMax={LISTEN_WPM_MAX}
               showHint={state.showHint}
               showMnemonic={state.showMnemonic}
+              reminder={state.reminder}
               isDeletingAccount={isDeletingAccount}
               onClose={() => {
                 setters.flushPendingSave()
@@ -145,6 +194,7 @@ export default function App() {
               onListenCharacterWpmChange={handlers.handleListenWpmChange}
               onShowHintChange={setters.setShowHint}
               onShowMnemonicChange={setters.setShowMnemonic}
+              onReminderChange={handlers.handleReminderChange}
               onUseRecommended={handlers.handleUseRecommended}
               onShowAbout={handleShowAbout}
               user={user}
@@ -325,6 +375,10 @@ export default function App() {
             onFinishKnownTour={handlers.handleFinishKnownTour}
             onContinueFromStages={handlers.handleNuxContinueFromStages}
             onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
+            onSetReminder={(time) => {
+              void handlers.handleNuxSetReminder(time)
+            }}
+            onSkipReminder={handlers.handleNuxSkipReminder}
           />
         ) : null}
       </View>
