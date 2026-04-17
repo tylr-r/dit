@@ -1,6 +1,9 @@
+import type { ReminderSettings } from '@dit/core'
+import { DateTimePicker, Host } from '@expo/ui/swift-ui'
 import type { User } from '@firebase/auth'
 import { BlurView } from 'expo-blur'
 import React from 'react'
+import { ensureNotificationPermission } from '../notifications/reminder'
 import {
   Animated,
   Easing,
@@ -36,6 +39,7 @@ type SettingsModalProps = {
   listenCharacterWpmMax: number
   showHint: boolean
   showMnemonic: boolean
+  reminder: ReminderSettings | undefined
   user: User | null
   isDeletingAccount: boolean
   onClose: () => void
@@ -49,6 +53,7 @@ type SettingsModalProps = {
   onListenCharacterWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
+  onReminderChange: (reminder: ReminderSettings | undefined) => void
   onUseRecommended: () => void
   onShowAbout: () => void
   onSignInWithApple: () => Promise<unknown>
@@ -167,6 +172,7 @@ export function SettingsModal({
   listenCharacterWpmMax,
   showHint,
   showMnemonic,
+  reminder,
   user,
   isDeletingAccount,
   onClose,
@@ -180,6 +186,7 @@ export function SettingsModal({
   onListenCharacterWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
+  onReminderChange,
   onUseRecommended,
   onShowAbout,
   onSignInWithApple,
@@ -215,6 +222,39 @@ export function SettingsModal({
   const [practiceSettingsExpanded, setPracticeSettingsExpanded] =
     React.useState(false)
   const [helperExpanded, setHelperExpanded] = React.useState(false)
+
+  const reminderEnabled = Boolean(reminder?.enabled)
+  const reminderTime = reminder?.time ?? '19:00'
+  const reminderInitialIso = React.useMemo(() => {
+    const match = /^(\d{2}):(\d{2})$/.exec(reminderTime)
+    const hour = match ? Number(match[1]) : 19
+    const minute = match ? Number(match[2]) : 0
+    const date = new Date()
+    date.setHours(hour, minute, 0, 0)
+    return date.toISOString()
+  }, [reminderTime])
+
+  const handleReminderEnabledChange = React.useCallback(
+    (next: boolean) => {
+      if (!next) {
+        onReminderChange({ enabled: false, time: reminderTime })
+        return
+      }
+      void ensureNotificationPermission().then((granted) => {
+        onReminderChange({ enabled: granted, time: reminderTime })
+      })
+    },
+    [onReminderChange, reminderTime],
+  )
+
+  const handleReminderTimeChange = React.useCallback(
+    (date: Date) => {
+      const hh = date.getHours().toString().padStart(2, '0')
+      const mm = date.getMinutes().toString().padStart(2, '0')
+      onReminderChange({ enabled: reminderEnabled, time: `${hh}:${mm}` })
+    },
+    [onReminderChange, reminderEnabled],
+  )
   const bottomInsetPadding = Math.max(
     spacing.xl * 2,
     insets.bottom + spacing.xl,
@@ -727,6 +767,33 @@ export function SettingsModal({
                       </Text>
                     </>
                   ) : null}
+                </SettingsGroup>
+
+                <SettingsGroup>
+                  <ToggleRow
+                    label="Daily reminder"
+                    value={reminderEnabled}
+                    onValueChange={handleReminderEnabledChange}
+                  />
+                  {reminderEnabled ? (
+                    <>
+                      <View style={styles.separator} />
+                      <View style={styles.row}>
+                        <Text style={styles.rowLabel}>Time</Text>
+                        <Host matchContents>
+                          <DateTimePicker
+                            initialDate={reminderInitialIso}
+                            displayedComponents="hourAndMinute"
+                            variant="compact"
+                            onDateSelected={handleReminderTimeChange}
+                          />
+                        </Host>
+                      </View>
+                    </>
+                  ) : null}
+                  <Text style={styles.helperText}>
+                    One nudge per day, skipped once you hit today's goal.
+                  </Text>
                 </SettingsGroup>
 
                 <SettingsGroup>

@@ -4,12 +4,15 @@ import {
   type GuidedLessonProgress,
   type GuidedPhase,
   type LearnerProfile,
+  type ReminderSettings,
 } from '@dit/core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback } from 'react'
+import { ensureNotificationPermission } from '../notifications/reminder'
 import {
   LISTEN_MIN_UNIT_MS,
   NUX_STATUS_KEY,
+  type NuxStep,
 } from '../utils/appState'
 import { playMorseTone } from '../utils/tone'
 
@@ -25,8 +28,9 @@ type UseOnboardingActionsOptions = {
   persistIntroHintStep: (step: 'morse' | 'settings' | 'done') => void
   persistNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
   setNuxStatus: (status: 'pending' | 'completed' | 'skipped') => void
-  setNuxStep: (step: 'welcome' | 'profile' | 'sound_check' | 'button_tutorial' | 'known_tour' | 'beginner_stages' | 'beginner_intro') => void
+  setNuxStep: (step: NuxStep) => void
   setLearnerProfile: (profile: LearnerProfile | null) => void
+  onReminderChange: (reminder: ReminderSettings | undefined) => void
   setDidCompleteSoundCheck: (value: boolean) => void
   setTutorialTapCount: (value: number) => void
   setTutorialHoldCount: (value: number) => void
@@ -94,6 +98,7 @@ export const useOnboardingActions = ({
   practiceReviewQueueRef,
   applyKnownLearnerDefaults,
   moveIntoGuidedLesson,
+  onReminderChange,
 }: UseOnboardingActionsOptions) => {
   const playOnboardingCode = useCallback((code: '.' | '-') => {
     void playMorseTone({
@@ -164,10 +169,9 @@ export const useOnboardingActions = ({
     setGuidedCourseActive(false)
     setGuidedPhase('complete')
     setGuidedProgress(createGuidedLessonProgress())
-    finishOnboarding()
+    setNuxStep('reminder')
   }, [
     applyKnownLearnerDefaults,
-    finishOnboarding,
     guidedCourseActiveRef,
     guidedPhaseRef,
     guidedProgressRef,
@@ -176,6 +180,7 @@ export const useOnboardingActions = ({
     setGuidedPhase,
     setGuidedProgress,
     setLearnerProfile,
+    setNuxStep,
   ])
 
   const handleStartBeginnerCourse = useCallback(() => {
@@ -191,17 +196,15 @@ export const useOnboardingActions = ({
     practiceReviewQueueRef.current = []
     setPracticeReviewMisses(false)
     practiceReviewMissesRef.current = false
-    finishOnboarding()
-    moveIntoGuidedLesson('teach', 0, createGuidedLessonProgress())
+    setNuxStep('reminder')
   }, [
-    finishOnboarding,
     learnerProfileRef,
-    moveIntoGuidedLesson,
     practiceIfrModeRef,
     practiceLearnModeRef,
     practiceReviewMissesRef,
     practiceReviewQueueRef,
     setLearnerProfile,
+    setNuxStep,
     setPracticeAutoPlay,
     setPracticeIfrMode,
     setPracticeLearnMode,
@@ -209,6 +212,27 @@ export const useOnboardingActions = ({
     setShowHint,
     setShowMnemonic,
   ])
+
+  const completeAfterReminderStep = useCallback(() => {
+    const profile = learnerProfileRef.current
+    finishOnboarding()
+    if (profile === 'beginner') {
+      moveIntoGuidedLesson('teach', 0, createGuidedLessonProgress())
+    }
+  }, [finishOnboarding, learnerProfileRef, moveIntoGuidedLesson])
+
+  const handleNuxSetReminder = useCallback(
+    async (time: string) => {
+      const granted = await ensureNotificationPermission()
+      onReminderChange({ enabled: granted, time })
+      completeAfterReminderStep()
+    },
+    [completeAfterReminderStep, onReminderChange],
+  )
+
+  const handleNuxSkipReminder = useCallback(() => {
+    completeAfterReminderStep()
+  }, [completeAfterReminderStep])
 
   const handleReplayNux = useCallback(() => {
     setShowSettings(false)
@@ -242,6 +266,8 @@ export const useOnboardingActions = ({
     handleNuxContinueFromStages,
     handleFinishKnownTour,
     handleStartBeginnerCourse,
+    handleNuxSetReminder,
+    handleNuxSkipReminder,
     handleReplayNux,
   }
 }

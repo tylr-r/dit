@@ -15,7 +15,31 @@
     },
     "plugins": [
       "expo-dev-client",
-      "./plugins/withModularHeaders"
+      "./plugins/withModularHeaders",
+      [
+        "expo-notifications",
+        {
+          "color": "#0a0c12"
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "DitProgress",
+              "displayName": "Dit",
+              "description": "Your streak and today's progress.",
+              "supportedFamilies": [
+                "systemSmall",
+                "systemMedium",
+                "accessoryRectangular"
+              ],
+              "contentMarginsDisabled": false
+            }
+          ]
+        }
+      ]
     ],
     "ios": {
       "userInterfaceStyle": "dark",

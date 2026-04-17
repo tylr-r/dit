@@ -75,6 +75,11 @@ const mergeProgressSnapshot = (
   showHint: progress.showHint ?? base.showHint,
   showMnemonic: progress.showMnemonic ?? base.showMnemonic,
   wordMode: progress.wordMode ?? base.wordMode,
+  dailyActivity: progress.dailyActivity ?? base.dailyActivity,
+  streak: progress.streak ?? base.streak,
+  letterAccuracy: progress.letterAccuracy ?? base.letterAccuracy,
+  bestWpm: progress.bestWpm ?? base.bestWpm,
+  reminder: progress.reminder ?? base.reminder,
 })
 
 const clearTimer = (ref: { current: TimeoutHandle | null }) => {

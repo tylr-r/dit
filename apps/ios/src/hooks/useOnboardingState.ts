@@ -28,6 +28,7 @@ const NUX_STEP_VALUES: readonly NuxStep[] = [
   'known_tour',
   'beginner_stages',
   'beginner_intro',
+  'reminder',
 ]
 
 const isNuxStep = (value: unknown): value is NuxStep =>

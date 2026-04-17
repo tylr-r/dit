@@ -80,6 +80,7 @@ export type NuxStep =
   | 'known_tour'
   | 'beginner_stages'
   | 'beginner_intro'
+  | 'reminder'
 export type ListenPromptTiming = {
   targetLetter: Letter
   expectedEndAt: number
