@@ -12,6 +12,7 @@ dist
 dist-ssr
 .turbo
 .firebase
+.worktrees
 *.local
 
 # Editor directories and files
