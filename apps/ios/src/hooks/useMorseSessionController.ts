@@ -1859,7 +1859,7 @@ export const useMorseSessionController = ({
           ? 'Try again'
           : 'Listen and try again'
         : guidedPhase === 'teach'
-          ? 'Tap what you hear'
+          ? 'Tap out what you heard'
           : ' '
     : null
   const guidedPracticeStatusDetailText =

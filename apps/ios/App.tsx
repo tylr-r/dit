@@ -301,8 +301,6 @@ export default function App() {
             onChooseProfile={handlers.handleNuxChooseProfile}
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
             onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}
-            onPlayDitDemo={handlers.handleNuxPlayDitDemo}
-            onPlayDahDemo={handlers.handleNuxPlayDahDemo}
             onCompleteButtonTutorial={handlers.handleNuxCompleteButtonTutorial}
             onFinishKnownTour={handlers.handleFinishKnownTour}
             onContinueFromStages={handlers.handleNuxContinueFromStages}
