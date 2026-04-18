@@ -745,6 +745,25 @@ public final class DitNativeModule: Module {
       return "Dit native module ready"
     }
 
+    AsyncFunction("copyAssetToAppGroup") { (sourceUri: String, appGroup: String, filename: String) -> String? in
+      guard let container = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroup
+      ) else {
+        return nil
+      }
+      let targetUrl = container.appendingPathComponent(filename)
+      guard let sourceUrl = URL(string: sourceUri) else { return nil }
+      if FileManager.default.fileExists(atPath: targetUrl.path) {
+        try? FileManager.default.removeItem(at: targetUrl)
+      }
+      do {
+        try FileManager.default.copyItem(at: sourceUrl, to: targetUrl)
+      } catch {
+        return nil
+      }
+      return targetUrl.absoluteString
+    }
+
     AsyncFunction("getLowPowerModeEnabled") { () -> Bool in
       ProcessInfo.processInfo.isLowPowerModeEnabled
     }

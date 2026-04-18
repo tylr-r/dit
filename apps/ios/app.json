@@ -37,7 +37,7 @@
                 "systemMedium",
                 "accessoryRectangular"
               ],
-              "contentMarginsDisabled": false
+              "contentMarginsDisabled": true
             }
           ]
         }
