@@ -42,6 +42,11 @@ export type DitNativeModule = {
     durationMs: number,
     volume: number
   ) => boolean | Promise<boolean>
+  copyAssetToAppGroup?: (
+    sourceUri: string,
+    appGroup: string,
+    filename: string
+  ) => Promise<string | null>
 }
 
 const DitNative = requireOptionalNativeModule<DitNativeModule>('DitNative')
@@ -109,6 +114,15 @@ export const stopTone = async () => {
   }
 
   return false
+}
+
+export const copyAssetToAppGroup = async (
+  sourceUri: string,
+  appGroup: string,
+  filename: string
+): Promise<string | null> => {
+  if (!DitNative?.copyAssetToAppGroup) return null
+  return DitNative.copyAssetToAppGroup(sourceUri, appGroup, filename)
 }
 
 export default DitNative
