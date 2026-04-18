@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { DateTimePicker, Host } from '@expo/ui/swift-ui'
+import { DatePicker, Host } from '@expo/ui/swift-ui'
+import { datePickerStyle } from '@expo/ui/swift-ui/modifiers'
 import { SymbolView } from 'expo-symbols'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
@@ -666,10 +667,10 @@ export function NuxModal({
     null,
   )
   const [reminderTime, setReminderTime] = useState('19:00')
-  const reminderInitialIso = useMemo(() => {
+  const reminderInitialDate = useMemo(() => {
     const now = new Date()
     now.setHours(19, 0, 0, 0)
-    return now.toISOString()
+    return now
   }, [])
   const formatClockTime = useCallback((time: string) => {
     const match = /^(\d{2}):(\d{2})$/.exec(time)
@@ -1081,11 +1082,11 @@ export function NuxModal({
                       {formatClockTime(reminderTime)}
                     </Text>
                     <Host matchContents>
-                      <DateTimePicker
-                        initialDate={reminderInitialIso}
-                        displayedComponents="hourAndMinute"
-                        variant="wheel"
-                        onDateSelected={(date) => {
+                      <DatePicker
+                        selection={reminderInitialDate}
+                        displayedComponents={['hourAndMinute']}
+                        modifiers={[datePickerStyle('wheel')]}
+                        onDateChange={(date: Date) => {
                           const hh = date.getHours().toString().padStart(2, '0')
                           const mm = date
                             .getMinutes()
