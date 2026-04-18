@@ -25,6 +25,8 @@
       [
         "expo-widgets",
         {
+          "bundleIdentifier": "com.tylerobinson.dit.ExpoWidgetsTarget",
+          "groupIdentifier": "group.com.tylerobinson.dit",
           "widgets": [
             {
               "name": "DitProgress",
@@ -44,6 +46,7 @@
     "ios": {
       "userInterfaceStyle": "dark",
       "supportsTablet": true,
+      "icon": "./assets/images/AppIcon.icon",
       "bundleIdentifier": "com.tylerobinson.dit",
       "entitlements": {
         "com.apple.developer.applesignin": [

@@ -1,5 +1,6 @@
 import type { ReminderSettings } from '@dit/core'
-import { DateTimePicker, Host } from '@expo/ui/swift-ui'
+import { DatePicker, Host } from '@expo/ui/swift-ui'
+import { datePickerStyle } from '@expo/ui/swift-ui/modifiers'
 import type { User } from '@firebase/auth'
 import { BlurView } from 'expo-blur'
 import React from 'react'
@@ -225,13 +226,13 @@ export function SettingsModal({
 
   const reminderEnabled = Boolean(reminder?.enabled)
   const reminderTime = reminder?.time ?? '19:00'
-  const reminderInitialIso = React.useMemo(() => {
+  const reminderInitialDate = React.useMemo(() => {
     const match = /^(\d{2}):(\d{2})$/.exec(reminderTime)
     const hour = match ? Number(match[1]) : 19
     const minute = match ? Number(match[2]) : 0
     const date = new Date()
     date.setHours(hour, minute, 0, 0)
-    return date.toISOString()
+    return date
   }, [reminderTime])
 
   const handleReminderEnabledChange = React.useCallback(
@@ -781,11 +782,11 @@ export function SettingsModal({
                       <View style={styles.row}>
                         <Text style={styles.rowLabel}>Time</Text>
                         <Host matchContents>
-                          <DateTimePicker
-                            initialDate={reminderInitialIso}
-                            displayedComponents="hourAndMinute"
-                            variant="compact"
-                            onDateSelected={handleReminderTimeChange}
+                          <DatePicker
+                            selection={reminderInitialDate}
+                            displayedComponents={['hourAndMinute']}
+                            modifiers={[datePickerStyle('compact')]}
+                            onDateChange={handleReminderTimeChange}
                           />
                         </Host>
                       </View>

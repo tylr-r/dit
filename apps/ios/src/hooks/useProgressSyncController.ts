@@ -17,6 +17,7 @@ import type { User } from '@firebase/auth'
 import type { Database } from '@firebase/database'
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { type Mode } from '../components/ModeSwitcher'
+import { publishProgressToWidget } from '../widgets/publish'
 import { useFirebaseSync } from './useFirebaseSync'
 import { useProgressPersistence } from './useProgressPersistence'
 import {
@@ -450,6 +451,10 @@ export const useProgressSyncController = ({
     }
     saveNow(payload, payload.updatedAt)
   }, [consumePendingRemoteSync, pendingRemoteSyncTick, remoteLoaded, saveNow, user])
+
+  useEffect(() => {
+    publishProgressToWidget(progressSnapshot)
+  }, [progressSnapshot])
 
   return {
     clearLocalProgress,

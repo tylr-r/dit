@@ -1,5 +1,11 @@
-import { Host, Picker } from '@expo/ui/swift-ui'
-import { accessibilityLabel, frame } from '@expo/ui/swift-ui/modifiers'
+import { Host, Picker, Text } from '@expo/ui/swift-ui'
+import {
+  accessibilityLabel,
+  foregroundStyle,
+  frame,
+  pickerStyle,
+  tag,
+} from '@expo/ui/swift-ui/modifiers'
 import { GlassView } from 'expo-glass-effect'
 import { StyleSheet, View } from 'react-native'
 import { normalizeColorForNative } from '../design/color'
@@ -23,7 +29,6 @@ const MENU_MIN_WIDTH = 132
 
 /** Toggle between practice, freestyle, and listen modes. */
 export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
-  const selectedIndex = MODE_ORDER.indexOf(value)
   const pickerTintColor = normalizeColorForNative(colors.controls.pickerTint)
   const pickerAccentColor = normalizeColorForNative(colors.text.primary80)
 
@@ -36,23 +41,27 @@ export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
     >
       <View style={styles.pickerWrap}>
         <Host matchContents>
-          <Picker
-            options={MODE_ORDER.map((mode) => MODE_LABELS[mode])}
-            selectedIndex={selectedIndex}
+          <Picker<Mode>
             label={MODE_LABELS[value]}
-            color={pickerAccentColor}
+            selection={value}
+            onSelectionChange={(next) => {
+              if (next) {
+                onChange(next)
+              }
+            }}
             modifiers={[
               accessibilityLabel('Mode'),
               frame({ minWidth: MENU_MIN_WIDTH }),
+              pickerStyle('menu'),
+              foregroundStyle(pickerAccentColor),
             ]}
-            onOptionSelected={({ nativeEvent }) => {
-              const nextMode = MODE_ORDER[nativeEvent.index]
-              if (nextMode) {
-                onChange(nextMode)
-              }
-            }}
-            variant="menu"
-          />
+          >
+            {MODE_ORDER.map((mode) => (
+              <Text key={mode} modifiers={[tag(mode)]}>
+                {MODE_LABELS[mode]}
+              </Text>
+            ))}
+          </Picker>
         </Host>
       </View>
     </GlassView>
