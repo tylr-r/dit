@@ -760,9 +760,10 @@ export function NuxModal({
     setMorphSource(null)
   }, [])
 
-  // Exit transition from the final onboarding step into the first lesson.
-  // Fades the modal out and drifts it forward a touch while the lesson screen
-  // (already mounted underneath) comes into focus — avoids the abrupt unmount.
+  // Exit transition from the final onboarding step (reminder) into the first
+  // lesson. Fades the modal out and drifts it forward a touch while the lesson
+  // screen (already mounted underneath) comes into focus — avoids the abrupt
+  // unmount.
   const exitProgress = useSharedValue(0)
   const exitingRef = useRef(false)
   const exitStyle = useAnimatedStyle(() => ({
@@ -770,19 +771,34 @@ export function NuxModal({
     transform: [{ scale: 1 + exitProgress.value * 0.04 }],
   }))
 
+  const runExitTransition = useCallback(
+    (done: () => void) => {
+      if (exitingRef.current) return
+      exitingRef.current = true
+      if (reduceMotion) {
+        done()
+        return
+      }
+      exitProgress.value = withTiming(1, {
+        duration: 360,
+        easing: REasing.bezier(...BEZIER.out),
+      })
+      setTimeout(done, 280)
+    },
+    [exitProgress, reduceMotion],
+  )
+
   const handleStartBeginnerCourse = useCallback(() => {
-    if (exitingRef.current) return
-    exitingRef.current = true
-    if (reduceMotion) {
-      onStartBeginnerCourse()
-      return
-    }
-    exitProgress.value = withTiming(1, {
-      duration: 360,
-      easing: REasing.bezier(...BEZIER.out),
-    })
-    setTimeout(onStartBeginnerCourse, 280)
-  }, [onStartBeginnerCourse, reduceMotion, exitProgress])
+    onStartBeginnerCourse()
+  }, [onStartBeginnerCourse])
+
+  const handleReminderSet = useCallback(() => {
+    runExitTransition(() => onSetReminder(reminderTime))
+  }, [onSetReminder, reminderTime, runExitTransition])
+
+  const handleReminderSkip = useCallback(() => {
+    runExitTransition(onSkipReminder)
+  }, [onSkipReminder, runExitTransition])
 
   const handleContinueFromStages = useCallback(() => {
     onContinueFromStages()
@@ -1098,7 +1114,7 @@ export function NuxModal({
                     </Host>
                   </Animated.View>
                   <Pressable
-                    onPress={onSkipReminder}
+                    onPress={handleReminderSkip}
                     accessibilityRole="button"
                     accessibilityLabel="Skip reminder"
                     style={({ pressed }) => [
@@ -1164,7 +1180,7 @@ export function NuxModal({
             {displayedStep === 'reminder' ? (
               <DitButton
                 text="Turn on reminder"
-                onPress={() => onSetReminder(reminderTime)}
+                onPress={handleReminderSet}
                 style={styles.ctaButton}
                 radius={radii.pill}
                 paddingVertical={16}
