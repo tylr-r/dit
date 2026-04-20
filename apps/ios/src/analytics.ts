@@ -4,25 +4,31 @@ import {
   type AnalyticsEventParams,
   noopAnalyticsClient,
 } from '@dit/core'
-import analytics from '@react-native-firebase/analytics'
+import { getApp } from '@react-native-firebase/app'
+import {
+  getAnalytics,
+  logEvent,
+  setUserId,
+  setUserProperty,
+} from '@react-native-firebase/analytics'
 
 /**
  * iOS analytics client backed by Firebase Analytics via @react-native-firebase.
- * Falls back to a no-op in environments where the native module isn't available
- * (unit tests, Storybook web runner, etc.).
+ * Uses the modular v22 API. Falls back to a no-op when the native module
+ * isn't available (unit tests, Storybook web runner, etc.).
  */
 const createClient = (): AnalyticsClient => {
   try {
-    const instance = analytics()
+    const instance = getAnalytics(getApp())
     return {
       logEvent: (name, ...params) => {
-        instance.logEvent(name, params[0]).catch(() => {})
+        logEvent(instance, name, params[0]).catch(() => {})
       },
       setUserId: (id) => {
-        instance.setUserId(id).catch(() => {})
+        setUserId(instance, id).catch(() => {})
       },
       setUserProperty: (name, value) => {
-        instance.setUserProperty(name, value).catch(() => {})
+        setUserProperty(instance, name, value).catch(() => {})
       },
     }
   } catch {
