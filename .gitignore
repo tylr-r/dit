@@ -42,4 +42,5 @@ apps/web/test-results/
 /app.json
 apps/ios/GoogleService-Info.plist
 apps/ios/build/
-docs/USER_REVIEWS.md
+# Private operational docs (kept locally)
+docs/private/
