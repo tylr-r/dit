@@ -11,7 +11,6 @@ export const TIMING = {
   exit: 140,
   morph: 520,
   wash: 320,
-  aurora: 8000,
   breath: 3000,
   ripple: 1200,
   circleDraw: 500,
