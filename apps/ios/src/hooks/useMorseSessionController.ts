@@ -44,6 +44,7 @@ import { AppState } from 'react-native'
 import type { PhaseModalContent } from '../components/PhaseModal'
 import { type Mode } from '../components/ModeSwitcher'
 import type { StagePip } from '../components/StageDisplay'
+import { logAnalyticsEvent } from '../analytics'
 import { database } from '../firebase'
 import { useAccountActions } from './useAccountActions'
 import { useOnboardingActions } from './useOnboardingActions'
@@ -799,6 +800,12 @@ export const useMorseSessionController = ({
         setDailyActivity(nextDaily)
         setLetterAccuracy(nextAccuracy)
         if (next.streak && next.streak !== streakRef.current) {
+          const prevStreak = streakRef.current?.current ?? 0
+          if (next.streak.current > prevStreak) {
+            logAnalyticsEvent('streak_day_reached', {
+              streak_length: next.streak.current,
+            })
+          }
           streakRef.current = next.streak
           setStreak(next.streak)
         }
@@ -1776,6 +1783,7 @@ export const useMorseSessionController = ({
 
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
+      logAnalyticsEvent('mode_start', { mode: nextMode })
       stopListenPlayback()
       setMode(nextMode)
       setShowSettings(false)

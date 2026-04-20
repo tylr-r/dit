@@ -1,3 +1,10 @@
+export { noopAnalyticsClient } from './analytics'
+export type {
+  AnalyticsClient,
+  AnalyticsEvent,
+  AnalyticsEventName,
+  AnalyticsEventParams,
+} from './analytics'
 export { MORSE_DATA } from './data/morse'
 export { PRACTICE_WORDS } from './data/practiceWords'
 export {

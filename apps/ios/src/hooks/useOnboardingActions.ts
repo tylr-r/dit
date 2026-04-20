@@ -8,6 +8,7 @@ import {
 } from '@dit/core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback } from 'react'
+import { logAnalyticsEvent } from '../analytics'
 import { ensureNotificationPermission } from '../notifications/reminder'
 import {
   LISTEN_MIN_UNIT_MS,
@@ -144,6 +145,7 @@ export const useOnboardingActions = ({
   }, [setNuxStep])
 
   const finishOnboarding = useCallback(() => {
+    logAnalyticsEvent('onboarding_completed')
     persistNuxStatus('completed')
     persistIntroHintStep('done')
     setNuxStep('welcome')
