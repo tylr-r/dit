@@ -41,7 +41,9 @@ All HSL. Opacities derive from a single hue per role.
 | Token            | Value                         | Use                          |
 | ---------------- | ----------------------------- | ---------------------------- |
 | `text.primary`   | `hsl(24, 29%, 97%)`           | Headlines, active copy       |
+| `text.primary90` | `hsla(24, 29%, 97%, 0.9)`     | Near-primary, high-emphasis  |
 | `text.primary80` | `hsla(24, 29%, 97%, 0.8)`     | De-emphasized primary        |
+| `text.primary70` | `hsla(24, 29%, 97%, 0.7)`     | Between body and primary     |
 | `text.primary60` | `hsla(24, 29%, 97%, 0.6)`     | Secondary copy               |
 | `text.primary40` | `hsla(24, 29%, 97%, 0.4)`     | Hints, disabled, meta labels |
 | `text.primary20` | `hsla(24, 29%, 97%, 0.2)`     | Separators, connector lines  |
@@ -155,7 +157,9 @@ Body line-height: 20. Others: default.
 
 ### Pressable (`ScalePressable`)
 
-Generic tappable surface. Press scale 0.97, `TIMING.press` (120ms).
+Generic tappable surface. Press scale 0.97, `TIMING.press` (120ms). Currently
+a local helper inside `NuxModal.tsx`. Extract it if a second file needs the
+same behavior — don't duplicate it.
 
 ### Option card
 
@@ -175,11 +179,12 @@ interpolates `text.primary40` → `text.primary` as the ring draws. Title
 20/600, description 14/400 centered below. 6px gap between ring, title,
 description.
 
-### Letter chip
+### Letter chip (`LetterDealChip`)
 
 72×72, `radii.lg` (20), `surface.panelStrong` background, 1px
-`border.subtle`. Letter 26/700. Entrance: rotateY 90→0, scale 0.7→1,
-opacity 0→1, spring `RSPRING.soft`.
+`border.subtle`. Letter 26/700. Entrance flips like a dealt card: rotateY
+90→0, scale 0.7→1, opacity 0→1, spring `RSPRING.soft`. Under reduced
+motion, opacity fades in over 240ms with no transform.
 
 ### Inputs
 
@@ -280,17 +285,19 @@ shadows.
 
 ### Timing (ms)
 
-| Token          | Value | Use                           |
-| -------------- | ----- | ----------------------------- |
-| `press`        | 120   | Press feedback                |
-| `exit`         | 140   | Step exit                     |
-| `snap`         | 160   | Small state changes           |
-| `standard`     | 240   | Step content reveal           |
-| `medium`       | 320   | Step enter                    |
-| `circleDraw`   | 500   | Stage ring draw               |
-| `morph`        | 520   | Shared-element morphs (rare)  |
-| `connector`    | 700   | Stage connector draw          |
-| `breath`       | 3000  | Welcome-logo breathing (once) |
+| Token          | Value | Use                                  |
+| -------------- | ----- | ------------------------------------ |
+| `press`        | 120   | Press feedback                       |
+| `exit`         | 140   | Step exit                            |
+| `snap`         | 160   | Small state changes                  |
+| `standard`     | 240   | Step content reveal                  |
+| `medium`       | 320   | Step enter                           |
+| `wash`         | 320   | Sound-check washes, short overlays   |
+| `circleDraw`   | 500   | Stage ring draw                      |
+| `morph`        | 520   | Shared-element morphs (rare)         |
+| `connector`    | 700   | Stage connector draw                 |
+| `ripple`       | 1200  | Sonar-style ripple rings             |
+| `breath`       | 3000  | Welcome-logo breathing (once)        |
 
 ### Bezier curves
 

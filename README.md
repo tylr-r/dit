@@ -1,40 +1,41 @@
 # Dit
 
-Dit is a Morse code practice app for web and iOS. It offers various modes to help users learn and practice Morse code, providing instant feedback and tracking progress. The app is built using a monorepo architecture with shared logic and native modules for audio and haptic feedback.
+Dit is a Morse code practice app for web and iOS. It teaches Morse by ear, using the Koch method with Farnsworth spacing, so you build a direct sound-to-character reflex instead of mentally decoding dots and dashes. The repo is a monorepo with shared Morse logic, a Vite + React web app, an Expo iOS app, and a Swift/UIKit native module for audio, haptics, and glass effects.
 
 ## Principles
 
-- **Convenient daily practice** — Easy to use and accessible for consistent learning
-- **Auditory reflex over decoding** — Build direct sound-to-character recognition rather than analytical translation
-- **Koch method foundation** — Start at manageable speeds with Farnsworth spacing and high-frequency characters
-- **Variable speed training** — Gradually increase effective speed through adjustable Farnsworth spacing
-- **Early meaningful words** — Learn high-frequency characters first to form words quickly
-- **Self-paced progression** — Carousel structure removes rigid linear requirements
+- Convenient daily practice. If it isn't easy to open and use, people don't come back.
+- Auditory reflex over decoding. Build sound-to-character recognition, not a mental lookup table.
+- Koch method foundation. Start at realistic character speed with Farnsworth spacing and introduce high-frequency letters first.
+- Variable effective speed. Tighten inter-character gaps as proficiency grows rather than raising the per-character speed.
+- Early meaningful words. High-frequency letters come first so learners can form real words within the first lessons.
+- Self-paced progression. Beginners get a guided course that advances in small packs; anyone else can free-roam across modes without a fixed sequence.
+
+See [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) for the long version.
 
 ## Modes
 
-**Practice** — Match the prompted letter. Get it right, move on. Get it wrong, start over.
-
-**Freestyle** — Tap out whatever you want and see what letter it is. Word mode lets you spell things out.
-
-**Listen** — Hear a letter, type the answer.
+- Practice: match the prompted letter. Get it right and it moves on. Get it wrong and, depending on settings, the app either keeps you on the same target or drops it and advances (IFR mode). Word mode strings letters into a full word.
+- Freestyle: tap out whatever you want, pause, and the app tells you which letter you sent. Word mode accumulates letters with automatic spaces on word gaps.
+- Listen: the app plays a letter at the chosen WPM and you type the answer.
 
 ## Architecture
 
-- Turborepo monorepo with shared Morse logic in `packages/core`
-- Web app in `apps/web` (Vite + React)
-- iOS app in `apps/ios` (Expo + React Native)
-- Native bridge in `modules/dit-native` (audio, haptics, glass view)
-- Firebase Auth + Realtime Database for sync
-- UI intent: web ships custom React components; iOS prefers Expo UI/SwiftUI components when available, with React Native fallbacks as needed
+- Turborepo + pnpm workspaces. Shared Morse logic lives in `packages/core`.
+- Web app in `apps/web` (Vite + React 19).
+- iOS app in `apps/ios` (Expo SDK 55 + React Native 0.81).
+- Native bridge in `modules/dit-native` (audio playback, haptics, glass view) implemented in Swift/UIKit.
+- iOS also ships a `DitProgress` home-screen widget driven by the same progress data as the in-app Reference view.
+- Firebase Auth + Realtime Database for cross-device sync. Firebase Analytics for basic usage events.
+- UI intent: web uses custom React components matching Dit's design language; iOS prefers Expo UI and UIKit components so the system renders Liquid Glass where applicable, with React Native fallbacks as needed.
 
 ## Repo layout
 
-- `apps/web` — web client, unit tests in `apps/web/tests/unit`, e2e tests in `apps/web/tests/e2e`
-- `apps/ios` — iOS app, assets in `apps/ios/assets`, native code in `apps/ios/ios` and `apps/ios/native`
-- `packages/core` — shared Morse logic + types
-- `modules/dit-native` — Expo native module
-- `scripts` — repo tooling helpers
+- `apps/web`: web client. Unit tests in `apps/web/tests/unit`, Playwright e2e in `apps/web/tests/e2e`.
+- `apps/ios`: iOS app source. `src/` for TS/RN code, `ios/` for the generated Xcode project and Pods, `plugins/` for Expo config plugins, `assets/` for images and fonts, `tests/` for unit tests.
+- `packages/core`: shared Morse logic, types, constants, Firebase helpers, and React hooks.
+- `modules/dit-native`: Expo native module (Swift/UIKit).
+- `scripts`: small repo tooling helpers.
 
 ## Running locally
 
@@ -92,10 +93,9 @@ pnpm run deploy        # builds web app and deploys to Firebase
 
 ## Docs
 
-See `docs/` for detailed references:
-
-- [APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md) — intended behavior across platforms
-- [IOS_APP_STORE_RELEASE.md](docs/IOS_APP_STORE_RELEASE.md) — iOS build, export, and upload flow
-- [STYLE_GUIDE.md](docs/STYLE_GUIDE.md) — code style and naming conventions
-- [NATIVE_IOS.md](docs/NATIVE_IOS.md) — iOS native module details
-- [PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md) — learning methodology
+- [docs/APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md): intended behavior across platforms.
+- [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md): the learning methodology behind the modes and progression.
+- [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md): code style, naming, and UI design principles.
+- [docs/NATIVE_IOS.md](docs/NATIVE_IOS.md): iOS native module architecture.
+- [DESIGN.md](DESIGN.md): visual, motion, and interaction direction; also what we've tried and removed.
+- [AGENTS.md](AGENTS.md): rules for AI coding agents working in this repo.
