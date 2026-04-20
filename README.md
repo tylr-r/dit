@@ -12,35 +12,35 @@ Web: [practicedit.com](https://practicedit.com)
 
 ## Why this repo is public
 
-I build Dit solo, in the open, and I'd rather show how it works than keep the source hidden. If you're curious how the modes are structured, how Firebase sync stays out of the way when signed out, how we bridge Swift and React Native for audio and haptics, or how a small app handles onboarding so please do look around.
+I build Dit solo, in the open. I'd rather show how it works than hide the source. Poke around if you're curious about how the modes are structured, how we bridge Swift and React Native for audio and haptics, or how Firebase sync stays out of the way when you're signed out.
 
 The code is licensed under [AGPL-3.0](LICENSE). You can read it, clone it, run it yourself, and learn from it. You cannot repackage it as a closed commercial product. See [License](#license) below for specifics.
 
 ## Status
 
-Dit ships on the App Store and runs on [practicedit.com](https://practicedit.com). It's a solo project, worked on in bursts, and the codebase moves when it needs to rather than on a schedule. Expect the `main` branch to reflect what's currently live, give or take a day.
+Dit ships on the App Store and runs on [practicedit.com](https://practicedit.com). It's a solo project, worked on in bursts, so the codebase moves when it needs to, not on a schedule. `main` usually reflects what's live, give or take a day.
 
 ## How Dit teaches Morse
 
-- **Auditory reflex over decoding.** You learn the _sound_ of each letter, not a mental lookup of dits and dahs.
-- **Koch method.** Start at realistic character speed with wide spacing (Farnsworth), introduce high-frequency letters first, and bring the gaps in as you get faster.
-- **Variable effective speed.** Character WPM stays fixed; inter-character gaps tighten with proficiency. This trains the ear at real speeds without overwhelming it.
-- **Meaningful words early.** The first letters introduced form real words (TEN, RAT, NET), so practice doesn't feel abstract.
-- **Self-paced.** Beginners get a guided course that advances in small packs. Everyone else free-roams across modes without a fixed sequence.
+- **Auditory reflex, not decoding.** You learn the _sound_ of each letter, not a mental lookup of dits and dahs.
+- **Koch method (1935).** Start at realistic character speed with two letters. Add more as the ear catches up. Don't slow characters down; the reflex you learn at 5 WPM doesn't transfer.
+- **Farnsworth spacing (ARRL, 1990).** Character speed stays fixed. The gaps between characters stretch for beginners and tighten as you get faster. That's how you train at real speeds without being overwhelmed.
+- **Frequency-based letter order.** The first letters form real words (TEN, RAT, NET), so practice doesn't feel abstract.
+- **Self-paced.** Beginners get a guided course that advances in small packs. Everyone else free-roams.
 
-Full pedagogical writeup: [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md).
+More on the research behind this and how it maps to the app: [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md).
 
 ## The three modes
 
-- **Practice**: match the prompted letter. Get it right and it moves on; get it wrong and (depending on settings) the app either holds you on the same target or drops it and advances (IFR mode). Word mode strings letters into a full word and reports your WPM at the end.
+- **Practice**: match the prompted letter. Get it right and it moves on. Get it wrong and, depending on settings, you either stay on the same target or advance immediately (IFR mode). Word mode strings letters into a full word and reports your WPM at the end.
 - **Freestyle**: tap whatever you want, pause, and Dit tells you what letter you sent. Word mode collects decoded letters into a running sentence.
-- **Listen**: Dit plays a letter at the speed you pick, you type the answer.
+- **Listen**: Dit plays a letter at the speed you pick. You type the answer.
 
-Intended behavior across platforms lives in [docs/APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md).
+Intended behavior across platforms is in [docs/APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md).
 
 ## Contributing
 
-This is a personal project, so I'm not set up to review outside pull requests. Issues and bug reports are welcome — if you find something broken or confusing, please open one. If you want to build on Dit's ideas, please fork under AGPL-3.0 and make it your own.
+This is a personal project, so I'm not set up to review outside pull requests. Issues and bug reports are welcome. If you find something broken or confusing, please open one. If you want to build on the ideas, fork under AGPL-3.0 and make it your own.
 
 ---
 
@@ -94,7 +94,7 @@ Dit reads config from:
 - `apps/ios/.env` for Expo-specific config.
 - `apps/ios/GoogleService-Info.plist` for Firebase iOS (local only; copy from `apps/ios/GoogleService-Info.example.plist`).
 
-You'll need your own Firebase project if you want sign-in or sync to work end-to-end. The app runs fine without Firebase — it just keeps all progress local.
+You'll need your own Firebase project if you want sign-in or sync to work end-to-end. The app runs fine without Firebase but it just keeps all progress local.
 
 ## Docs
 

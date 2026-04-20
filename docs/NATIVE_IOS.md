@@ -1,209 +1,58 @@
-# Native iOS Components
+# Native iOS module
 
-**Last Updated:** January 21, 2026  
-**Status:** ✅ Core components functional  
-**Commit:** `3439663`
+`modules/dit-native` is the Expo native module that bridges Swift/UIKit capabilities into the React Native app. Consumed as `@dit/dit-native` via the pnpm workspace.
 
----
+## Why it exists
 
-## Overview
+Three things that RN libraries can't do well:
 
-We've implemented native iOS UI components with authentic "Liquid Glass" aesthetics, replacing generic React Native components with platform-native controls that leverage `UIVisualEffectView` blur effects.
+- **Morse audio.** Low-latency tone playback with tight dit/dah timing, paired with CoreHaptics so the user feels the same rhythm they hear. Done through `AVAudioEngine` + a `CHHapticEngine` pattern player in the same Swift class so timing stays in sync.
+- **Auth.** Google and Apple sign-in go through Firebase, but the credential handshake has to happen in native code (Apple's `ASAuthorizationController`, GoogleSignIn's presenting controller). We also do the Apple token revoke dance for account deletion here.
+- **Widget support.** The home-screen widget lives in a separate target and reads files from an App Group container. `copyAssetToAppGroup` copies bundle assets into the shared container so the widget can render them.
 
-**What's Working:**
-- ✅ Glass surface containers with configurable blur
-- ✅ Glass buttons with press states
-- ✅ Native segmented control for mode selection
-- ✅ Full integration with existing app
+## Surface
 
----
+Everything is one Expo module named `DitNative` defined in [modules/dit-native/ios/DitNativeModule.swift](../modules/dit-native/ios/DitNativeModule.swift). Exported via [modules/dit-native/src/index.ts](../modules/dit-native/src/index.ts).
 
-## Components
+Audio (Morse sequencing bakes haptics in — no separate haptic API):
+- `prepareToneEngine()` — warm up `AVAudioEngine` before the first user tap
+- `startTone(frequency, volume)` / `stopTone()` — continuous tone for key-down input
+- `playTone(frequency, durationMs, volume)` — one-shot for Listen mode
+- `playMorseSequence(code, characterUnitMs, effectiveUnitMs, frequency, volume)` — plays a full code string with dits/dahs as audio + CoreHaptics pulses
+- `stopMorseSequence()`
 
-### Glass Surface (`GlassSurface` → `DitGlassView`)
-Foundational blur effect container using native `UIVisualEffectView`.
+Auth:
+- `signInWithGoogle()` / `signInWithApple()` — return credentials the JS side hands to Firebase
+- `prepareAppleAccountDeletion(userId)` + `revokeAppleTokenForAccountDeletion(code, userId)` — Apple requires revoking the refresh token when deleting the account
 
-- **Type:** Custom native Swift wrapper
-- **Where:** Settings panel background, containers
-- **Key Feature:** Adjustable blur intensity
-- **Architecture:** Rendered as background sibling to avoid Fabric crashes
+System:
+- `getLowPowerModeEnabled()` and the `onLowPowerModeChanged` event — used to gate animations/haptics when Low Power is on
+- `copyAssetToAppGroup(sourceUri, appGroup, filename)` — for widget assets
 
-### Glass Buttons (`GlassButton`)
-Interactive buttons with blur effects and press feedback.
+Two call styles in the app:
+- Typed wrappers from `@dit/dit-native` (`startTone`, `getLowPowerModeEnabled`, `copyAssetToAppGroup`, etc.) — preferred
+- Direct `requireNativeModule<DitNativeModule>('DitNative')` in [apps/ios/src/services/auth.ts](../apps/ios/src/services/auth.ts) and [apps/ios/src/utils/tone.ts](../apps/ios/src/utils/tone.ts) where the wrapper doesn't expose the full shape yet
 
-- **Type:** Expo's `expo-glass-effect` package
-- **Where:** Settings panel actions (Reference, Sign in, etc.)
-- **Key Feature:** Press opacity (0.85 → 0.7)
-- **Why Expo:** Official package, well-maintained, less custom code
+## Key decisions
 
-### Mode Selector (`GlassSegmentedControl`)
-Native iOS segmented control for Practice/Freestyle/Listen modes.
+- **UIKit, not SwiftUI.** Bridging SwiftUI through `UIHostingController` fights the RN view hierarchy. For glass surfaces we use `expo-glass-effect` (iOS 26 Liquid Glass) directly from JS instead of a custom wrapper.
+- **One module, not one per capability.** Audio, haptics, auth, and system APIs all live in `DitNativeModule.swift`. Splitting them meant extra Expo config and pod registration for no real benefit.
+- **Haptics piggyback on Morse audio.** `playMorseSequence` drives both `AVAudioEngine` and `CHHapticEngine` from the same timeline so they can't drift.
+- **Firebase + GoogleSignIn are pod dependencies** (see [DitNative.podspec](../modules/dit-native/ios/DitNative.podspec)) — the module itself, not the app, owns the linkage.
 
-- **Type:** Custom native UIKit (`UISegmentedControl`)
-- **Where:** Top of main screen
-- **Key Feature:** Pixel-perfect iOS appearance
-- **Why Custom:** No React Native library matches native look
+## Rebuilding
 
----
+Native Swift changes need a full rebuild. JS/TSX wrapper changes hot-reload.
 
-## Architecture
-
-### Module Structure
-```
-modules/dit-native/
-├── expo-module.config.json    # Registers native modules
-├── index.tsx                  # TypeScript exports
-└── ios/
-    ├── DitNativeModule.swift           # Audio/haptic utilities
-    ├── DitGlassView.swift              # Custom blur container
-    └── DitGlassSegmentedControl.swift  # Mode selector
+```bash
+cd apps/ios/ios && pod install        # only when podspec or expo-module.config.json changes
+pnpm --filter @dit/ios ios            # simulator
+pnpm --filter @dit/ios ios --device   # physical device
 ```
 
-### Key Decisions
+Native logs: Xcode console, filter for "Dit". JS logs: Metro.
 
-**UIKit over SwiftUI:** Direct UIKit controls avoid `UIHostingController` complexity and crashes.
+## Known gotchas
 
-**Expo Package for Buttons:** Using `expo-glass-effect` instead of custom implementation reduces maintenance burden and leverages Expo's testing.
-
-**Sibling Architecture:** Glass blur views are siblings (not parents) to avoid React Native Fabric subview indexing issues.
-
----
-
-## Known Issues
-
-### Expo Prop Binding (Non-Critical)
-**Problem:** Dynamic props (`items`, `selectedIndex`) aren't passed to native Swift code in `DitGlassSegmentedControl`.
-
-**Workaround:** Mode names hardcoded in Swift. Works perfectly for current static use case.
-
-**Impact:** 
-- ✅ Functionality unaffected
-- ❌ Can't change mode labels dynamically
-- ⚠️ Not suitable for i18n without fix
-
-**Investigation:** Likely Expo SDK 54 issue with array props or Fabric-specific problem.
-
----
-
-## Implementation Guide
-
-### Adding New Components
-
-1. **Create native module:**
-   ```bash
-   # Add Swift file to modules/dit-native/ios/
-   # Register in expo-module.config.json
-   cd apps/ios/ios && pod install
-   ```
-
-2. **Create React wrapper:**
-   ```tsx
-   // apps/ios/src/components/YourComponent.tsx
-   import { NativeYourComponent } from 'dit-native'
-   export const YourComponent = (props) => <NativeYourComponent {...props} />
-   ```
-
-3. **Export types:**
-   ```tsx
-   // modules/dit-native/index.tsx
-   export type YourComponentProps = ViewProps & { /* ... */ }
-   ```
-
-### Making Changes
-
-**Native code (Swift):** Requires full rebuild via `npx expo run:ios`  
-**React wrappers (TSX):** Hot reload works (press `r` in Metro)  
-**Module registration:** Run `pod install` after editing `expo-module.config.json`
-
-### Debugging
-
-**Logs:**
-- JavaScript: Metro terminal
-- Native: Xcode console (filter for "Dit")
-
-**Common Issues:**
-- Build errors after deleting files → run `pod install`
-- Props not updating → check for Expo prop binding issue
-- Crashes on view creation → verify UIKit (not SwiftUI with UIHostingController)
-
----
-
-## Roadmap
-
-### ✅ Phase 1: Core (Complete)
-Native components implemented and integrated.
-
-### 🔄 Phase 2: Polish (In Progress)
-- Debug Expo prop system
-- Add SF Symbol icons to buttons
-- Fine-tune glass opacity/appearance
-- Verify settings panel stability
-
-### 📋 Phase 3: Advanced
-- Custom glass styles (vibrant, prominent)
-- Animated mode transitions
-- Haptic feedback enhancements
-- i18n support (requires prop fix)
-
-### 📋 Phase 4: Release
-- Local App Store build/export/upload scripts configured in `apps/ios/scripts/`
-- Release/versioning process documented in `docs/IOS_APP_STORE_RELEASE.md`
-- Comprehensive testing on devices
-- Performance profiling
-- Accessibility verification
-- TestFlight beta
-
----
-
-## Dependencies
-
-```json
-{
-  "expo-glass-effect": "~0.1.8"
-}
-```
-
-**Requirements:**
-- iOS 15+ (for `expo-glass-effect`)
-- Expo SDK 54+
-- React Native Fabric enabled
-
----
-
-## FAQ
-
-**Q: Why native instead of React Native libraries?**  
-A: Authentic iOS appearance, better performance, system integration (haptics, etc.).
-
-**Q: When to use custom native vs Expo packages?**  
-A: Custom when no alternative exists. Expo packages when available (less maintenance).
-
-**Q: Why hardcode mode names?**  
-A: Pragmatic - works perfectly for static data, unblocks development, easy to fix later.
-
-**Q: Will this work on Android?**  
-A: No - iOS only. Android needs separate Material Design implementation.
-
-**Q: How do I customize blur appearance?**  
-A: Use `glassEffectStyle` ("clear"/"regular") or `intensity` prop on `GlassSurface`.
-
-**Q: Can I use SwiftUI?**  
-A: Not recommended - `UIHostingController` adds complexity. Use UIKit for React Native bridges.
-
----
-
-## References
-
-- [Expo Glass Effect](https://docs.expo.dev/versions/latest/sdk/glass-effect/)
-- [Expo Modules API](https://docs.expo.dev/modules/module-api/)
-- [UIVisualEffectView](https://developer.apple.com/documentation/uikit/uivisualeffectview)
-- [UISegmentedControl](https://developer.apple.com/documentation/uikit/uisegmentedcontrol)
-
-**Project Files:**
-- Native modules: `modules/dit-native/ios/`
-- React wrappers: `apps/ios/src/components/`
-- Type definitions: `modules/dit-native/index.tsx`
-
----
-
-**Questions?** Check Xcode logs or review the [Expo Modules documentation](https://docs.expo.dev/modules/module-api/).
+- `DitNativeModule` type in `src/index.ts` is incomplete (missing `playMorseSequence`, `stopMorseSequence`, `prepareToneEngine`). Call sites work around it by using `requireNativeModule` directly. Worth tightening up if the wrapper grows.
+- `requireOptionalNativeModule` returns undefined on web, so every wrapper function guards with `?.` — keep that pattern when adding new ones.
