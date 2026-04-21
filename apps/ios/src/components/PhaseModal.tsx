@@ -52,7 +52,7 @@ export function PhaseModal({ content, onDismiss }: PhaseModalProps) {
           <BlurView
             intensity={28}
             tint="dark"
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
           <View style={styles.body}>
             <Text style={styles.title}>{content.title}</Text>

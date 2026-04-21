@@ -457,6 +457,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tintLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 })

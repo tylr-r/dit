@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   liquidBackground: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.3,
     zIndex: 0,
   },

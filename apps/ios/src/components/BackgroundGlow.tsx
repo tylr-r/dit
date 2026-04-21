@@ -87,7 +87,7 @@ export function BackgroundGlow() {
 
 const styles = StyleSheet.create({
   backgroundGlow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
 })
