@@ -1,5 +1,5 @@
-import { type Letter } from '@dit/core'
 import { describe, expect, it } from 'vitest'
+import type { Letter } from '../../src/data/morse'
 import {
   enqueueReviewLetter,
   filterReviewQueue,

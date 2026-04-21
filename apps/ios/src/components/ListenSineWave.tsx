@@ -11,7 +11,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg'
 import { hslaFromHsl } from '../design/color'
 import { colors } from '../design/tokens'
-import { type ListenWavePlayback } from '../utils/listenWave'
+import { type ListenWavePlayback } from '@dit/core'
 
 type ListenWaveTintStatus = 'idle' | 'success' | 'error'
 

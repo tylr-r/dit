@@ -1,15 +1,26 @@
 import {
+  clearTimer,
+  type DailyActivity,
+  filterReviewQueue,
+  getAutoEffectiveWpm,
   getLettersForLevel,
   getWordsForLetters,
-  type DailyActivity,
   type GuidedLessonProgress,
   type GuidedPhase,
-  type Letter,
   type LearnerProfile,
+  type Letter,
   type LetterAccuracyRecord,
+  LEVELS,
+  LISTEN_EFFECTIVE_WPM_MAX,
+  LISTEN_EFFECTIVE_WPM_MIN,
   type ListenTtrRecord,
+  LISTEN_WPM_MAX,
+  LISTEN_WPM_MIN,
+  normalizeListenSpeeds,
+  type PracticeReviewItem,
   type Progress,
   type ProgressSnapshot,
+  PROGRESS_SAVE_DEBOUNCE_MS,
   type ReminderSettings,
   type StreakState,
 } from '@dit/core'
@@ -20,17 +31,6 @@ import { type Mode } from '../components/ModeSwitcher'
 import { publishProgressToWidget } from '../widgets/publish'
 import { useFirebaseSync } from './useFirebaseSync'
 import { useProgressPersistence } from './useProgressPersistence'
-import {
-  LEVELS,
-  LISTEN_EFFECTIVE_WPM_MAX,
-  LISTEN_EFFECTIVE_WPM_MIN,
-  LISTEN_WPM_MAX,
-  LISTEN_WPM_MIN,
-  PROGRESS_SAVE_DEBOUNCE_MS,
-  clearTimer,
-} from '../utils/appState'
-import { getAutoEffectiveWpm, normalizeListenSpeeds } from '../utils/listenSpeed'
-import { filterReviewQueue, type PracticeReviewItem } from '../utils/practiceReviewQueue'
 
 type RefValue<T> = {
   current: T

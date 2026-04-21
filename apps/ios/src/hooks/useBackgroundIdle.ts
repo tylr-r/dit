@@ -3,7 +3,7 @@ import {
   BACKGROUND_IDLE_TIMEOUT_MS,
   clearTimer,
   type TimeoutHandle,
-} from '../utils/appState'
+} from '@dit/core'
 
 /** Marks the app background animation idle until the next user interaction. */
 export const useBackgroundIdle = () => {
