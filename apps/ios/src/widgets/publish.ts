@@ -33,6 +33,7 @@ export const deriveWidgetProps = (
     heroKind: hero.kind,
     heroValue: hero.kind === 'wpm' ? hero.value : hero.count,
     heroTotal: hero.kind === 'wpm' ? 0 : hero.total,
+    bestWpm: progress.bestWpm ?? 0,
     iconUri: iconUri ?? '',
     bgSmallUri: bgSmallUri ?? '',
     bgMediumUri: bgMediumUri ?? '',
