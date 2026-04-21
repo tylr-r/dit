@@ -24,6 +24,8 @@ import {
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
   TONE_FREQUENCY_RANGE,
+  computeHero,
+  todayStreakContribution,
   useMorseSessionController,
   useOnboardingState,
   type Letter,
@@ -146,6 +148,14 @@ function MainApp() {
     toneFrequency,
     scores,
     isPressing,
+    learnerProfile,
+    bestWpm,
+    streak,
+    letterAccuracy,
+    dailyActivity,
+    guidedCourseActive,
+    guidedPackIndex,
+    guidedPhase,
   } = state
   const {
     isFreestyle,
@@ -156,6 +166,7 @@ function MainApp() {
     letterPlaceholder,
     practiceWpmText,
     listenTtrText,
+    guidedCurrentPack,
   } = derived
 
   useEffect(() => {
@@ -693,6 +704,27 @@ function MainApp() {
           onClose={() => setShowReference(false)}
           onResetScores={handlers.handleResetScores}
           scores={scores}
+          hero={computeHero({
+            learnerProfile: learnerProfile ?? undefined,
+            scores,
+            letterAccuracy,
+            bestWpm,
+          })}
+          streak={streak}
+          todayCorrect={
+            todayStreakContribution({ dailyActivity, streak }).correct
+          }
+          letterAccuracy={letterAccuracy}
+          courseProgress={
+            guidedCourseActive
+              ? {
+                  packIndex: guidedPackIndex,
+                  totalPacks: BEGINNER_COURSE_PACKS.length,
+                  phase: guidedPhase,
+                  packLetters: guidedCurrentPack,
+                }
+              : null
+          }
         />
       ) : null}
       {phaseModal ? (
