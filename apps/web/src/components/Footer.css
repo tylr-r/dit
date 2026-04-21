@@ -18,8 +18,8 @@
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition:
-    color 160ms ease,
-    border-color 160ms ease;
+    color var(--timing-snap) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out);
 }
 
 .app-footer a:hover {
