@@ -8,7 +8,9 @@ let cachedUri: string | null = null
 let pending: Promise<string | null> | null = null
 
 const resolve = async (): Promise<string | null> => {
-  const asset = Asset.fromModule(require('../../assets/splash-icon.png'))
+  const asset = Asset.fromModule(
+    require('../../assets/images/widget-brand-icon.png'),
+  )
   if (!asset.localUri) {
     await asset.downloadAsync()
   }

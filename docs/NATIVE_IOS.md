@@ -45,10 +45,13 @@ Two call styles in the app:
 Native Swift changes need a full rebuild. JS/TSX wrapper changes hot-reload.
 
 ```bash
-cd apps/ios/ios && pod install        # only when podspec or expo-module.config.json changes
-pnpm --filter @dit/ios ios            # simulator
-pnpm --filter @dit/ios ios --device   # physical device
+pnpm --filter @dit/ios exec expo prebuild --clean   # regenerate ios/ from app.json + plugins
+cd apps/ios/ios && pod install                 # only when podspec or expo-module.config.json changes
+pnpm --filter @dit/ios ios                     # simulator
+pnpm --filter @dit/ios ios --device            # physical device
 ```
+
+Run `expo prebuild --clean` after changing `app.json`, any Expo config plugin, widget assets, or anything else that regenerates the native project. Drop `--clean` if you want to keep manual edits inside `ios/`.
 
 Native logs: Xcode console, filter for "Dit". JS logs: Metro.
 
