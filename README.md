@@ -81,6 +81,7 @@ pnpm run dev                          # everything, in parallel, via Turbo
 
 ```bash
 pnpm run lint
+pnpm run security:history
 pnpm run test:unit
 pnpm run test:e2e
 pnpm run test:types
