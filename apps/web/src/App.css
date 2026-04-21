@@ -123,7 +123,7 @@
 
 .legal-back:hover {
   color: var(--color-text-primary-90);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .legal-back:focus-visible {
@@ -148,7 +148,7 @@
 
 .legal-nav a:hover {
   color: var(--color-text-primary-90);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .legal-nav a[aria-current='page'] {
@@ -330,7 +330,7 @@
 
 .about-links a:hover {
   color: var(--color-text-primary-80);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .about-links a:focus-visible {
@@ -354,7 +354,7 @@
 
 .about-close:hover {
   color: var(--text);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -397,7 +397,7 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid hsla(0, 0%, 100%, 0.25);
+  border: 1px solid var(--color-border-hover);
   background: var(--color-surface-panel-strong);
   display: grid;
   place-items: center;
@@ -437,7 +437,7 @@
 
 .auth-button:hover {
   color: var(--text);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: var(--color-surface-input-pressed);
   transform: translateY(-1px);
 }
@@ -494,7 +494,7 @@
 }
 
 .panel-select:hover {
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: var(--color-surface-input-pressed);
 }
 
@@ -525,7 +525,7 @@
 }
 
 .settings-button[aria-expanded="true"] {
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 @keyframes settingsGearSpin {
@@ -611,7 +611,7 @@
 
 :is(.panel-button, .modal-close, .hint-button):hover {
   color: var(--text);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: var(--color-surface-input-pressed);
   transform: translateY(-1px);
 }
@@ -651,7 +651,7 @@
 }
 
 .toggle-input:hover {
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .toggle-input::after {
@@ -919,7 +919,7 @@
 .intro-hint-dismiss:hover {
   transform: translateY(-1px);
   background: var(--color-surface-input-pressed);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .intro-hint-dismiss:focus-visible {
@@ -980,7 +980,7 @@
 .keyboard-key:active {
   transform: translateY(1px) scale(0.98);
   background: var(--color-surface-input-pressed);
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
 }
 
 .keyboard-key:disabled {
@@ -1041,12 +1041,12 @@
 
 .modal-close.modal-reset {
   color: var(--error);
-  border-color: hsla(0, 100%, 71%, 0.35);
+  border-color: var(--color-border-error);
 }
 
 .modal-close.modal-reset:hover {
   color: var(--error);
-  border-color: hsla(0, 100%, 71%, 0.6);
+  border-color: var(--color-border-error-strong);
 }
 
 .reference-grid,
@@ -1572,7 +1572,7 @@
 }
 
 .nux-option-card.selected {
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: var(--color-surface-input-pressed);
 }
 
@@ -1647,7 +1647,7 @@
 }
 
 .nux-sound-choice.selected {
-  border-color: hsla(0, 0%, 100%, 0.25);
+  border-color: var(--color-border-hover);
   background: var(--color-surface-input-pressed);
 }
 

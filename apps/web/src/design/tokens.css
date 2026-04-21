@@ -27,7 +27,9 @@
 
   /* Borders */
   --color-border-subtle: hsla(0, 0%, 100%, 0.12);
+  --color-border-hover: hsla(0, 0%, 100%, 0.25);
   --color-border-error: hsla(0, 100%, 71%, 0.4);
+  --color-border-error-strong: hsla(0, 100%, 71%, 0.6);
 
   /* Surfaces */
   --color-surface-solid-backdrop: hsla(207, 40%, 4%, 1);
