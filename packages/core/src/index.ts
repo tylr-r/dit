@@ -70,6 +70,15 @@ export { useOnboardingState } from './hooks/useOnboardingState'
 export { useProgressPersistence } from './hooks/useProgressPersistence'
 export { useProgressSyncController } from './hooks/useProgressSyncController'
 export type { Mode } from './hooks/useProgressSyncController'
+export { useMorseSessionController } from './hooks/useMorseSessionController'
+export type {
+  PhaseModalContent,
+  PlayMorseToneOptions,
+  PlayTonePatternOptions,
+  StagePip,
+  UseMorseSessionControllerCallbacks,
+  UseMorseSessionControllerOptions,
+} from './hooks/useMorseSessionController'
 export {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
