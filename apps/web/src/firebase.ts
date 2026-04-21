@@ -22,7 +22,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
-const database = getDatabase(app)
+export const database = getDatabase(app)
 const googleProvider = new GoogleAuthProvider()
 
 const isPopupFallbackError = (error: unknown) =>

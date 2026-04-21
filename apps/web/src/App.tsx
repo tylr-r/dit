@@ -13,84 +13,71 @@ import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
 import {
-  AUDIO_FREQUENCY,
-  AUDIO_VOLUME,
-  TONE_FREQUENCY_RANGE,
-  DASH_THRESHOLD,
-  DEBOUNCE_DELAY,
-  INTER_LETTER_UNITS,
-  INTER_WORD_UNITS,
+  DEFAULT_CHARACTER_WPM,
+  LISTEN_MIN_UNIT_MS,
+  LISTEN_WPM_MAX,
+  LISTEN_WPM_MIN,
   MORSE_DATA,
-  UNIT_TIME_MS,
-  WPM_RANGE,
-  applyScoreDelta,
-  formatWpm,
-  getLettersForLevel,
-  getRandomLetter,
-  getRandomWeightedLetter,
-  getRandomWord,
-  getWordsForLetters,
-  initializeScores,
-  parseProgress,
-  useFirebaseSync,
+  REFERENCE_LETTERS,
+  REFERENCE_NUMBERS,
+  TONE_FREQUENCY_RANGE,
+  useMorseSessionController,
+  useOnboardingState,
   type Letter,
-  type ProgressSnapshot,
 } from '@dit/core'
-import { firebaseService } from './firebase'
-import { useAudio } from './hooks/useAudio'
-import { useMorseInput } from './hooks/useMorseInput'
+import { getAuth, signOut as firebaseSignOut } from 'firebase/auth'
+import { database } from './firebase'
+import { useAuth } from './hooks/useAuth'
+import { usePhaseModalState } from './hooks/usePhaseModalState'
 import {
-  readStoredBoolean,
-  readStoredNumber,
-  readStoredScores,
-  useProgress,
-} from './hooks/useProgress'
-import { vibrate } from './platform/haptics'
-import { readStorageItem } from './platform/storage'
+  playMorseTone,
+  prepareToneEngine,
+  startTone,
+  stopMorseTone,
+  stopTone,
+} from './utils/tone'
 
-const LETTERS = Object.keys(MORSE_DATA) as Letter[]
 const LEVELS = [1, 2, 3, 4] as const
-const REFERENCE_LETTERS = LETTERS.filter((letter) => /^[A-Z]$/.test(letter))
-const REFERENCE_NUMBERS: Letter[] = [
-  '1',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-  '0',
-]
-const DOT_THRESHOLD_MS = DASH_THRESHOLD
-const UNIT_MS = UNIT_TIME_MS
-const LISTEN_WPM_MIN = WPM_RANGE.min
-const LISTEN_WPM_MAX = WPM_RANGE.max
-const INTER_CHAR_GAP_MS = UNIT_MS * INTER_LETTER_UNITS
-const WORD_GAP_MS = UNIT_MS * INTER_WORD_UNITS
-const WORD_GAP_EXTRA_MS = WORD_GAP_MS - INTER_CHAR_GAP_MS
-const PRACTICE_WORD_UNITS = 5
-const DEFAULT_TONE_FREQUENCY = AUDIO_FREQUENCY
-const TONE_GAIN = AUDIO_VOLUME
-const ERROR_LOCKOUT_MS = 1000
-const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
-const STORAGE_KEYS = {
-  mode: 'morse-mode',
-  showHint: 'morse-show-hint',
-  showMnemonic: 'morse-show-mnemonic',
-  wordMode: 'morse-word-mode',
-  practiceWordMode: 'morse-practice-word-mode',
-  maxLevel: 'morse-max-level',
-  scores: 'morse-scores',
-  listenWpm: 'morse-listen-wpm',
+
+const playOnboardingTone = (symbol: '.' | '-') => {
+  void playMorseTone({
+    code: symbol,
+    characterWpm: DEFAULT_CHARACTER_WPM,
+    effectiveWpm: DEFAULT_CHARACTER_WPM,
+    minUnitMs: LISTEN_MIN_UNIT_MS,
+  })
 }
 
-const clearTimer = (ref: { current: number | null }) => {
-  if (ref.current !== null) {
-    window.clearTimeout(ref.current)
-    ref.current = null
+const trackEvent = (event: string, params?: Record<string, unknown>) => {
+  if (typeof window === 'undefined' || !window.gtag) {
+    return
   }
+  window.gtag('event', event, params ?? {})
+}
+
+const ensureNotificationPermission = async () => {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return false
+  }
+  if (Notification.permission === 'granted') {
+    return true
+  }
+  if (Notification.permission === 'denied') {
+    return false
+  }
+  const result = await Notification.requestPermission()
+  return result === 'granted'
+}
+
+const sessionCallbacks = {
+  logAnalyticsEvent: trackEvent,
+  ensureNotificationPermission,
+  prepareToneEngine,
+  startTone,
+  stopTone,
+  playMorseTone,
+  stopMorseTone,
+  playOnboardingTone,
 }
 
 const isEditableTarget = (target: EventTarget | null) => {
@@ -114,282 +101,69 @@ const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
   isEditableTarget(event.target)
 
 function MainApp() {
-  const initialConfig = useMemo(() => {
-    const maxLevel = readStoredNumber(STORAGE_KEYS.maxLevel, 4, 1, 4)
-    const practiceWordMode = readStoredBoolean(
-      STORAGE_KEYS.practiceWordMode,
-      false,
-    )
-    const availableLetters = getLettersForLevel(maxLevel)
-    const practiceWord = getRandomWord(
-      getWordsForLetters(availableLetters),
-    )
-    const letter = practiceWordMode
-      ? (practiceWord[0] as Letter)
-      : getRandomLetter(availableLetters)
-    return {
-      letter,
-      maxLevel,
-      practiceWord,
-      practiceWordMode,
-    }
-  }, [])
-
-  const [maxLevel, setMaxLevel] = useState(initialConfig.maxLevel)
-  const [letter, setLetter] = useState<Letter>(initialConfig.letter)
-  const [input, setInput] = useState('')
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [showHint, setShowHint] = useState(() =>
-    readStoredBoolean(STORAGE_KEYS.showHint, true),
-  )
-  const [showMnemonic, setShowMnemonic] = useState(() =>
-    readStoredBoolean(STORAGE_KEYS.showMnemonic, false),
-  )
-  const [mode, setMode] = useState<'practice' | 'freestyle' | 'listen'>(() => {
-    if (typeof window === 'undefined') {
-      return 'practice'
-    }
-    const stored = readStorageItem(STORAGE_KEYS.mode)
-    if (stored === 'freestyle') {
-      return 'freestyle'
-    }
-    if (stored === 'listen') {
-      return 'listen'
-    }
-    return 'practice'
-  })
-  const [showHintOnce, setShowHintOnce] = useState(false)
-  const [practiceWordMode, setPracticeWordMode] = useState(
-    initialConfig.practiceWordMode,
-  )
-  const [practiceWord, setPracticeWord] = useState(initialConfig.practiceWord)
-  const [practiceWordIndex, setPracticeWordIndex] = useState(0)
-  const [practiceWpm, setPracticeWpm] = useState<number | null>(null)
-  const [freestyleInput, setFreestyleInput] = useState('')
-  const [freestyleResult, setFreestyleResult] = useState<string | null>(null)
-  const [freestyleWordMode, setFreestyleWordMode] = useState(() =>
-    readStoredBoolean(STORAGE_KEYS.wordMode, false),
-  )
-  const [freestyleWord, setFreestyleWord] = useState('')
-  const [listenWpm, setListenWpm] = useState(() =>
-    readStoredNumber(
-      STORAGE_KEYS.listenWpm,
-      20,
-      LISTEN_WPM_MIN,
-      LISTEN_WPM_MAX,
-    ),
-  )
-  const [toneFrequency, setToneFrequency] = useState(DEFAULT_TONE_FREQUENCY)
-  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
-  const [listenStatus, setListenStatus] = useState<
-    'idle' | 'success' | 'error'
-  >('idle')
-  const [listenReveal, setListenReveal] = useState<Letter | null>(null)
-  const [showReference, setShowReference] = useState(false)
+  const { user } = useAuth()
+  const onboarding = useOnboardingState()
+  const { showPhaseModal } = usePhaseModalState()
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
-  const [scores, setScores] = useState(() =>
-    readStoredScores(STORAGE_KEYS.scores),
+  const [showReference, setShowReference] = useState(false)
+  const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
+  const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
+    'idle',
   )
-  const maxLevelRef = useRef(maxLevel)
-  const inputRef = useRef(input)
-  const freestyleInputRef = useRef('')
-  const freestyleWordModeRef = useRef(freestyleWordMode)
-  const practiceWordModeRef = useRef(practiceWordMode)
-  const practiceWordRef = useRef(practiceWord)
-  const practiceWordIndexRef = useRef(practiceWordIndex)
-  const practiceWordStartRef = useRef<number | null>(null)
-  const showReferenceRef = useRef(showReference)
-  const letterRef = useRef(letter)
-  const scoresRef = useRef(scores)
-  const errorLockoutUntilRef = useRef(0)
-  const errorTimeoutRef = useRef<number | null>(null)
-  const successTimeoutRef = useRef<number | null>(null)
-  const letterTimeoutRef = useRef<number | null>(null)
-  const wordSpaceTimeoutRef = useRef<number | null>(null)
-  const listenTimeoutRef = useRef<number | null>(null)
   const morseButtonRef = useRef<HTMLButtonElement | null>(null)
-  const availableLetters = useMemo(
-    () => getLettersForLevel(maxLevel),
-    [maxLevel],
-  )
-  const availablePracticeWords = useMemo(
-    () => getWordsForLetters(availableLetters),
-    [availableLetters],
-  )
-  const progressSnapshot = useMemo<ProgressSnapshot>(
-    () => ({
-      toneFrequency,
-      listenWpm,
-      maxLevel,
-      practiceWordMode,
-      scores,
-      showHint,
-      showMnemonic,
-      wordMode: freestyleWordMode,
-    }),
-    [
-      freestyleWordMode,
-      listenWpm,
-      maxLevel,
-      practiceWordMode,
-      scores,
-      showHint,
-      showMnemonic,
-      toneFrequency,
-    ],
-  )
-  const triggerHaptics = useCallback((pattern: number | number[]) => {
-    vibrate(pattern)
-  }, [])
-  const bumpScore = useCallback((targetLetter: Letter, delta: number) => {
-    setScores((prev) => applyScoreDelta(prev, targetLetter, delta))
-  }, [])
-  const handleResetScores = useCallback(() => {
-    setScores(initializeScores())
-  }, [])
-  const isErrorLocked = useCallback(
-    () => performance.now() < errorLockoutUntilRef.current,
-    [],
-  )
-  const startErrorLockout = useCallback(() => {
-    errorLockoutUntilRef.current = performance.now() + ERROR_LOCKOUT_MS
-  }, [])
-  const canScoreAttempt = useCallback(
-    () => !(showHint || showHintOnce),
-    [showHint, showHintOnce],
-  )
-  const trackEvent = useCallback(
-    (name: string, params?: Record<string, unknown>) => {
-      if (typeof window === 'undefined' || !window.gtag) {
-        return
-      }
-      window.gtag('event', name, params ?? {})
-    },
-    [],
-  )
-  useProgress({
-    storageKeys: STORAGE_KEYS,
+  const isPressingRef = useRef(false)
+
+  const session = useMorseSessionController({
+    user,
+    database,
+    isDeletingAccount,
+    setIsDeletingAccount,
+    showReference,
+    setShowSettings,
+    setShowAbout,
+    setShowReference,
+    showPhaseModal,
+    onboarding,
+    callbacks: sessionCallbacks,
+  })
+  const { state, derived, handlers, setters } = session
+  const {
     mode,
     showHint,
     showMnemonic,
-    wordMode: freestyleWordMode,
     practiceWordMode,
-    maxLevel,
+    freestyleWordMode,
+    practiceWord,
+    practiceWordIndex,
+    listenStatus,
     listenWpm,
-    scores,
-  })
-
-  const {
-    handleSoundCheck,
-    playListenSequence,
-    soundCheckStatus,
-    startTone,
-    stopListenPlayback,
-    stopTone,
-  } = useAudio({
-    listenWpm,
-    onHaptics: triggerHaptics,
-    onTrackEvent: trackEvent,
     toneFrequency,
-    toneGain: TONE_GAIN,
-    useCustomKeyboard,
-  })
+    scores,
+    isPressing,
+  } = state
+  const {
+    isFreestyle,
+    isListen,
+    statusText,
+    stageLetter,
+    hintVisible,
+    letterPlaceholder,
+    practiceWpmText,
+  } = derived
 
   useEffect(() => {
-    freestyleInputRef.current = freestyleInput
-  }, [freestyleInput])
+    isPressingRef.current = isPressing
+  }, [isPressing])
 
+  // Auto-skip NUX on web until NUX UI lands (Sub-project E).
+  const { nuxReady, nuxStatus, persistNuxStatus } = onboarding
   useEffect(() => {
-    inputRef.current = input
-  }, [input])
-
-  useEffect(() => {
-    freestyleWordModeRef.current = freestyleWordMode
-  }, [freestyleWordMode])
-
-  useEffect(() => {
-    maxLevelRef.current = maxLevel
-  }, [maxLevel])
-
-  useEffect(() => {
-    practiceWordModeRef.current = practiceWordMode
-  }, [practiceWordMode])
-
-  useEffect(() => {
-    practiceWordRef.current = practiceWord
-  }, [practiceWord])
-
-  useEffect(() => {
-    practiceWordIndexRef.current = practiceWordIndex
-  }, [practiceWordIndex])
-
-  useEffect(() => {
-    showReferenceRef.current = showReference
-  }, [showReference])
-
-  useEffect(() => {
-    letterRef.current = letter
-  }, [letter])
-
-  useEffect(() => {
-    scoresRef.current = scores
-  }, [scores])
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) {
-      return
+    if (nuxReady && nuxStatus === 'pending') {
+      persistNuxStatus('skipped')
     }
-    const mediaQuery = window.matchMedia('(pointer: coarse)')
-    const updateKeyboardMode = () => {
-      setUseCustomKeyboard(mediaQuery.matches)
-    }
-    updateKeyboardMode()
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', updateKeyboardMode)
-    } else {
-      mediaQuery.addListener(updateKeyboardMode)
-    }
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', updateKeyboardMode)
-      } else {
-        mediaQuery.removeListener(updateKeyboardMode)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!showReference) {
-      return
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowReference(false)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [showReference])
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return
-    }
-    if (!showReference) {
-      return
-    }
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
-  }, [showReference])
-
-  const isFreestyle = mode === 'freestyle'
-  const isListen = mode === 'listen'
+  }, [nuxReady, nuxStatus, persistNuxStatus])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -409,15 +183,34 @@ function MainApp() {
     }
     updateAppHeight()
     window.addEventListener('resize', updateAppHeight)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateAppHeight)
-      window.visualViewport.addEventListener('scroll', updateAppHeight)
-    }
+    window.visualViewport?.addEventListener('resize', updateAppHeight)
+    window.visualViewport?.addEventListener('scroll', updateAppHeight)
     return () => {
       window.removeEventListener('resize', updateAppHeight)
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateAppHeight)
-        window.visualViewport.removeEventListener('scroll', updateAppHeight)
+      window.visualViewport?.removeEventListener('resize', updateAppHeight)
+      window.visualViewport?.removeEventListener('scroll', updateAppHeight)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return
+    }
+    const mediaQuery = window.matchMedia('(pointer: coarse)')
+    const update = () => {
+      setUseCustomKeyboard(mediaQuery.matches)
+    }
+    update()
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', update)
+    } else {
+      mediaQuery.addListener(update)
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', update)
+      } else {
+        mediaQuery.removeListener(update)
       }
     }
   }, [])
@@ -435,21 +228,11 @@ function MainApp() {
     const preventContextMenu = (event: Event) => {
       event.preventDefault()
     }
-    button.addEventListener('touchstart', preventTouchDefault, {
-      passive: false,
-    })
-    button.addEventListener('touchmove', preventTouchDefault, {
-      passive: false,
-    })
-    button.addEventListener('touchend', preventTouchDefault, {
-      passive: false,
-    })
-    button.addEventListener('touchcancel', preventTouchDefault, {
-      passive: false,
-    })
-    button.addEventListener('dblclick', preventTouchDefault, {
-      passive: false,
-    })
+    button.addEventListener('touchstart', preventTouchDefault, { passive: false })
+    button.addEventListener('touchmove', preventTouchDefault, { passive: false })
+    button.addEventListener('touchend', preventTouchDefault, { passive: false })
+    button.addEventListener('touchcancel', preventTouchDefault, { passive: false })
+    button.addEventListener('dblclick', preventTouchDefault, { passive: false })
     button.addEventListener('contextmenu', preventContextMenu)
     return () => {
       button.removeEventListener('touchstart', preventTouchDefault)
@@ -462,722 +245,82 @@ function MainApp() {
   }, [isListen])
 
   useEffect(() => {
-    return () => {
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      clearTimer(listenTimeoutRef)
-      stopListenPlayback()
-    }
-  }, [stopListenPlayback])
-
-  const resetListenState = useCallback(() => {
-    clearTimer(listenTimeoutRef)
-    setListenStatus('idle')
-    setListenReveal(null)
-  }, [])
-
-  useEffect(() => {
-    if (showHint || isFreestyle || isListen) {
+    if (!showReference) {
       return
     }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowReference(false)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [showReference])
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !showReference) {
+      return
+    }
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [showReference])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) {
-        return
-      }
-      if (event.key.toLowerCase() !== 'n') {
-        return
-      }
-      if (showHintOnce) {
-        return
-      }
-      event.preventDefault()
-      setShowHintOnce(true)
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isFreestyle, isListen, showHint, showHintOnce])
-
-  const applyModeChange = useCallback(
-    (nextMode: 'practice' | 'freestyle' | 'listen') => {
-      trackEvent('mode_change', { mode: nextMode })
-      if (nextMode !== 'practice') {
-        practiceWordStartRef.current = null
-        setPracticeWpm(null)
-      }
-      setMode(nextMode)
-      stopListenPlayback()
-      setFreestyleInput('')
-      setFreestyleResult(null)
-      setFreestyleWord('')
-      clearTimer(letterTimeoutRef)
-      clearTimer(wordSpaceTimeoutRef)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
-      resetListenState()
-      if (nextMode === 'freestyle') {
-        return
-      }
-      if (nextMode === 'listen') {
-        const nextLetter = availableLetters.includes(letter)
-          ? letter
-          : getRandomWeightedLetter(availableLetters, scores)
-        setLetter(nextLetter)
-        void playListenSequence(MORSE_DATA[nextLetter].code)
-        return
-      }
-      if (practiceWordModeRef.current) {
-        const nextWord = getRandomWord(
-          availablePracticeWords,
-          practiceWordRef.current,
-        )
-        practiceWordStartRef.current = null
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
-        return
-      }
-      setLetter((current) =>
-        availableLetters.includes(current)
-          ? current
-          : getRandomWeightedLetter(availableLetters, scores),
-      )
-    },
-    [
-      availableLetters,
-      availablePracticeWords,
-      letter,
-      playListenSequence,
-      resetListenState,
-      scores,
-      stopListenPlayback,
-      trackEvent,
-    ],
-  )
-
-  const handleModeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value } = event.target
-    const nextMode =
-      value === 'freestyle'
-        ? 'freestyle'
-        : value === 'listen'
-          ? 'listen'
-          : 'practice'
-    applyModeChange(nextMode)
-  }
-
-  const handleShowHintToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setShowHint(event.target.checked)
-    },
-    [],
-  )
-
-  const handleShowMnemonicToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setShowMnemonic(event.target.checked)
-    },
-    [],
-  )
-
-  const handlePracticeWordModeChange = useCallback(
-    (nextValue: boolean) => {
-      trackEvent('practice_word_mode_toggle', { enabled: nextValue })
-      setPracticeWordMode(nextValue)
-      practiceWordStartRef.current = null
-      setPracticeWpm(null)
-      clearTimer(letterTimeoutRef)
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
-      if (!nextValue) {
-        const nextLetter = getRandomWeightedLetter(
-          availableLetters,
-          scoresRef.current,
-          letterRef.current,
-        )
-        setPracticeWordIndex(0)
-        setLetter(nextLetter)
-        return
-      }
-      const nextWord = getRandomWord(
-        availablePracticeWords,
-        practiceWordRef.current,
-      )
-      setPracticeWord(nextWord)
-      setPracticeWordIndex(0)
-      setLetter(nextWord[0] as Letter)
-    },
-    [availableLetters, availablePracticeWords, trackEvent],
-  )
-
-  const handlePracticeWordModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlePracticeWordModeChange(event.target.checked)
-    },
-    [handlePracticeWordModeChange],
-  )
-
-  const handleMaxLevelChange = useCallback(
-    (nextLevel: number) => {
-      setMaxLevel(nextLevel)
-      setInput('')
-      setStatus('idle')
-      setShowHintOnce(false)
-      resetListenState()
-      const nextLetters = getLettersForLevel(nextLevel)
-      if (!isListen && practiceWordModeRef.current) {
-        const nextWord = getRandomWord(
-          getWordsForLetters(nextLetters),
-          practiceWordRef.current,
-        )
-        practiceWordStartRef.current = null
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
-        return
-      }
-      const nextLetter = nextLetters.includes(letter)
-        ? letter
-        : getRandomWeightedLetter(nextLetters, scores)
-      setLetter(nextLetter)
-      if (isListen) {
-        void playListenSequence(MORSE_DATA[nextLetter].code)
-      }
-    },
-    [
-      isListen,
-      letter,
-      playListenSequence,
-      resetListenState,
-      scores,
-      setMaxLevel,
-    ],
-  )
-
-  const handleMaxLevelSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handleMaxLevelChange(Number(event.target.value))
-    },
-    [handleMaxLevelChange],
-  )
-
-  const handleListenWpmChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      setListenWpm(Number(event.target.value))
-    },
-    [],
-  )
-
-  const handleToneFrequencyChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      setToneFrequency(Number(event.target.value))
-    },
-    [],
-  )
-
-  const applyRemoteProgress = useCallback((raw: unknown) => {
-    const progress = parseProgress(raw, {
-      listenWpmMin: LISTEN_WPM_MIN,
-      listenWpmMax: LISTEN_WPM_MAX,
-    })
-    if (!progress) {
-      return
-    }
-    const nextScores = progress.scores ?? scoresRef.current
-    const resolvedMaxLevel =
-      typeof progress.maxLevel === 'number'
-        ? progress.maxLevel
-        : maxLevelRef.current
-    if (progress.scores) {
-      setScores(progress.scores)
-    }
-    if (typeof progress.showHint === 'boolean') {
-      setShowHint(progress.showHint)
-    }
-    if (typeof progress.showMnemonic === 'boolean') {
-      setShowMnemonic(progress.showMnemonic)
-    }
-    if (typeof progress.wordMode === 'boolean') {
-      setFreestyleWordMode(progress.wordMode)
-    }
-    if (typeof progress.listenWpm === 'number') {
-      setListenWpm(progress.listenWpm)
-    }
-    if (typeof progress.maxLevel === 'number') {
-      const nextLetters = getLettersForLevel(progress.maxLevel)
-      const currentLetter = letterRef.current
-      const nextLetter = nextLetters.includes(currentLetter)
-        ? currentLetter
-        : getRandomWeightedLetter(nextLetters, nextScores, currentLetter)
-      setMaxLevel(progress.maxLevel)
-      setLetter(nextLetter)
-    }
-    if (typeof progress.practiceWordMode === 'boolean') {
-      setPracticeWordMode(progress.practiceWordMode)
-      practiceWordStartRef.current = null
-      if (!progress.practiceWordMode) {
-        setPracticeWpm(null)
-      }
-      if (progress.practiceWordMode) {
-        const nextLetters = getLettersForLevel(resolvedMaxLevel)
-        const nextWord = getRandomWord(getWordsForLetters(nextLetters))
-        setPracticeWord(nextWord)
-        setPracticeWordIndex(0)
-        setLetter(nextWord[0] as Letter)
-      }
-    }
-  }, [])
-
-  const { authReady, handleSignIn, handleSignOut, user } = useFirebaseSync({
-    firebaseService,
-    onRemoteProgress: applyRemoteProgress,
-    progressSaveDebounceMs: PROGRESS_SAVE_DEBOUNCE_MS,
-    progressSnapshot,
-    signInMethod: 'popup',
-    trackEvent,
-    isOnline: () => navigator.onLine,
-  })
-
-  const scheduleWordSpace = useCallback(() => {
-    clearTimer(wordSpaceTimeoutRef)
-    wordSpaceTimeoutRef.current = window.setTimeout(() => {
-      if (!freestyleWordModeRef.current) {
-        return
-      }
-      if (freestyleInputRef.current) {
-        return
-      }
-      setFreestyleWord((prev) => {
-        if (!prev || prev.endsWith(' ')) {
-          return prev
-        }
-        return `${prev} `
-      })
-    }, WORD_GAP_EXTRA_MS)
-  }, [])
-
-  const submitFreestyleInput = useCallback(
-    (value: string) => {
-      if (!value) {
-        setFreestyleResult('No input')
-        return
-      }
-      const match = (Object.entries(MORSE_DATA) as [Letter, (typeof MORSE_DATA)[Letter]][]).find(
-        ([, data]) => data.code === value,
-      )
-      const result = match ? match[0] : 'No match'
-      if (result !== 'No match') {
-        if (freestyleWordMode) {
-          setFreestyleWord((prev) => prev + result)
-          scheduleWordSpace()
-        }
-      }
-      setFreestyleResult(result)
-      setFreestyleInput('')
-    },
-    [freestyleWordMode, scheduleWordSpace],
-  )
-
-  const scheduleLetterReset = useCallback(
-    (nextMode: 'practice' | 'freestyle') => {
-      clearTimer(letterTimeoutRef)
-      letterTimeoutRef.current = window.setTimeout(() => {
-        if (nextMode === 'freestyle') {
-          submitFreestyleInput(freestyleInputRef.current)
-          return
-        }
-        const attempt = inputRef.current
-        if (!attempt) {
-          return
-        }
-        clearTimer(errorTimeoutRef)
-        clearTimer(successTimeoutRef)
-        const target = MORSE_DATA[letterRef.current].code
-        const isCorrect = attempt === target
-        if (isCorrect) {
-          if (canScoreAttempt()) {
-            bumpScore(letterRef.current, 1)
-          }
-          setInput('')
-          if (practiceWordModeRef.current) {
-            const currentWord = practiceWordRef.current
-            if (!currentWord) {
-              const nextWord = getRandomWord(availablePracticeWords)
-              const nextLetter = nextWord[0] as Letter
-              practiceWordStartRef.current = null
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setShowHintOnce(false)
-              setStatus('idle')
-              return
-            }
-            const nextIndex = practiceWordIndexRef.current + 1
-            if (nextIndex >= currentWord.length) {
-              const startTime = practiceWordStartRef.current
-              if (startTime && currentWord.length > 0) {
-                const elapsedMs = performance.now() - startTime
-                if (elapsedMs > 0) {
-                  const nextWpm =
-                    (currentWord.length / PRACTICE_WORD_UNITS) *
-                    (60000 / elapsedMs)
-                  setPracticeWpm(Math.round(nextWpm * 10) / 10)
-                }
-              }
-              const nextWord = getRandomWord(availablePracticeWords, currentWord)
-              const nextLetter = nextWord[0] as Letter
-              practiceWordStartRef.current = null
-              practiceWordRef.current = nextWord
-              practiceWordIndexRef.current = 0
-              letterRef.current = nextLetter
-              setPracticeWord(nextWord)
-              setPracticeWordIndex(0)
-              setLetter(nextLetter)
-              setShowHintOnce(false)
-              setStatus('idle')
-              return
-            }
-            const nextLetter = currentWord[nextIndex] as Letter
-            practiceWordIndexRef.current = nextIndex
-            letterRef.current = nextLetter
-            setPracticeWordIndex(nextIndex)
-            setLetter(nextLetter)
-            setShowHintOnce(false)
-            setStatus('idle')
-            return
-          }
-          setStatus('success')
-          successTimeoutRef.current = window.setTimeout(() => {
-            setLetter((current) =>
-              getRandomWeightedLetter(availableLetters, scoresRef.current, current),
-            )
-            setShowHintOnce(false)
-            setStatus('idle')
-          }, 650)
-          return
-        }
-        startErrorLockout()
-        if (canScoreAttempt()) {
-          bumpScore(letterRef.current, -1)
-        }
-        setStatus('error')
-        setInput('')
-        errorTimeoutRef.current = window.setTimeout(() => {
-          setStatus('idle')
-        }, ERROR_LOCKOUT_MS)
-      }, INTER_CHAR_GAP_MS)
-    },
-    [
-      availableLetters,
-      bumpScore,
-      canScoreAttempt,
-      availablePracticeWords,
-      setLetter,
-      setShowHintOnce,
-      startErrorLockout,
-      submitFreestyleInput,
-    ],
-  )
-
-  const handleFreestyleClear = useCallback(() => {
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setFreestyleResult(null)
-    setFreestyleInput('')
-    setFreestyleWord('')
-  }, [])
-
-  const handleFreestyleBackspace = useCallback(() => {
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    setFreestyleResult(null)
-    if (freestyleInputRef.current) {
-      setFreestyleInput((prev) => {
-        const next = prev.slice(0, -1)
-        freestyleInputRef.current = next
-        return next
-      })
-      return
-    }
-    if (!freestyleWordModeRef.current) {
-      return
-    }
-    setFreestyleWord((prev) => {
-      const trimmed = prev.replace(/\s+$/, '')
-      if (!trimmed) {
-        return ''
-      }
-      return trimmed.slice(0, -1)
-    })
-  }, [])
-
-  const handleWordModeChange = useCallback(
-    (nextValue: boolean) => {
-      setFreestyleWordMode(nextValue)
-      handleFreestyleClear()
-    },
-    [handleFreestyleClear],
-  )
-
-  const handleWordModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handleWordModeChange(event.target.checked)
-    },
-    [handleWordModeChange],
-  )
-
-  const submitListenAnswer = useCallback(
-    (value: Letter) => {
-      if (listenStatus !== 'idle') {
-        return
-      }
-      if (!/^[A-Z0-9]$/.test(value)) {
-        return
-      }
-      if (useCustomKeyboard) {
-        triggerHaptics(10)
-      }
-      clearTimer(listenTimeoutRef)
-      stopListenPlayback()
-      const isCorrect = value === letter
-      setListenStatus(isCorrect ? 'success' : 'error')
-      setListenReveal(letter)
-      bumpScore(letter, isCorrect ? 1 : -1)
-      listenTimeoutRef.current = window.setTimeout(
-        () => {
-          const nextLetter = getRandomWeightedLetter(
-            availableLetters,
-            scores,
-            letter,
-          )
-          setListenStatus('idle')
-          setListenReveal(null)
-          setLetter(nextLetter)
-          void playListenSequence(MORSE_DATA[nextLetter].code)
-        },
-        isCorrect ? 650 : ERROR_LOCKOUT_MS,
-      )
-    },
-    [
-      availableLetters,
-      bumpScore,
-      letter,
-      listenStatus,
-      playListenSequence,
-      scores,
-      stopListenPlayback,
-      triggerHaptics,
-      useCustomKeyboard,
-    ],
-  )
-
-  const handleListenReplay = useCallback(() => {
-    if (listenStatus !== 'idle') {
-      return
-    }
-    setListenReveal(null)
-    if (useCustomKeyboard) {
-      triggerHaptics(12)
-    }
-    void playListenSequence(MORSE_DATA[letter].code)
-  }, [
-    letter,
-    listenStatus,
-    playListenSequence,
-    triggerHaptics,
-    useCustomKeyboard,
-  ])
-
-  const handleShowReference = useCallback(() => {
-    setShowAbout(false)
-    setShowSettings(false)
-    setShowReference(true)
-    trackEvent('reference_open')
-  }, [trackEvent])
-
-  const handleShowAbout = useCallback(() => {
-    setShowReference(false)
-    setShowSettings(false)
-    setShowAbout(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isFreestyle) {
-      return
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) {
-        return
-      }
-      if (event.key.toLowerCase() !== 'n') {
-        return
-      }
-      event.preventDefault()
-      handleFreestyleClear()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [handleFreestyleClear, isFreestyle])
-
-  useEffect(() => {
-    if (isListen) {
-      return
-    }
-    const handleShortcut = (event: KeyboardEvent) => {
       if (showReference) {
         return
       }
       if (shouldIgnoreShortcutEvent(event)) {
         return
       }
+      if (isListen) {
+        if (event.code === 'Space' || event.key === ' ') {
+          event.preventDefault()
+          handlers.handleListenReplay()
+          return
+        }
+        if (event.key.length !== 1) {
+          return
+        }
+        const next = event.key.toUpperCase()
+        if (!/^[A-Z0-9]$/.test(next)) {
+          return
+        }
+        event.preventDefault()
+        handlers.submitListenAnswer(next as Letter)
+        return
+      }
       const key = event.key.toLowerCase()
       if (key === 'f') {
         event.preventDefault()
-        applyModeChange('freestyle')
+        handlers.handleModeChange('freestyle')
         return
       }
       if (key === 'i') {
         event.preventDefault()
-        applyModeChange('listen')
+        handlers.handleModeChange('listen')
         return
       }
       if (key === 'l') {
         event.preventDefault()
-        applyModeChange('practice')
+        handlers.handleModeChange('practice')
         return
       }
-      if (key === 'h') {
-        if (mode === 'practice') {
-          event.preventDefault()
-          setShowHint((prev) => !prev)
+      if (event.code === 'Space' || event.key === ' ') {
+        if (isPressingRef.current) {
+          return
         }
-        return
-      }
-      if (key === 'w') {
-        if (mode === 'freestyle') {
-          event.preventDefault()
-          handleWordModeChange(!freestyleWordMode)
-        }
-        return
-      }
-      if (event.key === 'Backspace') {
-        if (mode === 'freestyle') {
-          event.preventDefault()
-          handleFreestyleBackspace()
-        }
+        event.preventDefault()
+        handlers.handleIntroPressIn()
       }
     }
-    window.addEventListener('keydown', handleShortcut)
-    return () => {
-      window.removeEventListener('keydown', handleShortcut)
-    }
-  }, [
-    applyModeChange,
-    freestyleWordMode,
-    handleFreestyleBackspace,
-    handleWordModeChange,
-    isListen,
-    mode,
-    showReference,
-  ])
-
-  const registerSymbol = useCallback(
-    (symbol: '.' | '-') => {
-      if (!isFreestyle && isErrorLocked()) {
-        return
-      }
-      clearTimer(errorTimeoutRef)
-      clearTimer(successTimeoutRef)
-      clearTimer(letterTimeoutRef)
-
-      if (isFreestyle) {
-        setFreestyleInput((prev) => {
-          const next = prev + symbol
-          scheduleLetterReset('freestyle')
-          return next
-        })
-        setFreestyleResult(null)
-        return
-      }
-
-      if (
-        practiceWordModeRef.current &&
-        practiceWordIndexRef.current === 0 &&
-        practiceWordStartRef.current === null &&
-        practiceWordRef.current
-      ) {
-        practiceWordStartRef.current = performance.now()
-      }
-
-      setStatus('idle')
-      setInput((prev) => prev + symbol)
-      scheduleLetterReset('practice')
-    },
-    [isErrorLocked, isFreestyle, scheduleLetterReset],
-  )
-  const handlePressStart = useCallback(() => {
-    clearTimer(letterTimeoutRef)
-    clearTimer(wordSpaceTimeoutRef)
-    void startTone()
-  }, [startTone])
-
-  const handlePressEnd = useCallback(() => {
-    stopTone()
-  }, [stopTone])
-
-  const handlePressCancel = useCallback(() => {
-    const hasInput = isFreestyle ? freestyleInput : input
-    if (hasInput) {
-      scheduleLetterReset(isFreestyle ? 'freestyle' : 'practice')
-    }
-  }, [freestyleInput, input, isFreestyle, scheduleLetterReset])
-
-  const canStartPress = useCallback(
-    () => (isFreestyle ? true : !isErrorLocked()),
-    [isErrorLocked, isFreestyle],
-  )
-
-  const isGlobalShortcutBlocked = useCallback(
-    () => showReferenceRef.current,
-    [],
-  )
-
-  const {
-    handleKeyDown,
-    handleKeyUp,
-    handlePointerCancel,
-    handlePointerDown,
-    handlePointerUp,
-    isPressing,
-  } = useMorseInput({
-    canStartPress,
-    dotThresholdMs: DOT_THRESHOLD_MS,
-    enableGlobalKeyboard: !isFreestyle && !isListen,
-    isGlobalShortcutBlocked,
-    onCancel: handlePressCancel,
-    onPressEnd: handlePressEnd,
-    onPressStart: handlePressStart,
-    onSymbol: registerSymbol,
-  })
-
-  useEffect(() => {
-    if (!isListen) {
-      return
-    }
-    const handleListenKey = (event: KeyboardEvent) => {
-      if (showReferenceRef.current) {
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (isListen) {
         return
       }
       if (shouldIgnoreShortcutEvent(event)) {
@@ -1185,118 +328,197 @@ function MainApp() {
       }
       if (event.code === 'Space' || event.key === ' ') {
         event.preventDefault()
-        handleListenReplay()
-        return
+        handlers.handlePressOut()
       }
-      if (event.key.length !== 1) {
-        return
-      }
-      const next = event.key.toUpperCase()
-      if (!/^[A-Z0-9]$/.test(next)) {
-        return
-      }
-      event.preventDefault()
-      submitListenAnswer(next as Letter)
     }
-    window.addEventListener('keydown', handleListenKey)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
     return () => {
-      window.removeEventListener('keydown', handleListenKey)
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handleListenReplay, isListen, submitListenAnswer])
+  }, [handlers, isListen, showReference])
 
-  const hintVisible = !isFreestyle && !isListen && (showHint || showHintOnce)
-  const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
-  const target = MORSE_DATA[letter].code
-  const mnemonic = MORSE_DATA[letter].mnemonic
-  const baseStatusText =
-    status === 'success'
-      ? 'Correct'
-      : status === 'error'
-        ? 'Missed. Start over.'
-        : mnemonicVisible
-          ? mnemonic
-          : ' '
-  const practiceProgressText =
-    !isFreestyle &&
-    !isListen &&
-    practiceWordMode &&
-    status === 'idle' &&
-    !hintVisible &&
-    !mnemonicVisible &&
-    practiceWord
-      ? `Letter ${practiceWordIndex + 1} of ${practiceWord.length}`
-      : null
-  const statusText = practiceProgressText ?? baseStatusText
-  const practiceWpmText =
-    !isFreestyle && !isListen && practiceWordMode && practiceWpm !== null
-      ? `${formatWpm(practiceWpm)} WPM`
-      : null
-  const targetSymbols = target.split('')
-  const isInputOnTrack =
-    !isFreestyle && !isListen && Boolean(input) && target.startsWith(input)
-  const highlightCount =
-    status === 'success'
-      ? targetSymbols.length
-      : isInputOnTrack
-        ? input.length
-        : 0
-  const pips = targetSymbols.map((symbol: string, index: number) => {
-    const isHit = index < highlightCount
-    return (
-      <span
-        key={`${symbol}-${index}`}
-        className={`pip ${symbol === '.' ? 'dot' : 'dah'} ${
-          isHit ? 'hit' : 'expected'
-        }`}
-      />
-    )
-  })
-  const isLetterResult = freestyleResult
-    ? /^[A-Z0-9]$/.test(freestyleResult)
-    : false
-  const freestyleStatus = freestyleResult
-    ? isLetterResult
-      ? freestyleWordMode
-        ? `Added ${freestyleResult}`
-        : `Result ${freestyleResult}`
-      : freestyleResult
-    : freestyleInput
-      ? `Input ${freestyleInput}`
-      : freestyleWordMode && freestyleWord
-        ? `Word ${freestyleWord}`
-        : 'Tap and pause'
-  const freestyleDisplay = freestyleWordMode
-    ? freestyleWord || (freestyleResult && !isLetterResult ? '?' : '')
-    : freestyleResult
-      ? isLetterResult
-        ? freestyleResult
-        : '?'
-      : ''
-  const hasFreestyleDisplay = freestyleWordMode
-    ? Boolean(freestyleWord) || (freestyleResult !== null && !isLetterResult)
-    : Boolean(freestyleResult)
-  const listenStatusText =
-    listenStatus === 'success'
-      ? 'Correct'
-      : listenStatus === 'error'
-        ? 'Incorrect'
-        : 'Listen and type the character'
-  const listenDisplay = listenReveal ?? '?'
-  const listenDisplayClass = `letter ${
-    listenReveal ? '' : 'letter-placeholder'
-  }`
-  const listenFocused = isListen && useCustomKeyboard
-  const userLabel = user ? (user.displayName ?? user.email ?? 'Signed in') : ''
-  const userInitial = user
-    ? userLabel
-      ? userLabel[0].toUpperCase()
-      : '?'
+  const handleShowReference = useCallback(() => {
+    setShowSettings(false)
+    setShowAbout(false)
+    setShowReference(true)
+    trackEvent('reference_open')
+  }, [])
+
+  const handleShowAbout = useCallback(() => {
+    setShowReference(false)
+    setShowSettings(false)
+    setShowAbout(true)
+  }, [])
+
+  const handleModeSelectChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = event.target.value
+      const nextMode =
+        value === 'freestyle'
+          ? 'freestyle'
+          : value === 'listen'
+            ? 'listen'
+            : 'practice'
+      handlers.handleModeChange(nextMode)
+    },
+    [handlers],
+  )
+
+  const handleMaxLevelSelectChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      handlers.handleMaxLevelChange(Number(event.target.value))
+    },
+    [handlers],
+  )
+
+  const handleListenWpmSelectChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      handlers.handleListenWpmChange(Number(event.target.value))
+    },
+    [handlers],
+  )
+
+  const handleToneFrequencySelectChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      handlers.handleToneFrequencyChange(Number(event.target.value))
+    },
+    [handlers],
+  )
+
+  const handleShowHintToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setters.setShowHint(event.target.checked)
+    },
+    [setters],
+  )
+
+  const handleShowMnemonicToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setters.setShowMnemonic(event.target.checked)
+    },
+    [setters],
+  )
+
+  const handlePracticeWordModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlers.handlePracticeWordModeChange(event.target.checked)
+    },
+    [handlers],
+  )
+
+  const handleWordModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlers.handlePracticeWordModeChange(event.target.checked)
+    },
+    [handlers],
+  )
+
+  const handleSoundCheck = useCallback(async () => {
+    if (soundCheckStatus !== 'idle') {
+      return
+    }
+    trackEvent('sound_check')
+    setSoundCheckStatus('playing')
+    try {
+      await playMorseTone({
+        code: '-',
+        characterWpm: DEFAULT_CHARACTER_WPM,
+        effectiveWpm: DEFAULT_CHARACTER_WPM,
+        minUnitMs: LISTEN_MIN_UNIT_MS,
+        frequency: toneFrequency,
+      })
+    } finally {
+      window.setTimeout(() => setSoundCheckStatus('idle'), 600)
+    }
+  }, [soundCheckStatus, toneFrequency])
+
+  const handleSignIn = useCallback(() => {
+    void handlers.handleSignInWithGoogle()
+  }, [handlers])
+
+  const handleSignOut = useCallback(() => {
+    void firebaseSignOut(getAuth())
+  }, [])
+
+  const pointerPressActiveRef = useRef(false)
+  const handleButtonPointerDown = useCallback(() => {
+    if (pointerPressActiveRef.current) {
+      return
+    }
+    pointerPressActiveRef.current = true
+    handlers.handleIntroPressIn()
+  }, [handlers])
+
+  const handleButtonPointerEnd = useCallback(() => {
+    if (!pointerPressActiveRef.current) {
+      return
+    }
+    pointerPressActiveRef.current = false
+    handlers.handlePressOut()
+  }, [handlers])
+
+  const handleButtonKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.repeat) {
+        return
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        if (!pointerPressActiveRef.current) {
+          pointerPressActiveRef.current = true
+          handlers.handleIntroPressIn()
+        }
+      }
+    },
+    [handlers],
+  )
+
+  const handleButtonKeyUp = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        handleButtonPointerEnd()
+      }
+    },
+    [handleButtonPointerEnd],
+  )
+
+  const listenDisplayClass = `letter ${letterPlaceholder ? 'letter-placeholder' : ''}`
+  const stageTarget = isFreestyle || isListen ? '' : MORSE_DATA[stageLetter as Letter]?.code ?? ''
+  const pipsNode = useMemo(
+    () =>
+      derived.stagePips.map((pip, index) => (
+        <span
+          key={`${pip.type}-${index}`}
+          className={`pip ${pip.type === 'dot' ? 'dot' : 'dah'} ${
+            pip.state === 'hit' ? 'hit' : 'expected'
+          }`}
+        />
+      )),
+    [derived.stagePips],
+  )
+
+  const freestyleDisplay = isFreestyle ? (stageLetter as string) : ''
+  const hasFreestyleDisplay = isFreestyle && Boolean(freestyleDisplay)
+  const practiceLetter = (isFreestyle || isListen ? 'A' : stageLetter) as Letter
+
+  const listenDisplay = isListen ? (stageLetter as string) : '?'
+  const freestyleStatusText = isFreestyle ? statusText : ''
+  const listenStatusText = isListen ? statusText : ''
+  const practiceStatusText = !isFreestyle && !isListen ? statusText : ''
+
+  const userLabel = user
+    ? (user.displayName ?? user.email ?? 'Signed in')
     : ''
+  const userInitial = user ? (userLabel ? userLabel[0].toUpperCase() : '?') : ''
+  const authReady = true
 
   return (
     <div
-      className={`app status-${status} mode-${mode}${
-        listenFocused ? ' listen-focused' : ''
+      className={`app status-idle mode-${mode}${
+        isListen && useCustomKeyboard ? ' listen-focused' : ''
       }`}
     >
       <header className="top-bar">
@@ -1315,7 +537,7 @@ function MainApp() {
         <select
           className="mode-select"
           value={mode}
-          onChange={handleModeChange}
+          onChange={handleModeSelectChange}
           aria-label="Mode"
         >
           <option value="practice">Practice</option>
@@ -1347,7 +569,7 @@ function MainApp() {
               isFreestyle={isFreestyle}
               isListen={isListen}
               levels={LEVELS}
-              maxLevel={maxLevel}
+              maxLevel={state.maxLevel}
               onMaxLevelChange={handleMaxLevelSelectChange}
               practiceWordMode={practiceWordMode}
               onPracticeWordModeChange={handlePracticeWordModeToggle}
@@ -1355,12 +577,12 @@ function MainApp() {
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
               onShowAbout={handleShowAbout}
-              onListenWpmChange={handleListenWpmChange}
+              onListenWpmChange={handleListenWpmSelectChange}
               toneFrequency={toneFrequency}
               toneFrequencyMin={TONE_FREQUENCY_RANGE.min}
               toneFrequencyMax={TONE_FREQUENCY_RANGE.max}
               toneFrequencyStep={TONE_FREQUENCY_RANGE.step}
-              onToneFrequencyChange={handleToneFrequencyChange}
+              onToneFrequencyChange={handleToneFrequencySelectChange}
               freestyleWordMode={freestyleWordMode}
               onWordModeChange={handleWordModeToggle}
               onSoundCheck={handleSoundCheck}
@@ -1381,71 +603,61 @@ function MainApp() {
         hintVisible={hintVisible}
         isFreestyle={isFreestyle}
         isListen={isListen}
-        letter={letter}
+        letter={practiceLetter}
         listenDisplay={listenDisplay}
         listenDisplayClass={listenDisplayClass}
         listenStatusText={listenStatusText}
-        pips={pips}
+        pips={pipsNode}
         practiceWord={practiceWord}
         practiceWordIndex={practiceWordIndex}
         practiceWordMode={practiceWordMode}
         practiceWpmText={practiceWpmText}
-        statusText={statusText}
-        target={target}
+        statusText={practiceStatusText}
+        target={stageTarget}
       />
       <div className="controls">
         {isFreestyle ? (
           <>
             <div className="freestyle-status" aria-live="polite">
-              {freestyleStatus}
+              {freestyleStatusText}
             </div>
             <button
               type="button"
               className="hint-button submit-button"
-              onClick={handleFreestyleClear}
+              onClick={handlers.handleFreestyleClear}
             >
               Clear
             </button>
           </>
         ) : null}
-        {!showHint && !isFreestyle && !isListen ? (
-          <button
-            type="button"
-            className="hint-button"
-            onClick={() => setShowHintOnce(true)}
-            disabled={showHintOnce}
-          >
-            Show this hint
-          </button>
-        ) : null}
         {isListen ? (
           <ListenControls
             listenStatus={listenStatus}
-            onReplay={handleListenReplay}
-            onSubmitAnswer={submitListenAnswer}
+            onReplay={handlers.handleListenReplay}
+            onSubmitAnswer={handlers.submitListenAnswer}
             useCustomKeyboard={useCustomKeyboard}
           />
         ) : (
           <MorseButton
             buttonRef={morseButtonRef}
             isPressing={isPressing}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            onPointerLeave={handlePointerCancel}
-            onKeyDown={handleKeyDown}
-            onKeyUp={handleKeyUp}
-            onBlur={handlePointerCancel}
+            onPointerDown={handleButtonPointerDown}
+            onPointerUp={handleButtonPointerEnd}
+            onPointerCancel={handleButtonPointerEnd}
+            onPointerLeave={handleButtonPointerEnd}
+            onKeyDown={handleButtonKeyDown}
+            onKeyUp={handleButtonKeyUp}
+            onBlur={handleButtonPointerEnd}
           />
         )}
       </div>
       {showReference ? (
         <ReferenceModal
-          letters={REFERENCE_LETTERS}
+          letters={[...REFERENCE_LETTERS]}
           morseData={MORSE_DATA}
-          numbers={REFERENCE_NUMBERS}
+          numbers={[...REFERENCE_NUMBERS]}
           onClose={() => setShowReference(false)}
-          onResetScores={handleResetScores}
+          onResetScores={handlers.handleResetScores}
           scores={scores}
         />
       ) : null}
@@ -1510,7 +722,6 @@ function App() {
   if (path === '/') {
     return <MainApp />
   }
-  // Show 404 page for all other routes
   return <Page404 />
 }
 
