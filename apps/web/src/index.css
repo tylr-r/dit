@@ -23,7 +23,6 @@ html {
   --text: var(--color-text-primary);
   --muted: var(--color-text-primary-60);
   --accent: var(--color-accent-wave);
-  --accent-cool: var(--color-feedback-success);
   --error: var(--color-feedback-error);
 }
 

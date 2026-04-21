@@ -191,9 +191,9 @@ export function ListenSineWave({ playback, tintStatus = 'idle' }: ListenSineWave
 
   const stroke =
     tintStatus === 'success'
-      ? 'rgb(110, 231, 183)'
+      ? 'hsl(154, 88%, 58%)'
       : tintStatus === 'error'
-        ? 'rgb(248, 113, 113)'
+        ? 'hsl(0, 100%, 71%)'
         : 'rgba(148, 163, 184, 0.85)'
 
   return (
