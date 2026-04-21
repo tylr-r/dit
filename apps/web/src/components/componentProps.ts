@@ -5,7 +5,14 @@ import type {
   ReactNode,
   RefObject,
 } from 'react'
-import type { FirebaseUser, Letter, ListenWavePlayback } from '@dit/core'
+import type {
+  FirebaseUser,
+  HeroMetric,
+  Letter,
+  LetterAccuracyRecord,
+  ListenWavePlayback,
+  StreakState,
+} from '@dit/core'
 
 export interface ListenControlsProps {
   listenStatus: 'idle' | 'success' | 'error'
@@ -85,6 +92,13 @@ export interface SettingsPanelProps {
 
 export type MorseData = Record<Letter, { code: string }>
 
+export interface ReferenceCourseProgress {
+  packIndex: number
+  totalPacks: number
+  phase: string
+  packLetters: readonly string[]
+}
+
 export interface ReferenceModalProps {
   letters: Letter[]
   morseData: MorseData
@@ -92,4 +106,9 @@ export interface ReferenceModalProps {
   onClose: () => void
   onResetScores: () => void
   scores: Record<Letter, number>
+  hero: HeroMetric
+  streak?: StreakState
+  todayCorrect: number
+  letterAccuracy?: LetterAccuracyRecord
+  courseProgress?: ReferenceCourseProgress | null
 }
