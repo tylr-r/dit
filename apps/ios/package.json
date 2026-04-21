@@ -51,7 +51,7 @@
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/ui": "^2.1.8",
+    "@vitest/ui": "^4.1.5",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
