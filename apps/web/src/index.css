@@ -18,8 +18,6 @@ html {
 
   /* Legacy aliases — App.css still references these names; map each to the
      unified semantic tokens. New code should consume --color-* directly. */
-  --bg-1: var(--color-surface-solid-backdrop);
-  --bg-2: var(--color-surface-panel-strong);
   --text: var(--color-text-primary);
   --muted: var(--color-text-primary-60);
   --accent: var(--color-accent-wave);
