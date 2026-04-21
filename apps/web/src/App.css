@@ -398,7 +398,7 @@
   height: 28px;
   border-radius: 999px;
   border: 1px solid hsla(0, 0%, 100%, 0.25);
-  background: var(--color-surface-card);
+  background: var(--color-surface-panel-strong);
   display: grid;
   place-items: center;
   color: var(--text);
@@ -513,7 +513,7 @@
   display: grid;
   place-items: center;
   color: var(--text);
-  transition: transform 140ms ease, border 200ms ease, filter 200ms ease, box-shadow 200ms ease;
+  transition: transform 140ms ease, border 200ms ease, filter 200ms ease;
 }
 
 .settings-button:hover {
@@ -1472,8 +1472,6 @@
   inset: 0;
   z-index: 80;
   background: var(--color-surface-solid-backdrop);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   display: flex;
   align-items: center;
   justify-content: center;
