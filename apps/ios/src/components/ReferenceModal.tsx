@@ -230,7 +230,7 @@ export function ReferenceModal({
     }))
 
     const overlayStyle = useAnimatedStyle(() => ({
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: bg.value
         ? colors.surface.inputPressed
         : colors.surface.input,
@@ -250,7 +250,7 @@ export function ReferenceModal({
         <BlurView
           intensity={26}
           tint="dark"
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <Animated.View pointerEvents="none" style={overlayStyle} />
         <Pressable
@@ -304,7 +304,7 @@ export function ReferenceModal({
       <BlurView
         intensity={24}
         tint="dark"
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       <View style={styles.header}>
         <Text style={styles.title}>Progress</Text>
