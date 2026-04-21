@@ -38,7 +38,9 @@ const {
 
 mockAuth.signOut = mockSignOut
 mockOAuthProviderInstance.credential = mockOAuthCredential
-MockOAuthProvider.mockImplementation(() => mockOAuthProviderInstance)
+MockOAuthProvider.mockImplementation(function () {
+  return mockOAuthProviderInstance
+})
 
 vi.mock('@firebase/auth', () => ({
   deleteUser: mockDeleteUser,
