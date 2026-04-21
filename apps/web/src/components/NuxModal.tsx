@@ -94,11 +94,23 @@ export function NuxModal({
     }
   }, [step, onSkipReminder])
 
+  const [displayedStep, setDisplayedStep] = useState(step)
+  const [soundRippleKey, setSoundRippleKey] = useState(0)
   const [soundCheckState, setSoundCheckState] = useState<
     'idle' | 'played' | 'heard' | 'not_heard'
   >('idle')
+  const bodyExiting = step !== displayedStep
+
+  useEffect(() => {
+    if (step === displayedStep) return
+    const swap = window.setTimeout(() => {
+      setDisplayedStep(step)
+    }, 140)
+    return () => window.clearTimeout(swap)
+  }, [step, displayedStep])
 
   const handlePlaySound = () => {
+    setSoundRippleKey((k) => k + 1)
     onPlaySoundCheck()
     setSoundCheckState((prev) => (prev === 'heard' ? 'heard' : 'played'))
   }
@@ -123,8 +135,12 @@ export function NuxModal({
     <div className="nux-overlay" role="dialog" aria-modal="true">
       <div className="nux-content">
         <ProgressDots step={step} />
-        <div className="nux-body">
-          {step === 'profile' ? (
+        <div
+          className="nux-body"
+          data-exiting={bodyExiting ? '' : undefined}
+          key={displayedStep}
+        >
+          {displayedStep === 'profile' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">Choose your path</p>
@@ -157,7 +173,7 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'sound_check' ? (
+          {displayedStep === 'sound_check' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">Check your sound</p>
@@ -178,11 +194,23 @@ export function NuxModal({
                 }`}
                 onClick={handlePlaySound}
               >
-                {soundCheckState === 'idle'
-                  ? 'Play sound'
-                  : soundCheckState === 'heard'
-                  ? 'Sound works'
-                  : 'Play again'}
+                {soundRippleKey > 0 ? (
+                  <>
+                    <span
+                      key={`ring1-${soundRippleKey}`}
+                      className="nux-sound-ring"
+                      aria-hidden="true"
+                    />
+                    <span
+                      key={`ring2-${soundRippleKey}`}
+                      className="nux-sound-ring nux-sound-ring-delayed"
+                      aria-hidden="true"
+                    />
+                  </>
+                ) : null}
+                <span className="nux-sound-label">
+                  {soundCheckState === 'idle' ? 'Play sound' : 'Play again'}
+                </span>
               </button>
               {soundCheckState === 'played' ||
               soundCheckState === 'not_heard' ||
@@ -242,7 +270,7 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'button_tutorial' ? (
+          {displayedStep === 'button_tutorial' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">Meet the Morse key</p>
@@ -268,7 +296,7 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'known_tour' ? (
+          {displayedStep === 'known_tour' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">Quick app tour</p>
@@ -284,7 +312,7 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'beginner_stages' ? (
+          {displayedStep === 'beginner_stages' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">How you'll learn</p>
@@ -298,7 +326,7 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'beginner_intro' ? (
+          {displayedStep === 'beginner_intro' ? (
             <>
               <div className="nux-copy">
                 <p className="nux-headline">Your first letters</p>
@@ -322,7 +350,7 @@ export function NuxModal({
         </div>
 
         <div className="nux-cta-slot">
-          {step === 'sound_check' ? (
+          {displayedStep === 'sound_check' ? (
             <button
               type="button"
               className="nux-cta"
@@ -332,17 +360,17 @@ export function NuxModal({
               Continue
             </button>
           ) : null}
-          {step === 'known_tour' ? (
+          {displayedStep === 'known_tour' ? (
             <button type="button" className="nux-cta" onClick={onFinishKnownTour}>
               Start practicing
             </button>
           ) : null}
-          {step === 'beginner_stages' ? (
+          {displayedStep === 'beginner_stages' ? (
             <button type="button" className="nux-cta" onClick={onContinueFromStages}>
               Continue
             </button>
           ) : null}
-          {step === 'beginner_intro' ? (
+          {displayedStep === 'beginner_intro' ? (
             <button type="button" className="nux-cta" onClick={onStartBeginnerCourse}>
               Start first lesson
             </button>
