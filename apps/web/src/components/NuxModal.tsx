@@ -11,7 +11,6 @@ const STEP_ORDER: readonly NuxStep[] = [
   'known_tour',
   'beginner_stages',
   'beginner_intro',
-  'reminder',
 ]
 
 type NuxModalProps = {
@@ -30,7 +29,6 @@ type NuxModalProps = {
   onFinishKnownTour: () => void
   onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
-  onSetReminder: (time: string) => void
   onSkipReminder: () => void
 }
 
@@ -65,7 +63,6 @@ export function NuxModal({
   onFinishKnownTour,
   onContinueFromStages,
   onStartBeginnerCourse,
-  onSetReminder,
   onSkipReminder,
 }: NuxModalProps) {
   useEffect(() => {
@@ -89,6 +86,16 @@ export function NuxModal({
     const timer = window.setTimeout(onCompleteButtonTutorial, 600)
     return () => window.clearTimeout(timer)
   }, [step, tutorialTapCount, tutorialHoldCount, onCompleteButtonTutorial])
+
+  useEffect(() => {
+    if (step === 'reminder') {
+      onSkipReminder()
+    }
+  }, [step, onSkipReminder])
+
+  if (step === 'reminder') {
+    return null
+  }
 
   if (step === 'welcome') {
     return (
@@ -235,9 +242,6 @@ export function NuxModal({
             </>
           ) : null}
 
-          {step === 'reminder' ? (
-            <ReminderStep onSet={onSetReminder} onSkip={onSkipReminder} />
-          ) : null}
         </div>
 
         <div className="nux-cta-slot">
@@ -301,51 +305,3 @@ const StageRow = ({
   </div>
 )
 
-const ReminderStep = ({
-  onSet,
-  onSkip,
-}: {
-  onSet: (time: string) => void
-  onSkip: () => void
-}) => {
-  return (
-    <>
-      <div className="nux-copy">
-        <p className="nux-headline">Daily nudge</p>
-        <p className="nux-subtext">
-          Pick a time and we'll remind you to practice. Change or turn it off
-          anytime in Settings.
-        </p>
-      </div>
-      <form
-        className="nux-reminder-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const data = new FormData(event.currentTarget)
-          const time = String(data.get('reminder-time') ?? '09:00')
-          onSet(time)
-        }}
-      >
-        <label className="nux-reminder-label">
-          Remind me at
-          <input
-            type="time"
-            name="reminder-time"
-            defaultValue="09:00"
-            className="nux-reminder-input"
-          />
-        </label>
-        <button type="submit" className="nux-cta">
-          Turn on reminder
-        </button>
-        <button
-          type="button"
-          className="nux-skip"
-          onClick={onSkip}
-        >
-          Not now
-        </button>
-      </form>
-    </>
-  )
-}

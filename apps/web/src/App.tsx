@@ -750,9 +750,6 @@ function MainApp() {
           onFinishKnownTour={handlers.handleFinishKnownTour}
           onContinueFromStages={handlers.handleNuxContinueFromStages}
           onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
-          onSetReminder={(time) => {
-            void handlers.handleNuxSetReminder(time)
-          }}
           onSkipReminder={handlers.handleNuxSkipReminder}
         />
       ) : null}
