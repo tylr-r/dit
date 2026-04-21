@@ -69,9 +69,9 @@
   height: auto;
   display: block;
   opacity: 0.5;
-  transition: 
-    opacity 160ms ease,
-    transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity var(--timing-snap) var(--ease-out),
+    transform var(--timing-connector) var(--ease-out);
 }
 
 .logo-button:hover img {
@@ -118,7 +118,7 @@
   color: var(--color-text-primary-60);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition: color var(--timing-snap) var(--ease-out), border-color var(--timing-snap) var(--ease-out);
 }
 
 .legal-back:hover {
@@ -143,7 +143,7 @@
   color: var(--color-text-primary-60);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition: color var(--timing-snap) var(--ease-out), border-color var(--timing-snap) var(--ease-out);
 }
 
 .legal-nav a:hover {
@@ -199,7 +199,7 @@
   background: var(--color-surface-backdrop);
   backdrop-filter: blur(6px);
   z-index: 4;
-  animation: legalFade 200ms ease;
+  animation: legalFade var(--timing-standard) var(--ease-out);
 }
 
 .legal-card {
@@ -212,7 +212,7 @@
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   display: grid;
   gap: 24px;
-  animation: aboutPop 240ms ease;
+  animation: aboutPop var(--timing-standard) var(--ease-out);
 }
 
 .legal-card a {
@@ -264,7 +264,7 @@
   background: var(--color-surface-backdrop-soft);
   backdrop-filter: blur(5px);
   z-index: 4;
-  animation: aboutFade 200ms ease;
+  animation: aboutFade var(--timing-standard) var(--ease-out);
 }
 
 .about-card {
@@ -279,7 +279,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  animation: aboutPop 240ms ease;
+  animation: aboutPop var(--timing-standard) var(--ease-out);
   position: relative;
   overflow: hidden;
 }
@@ -325,7 +325,7 @@
   color: inherit;
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition: color var(--timing-snap) var(--ease-out), border-color var(--timing-snap) var(--ease-out);
 }
 
 .about-links a:hover {
@@ -349,7 +349,7 @@
   letter-spacing: 0.2em;
   padding: 10px 18px;
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: all var(--timing-snap) var(--ease-out);
 }
 
 .about-close:hover {
@@ -432,7 +432,7 @@
   color: var(--color-text-primary-80);
   cursor: pointer;
   width: 100%;
-  transition: all 160ms ease;
+  transition: all var(--timing-snap) var(--ease-out);
 }
 
 .auth-button:hover {
@@ -490,7 +490,7 @@
   padding: 8px 30px 8px 14px;
   font-size: 0.72rem;
   font-weight: 500;
-  transition: border 160ms ease, background 160ms ease;
+  transition: border var(--timing-snap) var(--ease-out), background var(--timing-snap) var(--ease-out);
 }
 
 .panel-select:hover {
@@ -513,7 +513,7 @@
   display: grid;
   place-items: center;
   color: var(--text);
-  transition: transform 140ms ease, border 200ms ease, filter 200ms ease;
+  transition: transform var(--timing-exit) var(--ease-out), border var(--timing-standard) var(--ease-out), filter var(--timing-standard) var(--ease-out);
 }
 
 .settings-button:hover {
@@ -521,7 +521,7 @@
 }
 
 .settings-button:hover svg {
-  animation: settingsGearSpin 0.6s ease-in-out;
+  animation: settingsGearSpin var(--timing-connector) var(--ease-out);
 }
 
 .settings-button[aria-expanded="true"] {
@@ -551,7 +551,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  animation: panelSlideIn 200ms ease;
+  animation: panelSlideIn var(--timing-standard) var(--ease-out);
 }
 
 @keyframes panelSlideIn {
@@ -586,7 +586,7 @@
   color: var(--muted);
   text-transform: uppercase;
   cursor: pointer;
-  transition: border 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
+  transition: border var(--timing-snap) var(--ease-out), color var(--timing-snap) var(--ease-out), background var(--timing-snap) var(--ease-out), transform var(--timing-press) var(--ease-out);
 }
 
 .panel-button,
@@ -647,7 +647,7 @@
   background: var(--color-controls-switch-track-off);
   position: relative;
   cursor: pointer;
-  transition: background 200ms ease, border 200ms ease, box-shadow 200ms ease;
+  transition: background var(--timing-standard) var(--ease-out), border var(--timing-standard) var(--ease-out), box-shadow var(--timing-standard) var(--ease-out);
 }
 
 .toggle-input:hover {
@@ -663,7 +663,7 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), background 200ms ease;
+  transition: transform var(--timing-standard) var(--ease-in-out), background var(--timing-standard) var(--ease-out);
 }
 
 .toggle-input:checked {
@@ -704,7 +704,7 @@
   text-transform: uppercase;
   color: var(--text);
   text-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
-  animation: letterRise 520ms ease;
+  animation: letterRise var(--timing-morph) var(--ease-out);
 }
 
 .word-display {
@@ -720,12 +720,12 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: clamp(4px, 1.2vw, 12px);
-  animation: letterRise 520ms ease;
+  animation: letterRise var(--timing-morph) var(--ease-out);
 }
 
 .word-letter {
   opacity: 0.28;
-  transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
+  transition: color var(--timing-snap) var(--ease-out), opacity var(--timing-snap) var(--ease-out), transform var(--timing-snap) var(--ease-out);
 }
 
 .word-letter.done {
@@ -763,7 +763,7 @@
   display: inline-block;
   border-radius: 999px;
   background: var(--color-accent-wave);
-  transition: transform 140ms ease, background 200ms ease, opacity 200ms ease;
+  transition: transform var(--timing-exit) var(--ease-out), background var(--timing-standard) var(--ease-out), opacity var(--timing-standard) var(--ease-out);
 }
 
 .pip.dot {
@@ -823,7 +823,7 @@
 
 .status-error .letter {
   color: var(--color-feedback-error);
-  animation: letterShake 400ms ease;
+  animation: letterShake var(--timing-medium) var(--ease-out);
 }
 
 .status-success .pip {
@@ -913,7 +913,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 140ms ease, background 140ms ease, border 140ms ease;
+  transition: transform var(--timing-exit) var(--ease-out), background var(--timing-exit) var(--ease-out), border var(--timing-exit) var(--ease-out);
 }
 
 .intro-hint-dismiss:hover {
@@ -973,7 +973,7 @@
   font-size: clamp(0.75rem, 2.8vw, 0.95rem);
   letter-spacing: 0.12em;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: all var(--timing-press) var(--ease-out);
   touch-action: manipulation;
 }
 
@@ -1138,7 +1138,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--color-accent-wave);
-  transition: width 240ms ease-out;
+  transition: width var(--timing-standard) var(--ease-out);
 }
 
 .reference-course-banner {
@@ -1205,7 +1205,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  transition: opacity 160ms ease;
+  transition: opacity var(--timing-snap) var(--ease-out);
   font-family: inherit;
   text-transform: uppercase;
   color: var(--text);
@@ -1358,7 +1358,7 @@
   padding: clamp(16px, 4vw, 40px);
   z-index: 6;
   backdrop-filter: blur(8px);
-  animation: phase-modal-fade 160ms ease-out;
+  animation: phase-modal-fade var(--timing-snap) var(--ease-out);
 }
 
 .phase-modal-card {
@@ -1372,7 +1372,7 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  animation: phase-modal-scale 180ms ease-out;
+  animation: phase-modal-scale var(--timing-snap) var(--ease-out);
 }
 
 .phase-modal-title {
@@ -1423,7 +1423,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background var(--timing-press) var(--ease-out);
 }
 
 .phase-modal-button:hover {
@@ -1454,7 +1454,7 @@
   color: var(--text);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background var(--timing-press) var(--ease-out);
 }
 
 .return-to-lesson-button:hover {
@@ -1472,7 +1472,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  animation: phase-modal-fade 220ms ease-out;
+  animation: phase-modal-fade var(--timing-standard) var(--ease-out);
 }
 
 .nux-overlay-welcome {
@@ -1491,7 +1491,7 @@
   flex-direction: column;
   gap: 20px;
   color: var(--color-text-primary);
-  animation: phase-modal-scale 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: phase-modal-scale var(--timing-standard) var(--ease-out);
 }
 
 .nux-progress {
@@ -1505,7 +1505,7 @@
   height: 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
-  transition: background 160ms ease, transform 160ms ease;
+  transition: background var(--timing-snap) var(--ease-out), transform var(--timing-snap) var(--ease-out);
 }
 
 .nux-dot.active {
@@ -1560,7 +1560,7 @@
   color: inherit;
   font: inherit;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  transition: background var(--timing-exit) var(--ease-out), border-color var(--timing-exit) var(--ease-out), transform var(--timing-exit) var(--ease-out);
 }
 
 .nux-option-card:hover {
@@ -1602,7 +1602,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition: transform var(--timing-exit) var(--ease-out), border-color var(--timing-exit) var(--ease-out), background var(--timing-exit) var(--ease-out);
 }
 
 .nux-sound-button:hover {
@@ -1635,7 +1635,7 @@
   padding: 12px 14px;
   border-radius: 14px;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  transition: background var(--timing-exit) var(--ease-out), border-color var(--timing-exit) var(--ease-out), transform var(--timing-exit) var(--ease-out);
 }
 
 .nux-sound-choice:hover {
@@ -1720,7 +1720,7 @@
   height: 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
-  transition: background 160ms ease, transform 160ms ease;
+  transition: background var(--timing-snap) var(--ease-out), transform var(--timing-snap) var(--ease-out);
 }
 
 .nux-tutorial-pip.filled {
@@ -1884,7 +1884,7 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 140ms ease, opacity 140ms ease;
+  transition: transform var(--timing-exit) var(--ease-out), opacity var(--timing-exit) var(--ease-out);
 }
 
 .nux-cta:disabled {
@@ -1920,14 +1920,14 @@
   flex-direction: column;
   align-items: center;
   gap: 18px;
-  animation: phase-modal-scale 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: phase-modal-scale var(--timing-circle-draw) var(--ease-out);
 }
 
 .nux-welcome-logo {
   width: 108px;
   height: 108px;
   opacity: 0;
-  animation: nux-welcome-logo-in 600ms ease-out 120ms forwards;
+  animation: nux-welcome-logo-in var(--timing-connector) var(--ease-out) var(--timing-press) forwards;
 }
 
 .nux-welcome-title {
@@ -1936,7 +1936,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   opacity: 0;
-  animation: nux-welcome-text-in 500ms ease-out 400ms forwards;
+  animation: nux-welcome-text-in var(--timing-circle-draw) var(--ease-out) var(--timing-medium) forwards;
 }
 
 .nux-welcome-sub {
@@ -1944,7 +1944,7 @@
   color: var(--color-text-primary-70);
   font-size: 16px;
   opacity: 0;
-  animation: nux-welcome-text-in 500ms ease-out 600ms forwards;
+  animation: nux-welcome-text-in var(--timing-circle-draw) var(--ease-out) var(--timing-connector) forwards;
 }
 
 @keyframes nux-welcome-logo-in {
@@ -1997,7 +1997,7 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  transition: filter 220ms ease;
+  transition: filter var(--timing-standard) var(--ease-out);
 }
 
 .listen-wave.tint-success {
@@ -2016,7 +2016,7 @@
   justify-content: center;
   z-index: 1;
   pointer-events: none;
-  animation: listen-letter-in 160ms ease-out;
+  animation: listen-letter-in var(--timing-snap) var(--ease-out);
 }
 
 @keyframes listen-letter-in {
@@ -2040,7 +2040,7 @@
 
 .listen-ttr {
   font-variant-numeric: tabular-nums;
-  animation: listen-ttr-in 180ms ease-out;
+  animation: listen-ttr-in var(--timing-snap) var(--ease-out);
 }
 
 @keyframes listen-ttr-in {

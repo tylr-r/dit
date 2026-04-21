@@ -37,7 +37,7 @@
   text-shadow: 0 0 20px hsla(24, 100%, 65%, 0.3);
   display: block;
   margin-bottom: 0.5rem;
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse var(--timing-breath) var(--ease-in-out) infinite;
 }
 
 .morse-404 .space {
@@ -58,7 +58,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: glitch 3s ease-in-out infinite;
+  animation: glitch var(--timing-breath) var(--ease-in-out) infinite;
 }
 
 .page-404-message {
@@ -95,7 +95,7 @@
   font-size: 0.75rem;
   border-radius: 999px;
   cursor: pointer;
-  transition: all 160ms ease;
+  transition: all var(--timing-snap) var(--ease-out);
   display: inline-flex;
   align-items: center;
   gap: clamp(0.8rem, 2vw, 1rem);
@@ -139,19 +139,19 @@
 }
 
 .fade-in {
-  animation: fade-in 0.6s ease forwards;
+  animation: fade-in var(--timing-connector) var(--ease-out) forwards;
 }
 
 .fade-in-delayed {
-  animation: fade-in 0.6s ease 0.3s forwards;
+  animation: fade-in var(--timing-connector) var(--ease-out) var(--timing-medium) forwards;
 }
 
 .fade-in-more-delayed {
-  animation: fade-in 0.6s ease 0.6s forwards;
+  animation: fade-in var(--timing-connector) var(--ease-out) var(--timing-connector) forwards;
 }
 
 .fade-in-last {
-  animation: fade-in 0.6s ease 0.9s forwards;
+  animation: fade-in var(--timing-connector) var(--ease-out) var(--timing-ripple) forwards;
 }
 
 @keyframes pulse {
