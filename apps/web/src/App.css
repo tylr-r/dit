@@ -1316,3 +1316,118 @@
     width: 32px;
   }
 }
+
+.phase-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 14, 0.72);
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 40px);
+  z-index: 6;
+  backdrop-filter: blur(8px);
+  animation: phase-modal-fade 160ms ease-out;
+}
+
+.phase-modal-card {
+  width: min(420px, 100%);
+  background: rgba(12, 18, 24, 0.92);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: phase-modal-scale 180ms ease-out;
+}
+
+.phase-modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+}
+
+.phase-modal-subtitle {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: rgba(244, 247, 249, 0.7);
+  text-align: center;
+  margin: 0;
+}
+
+.phase-modal-letters {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.phase-modal-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.phase-modal-button {
+  margin-top: 8px;
+  padding: 12px 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.phase-modal-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.phase-modal-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+@keyframes phase-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes phase-modal-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.return-to-lesson-button {
+  margin-bottom: 12px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.return-to-lesson-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}

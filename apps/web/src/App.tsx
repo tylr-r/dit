@@ -9,6 +9,7 @@ import {
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
 import { Page404 } from './components/Page404'
+import { PhaseModal } from './components/PhaseModal'
 import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
@@ -103,7 +104,8 @@ const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
 function MainApp() {
   const { user } = useAuth()
   const onboarding = useOnboardingState()
-  const { showPhaseModal } = usePhaseModalState()
+  const { phaseModal, showPhaseModal, handlePhaseModalDismiss } =
+    usePhaseModalState()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -616,6 +618,22 @@ function MainApp() {
         target={stageTarget}
       />
       <div className="controls">
+        {derived.isGuidedLessonModeMismatch ? (
+          <button
+            type="button"
+            className="return-to-lesson-button"
+            onClick={() =>
+              handlers.moveIntoGuidedLesson(
+                state.guidedPhase,
+                state.guidedPackIndex,
+                state.guidedProgress,
+              )
+            }
+            aria-label="Return to guided lesson"
+          >
+            Return to lesson
+          </button>
+        ) : null}
         {isFreestyle ? (
           <>
             <div className="freestyle-status" aria-live="polite">
@@ -659,6 +677,12 @@ function MainApp() {
           onClose={() => setShowReference(false)}
           onResetScores={handlers.handleResetScores}
           scores={scores}
+        />
+      ) : null}
+      {phaseModal ? (
+        <PhaseModal
+          content={phaseModal}
+          onDismiss={handlePhaseModalDismiss}
         />
       ) : null}
       {showAbout ? (
