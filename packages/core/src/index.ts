@@ -1,3 +1,18 @@
+export {
+  colors,
+  hues,
+  radii,
+  shader,
+  spacing,
+} from './design/tokens'
+export type { HslTriplet } from './design/tokens'
+export {
+  hslaFromHsl,
+  normalizeColorForNative,
+  rgbaFromHsl,
+} from './design/color'
+export { BEZIER, cubicBezier, CTA_SLOT_HEIGHT, TIMING } from './design/motion'
+export type { BezierToken, TimingToken } from './design/motion'
 export { noopAnalyticsClient } from './analytics'
 export type {
   AnalyticsClient,

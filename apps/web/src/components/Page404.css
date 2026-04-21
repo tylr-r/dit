@@ -7,21 +7,21 @@
   background:
     radial-gradient(
       ellipse 1400px 1000px at 25% 85%,
-      rgba(168, 192, 255, 0.08),
+      hsla(24, 100%, 65%, 0.08),
       transparent 60%
     ),
     radial-gradient(
       ellipse 1200px 900px at 75% 15%,
-      rgba(196, 181, 253, 0.06),
+      hsla(207, 70%, 45%, 0.1),
       transparent 65%
     ),
     radial-gradient(
       ellipse 1000px 800px at 50% 50%,
-      rgba(245, 199, 247, 0.04),
+      hsla(24, 80%, 55%, 0.04),
       transparent 70%
     ),
-    #0a0c12;
-  color: var(--text, #f4f7f9);
+    var(--color-surface-solid-backdrop);
+  color: var(--color-text-primary);
   font-family: 'Space Grotesk', sans-serif;
   position: relative;
   overflow: hidden;
@@ -49,8 +49,8 @@
   font-size: clamp(1.5rem, 4vw, 2rem);
   font-family: 'Atkinson Hyperlegible', monospace;
   letter-spacing: 0.3em;
-  color: var(--accent, #38f2a2);
-  text-shadow: 0 0 20px rgba(56, 242, 162, 0.3);
+  color: var(--color-accent-wave);
+  text-shadow: 0 0 20px hsla(24, 100%, 65%, 0.3);
   display: block;
   margin-bottom: 0.5rem;
   animation: pulse 2s ease-in-out infinite;
@@ -65,11 +65,11 @@
   font-weight: 700;
   font-family: 'Atkinson Hyperlegible', monospace;
   margin: 0;
-  text-shadow: 0 0 40px rgba(56, 242, 162, 0.3);
+  text-shadow: 0 0 40px hsla(24, 100%, 65%, 0.3);
   background: linear-gradient(
     135deg,
-    var(--accent, #38f2a2),
-    var(--accent-cool, #4cc9ff)
+    var(--color-accent-wave),
+    var(--color-feedback-success)
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -100,7 +100,7 @@
 
 .page-404-message .subtitle {
   font-size: clamp(0.9rem, 2.5vw, 1rem);
-  color: var(--muted, #8d98a5);
+  color: var(--color-text-primary-60);
 }
 
 .home-button {
@@ -125,7 +125,7 @@
 .home-button:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.35);
-  color: var(--text, #f4f7f9);
+  color: var(--color-text-primary);
   transform: translateY(-2px);
 }
 

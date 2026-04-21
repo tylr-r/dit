@@ -1,0 +1,93 @@
+/*
+ * Web design tokens — derived from packages/core/src/design/tokens.ts.
+ * Keep semantic names in sync; values are hand-materialized from the core
+ * tokens so they resolve statically in CSS.
+ *
+ * When a token changes in core, update this file to match.
+ */
+
+:root {
+  /* Hues (raw) */
+  --hue-primary: 24;
+  --hue-liquid: 207;
+  --hue-success: 154;
+  --hue-error: 0;
+
+  /* Text — warm near-white on dark backdrops */
+  --color-text-primary: hsl(24, 29%, 97%);
+  --color-text-primary-90: hsla(24, 29%, 97%, 0.9);
+  --color-text-primary-80: hsla(24, 29%, 97%, 0.8);
+  --color-text-primary-70: hsla(24, 29%, 97%, 0.7);
+  --color-text-primary-60: hsla(24, 29%, 97%, 0.6);
+  --color-text-primary-40: hsla(24, 29%, 97%, 0.4);
+  --color-text-primary-20: hsla(24, 29%, 97%, 0.2);
+
+  /* Accents */
+  --color-accent-wave: hsl(24, 100%, 65%);
+
+  /* Borders */
+  --color-border-subtle: hsla(0, 0%, 100%, 0.12);
+  --color-border-error: hsla(0, 100%, 71%, 0.4);
+
+  /* Surfaces */
+  --color-surface-solid-backdrop: hsla(207, 40%, 4%, 1);
+  --color-surface-backdrop: hsla(207, 40%, 4%, 0.72);
+  --color-surface-backdrop-soft: hsla(207, 40%, 4%, 0.35);
+  --color-surface-panel: hsla(0, 0%, 0%, 0.4);
+  --color-surface-panel-strong: hsla(207, 33%, 7%, 0.92);
+  --color-surface-input: hsla(0, 0%, 100%, 0.06);
+  --color-surface-input-pressed: hsla(0, 0%, 100%, 0.12);
+  --color-surface-card: hsla(209, 34%, 12%, 0.45);
+  --color-surface-header-gradient: linear-gradient(
+    0deg,
+    transparent,
+    hsla(0, 0%, 0%, 0.26),
+    hsla(0, 0%, 0%, 0.9),
+    hsla(0, 0%, 0%, 0.9)
+  );
+
+  /* Feedback */
+  --color-feedback-success: hsl(154, 88%, 58%);
+  --color-feedback-error: hsl(0, 100%, 71%);
+
+  /* Shadows */
+  --color-shadow-base: hsl(0, 0%, 0%);
+  --color-shadow-text: hsla(0, 0%, 0%, 0.55);
+
+  /* Controls */
+  --color-controls-switch-track-off: hsla(0, 0%, 100%, 0.15);
+  --color-controls-switch-thumb-on: hsl(24, 29%, 7%);
+  --color-controls-picker-tint: hsla(0, 0%, 0%, 0.1);
+
+  /* Spacing (matches packages/core/src/design/tokens.ts) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* Radii */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --radius-icon-circle: 36px;
+
+  /* Motion — timing (ms) */
+  --timing-press: 120ms;
+  --timing-snap: 160ms;
+  --timing-standard: 240ms;
+  --timing-medium: 320ms;
+  --timing-exit: 140ms;
+  --timing-morph: 520ms;
+  --timing-wash: 320ms;
+  --timing-breath: 3000ms;
+  --timing-ripple: 1200ms;
+  --timing-circle-draw: 500ms;
+  --timing-connector: 700ms;
+
+  /* Motion — easings */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
