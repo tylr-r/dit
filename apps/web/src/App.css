@@ -172,7 +172,7 @@
 
 .legal-title {
   margin: 0;
-  font-family: 'Unbounded', sans-serif;
+  font-family: inherit;
   font-size: clamp(1.8rem, 3vw, 2.4rem);
   letter-spacing: 0.02em;
 }
@@ -758,7 +758,7 @@
 }
 
 .letter {
-  font-family: 'Atkinson Hyperlegible', 'Space Grotesk', sans-serif;
+  font-family: inherit;
   font-size: clamp(96px, 24vw, 200px);
   line-height: 0.9;
   letter-spacing: 0.12em;
@@ -770,7 +770,7 @@
 }
 
 .word-display {
-  font-family: 'Atkinson Hyperlegible', 'Space Grotesk', sans-serif;
+  font-family: inherit;
   font-size: clamp(52px, 14vw, 160px);
   line-height: 0.95;
   letter-spacing: 0.12em;
@@ -1009,7 +1009,7 @@
 }
 
 .keyboard-key {
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  font-family: inherit;
   text-transform: uppercase;
 }
 
@@ -1287,7 +1287,7 @@
   display: grid;
   place-items: center;
   transition: opacity 160ms ease;
-  font-family: 'Unbounded', 'Space Grotesk', sans-serif;
+  font-family: inherit;
   text-transform: uppercase;
   color: var(--text);
 }
