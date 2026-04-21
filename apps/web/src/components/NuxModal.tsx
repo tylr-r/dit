@@ -209,11 +209,7 @@ export function NuxModal({
                   </>
                 ) : null}
                 <span className="nux-sound-label">
-                  {soundCheckState === 'idle'
-                    ? 'Play sound'
-                    : soundCheckState === 'heard'
-                    ? 'Sound works'
-                    : 'Play again'}
+                  {soundCheckState === 'idle' ? 'Play sound' : 'Play again'}
                 </span>
               </button>
               {soundCheckState === 'played' ||
