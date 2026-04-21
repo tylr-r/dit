@@ -41,11 +41,7 @@ body {
   height: var(--app-height, 100dvh);
   overflow: hidden;
   overscroll-behavior: none;
-  background:
-    radial-gradient(ellipse 1400px 1000px at 25% 85%, hsla(24, 100%, 65%, 0.08), transparent 60%),
-    radial-gradient(ellipse 1200px 900px at 75% 15%, hsla(207, 70%, 45%, 0.1), transparent 65%),
-    radial-gradient(ellipse 1000px 800px at 50% 50%, hsla(24, 80%, 55%, 0.04), transparent 70%),
-    var(--color-surface-solid-backdrop);
+  background: var(--color-surface-solid-backdrop);
   color: var(--text);
   -webkit-user-select: none;
   user-select: none;
