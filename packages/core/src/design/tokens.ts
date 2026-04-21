@@ -45,11 +45,18 @@ export const colors = {
   },
   border: {
     subtle: hsla(0, 0, 100, 0.12),
+    hover: hsla(0, 0, 100, 0.25),
     error: hsla(
       feedbackHsl.error.h,
       feedbackHsl.error.s,
       feedbackHsl.error.l,
       0.4,
+    ),
+    errorStrong: hsla(
+      feedbackHsl.error.h,
+      feedbackHsl.error.s,
+      feedbackHsl.error.l,
+      0.6,
     ),
   },
   surface: {
