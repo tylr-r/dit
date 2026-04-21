@@ -5,7 +5,7 @@ import type {
   ReactNode,
   RefObject,
 } from 'react'
-import type { FirebaseUser, Letter } from '@dit/core'
+import type { FirebaseUser, Letter, ListenWavePlayback } from '@dit/core'
 
 export interface ListenControlsProps {
   listenStatus: 'idle' | 'success' | 'error'
@@ -33,9 +33,13 @@ export interface StageDisplayProps {
   isFreestyle: boolean
   isListen: boolean
   letter: Letter
+  letterPlaceholder: boolean
   listenDisplay: string
   listenDisplayClass: string
+  listenStatus: 'idle' | 'success' | 'error'
   listenStatusText: string
+  listenTtrText: string | null
+  listenWavePlayback: ListenWavePlayback | null
   pips: ReactNode
   practiceWord: string
   practiceWordIndex: number

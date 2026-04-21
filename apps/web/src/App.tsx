@@ -155,6 +155,7 @@ function MainApp() {
     hintVisible,
     letterPlaceholder,
     practiceWpmText,
+    listenTtrText,
   } = derived
 
   useEffect(() => {
@@ -617,9 +618,13 @@ function MainApp() {
         isFreestyle={isFreestyle}
         isListen={isListen}
         letter={practiceLetter}
+        letterPlaceholder={letterPlaceholder}
         listenDisplay={listenDisplay}
         listenDisplayClass={listenDisplayClass}
+        listenStatus={listenStatus}
         listenStatusText={listenStatusText}
+        listenTtrText={listenTtrText}
+        listenWavePlayback={state.listenWavePlayback}
         pips={pipsNode}
         practiceWord={practiceWord}
         practiceWordIndex={practiceWordIndex}

@@ -1,4 +1,5 @@
 import type { StageDisplayProps } from './componentProps'
+import { ListenSineWave } from './ListenSineWave'
 
 /** Main output area for freestyle, listen, and character modes. */
 export function StageDisplay({
@@ -8,9 +9,13 @@ export function StageDisplay({
   isFreestyle,
   isListen,
   letter,
+  letterPlaceholder,
   listenDisplay,
   listenDisplayClass,
+  listenStatus,
   listenStatusText,
+  listenTtrText,
+  listenWavePlayback,
   pips,
   practiceWord,
   practiceWordIndex,
@@ -33,12 +38,37 @@ export function StageDisplay({
         </div>
       ) : isListen ? (
         <>
-          <div key={letter} className={listenDisplayClass} aria-live="polite">
-            {listenDisplay}
+          <div className="listen-visual">
+            <ListenSineWave
+              playback={listenWavePlayback}
+              tintStatus={listenStatus}
+            />
+            {!letterPlaceholder ? (
+              <div
+                key={letter}
+                className={`${listenDisplayClass} listen-overlay-letter`}
+                aria-live="polite"
+              >
+                {listenDisplay}
+              </div>
+            ) : null}
           </div>
-          <p className="status-text" aria-live="polite">
+          <p
+            key={`listen-status-${listenStatus}-${listenStatusText}`}
+            className={`status-text listen-status-${listenStatus}`}
+            aria-live="polite"
+          >
             {listenStatusText}
           </p>
+          {listenTtrText ? (
+            <p
+              key={`listen-ttr-${listenTtrText}`}
+              className="wpm-text listen-ttr"
+              aria-live="polite"
+            >
+              {listenTtrText}
+            </p>
+          ) : null}
         </>
       ) : (
         <>
