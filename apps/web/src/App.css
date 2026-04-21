@@ -123,7 +123,7 @@
 
 .legal-back:hover {
   color: var(--color-text-primary-90);
-  border-color: var(--color-text-primary-40);
+  border-color: hsla(0, 0%, 100%, 0.25);
 }
 
 .legal-back:focus-visible {
@@ -148,7 +148,7 @@
 
 .legal-nav a:hover {
   color: var(--color-text-primary-90);
-  border-color: var(--color-text-primary-40);
+  border-color: hsla(0, 0%, 100%, 0.25);
 }
 
 .legal-nav a[aria-current='page'] {
@@ -740,11 +740,11 @@
 }
 
 .status-success .word-letter.active {
-  color: var(--accent);
+  color: var(--color-feedback-success);
 }
 
 .status-error .word-letter.active {
-  color: var(--error);
+  color: var(--color-feedback-error);
 }
 
 .letter-placeholder {
@@ -810,19 +810,19 @@
 }
 
 .status-success .status-text {
-  color: var(--accent);
+  color: var(--color-feedback-success);
 }
 
 .status-error .status-text {
-  color: var(--error);
+  color: var(--color-feedback-error);
 }
 
 .status-success .letter {
-  color: var(--accent);
+  color: var(--color-feedback-success);
 }
 
 .status-error .letter {
-  color: var(--error);
+  color: var(--color-feedback-error);
   animation: letterShake 400ms ease;
 }
 
@@ -1806,7 +1806,7 @@
 .nux-stage-desc {
   margin: 0;
   font-size: 13px;
-  color: var(--color-text-primary-70);
+  color: var(--color-text-primary-60);
 }
 
 .nux-pack-preview {
