@@ -1,5 +1,5 @@
-import { EFFECTIVE_WPM_RANGE, WPM_RANGE } from '@dit/core'
 import { describe, expect, it } from 'vitest'
+import { EFFECTIVE_WPM_RANGE, WPM_RANGE } from '../../src/constants'
 import {
   clampListenEffectiveWpm,
   clampListenWpm,

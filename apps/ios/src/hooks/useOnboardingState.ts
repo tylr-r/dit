@@ -1,16 +1,16 @@
-import type { LearnerProfile } from '@dit/core'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useCallback, useEffect, useState } from 'react'
 import {
   INTRO_HINTS_KEY,
   LEGACY_INTRO_HINTS_KEY,
+  type IntroHintStep,
+  type LearnerProfile,
   LOCAL_PROGRESS_KEY,
   NUX_STATE_KEY,
   NUX_STATUS_KEY,
-  type IntroHintStep,
   type NuxStatus,
   type NuxStep,
-} from '../utils/appState'
+} from '@dit/core'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useCallback, useEffect, useState } from 'react'
 
 type PersistedNuxState = {
   step: NuxStep

@@ -1,4 +1,4 @@
-import type { Letter } from '@dit/core'
+import type { Letter } from '../data/morse'
 
 export type PracticeReviewItem = {
   letter: Letter

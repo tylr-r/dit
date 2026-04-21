@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { colors, radii, spacing } from '../design/tokens'
-import type { ListenWavePlayback } from '../utils/listenWave'
+import type { ListenWavePlayback } from '@dit/core'
 import { ListenSineWave } from './ListenSineWave'
 
 export type StagePip = {

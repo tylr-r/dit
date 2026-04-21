@@ -1,9 +1,16 @@
 import {
   BEGINNER_COURSE_PACKS,
-  MORSE_DATA,
-  TONE_FREQUENCY_RANGE,
   computeHero,
+  LEVELS,
+  LISTEN_MIN_UNIT_MS,
+  LISTEN_WPM_MAX,
+  LISTEN_WPM_MIN,
+  MORSE_DATA,
+  REFERENCE_LETTERS,
+  REFERENCE_NUMBERS,
+  REFERENCE_WPM,
   todayStreakContribution,
+  TONE_FREQUENCY_RANGE,
 } from '@dit/core'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -30,15 +37,6 @@ import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
 import { rescheduleReminder } from './src/notifications/reminder'
 import { publishProgressToWidget } from './src/widgets/publish'
 import { signOut } from './src/services/auth'
-import {
-  LEVELS,
-  LISTEN_MIN_UNIT_MS,
-  LISTEN_WPM_MAX,
-  LISTEN_WPM_MIN,
-  REFERENCE_LETTERS,
-  REFERENCE_NUMBERS,
-  REFERENCE_WPM,
-} from './src/utils/appState'
 import { playMorseTone } from './src/utils/tone'
 
 /** Primary app entry for Dit iOS. */

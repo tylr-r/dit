@@ -1,4 +1,4 @@
-import { EFFECTIVE_WPM_RANGE, WPM_RANGE } from '@dit/core'
+import { EFFECTIVE_WPM_RANGE, WPM_RANGE } from '../constants'
 
 export const LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS = {
   medium: 12,

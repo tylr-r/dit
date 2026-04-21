@@ -1,6 +1,5 @@
-import { AUDIO_FREQUENCY, AUDIO_VOLUME } from '@dit/core'
+import { AUDIO_FREQUENCY, AUDIO_VOLUME, getListenUnitMs } from '@dit/core'
 import { requireNativeModule } from 'expo-modules-core'
-import { getListenUnitMs } from './listenSpeed'
 
 const DitNative = requireNativeModule('DitNative')
 

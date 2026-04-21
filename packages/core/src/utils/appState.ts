@@ -1,25 +1,28 @@
 import {
-  clamp,
-  createGuidedLessonProgress,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   DEFAULT_CHARACTER_WPM,
   DEFAULT_EFFECTIVE_WPM,
   EFFECTIVE_WPM_RANGE,
+  INTER_LETTER_UNITS,
+  INTER_WORD_UNITS,
+  UNIT_TIME_MS,
+  WPM_RANGE,
+} from '../constants'
+import { MORSE_DATA, type Letter } from '../data/morse'
+import type { ListenTtrRecord } from '../types'
+import {
+  createGuidedLessonProgress,
   getBeginnerCoursePack,
   getBeginnerUnlockedLetters,
+} from './beginnerCourse'
+import {
+  clamp,
   getLettersForLevel,
   getRandomLetter,
   getRandomWord,
   getWordsForLetters,
-  INTER_LETTER_UNITS,
-  INTER_WORD_UNITS,
-  MORSE_DATA,
-  UNIT_TIME_MS,
-  WPM_RANGE,
-  type Letter,
-  type ListenTtrRecord,
-} from '@dit/core'
+} from './morseUtils'
 
 export const LEVELS = [1, 2, 3, 4] as const
 export const DEFAULT_MAX_LEVEL: (typeof LEVELS)[number] = 3

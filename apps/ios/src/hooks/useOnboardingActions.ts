@@ -4,17 +4,15 @@ import {
   type GuidedLessonProgress,
   type GuidedPhase,
   type LearnerProfile,
+  LISTEN_MIN_UNIT_MS,
+  NUX_STATUS_KEY,
+  type NuxStep,
   type ReminderSettings,
 } from '@dit/core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCallback } from 'react'
 import { logAnalyticsEvent } from '../analytics'
 import { ensureNotificationPermission } from '../notifications/reminder'
-import {
-  LISTEN_MIN_UNIT_MS,
-  NUX_STATUS_KEY,
-  type NuxStep,
-} from '../utils/appState'
 import { playMorseTone } from '../utils/tone'
 
 type RefValue<T> = {

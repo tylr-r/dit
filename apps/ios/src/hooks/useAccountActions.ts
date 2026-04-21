@@ -11,7 +11,7 @@ import {
   getDeleteAccountErrorMessage,
   getSignInErrorMessage,
   isErrorWithCode,
-} from '../utils/appState'
+} from '@dit/core'
 
 type UseAccountActionsOptions = {
   user: User | null
