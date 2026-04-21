@@ -1,5 +1,6 @@
 import type { LearnerProfile, NuxStep } from '@dit/core'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { isIOS } from '../platform/device'
 
 const TUTORIAL_REQUIRED = 3
 
@@ -93,6 +94,15 @@ export function NuxModal({
     }
   }, [step, onSkipReminder])
 
+  const [soundCheckState, setSoundCheckState] = useState<
+    'idle' | 'played' | 'heard' | 'not_heard'
+  >('idle')
+
+  const handlePlaySound = () => {
+    onPlaySoundCheck()
+    setSoundCheckState((prev) => (prev === 'heard' ? 'heard' : 'played'))
+  }
+
   if (step === 'reminder') {
     return null
   }
@@ -152,16 +162,83 @@ export function NuxModal({
               <div className="nux-copy">
                 <p className="nux-headline">Check your sound</p>
                 <p className="nux-subtext">
-                  Turn your volume up, then tap below to confirm you can hear the tones.
+                  {soundCheckState === 'idle'
+                    ? 'Turn your volume up, then play the sound.'
+                    : soundCheckState === 'heard'
+                    ? 'Great — sound works.'
+                    : soundCheckState === 'not_heard'
+                    ? "Let's get that fixed."
+                    : 'Did you hear it?'}
                 </p>
               </div>
               <button
                 type="button"
-                className={`nux-sound-button ${soundChecked ? 'complete' : ''}`}
-                onClick={onPlaySoundCheck}
+                className={`nux-sound-button ${
+                  soundCheckState === 'heard' ? 'complete' : ''
+                }`}
+                onClick={handlePlaySound}
               >
-                {soundChecked ? 'Sound works' : 'Test sound'}
+                {soundCheckState === 'idle'
+                  ? 'Play sound'
+                  : soundCheckState === 'heard'
+                  ? 'Sound works'
+                  : 'Play again'}
               </button>
+              {soundCheckState === 'played' ||
+              soundCheckState === 'not_heard' ||
+              soundCheckState === 'heard' ? (
+                <div className="nux-sound-confirm" role="group" aria-label="Did you hear it?">
+                  <button
+                    type="button"
+                    className={`nux-sound-choice ${
+                      soundCheckState === 'heard' ? 'selected' : ''
+                    }`}
+                    onClick={() => setSoundCheckState('heard')}
+                    aria-pressed={soundCheckState === 'heard'}
+                  >
+                    Yes, I heard it
+                  </button>
+                  <button
+                    type="button"
+                    className={`nux-sound-choice ${
+                      soundCheckState === 'not_heard' ? 'selected' : ''
+                    }`}
+                    onClick={() => setSoundCheckState('not_heard')}
+                    aria-pressed={soundCheckState === 'not_heard'}
+                  >
+                    No sound
+                  </button>
+                </div>
+              ) : null}
+              {soundCheckState === 'not_heard' ? (
+                <div className="nux-sound-help">
+                  {isIOS() ? (
+                    <>
+                      <p className="nux-sound-help-title">On iPhone or iPad</p>
+                      <ol className="nux-sound-help-list">
+                        <li>
+                          Open Control Center and tap the{' '}
+                          <span className="nux-sound-help-emph">bell icon</span> to
+                          turn off Silent Mode.
+                        </li>
+                        <li>Raise the volume with the side buttons.</li>
+                        <li>
+                          Leave this tab in the foreground, then play again.
+                        </li>
+                      </ol>
+                    </>
+                  ) : (
+                    <>
+                      <p className="nux-sound-help-title">Try this</p>
+                      <ol className="nux-sound-help-list">
+                        <li>Turn your system volume up.</li>
+                        <li>Unmute this browser tab if it's muted.</li>
+                        <li>Check your output device, then play again.</li>
+                      </ol>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </>
           ) : null}
 
@@ -250,7 +327,7 @@ export function NuxModal({
               type="button"
               className="nux-cta"
               onClick={onContinueFromSoundCheck}
-              disabled={!soundChecked}
+              disabled={soundCheckState !== 'heard' || !soundChecked}
             >
               Continue
             </button>
