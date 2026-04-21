@@ -63,6 +63,13 @@ export {
   progressPathForUser,
 } from './firebase/progress'
 export { useFirebaseSync } from './hooks/useFirebaseSync'
+export { useFirebaseProgressSync } from './hooks/useFirebaseProgressSync'
+export { useAccountActions, isAppleUser } from './hooks/useAccountActions'
+export { useOnboardingActions } from './hooks/useOnboardingActions'
+export { useOnboardingState } from './hooks/useOnboardingState'
+export { useProgressPersistence } from './hooks/useProgressPersistence'
+export { useProgressSyncController } from './hooks/useProgressSyncController'
+export type { Mode } from './hooks/useProgressSyncController'
 export {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
