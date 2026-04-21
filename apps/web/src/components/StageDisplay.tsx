@@ -60,15 +60,13 @@ export function StageDisplay({
           >
             {listenStatusText}
           </p>
-          {listenTtrText ? (
-            <p
-              key={`listen-ttr-${listenTtrText}`}
-              className="wpm-text listen-ttr"
-              aria-live="polite"
-            >
-              {listenTtrText}
-            </p>
-          ) : null}
+          <p
+            key={`listen-ttr-${listenTtrText ?? 'empty'}`}
+            className="wpm-text listen-ttr"
+            aria-live="polite"
+          >
+            {listenTtrText ?? ' '}
+          </p>
         </>
       ) : (
         <>
