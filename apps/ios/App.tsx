@@ -1,6 +1,7 @@
 import {
   BEGINNER_COURSE_PACKS,
   computeHero,
+  DEFAULT_CHARACTER_WPM,
   LEVELS,
   LISTEN_MIN_UNIT_MS,
   LISTEN_WPM_MAX,
@@ -11,6 +12,8 @@ import {
   REFERENCE_WPM,
   todayStreakContribution,
   TONE_FREQUENCY_RANGE,
+  useMorseSessionController,
+  useOnboardingState,
 } from '@dit/core'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -28,19 +31,55 @@ import { ReferenceModalSheet } from './src/components/ReferenceModalSheet'
 import { SettingsModal } from './src/components/SettingsModal'
 import { StageDisplay } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
+import { logAnalyticsEvent } from './src/analytics'
+import { database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
 import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
-import { useMorseSessionController } from './src/hooks/useMorseSessionController'
-import { useOnboardingState } from './src/hooks/useOnboardingState'
 import { usePhaseModalState } from './src/hooks/usePhaseModalState'
 import { useSystemLowPowerMode } from './src/hooks/useSystemLowPowerMode'
-import { rescheduleReminder } from './src/notifications/reminder'
+import { ensureNotificationPermission, rescheduleReminder } from './src/notifications/reminder'
+import { IosPlatformProvider } from './src/platform'
 import { publishProgressToWidget } from './src/widgets/publish'
 import { signOut } from './src/services/auth'
-import { playMorseTone } from './src/utils/tone'
+import {
+  playMorseTone,
+  prepareToneEngine,
+  startTone,
+  stopMorseTone,
+  stopTone,
+} from './src/utils/tone'
 
-/** Primary app entry for Dit iOS. */
-export default function App() {
+const playOnboardingTone = (symbol: '.' | '-') => {
+  void playMorseTone({
+    code: symbol,
+    characterWpm: DEFAULT_CHARACTER_WPM,
+    effectiveWpm: DEFAULT_CHARACTER_WPM,
+    minUnitMs: LISTEN_MIN_UNIT_MS,
+  })
+}
+
+const logAnalyticsEventLoose = (event: string, params?: Record<string, unknown>) => {
+  // Core emits events through a loosely typed callback; we forward them to the
+  // strongly typed Firebase Analytics client without re-validating names here.
+  ;(logAnalyticsEvent as unknown as (name: string, params?: Record<string, unknown>) => void)(
+    event,
+    params,
+  )
+}
+
+const sessionCallbacks = {
+  logAnalyticsEvent: logAnalyticsEventLoose,
+  ensureNotificationPermission,
+  prepareToneEngine,
+  startTone,
+  stopTone,
+  playMorseTone,
+  stopMorseTone,
+  playOnboardingTone,
+}
+
+/** Inner app shell mounted under IosPlatformProvider so core hooks can resolve usePlatform(). */
+function AppShell() {
   const { user } = useAuth()
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } = usePhaseModalState()
   const onboarding = useOnboardingState()
@@ -53,6 +92,7 @@ export default function App() {
 
   const session = useMorseSessionController({
     user,
+    database,
     isDeletingAccount,
     setIsDeletingAccount,
     showReference,
@@ -61,6 +101,7 @@ export default function App() {
     setShowReference,
     showPhaseModal,
     onboarding,
+    callbacks: sessionCallbacks,
   })
 
   const { state, setters, derived, handlers } = session
@@ -382,6 +423,15 @@ export default function App() {
       </View>
       <StatusBar style="light" />
     </SafeAreaProvider>
+  )
+}
+
+/** Primary app entry for Dit iOS. */
+export default function App() {
+  return (
+    <IosPlatformProvider>
+      <AppShell />
+    </IosPlatformProvider>
   )
 }
 
