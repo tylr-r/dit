@@ -12,6 +12,7 @@
     "device": "pnpm --filter @dit/ios ios --device",
     "preview": "turbo run preview",
     "deploy": "pnpm --filter @dit/web build && firebase deploy",
+    "security:history": "node ./scripts/check-private-history.js",
     "test:unit": "turbo run test:unit",
     "test:unit:run": "turbo run test:unit:run",
     "test:types": "turbo run test:types",
