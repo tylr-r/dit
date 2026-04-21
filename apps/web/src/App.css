@@ -1431,3 +1431,454 @@
 .return-to-lesson-button:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+
+/* ─── NUX onboarding overlay ─────────────────────────────────────── */
+
+.nux-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(8, 10, 16, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: phase-modal-fade 220ms ease-out;
+}
+
+.nux-overlay-welcome {
+  background: rgba(8, 10, 16, 0.96);
+}
+
+.nux-content {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: rgba(17, 20, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  color: #f8fafc;
+  animation: phase-modal-scale 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nux-progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.nux-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.nux-dot.active {
+  background: #f8fafc;
+  transform: scale(1.3);
+}
+
+.nux-dot.past {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.nux-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.nux-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.nux-headline {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.nux-subtext {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.68);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.nux-option-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nux-option-card {
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 16px 18px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.nux-option-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nux-option-card:active {
+  transform: scale(0.98);
+}
+
+.nux-option-card.selected {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nux-option-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.nux-option-body {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.64);
+  font-size: 14px;
+}
+
+.nux-sound-button {
+  align-self: center;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.nux-sound-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nux-sound-button:active {
+  transform: scale(0.97);
+}
+
+.nux-sound-button.complete {
+  border-color: rgba(110, 231, 183, 0.6);
+  color: rgb(110, 231, 183);
+}
+
+.nux-tutorial-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nux-tutorial-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.nux-tutorial-label {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.nux-tutorial-hint {
+  color: rgba(248, 250, 252, 0.55);
+  font-weight: 400;
+}
+
+.nux-tutorial-pips {
+  display: flex;
+  gap: 6px;
+}
+
+.nux-tutorial-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.nux-tutorial-pip.filled {
+  background: rgb(110, 231, 183);
+  transform: scale(1.1);
+}
+
+.nux-tutorial-button-slot {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.nux-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin: 0;
+}
+
+.nux-bullet-list {
+  list-style: none;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: rgba(248, 250, 252, 0.78);
+  font-size: 15px;
+}
+
+.nux-bullet-list li {
+  display: flex;
+  gap: 8px;
+}
+
+.nux-bullet-list li::before {
+  content: '•';
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.nux-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nux-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nux-stage-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.nux-stage-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nux-stage-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.nux-stage-desc {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(248, 250, 252, 0.6);
+}
+
+.nux-pack-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.nux-pack-label {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.55);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nux-pack-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nux-pack-chip {
+  min-width: 52px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.nux-reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.nux-reminder-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.nux-reminder-input {
+  padding: 10px 12px;
+  font-size: 18px;
+  font-family: inherit;
+  color: inherit;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nux-cta-slot {
+  display: flex;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.nux-cta {
+  min-width: 200px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 0;
+  background: #f8fafc;
+  color: #0a0c12;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.nux-cta:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.nux-cta:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.nux-cta:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.nux-skip {
+  align-self: center;
+  margin-top: 4px;
+  padding: 10px 18px;
+  border: 0;
+  background: transparent;
+  color: rgba(248, 250, 252, 0.55);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.nux-skip:hover {
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.nux-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  animation: phase-modal-scale 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nux-welcome-logo {
+  width: 108px;
+  height: 108px;
+  opacity: 0;
+  animation: nux-welcome-logo-in 600ms ease-out 120ms forwards;
+}
+
+.nux-welcome-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  animation: nux-welcome-text-in 500ms ease-out 400ms forwards;
+}
+
+.nux-welcome-sub {
+  margin: 0;
+  color: rgba(248, 250, 252, 0.65);
+  font-size: 16px;
+  opacity: 0;
+  animation: nux-welcome-text-in 500ms ease-out 600ms forwards;
+}
+
+@keyframes nux-welcome-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes nux-welcome-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app.nux-active > .top-bar,
+.app.nux-active > .stage,
+.app.nux-active > .controls {
+  visibility: hidden;
+}

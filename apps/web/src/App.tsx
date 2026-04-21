@@ -8,12 +8,14 @@ import {
 } from './components/LegalPage'
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
+import { NuxModal } from './components/NuxModal'
 import { Page404 } from './components/Page404'
 import { PhaseModal } from './components/PhaseModal'
 import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
 import {
+  BEGINNER_COURSE_PACKS,
   DEFAULT_CHARACTER_WPM,
   LISTEN_MIN_UNIT_MS,
   LISTEN_WPM_MAX,
@@ -159,13 +161,8 @@ function MainApp() {
     isPressingRef.current = isPressing
   }, [isPressing])
 
-  // Auto-skip NUX on web until NUX UI lands (Sub-project E).
-  const { nuxReady, nuxStatus, persistNuxStatus } = onboarding
-  useEffect(() => {
-    if (nuxReady && nuxStatus === 'pending') {
-      persistNuxStatus('skipped')
-    }
-  }, [nuxReady, nuxStatus, persistNuxStatus])
+  const { nuxReady, nuxStatus } = onboarding
+  const isNuxActive = nuxReady && nuxStatus === 'pending'
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -517,11 +514,25 @@ function MainApp() {
   const userInitial = user ? (userLabel ? userLabel[0].toUpperCase() : '?') : ''
   const authReady = true
 
+  const nuxMorseButton = (
+    <MorseButton
+      buttonRef={morseButtonRef}
+      isPressing={isPressing}
+      onPointerDown={handleButtonPointerDown}
+      onPointerUp={handleButtonPointerEnd}
+      onPointerCancel={handleButtonPointerEnd}
+      onPointerLeave={handleButtonPointerEnd}
+      onKeyDown={handleButtonKeyDown}
+      onKeyUp={handleButtonKeyUp}
+      onBlur={handleButtonPointerEnd}
+    />
+  )
+
   return (
     <div
       className={`app status-idle mode-${mode}${
         isListen && useCustomKeyboard ? ' listen-focused' : ''
-      }`}
+      }${isNuxActive ? ' nux-active' : ''}`}
     >
       <header className="top-bar">
         <div className="logo">
@@ -683,6 +694,29 @@ function MainApp() {
         <PhaseModal
           content={phaseModal}
           onDismiss={handlePhaseModalDismiss}
+        />
+      ) : null}
+      {isNuxActive ? (
+        <NuxModal
+          step={onboarding.nuxStep}
+          learnerProfile={state.learnerProfile}
+          soundChecked={state.didCompleteSoundCheck}
+          tutorialTapCount={state.tutorialTapCount}
+          tutorialHoldCount={state.tutorialHoldCount}
+          currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
+          morseButton={nuxMorseButton}
+          onWelcomeDone={handlers.handleNuxWelcomeDone}
+          onChooseProfile={handlers.handleNuxChooseProfile}
+          onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
+          onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}
+          onCompleteButtonTutorial={handlers.handleNuxCompleteButtonTutorial}
+          onFinishKnownTour={handlers.handleFinishKnownTour}
+          onContinueFromStages={handlers.handleNuxContinueFromStages}
+          onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
+          onSetReminder={(time) => {
+            void handlers.handleNuxSetReminder(time)
+          }}
+          onSkipReminder={handlers.handleNuxSkipReminder}
         />
       ) : null}
       {showAbout ? (
