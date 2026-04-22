@@ -28,6 +28,9 @@ import { normalizeColorForNative } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import DitLogo from './DitLogo'
+import { IntroFluencyIllustration } from './nux/IntroFluencyIllustration'
+import { IntroListenIllustration } from './nux/IntroListenIllustration'
+import { IntroSpeedIllustration } from './nux/IntroSpeedIllustration'
 import { LetterDealChip } from './nux/LetterDealChip'
 import { MorphGhost, type MorphRect } from './nux/MorphGhost'
 import { SonarRipple } from './nux/SonarRipple'
@@ -700,6 +703,9 @@ export function NuxModal({
   onWelcomeDone,
   onBack,
   onChooseProfile,
+  onContinueFromIntroFluency,
+  onContinueFromIntroListen,
+  onContinueFromIntroSpeed,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
   onCompleteButtonTutorial,
@@ -1063,6 +1069,58 @@ export function NuxModal({
               </>
             ) : null}
 
+            {displayedStep === 'intro_fluency' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Real Morse fluency.</Text>
+                  <Text style={styles.subtext}>
+                    Science-backed training, instant feedback, and smart review that targets your
+                    weakest letters.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={stagger[1]}>
+                    <IntroFluencyIllustration />
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
+            {displayedStep === 'intro_listen' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>No chart. Just listen.</Text>
+                  <Text style={styles.subtext}>
+                    Experienced operators don't count dots and dashes. They hear each letter the way
+                    you hear your name. Dit trains that reflex from the start.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={stagger[1]}>
+                    <IntroListenIllustration />
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
+            {displayedStep === 'intro_speed' ? (
+              <>
+                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                  <Text style={styles.headline}>Real speed from day one.</Text>
+                  <Text style={styles.subtext}>
+                    Slow letters teach you to count. Dit uses the Koch method, which keeps every
+                    character at a usable speed. The gaps between letters start roomy and tighten as
+                    you improve, so you always have time to think.
+                  </Text>
+                </Animated.View>
+                <View style={styles.stepFill}>
+                  <Animated.View style={stagger[1]}>
+                    <IntroSpeedIllustration />
+                  </Animated.View>
+                </View>
+              </>
+            ) : null}
+
             {displayedStep === 'sound_check' ? (
               <>
                 <Animated.View style={[styles.copyBlock, stagger[0]]}>
@@ -1290,6 +1348,33 @@ export function NuxModal({
               consistent whether or not the step has a button. GlassView can't
               live inside the animated body (animated opacity breaks it). */}
           <View style={styles.ctaSlot}>
+            {displayedStep === 'intro_fluency' ? (
+              <DitButton
+                text="Continue"
+                onPress={onContinueFromIntroFluency}
+                style={styles.ctaButton}
+                radius={radii.pill}
+                paddingVertical={16}
+              />
+            ) : null}
+            {displayedStep === 'intro_listen' ? (
+              <DitButton
+                text="Continue"
+                onPress={onContinueFromIntroListen}
+                style={styles.ctaButton}
+                radius={radii.pill}
+                paddingVertical={16}
+              />
+            ) : null}
+            {displayedStep === 'intro_speed' ? (
+              <DitButton
+                text="Continue"
+                onPress={onContinueFromIntroSpeed}
+                style={styles.ctaButton}
+                radius={radii.pill}
+                paddingVertical={16}
+              />
+            ) : null}
             {displayedStep === 'sound_check' ? (
               <View
                 ref={ctaSlotRef}
