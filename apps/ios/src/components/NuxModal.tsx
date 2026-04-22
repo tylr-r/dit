@@ -11,7 +11,6 @@ import Reanimated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -28,7 +27,6 @@ import {
   BEZIER,
   CTA_SLOT_HEIGHT,
   EASE,
-  RSPRING,
   TIMING,
 } from './nux/animationTokens'
 import { useReduceMotion } from './nux/useReduceMotion'
@@ -63,72 +61,48 @@ type NuxModalProps = {
 }
 
 // ─── Step body transition ─────────────────────────────────────────────────────
-// Directional spatial slide using Reanimated — exits leftward, enters from the
-// right, giving a sense of forward movement. ProgressDots stay static as the
-// spatial anchor (rendered outside this animated container).
+// Pure opacity crossfade. Content swap is deferred until opacity hits zero so
+// there's no visible handoff; no spatial slide to avoid mid-transition position
+// glitches from the worklet/JS state-swap gap.
 
 function useStepTransition(step: NuxStep, reduceMotion: boolean) {
   const [displayedStep, setDisplayedStep] = useState<NuxStep>(step)
   const opacity = useSharedValue(1)
-  const translateX = useSharedValue(0)
-  const scale = useSharedValue(1)
   const prevStep = useRef(step)
 
   useEffect(() => {
     if (prevStep.current === step) return
     prevStep.current = step
 
-    // Swap content + start enter animation on the UI thread via the exit's
-    // completion callback so there's no setTimeout/worklet race. A JS setTimeout
-    // can fire a frame before/after the opacity hits zero, which flashes the
-    // new content. Atomic sequencing here eliminates that gap.
-    const swapAndEnter = () => {
-      setDisplayedStep(step)
-    }
-
-    if (reduceMotion) {
-      opacity.value = withTiming(
-        0,
-        { duration: 140, easing: REasing.bezier(...BEZIER.out) },
-        (finished) => {
-          'worklet'
-          if (!finished) return
-          runOnJS(swapAndEnter)()
-          opacity.value = withTiming(1, { duration: 200 })
-        },
-      )
-      return
-    }
-
+    const exitDuration = reduceMotion ? 140 : TIMING.exit
     opacity.value = withTiming(
       0,
-      { duration: TIMING.exit, easing: REasing.bezier(...BEZIER.out) },
+      { duration: exitDuration, easing: REasing.bezier(...BEZIER.out) },
       (finished) => {
         'worklet'
         if (!finished) return
-        runOnJS(swapAndEnter)()
-        translateX.value = 16
-        scale.value = 0.97
-        opacity.value = withTiming(1, {
-          duration: TIMING.medium,
-          easing: REasing.bezier(...BEZIER.out),
-        })
-        translateX.value = withTiming(0, {
-          duration: TIMING.medium,
-          easing: REasing.bezier(...BEZIER.out),
-        })
-        scale.value = withSpring(1, RSPRING.snappy)
+        runOnJS(setDisplayedStep)(step)
       },
     )
-    translateX.value = withTiming(-16, {
-      duration: TIMING.exit,
+  }, [step, reduceMotion, opacity])
+
+  // Fade back in once displayedStep has caught up to the new step. Running the
+  // enter animation off the committed state (rather than chaining it inside the
+  // exit callback) guarantees the new content is mounted before we ramp opacity.
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    opacity.value = withTiming(1, {
+      duration: reduceMotion ? 200 : TIMING.medium,
       easing: REasing.bezier(...BEZIER.out),
     })
-  }, [step, reduceMotion, opacity, translateX, scale])
+  }, [displayedStep, reduceMotion, opacity])
 
   const bodyAnimStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateX: translateX.value }, { scale: scale.value }],
   }))
 
   return { displayedStep, bodyAnimStyle }

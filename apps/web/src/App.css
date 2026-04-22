@@ -1549,7 +1549,7 @@
   flex-direction: column;
   gap: 20px;
   align-items: stretch;
-  transition: opacity var(--timing-exit) var(--ease-out), transform var(--timing-exit) var(--ease-out);
+  transition: opacity var(--timing-exit) var(--ease-out);
 }
 
 .nux-body > * {
@@ -1578,7 +1578,6 @@
 
 .nux-body[data-exiting] {
   opacity: 0;
-  transform: translateX(-16px);
   pointer-events: none;
 }
 
@@ -1589,7 +1588,6 @@
 @starting-style {
   .nux-body {
     opacity: 0;
-    transform: translateX(16px);
   }
 }
 
