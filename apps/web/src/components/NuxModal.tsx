@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { isIOS } from '../platform/device'
 import { useScreenTracker } from '../lib/analytics'
 
+import { IntroFluencyIllustration } from './nux/IntroFluencyIllustration'
+import { IntroListenIllustration } from './nux/IntroListenIllustration'
+import { IntroSpeedIllustration } from './nux/IntroSpeedIllustration'
+
 type AuthUser = { uid: string }
 
 const TUTORIAL_REQUIRED = 3
@@ -93,6 +97,9 @@ export function NuxModal({
   onWelcomeDone,
   onBack,
   onChooseProfile,
+  onContinueFromIntroFluency,
+  onContinueFromIntroListen,
+  onContinueFromIntroSpeed,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
   onCompleteButtonTutorial,
@@ -267,6 +274,52 @@ export function NuxModal({
             </>
           ) : null}
 
+          {displayedStep === 'intro_fluency' ? (
+            <>
+              <div className="nux-copy">
+                <p className="nux-headline">Real Morse fluency.</p>
+                <p className="nux-subtext">
+                  Science-backed training, instant feedback, and smart review that targets your
+                  weakest letters.
+                </p>
+              </div>
+              <div className="nux-intro-illustration">
+                <IntroFluencyIllustration />
+              </div>
+            </>
+          ) : null}
+
+          {displayedStep === 'intro_listen' ? (
+            <>
+              <div className="nux-copy">
+                <p className="nux-headline">No chart. Just listen.</p>
+                <p className="nux-subtext">
+                  Experienced operators don't count dots and dashes. They hear each letter the way
+                  you hear your name. Dit trains that reflex from the start.
+                </p>
+              </div>
+              <div className="nux-intro-illustration">
+                <IntroListenIllustration />
+              </div>
+            </>
+          ) : null}
+
+          {displayedStep === 'intro_speed' ? (
+            <>
+              <div className="nux-copy">
+                <p className="nux-headline">Real speed from day one.</p>
+                <p className="nux-subtext">
+                  Slow letters teach you to count. Dit uses the Koch method, which keeps every
+                  character at a usable speed. The gaps between letters start roomy and tighten as
+                  you improve, so you always have time to think.
+                </p>
+              </div>
+              <div className="nux-intro-illustration">
+                <IntroSpeedIllustration />
+              </div>
+            </>
+          ) : null}
+
           {displayedStep === 'sound_check' ? (
             <>
               <div className="nux-copy">
@@ -432,6 +485,21 @@ export function NuxModal({
         </div>
 
         <div className="nux-cta-slot">
+          {displayedStep === 'intro_fluency' ? (
+            <button type="button" className="nux-cta" onClick={onContinueFromIntroFluency}>
+              Continue
+            </button>
+          ) : null}
+          {displayedStep === 'intro_listen' ? (
+            <button type="button" className="nux-cta" onClick={onContinueFromIntroListen}>
+              Continue
+            </button>
+          ) : null}
+          {displayedStep === 'intro_speed' ? (
+            <button type="button" className="nux-cta" onClick={onContinueFromIntroSpeed}>
+              Continue
+            </button>
+          ) : null}
           {displayedStep === 'sound_check' ? (
             <button
               type="button"
