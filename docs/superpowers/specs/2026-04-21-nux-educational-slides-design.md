@@ -46,11 +46,58 @@ Copy rules applied: no em dashes, "usable speed" rather than "full speed", Koch 
 
 ## Interaction
 
-Each slide is passive: headline, body copy, no interactive element. The CTA slot shows a single **Continue** button that advances to the next slide. After slide 3, Continue advances to `sound_check`.
+Each slide is passive: headline, body copy, illustration, no interactive element. The CTA slot shows a single **Continue** button that advances to the next slide. After slide 3, Continue advances to `sound_check`.
 
-Swipe-forward gesture on iOS is not required for v1 — Continue button is the primary advance. If we want swipe later, the existing directional `useStepTransition` already animates in that direction so the gesture just needs to trigger the same step change.
+Swipe-forward gesture on iOS is not required for v1. Continue button is the primary advance. If we want swipe later, the existing directional `useStepTransition` already animates in that direction so the gesture just needs to trigger the same step change.
 
 No back navigation. Matches the rest of the NUX flow (which is also forward-only).
+
+## Illustrations
+
+All three slides share a "translation" visual grammar: a ghosted "from" state on the left, an orange "to" state on the right, a thin arrow between them, mono uppercase labels at the bottom. The arrow represents a transformation Dit performs. Same grammar across all three slides makes the set feel coherent.
+
+Implementation: inline SVG per slide (no Lottie, no image assets). Stroke widths, colors, and typography pull from existing tokens (`accent.wave` for the orange signal, `text.primary` / `text.primary40` for labels, SF Mono for ticks).
+
+### Slide 1 — "Real Morse fluency"
+
+- **Left (ghost):** a vertical stack of 5 letters representing weakest-learned characters (e.g., K, Q, Z, X, J), each followed by a small mono "×N" miss-count tick. Opacity ~0.35.
+- **Arrow:** thin horizontal arrow pointing right, at vertical center.
+- **Right (signal):** one letter pulled from the stack, rendered large (48px, 600 weight) in accent orange, with its Morse pattern drawn as a small square-wave trace below in the same orange.
+- **Bottom labels:** `WEAKEST` (left) and `MASTERED` (right), mono 9px, `text.primary40`, letterspacing 0.1em.
+
+### Slide 2 — "No chart. Just listen."
+
+- **Left (ghost):** a 5-row chart table (A / N / R / T / E) with each letter's dit/dah pattern rendered in mono text. Opacity ~0.4.
+- **Arrow:** thin horizontal arrow pointing right, at vertical center.
+- **Right (signal):** a flowing waveform in accent orange, ~2.5px stroke, no chart reference.
+- **Bottom labels:** `DECODE` (left) and `HEAR` (right).
+
+### Slide 3 — "Real speed from day one"
+
+- **Top row (ghost):** four letters (N, R, A, T) rendered as dit/dah pattern bars with wide inter-letter gaps. Opacity ~0.4. Label above: `12 / 8 WPM` (mono).
+- **Arrow:** thin vertical arrow, pointing down, at horizontal center between rows.
+- **Bottom row (signal):** same four letters, same pattern bars, tight gaps, accent orange. Label above: `12 / 12 WPM` (mono).
+- Using Dit's Farnsworth notation as the row labels rewards users who notice the pattern ("same first number, second number changes") without demanding they understand it. Casual readers just read it as "two speeds."
+
+## Motion
+
+Each slide's ghost side (left or top) renders with the step-entrance animation as part of the `useStepTransition` body. After the body has settled, the signal side (right or bottom, orange) and the arrow stagger in:
+
+- Arrow: short draw-in (stroke dash animation) or opacity fade, ~200ms, `BEZIER.out`.
+- Signal: translateX or translateY from 8px offset + opacity fade, ~340ms, staggered 60ms after the arrow.
+- Slide 3 bottom row additionally animates its gap-width: starts at the wide spacing, contracts to the tight spacing over ~600ms once in view.
+
+All motion uses existing `TIMING` and `BEZIER` tokens. Extends the existing `useSlideStagger` pattern rather than introducing new primitives.
+
+### Reduce motion
+
+- Ghost + signal + arrow all render immediately at their final state, no translateX/Y or stroke draw.
+- Slide 3 renders at the tight spacing directly; no gap-width interpolation.
+- Step-level enter/exit fade still runs (matches the rest of the NUX under reduce-motion).
+
+## Future: character illustrations
+
+Explicitly deferred: a character-illustration variant (a drawn operator, an ear, etc.) was considered and parked. If we revisit later, that direction would justify adding `lottie-react-native` / `lottie-web`. Current choice is SVG-only line art, no animation library.
 
 ## Step transitions
 
@@ -163,9 +210,10 @@ No new reusable subcomponent needed — each slide is five lines of JSX. If a fo
 ## Out of scope
 
 - Swipe-to-advance gesture on iOS (can be added later; transitions already support it).
-- Interactive demos (e.g., "tap to hear R at 5 WPM vs. 12 WPM"). Decided against in brainstorming — passive slides only.
+- Interactive demos (e.g., "tap to hear R at 5 WPM vs. 12 WPM"). Decided against in brainstorming; passive slides only.
 - Known-path abbreviation. Both paths see all three slides.
 - Named Farnsworth spacing. Concept is kept on slide 3, name omitted per direction.
+- Character illustrations / Lottie. Parked for a possible later iteration.
 
 ## Open questions
 
