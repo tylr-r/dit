@@ -3242,6 +3242,34 @@
   transform: scale(0.97);
 }
 
+.nux-intro-illustration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0 8px;
+}
+
+@keyframes nux-intro-speed-compress {
+  from {
+    transform: translateX(-48px) scaleX(1.4);
+    transform-origin: 50% 50%;
+  }
+  to {
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+.nux-intro-speed-signal {
+  animation: nux-intro-speed-compress 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nux-intro-speed-signal {
+    animation: none;
+  }
+}
+
 .nux-skip {
   align-self: center;
   margin-top: 4px;
