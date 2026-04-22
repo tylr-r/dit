@@ -47,6 +47,9 @@ import { isOutputVolumeSufficient } from '../utils/soundCheck'
 type NuxStep =
   | 'welcome'
   | 'profile'
+  | 'intro_fluency'
+  | 'intro_listen'
+  | 'intro_speed'
   | 'sound_check'
   | 'button_tutorial'
   | 'known_tour'
@@ -67,6 +70,9 @@ type NuxModalProps = {
   onWelcomeDone: () => void
   onBack: (step: NuxStep) => void
   onChooseProfile: (profile: 'beginner' | 'known') => void
+  onContinueFromIntroFluency: () => void
+  onContinueFromIntroListen: () => void
+  onContinueFromIntroSpeed: () => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
   onCompleteButtonTutorial: () => void
@@ -205,12 +211,15 @@ function useStaggerEntrance(
 const progressIndexByStep: Record<NuxStep, number> = {
   welcome: -1,
   profile: 0,
-  sound_check: 1,
-  button_tutorial: 2,
-  known_tour: 3,
-  beginner_stages: 3,
-  beginner_intro: 3,
-  reminder: 4,
+  intro_fluency: 1,
+  intro_listen: 1,
+  intro_speed: 1,
+  sound_check: 2,
+  button_tutorial: 3,
+  known_tour: 4,
+  beginner_stages: 4,
+  beginner_intro: 4,
+  reminder: 5,
 }
 
 function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean }) {
@@ -242,7 +251,7 @@ function AnimatedDot({ isDone, isActive }: { isDone: boolean; isActive: boolean 
 }
 
 function ProgressDots({ step }: { step: NuxStep }) {
-  const total = 5
+  const total = 6
   const activeIndex = progressIndexByStep[step]
 
   return (
@@ -940,6 +949,9 @@ export function NuxModal({
   const staggerCounts: Record<NuxStep, number> = {
     welcome: 0,
     profile: 2,
+    intro_fluency: 2,
+    intro_listen: 2,
+    intro_speed: 2,
     sound_check: 2,
     button_tutorial: 2,
     known_tour: 2,
