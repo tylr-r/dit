@@ -1,7 +1,7 @@
-import { BlurView } from 'expo-blur'
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -10,6 +10,9 @@ import { scheduleOnRN } from 'react-native-worklets'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import { ModalShell } from './ModalShell'
+import { BEZIER, TIMING } from './nux/animationTokens'
+
+const EASE_OUT = Easing.bezier(...BEZIER.out)
 
 export type PhaseModalContent = {
   title: string
@@ -29,15 +32,19 @@ export function PhaseModal({ content, onDismiss }: PhaseModalProps) {
   const [exiting, setExiting] = React.useState(false)
 
   React.useEffect(() => {
-    opacity.value = withTiming(1, { duration: 160 })
+    opacity.value = withTiming(1, { duration: TIMING.standard, easing: EASE_OUT })
   }, [opacity])
 
   const handleDismiss = React.useCallback(() => {
     if (exiting) return
     setExiting(true)
-    opacity.value = withTiming(0, { duration: 140 }, (finished) => {
-      if (finished) scheduleOnRN(onDismiss)
-    })
+    opacity.value = withTiming(
+      0,
+      { duration: TIMING.exit, easing: EASE_OUT },
+      (finished) => {
+        if (finished) scheduleOnRN(onDismiss)
+      },
+    )
   }, [exiting, onDismiss, opacity])
 
   const animStyle = useAnimatedStyle(() => ({
@@ -47,37 +54,28 @@ export function PhaseModal({ content, onDismiss }: PhaseModalProps) {
 
   return (
     <ModalShell onClose={handleDismiss}>
-      <Animated.View style={animStyle}>
-        <View style={styles.card}>
-          <BlurView
-            intensity={28}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.body}>
-            <Text style={styles.title}>{content.title}</Text>
-            {content.subtitle ? (
-              <Text style={styles.subtitle}>{content.subtitle}</Text>
-            ) : null}
-            {content.letters && content.letters.length > 0 ? (
-              <View style={styles.letterRow}>
-                {content.letters.map((letter) => (
-                  <View key={letter} style={styles.letterChip}>
-                    <Text style={styles.letterText}>{letter}</Text>
-                  </View>
-                ))}
+      <Animated.View style={[styles.card, animStyle]}>
+        <Text style={styles.title}>{content.title}</Text>
+        {content.subtitle ? (
+          <Text style={styles.subtitle}>{content.subtitle}</Text>
+        ) : null}
+        {content.letters && content.letters.length > 0 ? (
+          <View style={styles.letterRow}>
+            {content.letters.map((letter) => (
+              <View key={letter} style={styles.letterChip}>
+                <Text style={styles.letterText}>{letter}</Text>
               </View>
-            ) : null}
-            <DitButton
-              text={content.buttonText ?? 'Continue'}
-              onPress={handleDismiss}
-              paddingVertical={12}
-              paddingHorizontal={24}
-              radius={radii.md}
-              accessibilityLabel={content.buttonText ?? 'Continue'}
-            />
+            ))}
           </View>
-        </View>
+        ) : null}
+        <DitButton
+          text={content.buttonText ?? 'Continue'}
+          onPress={handleDismiss}
+          paddingVertical={12}
+          paddingHorizontal={24}
+          radius={radii.md}
+          accessibilityLabel={content.buttonText ?? 'Continue'}
+        />
       </Animated.View>
     </ModalShell>
   )
@@ -87,16 +85,9 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     borderRadius: radii.lg,
-    overflow: 'hidden',
-    backgroundColor: colors.surface.panel,
+    backgroundColor: colors.surface.panelStrong,
     borderWidth: 1,
     borderColor: colors.border.subtle,
-    shadowColor: colors.shadow.base,
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-  },
-  body: {
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.xl,
@@ -122,9 +113,9 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xs,
   },
   letterChip: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
+    width: 72,
+    height: 72,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface.input,
     borderWidth: 1,
     borderColor: colors.border.subtle,
@@ -132,9 +123,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   letterText: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 2,
+    fontSize: 26,
+    fontWeight: '700',
     color: colors.text.primary,
   },
 })
