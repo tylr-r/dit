@@ -110,8 +110,20 @@ export const useOnboardingActions = ({
   const handleNuxChooseProfile = useCallback((profile: LearnerProfile) => {
     setLearnerProfile(profile)
     learnerProfileRef.current = profile
-    setNuxStep('sound_check')
+    setNuxStep('intro_fluency')
   }, [learnerProfileRef, setLearnerProfile, setNuxStep])
+
+  const handleNuxContinueFromIntroFluency = useCallback(() => {
+    setNuxStep('intro_listen')
+  }, [setNuxStep])
+
+  const handleNuxContinueFromIntroListen = useCallback(() => {
+    setNuxStep('intro_speed')
+  }, [setNuxStep])
+
+  const handleNuxContinueFromIntroSpeed = useCallback(() => {
+    setNuxStep('sound_check')
+  }, [setNuxStep])
 
   const handleNuxPlaySoundCheck = useCallback(() => {
     playOnboardingCode('.')
@@ -317,6 +329,9 @@ export const useOnboardingActions = ({
   return {
     handleNuxWelcomeDone,
     handleNuxChooseProfile,
+    handleNuxContinueFromIntroFluency,
+    handleNuxContinueFromIntroListen,
+    handleNuxContinueFromIntroSpeed,
     handleNuxPlaySoundCheck,
     handleNuxContinueFromSoundCheck,
     handleNuxCompleteButtonTutorial,

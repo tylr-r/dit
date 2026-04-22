@@ -222,4 +222,36 @@ describe('useOnboardingActions', () => {
     expect(options.setNuxStep).toHaveBeenCalledWith('welcome')
     expect(options.setLearnerProfile).toHaveBeenCalledWith(null)
   })
+
+  it('advances to the first intro slide after a profile is chosen', () => {
+    const options = buildOptions()
+    const { result } = renderOnboardingHook(options)
+
+    act(() => {
+      result.current.handleNuxChooseProfile('beginner')
+    })
+
+    expect(options.setLearnerProfile).toHaveBeenCalledWith('beginner')
+    expect(options.setNuxStep).toHaveBeenCalledWith('intro_fluency')
+  })
+
+  it('advances through intro slides in order', () => {
+    const options = buildOptions()
+    const { result } = renderOnboardingHook(options)
+
+    act(() => {
+      result.current.handleNuxContinueFromIntroFluency()
+    })
+    expect(options.setNuxStep).toHaveBeenLastCalledWith('intro_listen')
+
+    act(() => {
+      result.current.handleNuxContinueFromIntroListen()
+    })
+    expect(options.setNuxStep).toHaveBeenLastCalledWith('intro_speed')
+
+    act(() => {
+      result.current.handleNuxContinueFromIntroSpeed()
+    })
+    expect(options.setNuxStep).toHaveBeenLastCalledWith('sound_check')
+  })
 })
