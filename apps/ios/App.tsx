@@ -700,6 +700,9 @@ function AppShell() {
             onWelcomeDone={handlers.handleNuxWelcomeDone}
             onBack={handlers.handleNuxBack}
             onChooseProfile={handlers.handleNuxChooseProfile}
+            onContinueFromIntroFluency={handlers.handleNuxContinueFromIntroFluency}
+            onContinueFromIntroListen={handlers.handleNuxContinueFromIntroListen}
+            onContinueFromIntroSpeed={handlers.handleNuxContinueFromIntroSpeed}
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
             onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}
             onCompleteButtonTutorial={handlers.handleNuxCompleteButtonTutorial}
