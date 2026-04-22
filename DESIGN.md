@@ -96,10 +96,10 @@ All HSL. Opacities derive from a single hue per role.
 
 ### Forbidden
 
-- **No gradients behind content.** We tried an aurora-style radial gradient
-  on welcome and removed it — pulled focus from the logo.
-- **No decorative glows.** Profile-card green halo, CTA success-glow pulse,
-  and sound-check green wash were all removed for the same reason.
+- **No gradients behind content.** Aurora-style radial gradients on welcome
+  pull focus from the logo.
+- **No decorative glows.** Profile-card green halos, CTA success-glow pulses,
+  and sound-check green washes distract from the content.
 
 ### Liquid shader background (iOS + web)
 
@@ -729,9 +729,8 @@ instead of describing them:
   that used to be ledger rows (no account, self-paced, paddle support)
   collapse into one contained pill strip after the third band. Bands rise
   on scroll where `animation-timeline: view()` is supported; they carry an
-  explicit `opacity: 0` base so the reveal is real, not inert. Symmetric
-  card grids were tried for this content and dropped for reading as
-  template design (2026-06-12). Claims must stay verifiable against
+  explicit `opacity: 0` base so the reveal is real, not inert. Avoid symmetric
+  card grids, which make the page look like a generic template. Claims must stay verifiable against
   `docs/Pedagogical_philosophy.md` and `docs/PLATFORM_PARITY.md`. Do not
   invent marketing claims, and never render dot/dash marks in a band
   visual.
@@ -742,24 +741,16 @@ instead of describing them:
   one slab). The contained pill strip sits between the last why band and
   the full-bleed iPhone band, so no two full-bleed bands touch. Rhythm:
   hero (contained) → why band → why band → why band → conveniences
-  (contained) → iPhone (band) → closing (contained). An earlier rhythm put
-  a single contained "method" section between one why band and the iPhone
-  band; it folded into the bands (2026-06-13, see below).
+  (contained) → iPhone (band) → closing (contained).
 - **Lean far more generous on whitespace than feels normal.** This page
   wants a lot of air: section gaps run `clamp(120px, 17vw, 248px)`, band
   vertical padding `clamp(80px, 11vw, 168px)`, body line-heights ~1.6.
-  Tighter, app-like spacing was tried twice and read as cramped and
-  text-heavy (2026-06-13); the generous version is the intended look.
+  Tighter, app-like spacing makes the page cramped and text-heavy.
   Whitespace, not density, carries the page. Don't "tighten it up."
-- **The "method" breather section was removed (2026-06-13).** It was a
-  contained `min(900px)` centered section over the shader carrying the
-  pedagogy: an auditory-reflex lead, then three principles (Koch /
-  Farnsworth / adaptive review) on a hairline rail with `accent.wave`
-  numbered markers. It said what the why bands now say, so its content
-  folded into why band 02 (the method) and band 03 (TTR). Do not re-add a
-  separate method section; if the pedagogy needs more room, extend the
-  bands. An earlier empty "Hear it / Answer / It sticks" loop in this slot
-  was rejected as filler (2026-06-13).
+- **Keep the method within the why bands.** Band 02 explains the method;
+  band 03 explains TTR. A separate method section repeats that content.
+  If the pedagogy needs more room, extend the bands. Avoid an empty
+  "Hear it / Answer / It sticks" loop, which adds no explanation.
 - **CTAs** are the §4 glass pill in CSS (48px, pill radius, blur(24px)
   saturate(140%) over `rgba(255,255,255,0.08)`), one primary plus one
   tertiary text link per cluster.

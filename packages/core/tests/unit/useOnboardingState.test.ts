@@ -12,6 +12,9 @@ describe('isNuxStep', () => {
   it('accepts every known NUX step value', () => {
     expect(isNuxStep('welcome')).toBe(true)
     expect(isNuxStep('profile')).toBe(true)
+    expect(isNuxStep('intro_fluency')).toBe(true)
+    expect(isNuxStep('intro_listen')).toBe(true)
+    expect(isNuxStep('intro_speed')).toBe(true)
     expect(isNuxStep('sound_check')).toBe(true)
     expect(isNuxStep('button_tutorial')).toBe(true)
     expect(isNuxStep('known_tour')).toBe(true)
@@ -80,6 +83,25 @@ describe('parsePersistedNuxState', () => {
       tutorialTapCount: 2,
       tutorialHoldCount: 1,
     })
+  })
+
+  it('accepts persisted state at each intro slide step', () => {
+    for (const step of ['intro_fluency', 'intro_listen', 'intro_speed'] as const) {
+      const raw = JSON.stringify({
+        step,
+        learnerProfile: 'beginner',
+        didCompleteSoundCheck: false,
+        tutorialTapCount: 0,
+        tutorialHoldCount: 0,
+      })
+      expect(parsePersistedNuxState(raw)).toEqual({
+        step,
+        learnerProfile: 'beginner',
+        didCompleteSoundCheck: false,
+        tutorialTapCount: 0,
+        tutorialHoldCount: 0,
+      })
+    }
   })
 })
 

@@ -23,6 +23,9 @@ export type PersistedNuxState = {
 const NUX_STEP_VALUES: readonly NuxStep[] = [
   'welcome',
   'profile',
+  'intro_fluency',
+  'intro_listen',
+  'intro_speed',
   'sound_check',
   'button_tutorial',
   'known_tour',
