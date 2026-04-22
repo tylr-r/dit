@@ -7,7 +7,7 @@ const ARROW_COLOR = 'rgba(245,245,245,0.3)'
 const LABEL_COLOR = 'rgba(245,245,245,0.4)'
 
 const LETTERS = ['K', 'Q', 'Z', 'X', 'J']
-const COUNTS = ['x4', 'x3', 'x3', 'x2', 'x1']
+const COUNTS = ['×4', '×3', '×3', '×2', '×1']
 
 /** Slide 1 illustration — weakest letters translate to a mastered letter with waveform. */
 export function IntroFluencyIllustration() {
