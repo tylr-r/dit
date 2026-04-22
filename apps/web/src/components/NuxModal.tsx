@@ -7,15 +7,6 @@ type AuthUser = { uid: string }
 
 const TUTORIAL_REQUIRED = 3
 
-const STEP_ORDER: readonly NuxStep[] = [
-  'welcome',
-  'profile',
-  'sound_check',
-  'button_tutorial',
-  'known_tour',
-  'beginner_stages',
-  'beginner_intro',
-]
 
 type NuxModalProps = {
   step: NuxStep
@@ -29,6 +20,9 @@ type NuxModalProps = {
   onWelcomeDone: () => void
   onBack: (step: NuxStep) => void
   onChooseProfile: (profile: LearnerProfile) => void
+  onContinueFromIntroFluency: () => void
+  onContinueFromIntroListen: () => void
+  onContinueFromIntroSpeed: () => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
   onCompleteButtonTutorial: () => void
@@ -42,14 +36,43 @@ type NuxModalProps = {
 const SIGNED_IN_WELCOME_ADVANCE_MS = 350
 const WELCOME_OPTIONS_DELAY_MS = 2000
 const SWIPE_BACK_THRESHOLD_PX = 48
+type DotSlot =
+  | 'profile'
+  | 'intro'
+  | 'sound_check'
+  | 'button_tutorial'
+  | 'stage'
+
+const DOT_SLOTS: readonly DotSlot[] = [
+  'profile',
+  'intro',
+  'sound_check',
+  'button_tutorial',
+  'stage',
+]
+
+const STEP_TO_SLOT: Record<NuxStep, DotSlot | null> = {
+  welcome: null,
+  profile: 'profile',
+  intro_fluency: 'intro',
+  intro_listen: 'intro',
+  intro_speed: 'intro',
+  sound_check: 'sound_check',
+  button_tutorial: 'button_tutorial',
+  known_tour: 'stage',
+  beginner_stages: 'stage',
+  beginner_intro: 'stage',
+  reminder: 'stage',
+}
 
 const ProgressDots = ({ step }: { step: NuxStep }) => {
-  const activeIndex = STEP_ORDER.indexOf(step)
+  const activeSlot = STEP_TO_SLOT[step]
+  const activeIndex = activeSlot ? DOT_SLOTS.indexOf(activeSlot) : -1
   return (
     <div className="nux-progress" aria-hidden="true">
-      {STEP_ORDER.map((s, i) => (
+      {DOT_SLOTS.map((slot, i) => (
         <span
-          key={s}
+          key={slot}
           className={`nux-dot ${i === activeIndex ? 'active' : ''} ${i < activeIndex ? 'past' : ''}`}
         />
       ))}
