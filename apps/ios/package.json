@@ -1,6 +1,6 @@
 {
   "name": "@dit/ios",
-  "version": "0.0.0",
+  "version": "2026.4.20",
   "private": true,
   "main": "index.ts",
   "scripts": {
