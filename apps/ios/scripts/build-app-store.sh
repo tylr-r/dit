@@ -41,7 +41,12 @@ trap cleanup EXIT
 
 node -e "const fs=require('fs');const pkgPath=process.argv[1];const pkg=JSON.parse(fs.readFileSync(pkgPath,'utf8'));pkg.expo ??= {}; pkg.expo.autolinking ??= {}; const current=new Set(pkg.expo.autolinking.exclude ?? []); for (const name of ['expo-dev-client','expo-dev-launcher','expo-dev-menu','expo-dev-menu-interface']) current.add(name); pkg.expo.autolinking.exclude=[...current]; fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');" "$PACKAGE_JSON_PATH"
 
-pnpm exec expo prebuild --platform ios --no-install
+(
+  cd "$ROOT_DIR/../.."
+  pnpm install
+)
+
+pnpm exec expo prebuild --platform ios --no-install --clean
 
 (
   cd "$ROOT_DIR/ios"
@@ -59,6 +64,7 @@ XCODEBUILD_ARGS=(
   -archivePath "$ARCHIVE_PATH"
   CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
   MARKETING_VERSION="$VERSION"
+  DEVELOPMENT_TEAM="3HN9A5HR55"
   clean
   archive
 )
@@ -69,11 +75,18 @@ fi
 
 xcodebuild "${XCODEBUILD_ARGS[@]}"
 
-xcodebuild \
-  -exportArchive \
-  -archivePath "$ARCHIVE_PATH" \
-  -exportPath "$EXPORT_PATH" \
+EXPORT_ARGS=(
+  -exportArchive
+  -archivePath "$ARCHIVE_PATH"
+  -exportPath "$EXPORT_PATH"
   -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
+)
+
+if [[ "${ALLOW_PROVISIONING_UPDATES:-1}" == "1" ]]; then
+  EXPORT_ARGS=(-allowProvisioningUpdates "${EXPORT_ARGS[@]}")
+fi
+
+xcodebuild "${EXPORT_ARGS[@]}"
 
 IPA_PATH="$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' -print -quit)"
 
