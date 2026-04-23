@@ -288,58 +288,24 @@ function WelcomeScreen({
   onWelcomeDone: () => void
   reduceMotion: boolean
 }) {
-  const logoOpacity = useRef(new Animated.Value(0)).current
-  const logoScale = useSharedValue(reduceMotion ? 1 : 0.9)
-  const titleOpacity = useRef(new Animated.Value(0)).current
-  const titleY = useRef(new Animated.Value(12)).current
+  // This screen IS the splash. Every element is rendered at its resting state
+  // on first paint so the native splash (bg color only) cross-fades directly
+  // into a complete composition. The breathing loop is the only animation.
+  const logoScale = useSharedValue(1)
   useEffect(() => {
-    Animated.timing(logoOpacity, {
-      toValue: 1,
-      duration: 600,
-      easing: EASE.out,
-      useNativeDriver: true,
-    }).start()
-
-    // Spring into place, then start the breathing loop. The callback runs on
-    // the UI thread so it's safe to chain another animation from there.
-    logoScale.value = withTiming(
-      1,
-      { duration: 700, easing: REasing.bezier(...BEZIER.out) },
-      (finished) => {
-        'worklet'
-        if (!finished || reduceMotion) return
-        logoScale.value = withRepeat(
-          withTiming(1.015, {
-            duration: TIMING.breath,
-            easing: REasing.bezier(...BEZIER.inOut),
-          }),
-          -1,
-          true,
-        )
-      },
+    if (reduceMotion) return
+    logoScale.value = withRepeat(
+      withTiming(1.015, {
+        duration: TIMING.breath,
+        easing: REasing.bezier(...BEZIER.inOut),
+      }),
+      -1,
+      true,
     )
-
-    Animated.parallel([
-      Animated.timing(titleOpacity, {
-        toValue: 1,
-        duration: 500,
-        delay: 300,
-        easing: EASE.out,
-        useNativeDriver: true,
-      }),
-      Animated.timing(titleY, {
-        toValue: 0,
-        duration: 500,
-        delay: 300,
-        easing: EASE.out,
-        useNativeDriver: true,
-      }),
-    ]).start()
-
     return () => {
       cancelAnimation(logoScale)
     }
-  }, [logoOpacity, logoScale, titleOpacity, titleY, reduceMotion])
+  }, [logoScale, reduceMotion])
 
   const logoStyle = useAnimatedStyle(() => ({
     transform: [{ scale: logoScale.value }],
@@ -351,14 +317,10 @@ function WelcomeScreen({
       onPress={onWelcomeDone}
       accessibilityLabel="Welcome to Dit"
     >
-      <Animated.View style={{ opacity: logoOpacity }}>
-        <Reanimated.View style={logoStyle}>
-          <DitLogo size={120} opacity={0.9} animated />
-        </Reanimated.View>
-      </Animated.View>
-      <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleY }] }}>
-        <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
-      </Animated.View>
+      <Reanimated.View style={logoStyle}>
+        <DitLogo size={120} opacity={0.9} animated />
+      </Reanimated.View>
+      <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
     </Pressable>
   )
 }
@@ -1183,7 +1145,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xl,
+    gap: 48,
   },
   welcomeTitle: {
     fontSize: 32,

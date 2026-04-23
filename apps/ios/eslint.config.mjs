@@ -10,7 +10,13 @@ export default [
   js.configs.recommended,
   // Node.js config for JS files like metro.config.js
   {
-    files: ['metro.config.js', 'babel.config.js', 'app.config.js', 'plugins/**/*.js'],
+    files: [
+      'metro.config.js',
+      'babel.config.js',
+      'app.config.js',
+      'plugins/**/*.js',
+      'scripts/**/*.js',
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
@@ -34,6 +40,7 @@ export default [
       globals: {
         ...globals.node,
         ...globals.es2021,
+        ...globals.browser,
         __DEV__: 'readonly',
       },
     },

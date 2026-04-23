@@ -8,12 +8,18 @@
     ],
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "ios": {
+            "image": "./assets/splash-welcome.png",
+            "backgroundColor": "#0a0c12",
+            "resizeMode": "contain",
+            "enableFullScreenImage_legacy": true
+          }
+        }
+      ],
       "expo-dev-client",
       "@react-native-firebase/app",
       [
@@ -26,6 +32,7 @@
         }
       ],
       "./plugins/withModularHeaders",
+      "./plugins/withSplashScreenFix",
       [
         "expo-notifications",
         {

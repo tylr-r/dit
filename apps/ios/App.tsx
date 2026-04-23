@@ -15,9 +15,19 @@ import {
   useMorseSessionController,
   useOnboardingState,
 } from '@dit/core'
+import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AppState, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+// Hold the native splash until the welcome screen has laid out its logo at the
+// resting position so the handoff is invisible. Fire-and-forget — the `catch`
+// swallows the "already hidden" case from Fast Refresh re-entries.
+SplashScreen.preventAutoHideAsync().catch(() => {})
+// Cross-dissolve the runtime splash into whatever React has painted behind it
+// rather than cutting. Any minor drift vs. the storyboard frame blends across
+// the fade instead of registering as a jump.
+SplashScreen.setOptions({ fade: true, duration: 500 })
+import { Animated, AppState, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AboutModal } from './src/components/AboutModal'
 import { BackgroundGlow } from './src/components/BackgroundGlow'
@@ -107,6 +117,39 @@ function AppShell() {
   const { state, setters, derived, handlers } = session
   const { dismissSettingsHint, nuxReady, nuxStatus } = onboarding
   const isNuxActive = nuxReady && nuxStatus === 'pending'
+
+  // Reveal the first real UI (NUX welcome or main shell) by hiding the native
+  // splash once onboarding state has loaded. A black overlay then fades out so
+  // the welcome composition emerges from the splash's background color rather
+  // than popping in.
+  const [postSplashOverlayVisible, setPostSplashOverlayVisible] = useState(true)
+  const postSplashOverlayOpacity = useRef(new Animated.Value(1)).current
+  useEffect(() => {
+    if (!nuxReady) return
+    // Wait two frames before dismissing the native splash so React has
+    // committed and painted the overlay + welcome composition behind it.
+    // Without this, there's a one-frame gap where neither the splash nor
+    // the welcome is visible — reads as a brief black flash.
+    let pendingRaf: number | null = null
+    const raf1 = requestAnimationFrame(() => {
+      pendingRaf = requestAnimationFrame(() => {
+        pendingRaf = null
+        SplashScreen.hideAsync().catch(() => {})
+        Animated.timing(postSplashOverlayOpacity, {
+          toValue: 0,
+          duration: 500,
+          delay: 1000,
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (finished) setPostSplashOverlayVisible(false)
+        })
+      })
+    })
+    pendingRaf = raf1
+    return () => {
+      if (pendingRaf != null) cancelAnimationFrame(pendingRaf)
+    }
+  }, [nuxReady, postSplashOverlayOpacity])
   const isBackgroundAnimationPaused =
     !isNuxActive && (isSystemLowPowerModeEnabled || isBackgroundIdle)
 
@@ -184,6 +227,12 @@ function AppShell() {
           style={styles.liquidBackground}
         />
         <BackgroundGlow />
+        {postSplashOverlayVisible ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.postSplashOverlay, { opacity: postSplashOverlayOpacity }]}
+          />
+        ) : null}
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           {!isNuxActive ? (
             <TopBar
@@ -440,6 +489,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0c12',
     overflow: 'hidden',
+  },
+  postSplashOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#0a0c12',
   },
   liquidBackground: {
     ...StyleSheet.absoluteFill,
