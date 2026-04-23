@@ -176,7 +176,10 @@ export const useOnboardingState = () => {
         if (resolvedStatus === 'pending') {
           const persisted = parsePersistedNuxState(stateRaw)
           if (persisted) {
-            setNuxStep(persisted.step)
+            // Welcome is always the first beat on a cold launch. Other
+            // per-step progress still restores so the user resumes at the
+            // right place once they tap through welcome.
+            setNuxStep('welcome')
             setLearnerProfile(persisted.learnerProfile)
             setDidCompleteSoundCheck(persisted.didCompleteSoundCheck)
             setTutorialTapCount(persisted.tutorialTapCount)
