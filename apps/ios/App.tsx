@@ -323,7 +323,10 @@ function AppShell() {
               onRequestSignIn={handleRequestSignInFromSettings}
               onSignOut={signOut}
               onDeleteAccount={handlers.handleDeleteAccount}
-              onReplayNux={handlers.handleReplayNux}
+              // __DEV__ is false in any release build (TestFlight, App Store),
+              // true in Metro/dev-client builds. Dev Mode settings only exist
+              // when this flag is set so production users never see them.
+              onReplayNux={__DEV__ ? handlers.handleReplayNux : undefined}
             />
           ) : null}
           {showReference ? (
