@@ -2197,6 +2197,7 @@ export const useMorseSessionController = ({
       stageLetter,
       stagePips,
       hintVisible,
+      mnemonicVisible,
       letterPlaceholder,
       practiceWpmText,
       listenTtrText,

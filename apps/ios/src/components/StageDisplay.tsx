@@ -36,6 +36,15 @@ type StageDisplayProps = {
   practiceWord?: string | null
   practiceWordIndex?: number
   isFreestyle?: boolean
+  /**
+   * When true, reserve dedicated space for the pips row and the status text
+   * wrap so the letter does not shift as transient text (mnemonic, hint pips,
+   * correct/missed feedback) toggles in and out. When false, collapse those
+   * areas so the letter sits closer to the vertical center — used for plain
+   * practice when both hint and mnemonic helpers are turned off. Defaults to
+   * true for backwards-compatibility with listen / guided / word callers.
+   */
+  reservePracticeHelperSpace?: boolean
 }
 
 const getFreestyleLetterStyle = (value: string) => {
@@ -68,6 +77,7 @@ export function StageDisplay({
   practiceWord = null,
   practiceWordIndex = 0,
   isFreestyle = false,
+  reservePracticeHelperSpace = true,
 }: StageDisplayProps) {
   const displayLetter = letter || '?'
   const freestyleLetterStyle = getFreestyleLetterStyle(displayLetter)
@@ -226,10 +236,15 @@ export function StageDisplay({
             />
           ))}
         </View>
-      ) : (
+      ) : reservePracticeHelperSpace ? (
         <View style={[styles.progress, styles.progressHidden]} />
-      )}
-      <View style={styles.statusTextWrap}>
+      ) : null}
+      <View
+        style={[
+          styles.statusTextWrap,
+          !reservePracticeHelperSpace && styles.statusTextWrapCollapsed,
+        ]}
+      >
         {isListen ? (
           <>
             <Animated.Text
@@ -389,6 +404,9 @@ const styles = StyleSheet.create({
     minHeight: 64,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  statusTextWrapCollapsed: {
+    minHeight: 0,
   },
   metricSlot: {
     minHeight: 16,

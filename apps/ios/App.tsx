@@ -391,6 +391,12 @@ function AppShell() {
               practiceWord={derived.showPracticeWord ? derived.practiceWord : null}
               practiceWordIndex={state.practiceWordIndex}
               isFreestyle={derived.isFreestyle}
+              reservePracticeHelperSpace={
+                derived.hintVisible ||
+                derived.mnemonicVisible ||
+                derived.isGuidedPracticeActive ||
+                derived.isListen
+              }
             />
           ) : null}
           {!isNuxActive ? (
