@@ -44,6 +44,7 @@ apps/ios/GoogleService-Info.plist
 apps/ios/build/
 # Private operational docs (kept locally)
 docs/private/
+*/superpowers/
 
 # Claude
 .claude/
