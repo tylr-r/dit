@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { BEGINNER_COURSE_PACKS, type Letter } from '@dit/core'
 import type { LearningSheetProps } from './componentProps'
 
 type View = 'course' | 'open' | 'custom'
@@ -16,18 +17,41 @@ const TIERS: readonly Tier[] = [
   { level: 4, title: 'Full alphabet + digits', subtitle: 'adds 0 1 2 3 4 5 6 7 8 9' },
 ]
 
+const LETTERS: readonly Letter[] = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+]
+
+const DIGITS: readonly Letter[] = [
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+]
+
 /** Modal sheet for selecting a guided course pack or open-practice letter set. */
 export function LearningSheet({
   guidedCourseActive,
+  guidedPackIndex,
+  guidedMaxPackReached,
   customLetters,
   maxLevel,
   onClose,
+  onSelectPack,
   onSelectTier,
+  onSelectCustomLetters,
   onSetGuidedCourseActive,
 }: LearningSheetProps) {
   const [view, setView] = useState<View>(
     guidedCourseActive ? 'course' : 'open',
   )
+
+  const [draftSelection, setDraftSelection] = useState<readonly Letter[]>(
+    customLetters,
+  )
+
+  useEffect(() => {
+    if (view === 'custom') {
+      setDraftSelection(customLetters)
+    }
+  }, [view, customLetters])
 
   const handleSegmentChange = (next: 'course' | 'open') => {
     setView(next)
@@ -77,7 +101,41 @@ export function LearningSheet({
         </div>
         <div className="learning-body">
           {view === 'course' ? (
-            <div data-testid="learning-course-placeholder">Course view</div>
+            <ul className="learning-list" role="list">
+              {BEGINNER_COURSE_PACKS.map((pack, index) => {
+                const isCurrent = index === guidedPackIndex
+                const isCompleted = index < guidedMaxPackReached
+                const className = [
+                  'learning-row',
+                  isCurrent ? 'is-current' : '',
+                  isCompleted ? 'is-completed' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                return (
+                  <li key={index}>
+                    <button
+                      type="button"
+                      className={className}
+                      onClick={() => {
+                        onSelectPack(index)
+                        onClose()
+                      }}
+                    >
+                      <span className="learning-row-text">
+                        <span className="learning-row-title">Pack {index + 1}</span>
+                        <span className="learning-row-subtitle">{pack.join(' ')}</span>
+                      </span>
+                      {isCompleted ? (
+                        <span className="learning-row-check" aria-label="Completed">
+                          ✓
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
           ) : view === 'open' ? (
             <ul className="learning-list" role="list">
               {TIERS.map((tier) => {
@@ -123,6 +181,55 @@ export function LearningSheet({
                 </button>
               </li>
             </ul>
+          ) : view === 'custom' ? (
+            <div className="learning-custom">
+              <div className="learning-custom-header">
+                <button
+                  type="button"
+                  className="learning-custom-back"
+                  onClick={() => setView('open')}
+                  aria-label="Back to tier list"
+                >
+                  ‹ Back
+                </button>
+                <span className="learning-custom-count">
+                  {draftSelection.length} selected
+                </span>
+              </div>
+              <div className="learning-custom-grid">
+                {[...LETTERS, ...DIGITS].map((char) => {
+                  const isOn = draftSelection.includes(char)
+                  return (
+                    <button
+                      key={char}
+                      type="button"
+                      className={`learning-chip ${isOn ? 'is-on' : ''}`}
+                      aria-pressed={isOn}
+                      onClick={() => {
+                        setDraftSelection((prev) =>
+                          prev.includes(char)
+                            ? prev.filter((c) => c !== char)
+                            : [...prev, char],
+                        )
+                      }}
+                    >
+                      {char}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                type="button"
+                className="panel-button learning-custom-apply"
+                disabled={draftSelection.length === 0}
+                onClick={() => {
+                  onSelectCustomLetters([...draftSelection])
+                  onClose()
+                }}
+              >
+                Apply
+              </button>
+            </div>
           ) : null}
         </div>
       </div>

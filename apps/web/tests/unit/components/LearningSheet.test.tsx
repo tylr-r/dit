@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LearningSheet } from '../../../src/components/LearningSheet'
 import type { LearningSheetProps } from '../../../src/components/componentProps'
@@ -27,7 +27,7 @@ describe('LearningSheet', () => {
 
   it('starts on Course view when guidedCourseActive is true', () => {
     render(<LearningSheet {...baseProps} guidedCourseActive />)
-    expect(screen.getByTestId('learning-course-placeholder')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pack 1\b/i })).toBeInTheDocument()
   })
 
   it('renders four tier rows in Open practice view', () => {
@@ -104,5 +104,81 @@ describe('LearningSheet', () => {
     expect(
       screen.getByRole('button', { name: /pick your own/i }),
     ).toHaveTextContent(/3 characters selected/i)
+  })
+
+  it('lists all 14 beginner course packs in Course view', () => {
+    render(<LearningSheet {...baseProps} guidedCourseActive />)
+    expect(screen.getByRole('button', { name: /pack 1\b/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pack 14\b/i })).toBeInTheDocument()
+  })
+
+  it('marks completed packs in Course view', () => {
+    render(
+      <LearningSheet
+        {...baseProps}
+        guidedCourseActive
+        guidedMaxPackReached={3}
+      />,
+    )
+    const pack1 = screen.getByRole('button', { name: /pack 1\b/i })
+    const pack4 = screen.getByRole('button', { name: /pack 4\b/i })
+    expect(pack1.className).toContain('is-completed')
+    expect(pack4.className).not.toContain('is-completed')
+  })
+
+  it('calls onSelectPack and onClose when a pack is chosen', () => {
+    const onSelectPack = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LearningSheet
+        {...baseProps}
+        guidedCourseActive
+        onSelectPack={onSelectPack}
+        onClose={onClose}
+      />,
+    )
+    screen.getByRole('button', { name: /pack 5\b/i }).click()
+    expect(onSelectPack).toHaveBeenCalledWith(4)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens Pick your own grid and toggles characters', () => {
+    render(<LearningSheet {...baseProps} />)
+    fireEvent.click(screen.getByRole('button', { name: /pick your own/i }))
+    const aChip = screen.getByRole('button', { name: 'A', pressed: false })
+    fireEvent.click(aChip)
+    expect(
+      screen.getByRole('button', { name: 'A', pressed: true }),
+    ).toBeInTheDocument()
+  })
+
+  it('Apply persists draft selection and dismisses', () => {
+    const onSelectCustomLetters = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LearningSheet
+        {...baseProps}
+        customLetters={['A', 'E']}
+        onSelectCustomLetters={onSelectCustomLetters}
+        onClose={onClose}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /pick your own/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'B', pressed: false }))
+    fireEvent.click(screen.getByRole('button', { name: 'A', pressed: true }))
+    screen.getByRole('button', { name: /^apply$/i }).click()
+
+    expect(onSelectCustomLetters).toHaveBeenCalledTimes(1)
+    const arg = onSelectCustomLetters.mock.calls[0][0]
+    expect(arg).toContain('B')
+    expect(arg).toContain('E')
+    expect(arg).not.toContain('A')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('Apply is disabled when no characters are selected', () => {
+    render(<LearningSheet {...baseProps} />)
+    fireEvent.click(screen.getByRole('button', { name: /pick your own/i }))
+    expect(screen.getByRole('button', { name: /^apply$/i })).toBeDisabled()
   })
 })

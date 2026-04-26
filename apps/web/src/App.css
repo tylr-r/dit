@@ -2435,3 +2435,80 @@
 .learning-row-chevron {
   opacity: 0.7;
 }
+
+.learning-row.is-current {
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+}
+
+.learning-row.is-completed .learning-row-title {
+  opacity: 0.7;
+}
+
+.learning-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.learning-custom-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.learning-custom-back {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.learning-custom-back:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.learning-custom-count {
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+  font-size: 0.85em;
+}
+
+.learning-custom-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(40px, 1fr));
+  gap: 8px;
+}
+
+.learning-chip {
+  appearance: none;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.learning-chip:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.learning-chip.is-on {
+  background: var(--color-surface-panel-strong);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+}
+
+.learning-custom-apply {
+  align-self: stretch;
+}
+
+.learning-custom-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
