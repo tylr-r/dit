@@ -815,6 +815,8 @@ function MainApp() {
             handlers.moveIntoGuidedLesson('teach', packIndex, createGuidedLessonProgress())
           }}
           onSelectTier={(level) => {
+            // Order matters: handleSetGuidedCourseActive(false) must run first so
+            // handleMaxLevelChange's guidedCourseActiveRef guard doesn't no-op the level change.
             handlers.handleSetGuidedCourseActive(false)
             handlers.handleSelectCustomLetters([])
             handlers.handleMaxLevelChange(level)

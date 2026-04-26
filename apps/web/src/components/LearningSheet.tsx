@@ -43,9 +43,7 @@ export function LearningSheet({
     guidedCourseActive ? 'course' : 'open',
   )
 
-  const [draftSelection, setDraftSelection] = useState<readonly Letter[]>(
-    customLetters,
-  )
+  const [draftSelection, setDraftSelection] = useState<readonly Letter[]>([])
 
   const handleSegmentChange = (next: 'course' | 'open') => {
     setView(next)

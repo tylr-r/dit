@@ -82,7 +82,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Show hints | ✅ | ✅ | |
 | Show mnemonics | ✅ | ✅ | |
-| Max level (1–4) | ✅ | ✅ | |
+| Max level (1-4) | ✅ | ✅ | Web surfaces via Learning sheet tiers |
 | Practice Words | ✅ | ✅ | |
 | Freestyle Word mode | ✅ | ✅ | |
 | Listen speed (WPM) | ✅ | ✅ | |
