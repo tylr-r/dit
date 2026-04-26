@@ -1,10 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { BEGINNER_COURSE_PACKS, MORSE_DATA } from '@dit/core'
+import { BEGINNER_COURSE_PACKS, MORSE_DATA, colors } from '@dit/core'
 import type { Letter } from '@dit/core'
 import { BlurView } from 'expo-blur'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Modal,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -123,25 +124,64 @@ export function LearningSheet({
 
   const draftCount = draftCustom.size
 
+  const slideProgress = useRef(new Animated.Value(visible ? 1 : 0)).current
+
+  useEffect(() => {
+    Animated.timing(slideProgress, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? 280 : 220,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [slideProgress, visible])
+
+  const [mounted, setMounted] = useState(visible)
+  useEffect(() => {
+    if (visible) {
+      setMounted(true)
+      return
+    }
+    const id = setTimeout(() => setMounted(false), 240)
+    return () => clearTimeout(id)
+  }, [visible])
+
+  if (!mounted) return null
+
+  const sheetTranslateY = slideProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [800, 0],
+  })
+  const backdropOpacity = slideProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  })
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onDismiss}
+    <View
+      style={styles.overlay}
+      pointerEvents={visible ? 'box-none' : 'none'}
+      accessibilityViewIsModal
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.backdrop, { opacity: backdropOpacity }]}
+      />
       <Pressable
         style={styles.scrim}
         onPress={onDismiss}
+        accessibilityRole="button"
         accessibilityLabel="Dismiss learning sheet"
       />
-      <View
+      <Animated.View
         style={[
           styles.sheet,
-          { paddingBottom: Math.max(insets.bottom, 20) + 12 },
+          {
+            paddingBottom: Math.max(insets.bottom, 20) + 12,
+            transform: [{ translateY: sheetTranslateY }],
+          },
         ]}
       >
-        <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={18} tint="dark" style={styles.blurBase} />
         <View style={styles.tint} />
         <View style={styles.grabber} />
 
@@ -444,14 +484,28 @@ export function LearningSheet({
             </Pressable>
           </>
         )}
-      </View>
-    </Modal>
+      </Animated.View>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 10,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: colors.surface.backdrop,
+  },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
+  },
+  blurBase: {
+    ...StyleSheet.absoluteFill,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    overflow: 'hidden',
   },
   sheet: {
     position: 'absolute',
@@ -460,15 +514,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingTop: 12,
     paddingHorizontal: 16,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     overflow: 'hidden',
-    backgroundColor: 'rgba(10, 12, 18, 0.6)',
     maxHeight: '85%',
+    shadowColor: colors.shadow.base,
+    shadowOpacity: 0.42,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: -10 },
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 12, 18, 0.35)',
+    ...StyleSheet.absoluteFill,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'hsla(215, 25%, 6%, 0.62)',
   },
   grabber: {
     alignSelf: 'center',
@@ -505,7 +566,7 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'hsla(217, 26%, 5%, 0.94)',
     borderRadius: 10,
     padding: 3,
     marginBottom: 12,
@@ -533,7 +594,7 @@ const styles = StyleSheet.create({
   list: {
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'hsla(217, 26%, 5%, 0.94)',
   },
   listContent: {
     paddingVertical: 0,
