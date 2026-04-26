@@ -121,3 +121,16 @@ export interface ReferenceModalProps {
   letterAccuracy?: LetterAccuracyRecord
   courseProgress?: ReferenceCourseProgress | null
 }
+
+export interface LearningSheetProps {
+  guidedCourseActive: boolean
+  guidedPackIndex: number
+  guidedMaxPackReached: number
+  maxLevel: number
+  customLetters: Letter[]
+  onClose: () => void
+  onSelectPack: (packIndex: number) => void
+  onSelectTier: (level: number) => void
+  onSelectCustomLetters: (letters: Letter[]) => void
+  onSetGuidedCourseActive: (active: boolean) => void
+}

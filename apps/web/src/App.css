@@ -2343,3 +2343,41 @@
     transform: translateY(0);
   }
 }
+
+.learning-sheet {
+  width: min(560px, 100%);
+}
+
+.learning-segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 12px 20px 4px;
+}
+
+.learning-segment {
+  appearance: none;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-input);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.learning-segment:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.learning-segment.is-active {
+  background: var(--color-surface-panel-strong);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.18));
+}
+
+.learning-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px 20px;
+}
