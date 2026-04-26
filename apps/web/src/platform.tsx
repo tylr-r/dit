@@ -6,7 +6,16 @@ import {
   type Platform,
   type StorageAdapter,
 } from '@dit/core'
-import { GoogleAuthProvider, getAuth, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
+import {
+  GoogleAuthProvider,
+  OAuthProvider,
+  createUserWithEmailAndPassword,
+  getAuth,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from 'firebase/auth'
 import type { ReactNode } from 'react'
 import { getLocalStorage } from './platform/storage'
 
@@ -101,6 +110,27 @@ const authAdapter: AuthAdapter = {
       }
       throw error
     }
+  },
+  signInWithApple: async () => {
+    const auth = getAuth()
+    const provider = new OAuthProvider('apple.com')
+    provider.addScope('email')
+    provider.addScope('name')
+    try {
+      await signInWithPopup(auth, provider)
+    } catch (error) {
+      if (isPopupFallbackError(error)) {
+        await signInWithRedirect(auth, provider)
+        return
+      }
+      throw error
+    }
+  },
+  signInWithEmail: async (email, password) => {
+    await signInWithEmailAndPassword(getAuth(), email, password)
+  },
+  createAccountWithEmail: async (email, password) => {
+    await createUserWithEmailAndPassword(getAuth(), email, password)
   },
   signOut: async () => {
     await signOut(getAuth())
