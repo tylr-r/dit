@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { Footer } from './components/Footer'
 import { LearningSheet } from './components/LearningSheet'
+import { SignInSheet } from './components/SignInSheet'
 import {
   PrivacyPolicy,
   SupportPage,
@@ -111,6 +112,7 @@ function MainApp() {
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } =
     usePhaseModalState()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showLearning, setShowLearning] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -511,8 +513,34 @@ function MainApp() {
     }
   }, [soundCheckStatus, toneFrequency])
 
-  const handleSignIn = useCallback(() => {
-    void handlers.handleSignInWithGoogle()
+  const handleShowSignIn = useCallback(() => {
+    setShowSignIn(true)
+  }, [])
+
+  const handleSignInWithApple = useCallback(async () => {
+    await handlers.handleSignInWithApple()
+  }, [handlers])
+
+  const handleSignInWithGoogle = useCallback(async () => {
+    await handlers.handleSignInWithGoogle()
+  }, [handlers])
+
+  const handleSignInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      return handlers.handleSignInWithEmail(email, password)
+    },
+    [handlers],
+  )
+
+  const handleCreateAccountWithEmail = useCallback(
+    async (email: string, password: string) => {
+      return handlers.handleCreateAccountWithEmail(email, password)
+    },
+    [handlers],
+  )
+
+  const handleDeleteAccount = useCallback(() => {
+    handlers.handleDeleteAccount()
   }, [handlers])
 
   const handleSignOut = useCallback(() => {
@@ -681,7 +709,9 @@ function MainApp() {
               userLabel={userLabel}
               userInitial={userInitial}
               authReady={authReady}
-              onSignIn={handleSignIn}
+              onShowSignIn={handleShowSignIn}
+              onDeleteAccount={handleDeleteAccount}
+              isDeletingAccount={isDeletingAccount}
               onSignOut={handleSignOut}
               practiceAutoPlay={practiceAutoPlay}
               practiceLearnMode={practiceLearnMode}
@@ -826,6 +856,15 @@ function MainApp() {
             handlers.handleSelectCustomLetters(letters)
           }}
           onSetGuidedCourseActive={handlers.handleSetGuidedCourseActive}
+        />
+      ) : null}
+      {showSignIn ? (
+        <SignInSheet
+          onClose={() => setShowSignIn(false)}
+          onSignInWithApple={handleSignInWithApple}
+          onSignInWithGoogle={handleSignInWithGoogle}
+          onSignInWithEmail={handleSignInWithEmail}
+          onCreateAccountWithEmail={handleCreateAccountWithEmail}
         />
       ) : null}
       {phaseModal ? (
