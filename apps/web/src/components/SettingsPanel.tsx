@@ -28,6 +28,8 @@ export function SettingsPanel({
   onPracticeLearnModeChange,
   onPracticeReviewMissesChange,
   onPracticeWordModeChange,
+  onUseRecommended,
+  onReplayNux,
   onShowAbout,
   onShowHintChange,
   onShowMnemonicChange,
@@ -235,6 +237,24 @@ export function SettingsPanel({
           </span>
         </div>
       ) : null}
+      <div className="panel-group">
+        <button
+          type="button"
+          className="panel-button"
+          onClick={onUseRecommended}
+        >
+          Use recommended settings
+        </button>
+        {onReplayNux ? (
+          <button
+            type="button"
+            className="panel-button"
+            onClick={onReplayNux}
+          >
+            Replay onboarding
+          </button>
+        ) : null}
+      </div>
       <div className="auth">
         {user ? (
           <>

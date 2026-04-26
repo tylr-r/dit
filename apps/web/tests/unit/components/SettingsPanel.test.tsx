@@ -120,4 +120,29 @@ describe('SettingsPanel', () => {
       screen.queryByRole('checkbox', { name: /immediate flow recovery/i }),
     ).toBeNull()
   })
+
+  it('renders Use recommended settings and fires its callback', () => {
+    const onUseRecommended = vi.fn()
+    render(<SettingsPanel {...baseProps} onUseRecommended={onUseRecommended} />)
+
+    const button = screen.getByRole('button', { name: /use recommended settings/i })
+    button.click()
+
+    expect(onUseRecommended).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders Replay onboarding only when onReplayNux is provided', () => {
+    const onReplayNux = vi.fn()
+    const { rerender } = render(<SettingsPanel {...baseProps} />)
+
+    expect(
+      screen.queryByRole('button', { name: /replay onboarding/i }),
+    ).toBeNull()
+
+    rerender(<SettingsPanel {...baseProps} onReplayNux={onReplayNux} />)
+
+    const button = screen.getByRole('button', { name: /replay onboarding/i })
+    button.click()
+    expect(onReplayNux).toHaveBeenCalledTimes(1)
+  })
 })
