@@ -72,17 +72,17 @@ export function SettingsPanel({
       </label>
       {!isFreestyle ? (
         <div className="panel-group">
-            <button
-              type="button"
-              className="panel-button panel-button-row"
-              onClick={onShowLearning}
-            >
-              <span className="panel-button-label">Learning</span>
-              <span className="panel-button-value">
-                {guidedCourseActive ? 'Course' : 'Open practice'}
-                <span className="panel-button-chevron"> ›</span>
-              </span>
-            </button>
+          <button
+            type="button"
+            className="panel-button panel-button-row"
+            onClick={onShowLearning}
+          >
+            <span className="panel-button-label">Learning</span>
+            <span className="panel-button-value">
+              {guidedCourseActive ? 'Course' : 'Open practice'}
+              <span className="panel-button-chevron"> ›</span>
+            </span>
+          </button>
           {!isListen ? (
             <label className="toggle">
               <span className="toggle-label">Words</span>
