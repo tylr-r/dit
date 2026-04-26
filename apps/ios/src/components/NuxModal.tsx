@@ -56,7 +56,6 @@ type NuxModalProps = {
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
   onCompleteButtonTutorial: () => void
-  onFinishKnownTour: () => void
   onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
   onSetReminder: (time: string) => void
@@ -650,6 +649,7 @@ function ProfileCard({
 /** Full-screen first-run flow for profile selection and basic app teaching. */
 export function NuxModal({
   step,
+  learnerProfile,
   soundChecked,
   tutorialTapCount,
   tutorialHoldCount,
@@ -660,7 +660,6 @@ export function NuxModal({
   onPlaySoundCheck,
   onContinueFromSoundCheck,
   onCompleteButtonTutorial,
-  onFinishKnownTour,
   onContinueFromStages,
   onStartBeginnerCourse,
   onSetReminder,
@@ -766,7 +765,9 @@ export function NuxModal({
 
   const handleContinueFromSoundCheck = useCallback(() => {
     if (morphActive) return
-    if (reduceMotion) {
+    // Known users still advance without the Morse-key morph; the button
+    // tutorial and reminder handle the rest of their path before the tour.
+    if (reduceMotion || learnerProfile === 'known') {
       onContinueFromSoundCheck()
       return
     }
@@ -780,17 +781,16 @@ export function NuxModal({
       const stepDelay = Math.round(TIMING.morph * 0.55)
       setTimeout(onContinueFromSoundCheck, stepDelay)
     })
-  }, [morphActive, reduceMotion, onContinueFromSoundCheck])
+  }, [morphActive, reduceMotion, learnerProfile, onContinueFromSoundCheck])
 
   const handleMorphComplete = useCallback(() => {
     setMorphActive(false)
     setMorphSource(null)
   }, [])
 
-  // Exit transition from the final onboarding step (reminder) into the first
-  // lesson. Fades the modal out and drifts it forward a touch while the lesson
-  // screen (already mounted underneath) comes into focus — avoids the abrupt
-  // unmount.
+  // Exit transition from the reminder step into either the known-user tour or
+  // the first lesson. Fades the modal out and drifts it forward a touch while
+  // the next screen (already mounted underneath) comes into focus.
   const exitProgress = useSharedValue(0)
   const exitingRef = useRef(false)
   const exitStyle = useAnimatedStyle(() => ({
@@ -889,7 +889,7 @@ export function NuxModal({
           onRequestSignIn={handleRequestSignIn}
           onStaySignedOut={onStaySignedOut}
         />
-      ) : (
+      ) : displayedStep === 'known_tour' ? null : (
         <View
           style={[styles.content, { paddingTop, paddingBottom }]}
           pointerEvents={isTutorial ? 'box-none' : undefined}
@@ -1011,27 +1011,6 @@ export function NuxModal({
                       </Text>
                       <TutorialProgress count={tutorialHoldCount} required={TUTORIAL_REQUIRED} />
                     </View>
-                  </Animated.View>
-                </View>
-              </>
-            ) : null}
-
-            {displayedStep === 'known_tour' ? (
-              <>
-                <Animated.View style={[styles.copyBlock, stagger[0]]}>
-                  <Text style={styles.headline}>Quick app tour</Text>
-                  <Text style={styles.subtext}>
-                    Practice shows the target, Play replays it, the logo opens reference, and
-                    Settings handles helpers, speed, and sync.
-                  </Text>
-                </Animated.View>
-                <View style={styles.stepFill}>
-                  <Animated.View style={[styles.card, stagger[1]]}>
-                    <Text style={styles.bullet}>Practice: send the shown character</Text>
-                    <Text style={styles.bullet}>
-                      Freestyle: tap whatever you want and decode it
-                    </Text>
-                    <Text style={styles.bullet}>Listen: hear a letter and type the answer</Text>
                   </Animated.View>
                 </View>
               </>
@@ -1181,15 +1160,6 @@ export function NuxModal({
                   paddingVertical={16}
                 />
               </View>
-            ) : null}
-            {displayedStep === 'known_tour' ? (
-              <DitButton
-                text="Start practicing"
-                onPress={onFinishKnownTour}
-                style={styles.ctaButton}
-                radius={radii.pill}
-                paddingVertical={16}
-              />
             ) : null}
             {displayedStep === 'beginner_stages' ? (
               <DitButton

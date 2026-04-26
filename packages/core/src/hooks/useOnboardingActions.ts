@@ -125,12 +125,45 @@ export const useOnboardingActions = ({
     setNuxStep('button_tutorial')
   }, [didCompleteSoundCheck, setNuxStep])
 
+  const applyKnownTrackSetup = useCallback(() => {
+    applyKnownLearnerDefaults()
+    learnerProfileRef.current = 'known'
+    setLearnerProfile('known')
+    guidedCourseActiveRef.current = false
+    guidedPhaseRef.current = 'complete'
+    guidedProgressRef.current = createGuidedLessonProgress()
+    setGuidedCourseActive(false)
+    setGuidedPhase('complete')
+    setGuidedProgress(createGuidedLessonProgress())
+  }, [
+    applyKnownLearnerDefaults,
+    guidedCourseActiveRef,
+    guidedPhaseRef,
+    guidedProgressRef,
+    learnerProfileRef,
+    setGuidedCourseActive,
+    setGuidedPhase,
+    setGuidedProgress,
+    setLearnerProfile,
+  ])
+
   const handleNuxCompleteButtonTutorial = useCallback(() => {
     if (tutorialTapCount < 3 || tutorialHoldCount < 3) {
       return
     }
-    setNuxStep(learnerProfileRef.current === 'known' ? 'known_tour' : 'beginner_stages')
-  }, [tutorialHoldCount, tutorialTapCount, learnerProfileRef, setNuxStep])
+    if (learnerProfileRef.current === 'known') {
+      applyKnownTrackSetup()
+      setNuxStep('reminder')
+      return
+    }
+    setNuxStep('beginner_stages')
+  }, [
+    applyKnownTrackSetup,
+    tutorialHoldCount,
+    tutorialTapCount,
+    learnerProfileRef,
+    setNuxStep,
+  ])
 
   const handleNuxContinueFromStages = useCallback(() => {
     setNuxStep('beginner_intro')
@@ -155,27 +188,11 @@ export const useOnboardingActions = ({
   ])
 
   const handleFinishKnownTour = useCallback(() => {
-    applyKnownLearnerDefaults()
-    learnerProfileRef.current = 'known'
-    setLearnerProfile('known')
-    guidedCourseActiveRef.current = false
-    guidedPhaseRef.current = 'complete'
-    guidedProgressRef.current = createGuidedLessonProgress()
-    setGuidedCourseActive(false)
-    setGuidedPhase('complete')
-    setGuidedProgress(createGuidedLessonProgress())
-    setNuxStep('reminder')
+    applyKnownTrackSetup()
+    finishOnboarding()
   }, [
-    applyKnownLearnerDefaults,
-    guidedCourseActiveRef,
-    guidedPhaseRef,
-    guidedProgressRef,
-    learnerProfileRef,
-    setGuidedCourseActive,
-    setGuidedPhase,
-    setGuidedProgress,
-    setLearnerProfile,
-    setNuxStep,
+    applyKnownTrackSetup,
+    finishOnboarding,
   ])
 
   const handleStartBeginnerCourse = useCallback(() => {
@@ -210,11 +227,15 @@ export const useOnboardingActions = ({
 
   const completeAfterReminderStep = useCallback(() => {
     const profile = learnerProfileRef.current
+    if (profile === 'known') {
+      setNuxStep('known_tour')
+      return
+    }
     finishOnboarding()
     if (profile === 'beginner') {
       moveIntoGuidedLesson('teach', 0, createGuidedLessonProgress())
     }
-  }, [finishOnboarding, learnerProfileRef, moveIntoGuidedLesson])
+  }, [finishOnboarding, learnerProfileRef, moveIntoGuidedLesson, setNuxStep])
 
   const handleNuxSetReminder = useCallback(
     async (time: string) => {

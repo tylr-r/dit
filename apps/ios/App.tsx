@@ -43,6 +43,8 @@ import { SettingsModal } from './src/components/SettingsModal'
 import { SignInSheet } from './src/components/SignInSheet'
 import { StageDisplay } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
+import { TourOverlay } from './src/components/tour/TourOverlay'
+import { useKnownTour } from './src/hooks/useKnownTour'
 import { logAnalyticsEvent } from './src/analytics'
 import { auth, database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
@@ -121,6 +123,35 @@ function AppShell() {
   const { state, setters, derived, handlers } = session
   const { dismissSettingsHint, nuxReady, nuxStatus } = onboarding
   const isNuxActive = nuxReady && nuxStatus === 'pending'
+  const isKnownTourStep = onboarding.nuxStep === 'known_tour'
+
+  const tour = useKnownTour({
+    active: isKnownTourStep,
+    onFinish: handlers.handleFinishKnownTour,
+  })
+
+  // Soften the NUX → tour handoff. While entering known_tour the home shell
+  // and overlay are mounting underneath the exiting modal; without this mask
+  // they pop in. We paint a black panel over the shell at full opacity, then
+  // fade it out once the layout has had a frame to settle.
+  const tourEntryMaskOpacity = useRef(new Animated.Value(1)).current
+  const [tourEntryMaskMounted, setTourEntryMaskMounted] = useState(false)
+  useEffect(() => {
+    if (!isKnownTourStep) {
+      tourEntryMaskOpacity.setValue(1)
+      setTourEntryMaskMounted(false)
+      return
+    }
+    setTourEntryMaskMounted(true)
+    Animated.timing(tourEntryMaskOpacity, {
+      toValue: 0,
+      duration: 540,
+      delay: 80,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setTourEntryMaskMounted(false)
+    })
+  }, [isKnownTourStep, tourEntryMaskOpacity])
 
   // Reveal the first real UI (NUX welcome or main shell) by hiding the native
   // splash once onboarding state has loaded. A black overlay then fades out so
@@ -320,7 +351,7 @@ function AppShell() {
           />
         ) : null}
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-          {!isNuxActive ? (
+          {(!isNuxActive || isKnownTourStep) ? (
             <TopBar
               mode={state.mode}
               onModeChange={handlers.handleModeChange}
@@ -422,7 +453,7 @@ function AppShell() {
               }}
             />
           ) : null}
-          {!isNuxActive ? (
+          {(!isNuxActive || isKnownTourStep) ? (
             <StageDisplay
               letter={derived.stageLetter}
               statusText={derived.statusText}
@@ -449,7 +480,7 @@ function AppShell() {
               }
             />
           ) : null}
-          {!isNuxActive ? (
+          {(!isNuxActive || isKnownTourStep) ? (
             <View style={styles.controls}>
               {derived.isGuidedLessonModeMismatch ? (
                 <DitButton
@@ -553,7 +584,6 @@ function AppShell() {
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
             onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}
             onCompleteButtonTutorial={handlers.handleNuxCompleteButtonTutorial}
-            onFinishKnownTour={handlers.handleFinishKnownTour}
             onContinueFromStages={handlers.handleNuxContinueFromStages}
             onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
             onSetReminder={(time) => {
@@ -565,6 +595,22 @@ function AppShell() {
             onSignInWithEmail={handlers.handleSignInWithEmail}
             onCreateAccountWithEmail={handlers.handleCreateAccountWithEmail}
             onStaySignedOut={handlers.handleNuxWelcomeDone}
+          />
+        ) : null}
+        {tourEntryMaskMounted ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.tourEntryMask, { opacity: tourEntryMaskOpacity }]}
+          />
+        ) : null}
+        {isKnownTourStep && tour.currentStop ? (
+          <TourOverlay
+            target={tour.currentStop.target}
+            title={tour.currentStop.title}
+            caption={tour.currentStop.caption}
+            stopIndex={tour.stopIndex}
+            totalStops={tour.totalStops}
+            onAdvance={tour.advance}
           />
         ) : null}
       </View>
@@ -610,6 +656,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   postSplashOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#0a0c12',
+  },
+  tourEntryMask: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#0a0c12',
   },

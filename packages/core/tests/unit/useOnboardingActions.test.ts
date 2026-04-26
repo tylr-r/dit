@@ -124,7 +124,35 @@ describe('useOnboardingActions', () => {
       knownResult.current.handleNuxCompleteButtonTutorial()
     })
 
-    expect(knownAtThreshold.setNuxStep).toHaveBeenCalledWith('known_tour')
+    expect(knownAtThreshold.setNuxStep).toHaveBeenCalledWith('reminder')
+    expect(knownAtThreshold.applyKnownLearnerDefaults).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the known tour after the reminder step for known learners', () => {
+    const options = buildOptions()
+    options.learnerProfileRef.current = 'known'
+    const { result } = renderOnboardingHook(options)
+
+    act(() => {
+      result.current.handleNuxSkipReminder()
+    })
+
+    expect(options.setNuxStep).toHaveBeenCalledWith('known_tour')
+    expect(options.persistNuxStatus).not.toHaveBeenCalled()
+  })
+
+  it('finishes onboarding after the known tour', () => {
+    const options = buildOptions()
+    options.learnerProfileRef.current = 'known'
+    const { result } = renderOnboardingHook(options)
+
+    act(() => {
+      result.current.handleFinishKnownTour()
+    })
+
+    expect(options.applyKnownLearnerDefaults).toHaveBeenCalledTimes(1)
+    expect(options.persistNuxStatus).toHaveBeenCalledWith('completed')
+    expect(options.setNuxStep).toHaveBeenCalledWith('welcome')
   })
 
   it('persists the pending NUX status via platform storage on replay', async () => {

@@ -17,7 +17,8 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 - Both paths begin with a sound check and a short input tutorial that explicitly teaches the big Morse key.
 - The button tutorial requires one short tap (dit) and one long press (dah) before continuing.
 - iOS also asks the user to set a daily practice reminder during NUX. The user can skip this and turn it on later in Settings.
-- Known users see a short app tour and then enter the normal app flow.
+- Known users see the daily reminder screen, then a short app tour, then enter
+  the normal app flow.
 - Beginner users enter the guided course, which introduces letters in small packs and advances automatically.
 - NUX status (`pending`, `completed`, `skipped`) is persisted so it only runs once unless replayed from Settings.
 
