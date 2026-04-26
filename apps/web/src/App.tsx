@@ -901,6 +901,7 @@ function MainApp() {
           tutorialHoldCount={state.tutorialHoldCount}
           currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
           morseButton={nuxMorseButton}
+          user={user}
           onWelcomeDone={handlers.handleNuxWelcomeDone}
           onChooseProfile={handlers.handleNuxChooseProfile}
           onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
@@ -910,6 +911,7 @@ function MainApp() {
           onContinueFromStages={handlers.handleNuxContinueFromStages}
           onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
           onSkipReminder={handlers.handleNuxSkipReminder}
+          onRequestSignIn={handleShowSignIn}
         />
       ) : null}
       {showAbout ? (

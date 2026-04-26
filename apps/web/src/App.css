@@ -2653,3 +2653,40 @@
   outline: 2px solid var(--color-border-strong, rgba(255, 255, 255, 0.5));
   outline-offset: 2px;
 }
+
+.welcome-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+
+.welcome-options.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.welcome-option-button {
+  appearance: none;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  font: inherit;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  min-width: 220px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.welcome-option-button:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.welcome-option-primary {
+  background: var(--color-surface-panel-strong);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+}
