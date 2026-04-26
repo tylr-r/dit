@@ -96,6 +96,16 @@ All HSL. Opacities derive from a single hue per role.
 - **No decorative glows.** Profile-card green halo, CTA success-glow pulse,
   and sound-check green wash were all removed for the same reason.
 
+### NUX welcome (iOS)
+
+- **Welcome auto-advance removed (2026-04-23).** The 2.2s `setTimeout` that
+  advanced welcome into profile selection was removed in favor of explicit
+  user choice. Signed-out users see two centered options (Sign in / Stay
+  signed out) fade in ~2000ms after paint. Signed-in users (NUX replay)
+  keep the single tap-anywhere advance. Do not re-add the timer — the
+  explicit choice exists so returning users can sign in and skip NUX on a
+  fresh install.
+
 ---
 
 ## 3. Typography

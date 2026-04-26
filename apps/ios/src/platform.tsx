@@ -11,8 +11,10 @@ import { Alert, AppState, type AppStateStatus } from 'react-native'
 import type { ReactNode } from 'react'
 import { auth } from './firebase'
 import {
+  createAccountWithEmail as authCreateAccountWithEmail,
   prepareCurrentUserAccountDeletion,
   signInWithApple as nativeSignInWithApple,
+  signInWithEmail as authSignInWithEmail,
   signInWithGoogle as nativeSignInWithGoogle,
 } from './services/auth'
 
@@ -60,6 +62,12 @@ const authAdapter: AuthAdapter = {
   },
   signInWithApple: async () => {
     await nativeSignInWithApple()
+  },
+  signInWithEmail: async (email, password) => {
+    await authSignInWithEmail(email, password)
+  },
+  createAccountWithEmail: async (email, password) => {
+    await authCreateAccountWithEmail(email, password)
   },
   signOut: async () => {
     await auth.signOut()

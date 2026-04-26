@@ -78,6 +78,7 @@ export type Progress = {
   letterAccuracy?: LetterAccuracyRecord
   bestWpm?: number
   reminder?: ReminderSettings
+  nuxCompleted?: boolean
 }
 
 export type ProgressSnapshot = {
@@ -107,6 +108,7 @@ export type ProgressSnapshot = {
   letterAccuracy?: LetterAccuracyRecord
   bestWpm?: number
   reminder?: ReminderSettings
+  nuxCompleted?: boolean
 }
 
 export type ParseProgressOptions = {

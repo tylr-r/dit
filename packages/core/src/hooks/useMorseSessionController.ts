@@ -354,6 +354,10 @@ export const useMorseSessionController = ({
       letterAccuracy,
       bestWpm,
       reminder,
+      nuxCompleted:
+        onboarding.nuxStatus === 'completed' || onboarding.nuxStatus === 'skipped'
+          ? true
+          : undefined,
     }),
     [
       bestWpm,
@@ -382,6 +386,7 @@ export const useMorseSessionController = ({
       showHint,
       showMnemonic,
       streak,
+      onboarding.nuxStatus,
     ],
   )
 
@@ -1934,6 +1939,8 @@ export const useMorseSessionController = ({
     database,
     user: userForSync,
     progressSnapshot,
+    nuxStatus: onboarding.nuxStatus,
+    persistNuxStatus: onboarding.persistNuxStatus,
     state: {
       setScores,
       setListenTtr,

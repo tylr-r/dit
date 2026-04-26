@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { usePlatform } from '../platform'
-import type { LearnerProfile } from '../types'
+import type { LearnerProfile, Progress } from '../types'
 import {
   INTRO_HINTS_KEY,
   LEGACY_INTRO_HINTS_KEY,
@@ -69,6 +69,28 @@ export const parsePersistedNuxState = (raw: string | null): PersistedNuxState | 
   }
 }
 
+const hasMeaningfulProgressFields = (progress: {
+  learnerProfile?: unknown
+  guidedCourseActive?: unknown
+  scores?: unknown
+}): boolean => {
+  if (isLearnerProfile(progress.learnerProfile)) {
+    return true
+  }
+  if (progress.guidedCourseActive === true) {
+    return true
+  }
+  const scores = progress.scores
+  if (scores && typeof scores === 'object') {
+    for (const value of Object.values(scores as Record<string, unknown>)) {
+      if (typeof value === 'number' && value > 0) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 /**
  * Returns true only if stored progress looks like a real returning user — not
  * the defaults-only snapshot the app writes on first launch. This is the
@@ -79,25 +101,22 @@ export const hasMeaningfulProgress = (raw: string | null) => {
     return false
   }
   try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>
-    if (isLearnerProfile(parsed.learnerProfile)) {
-      return true
-    }
-    if (parsed.guidedCourseActive === true) {
-      return true
-    }
-    const scores = parsed.scores
-    if (scores && typeof scores === 'object') {
-      for (const value of Object.values(scores as Record<string, unknown>)) {
-        if (typeof value === 'number' && value > 0) {
-          return true
-        }
-      }
-    }
-    return false
+    return hasMeaningfulProgressFields(JSON.parse(raw) as Record<string, unknown>)
   } catch {
     return false
   }
+}
+
+/**
+ * Remote-side equivalent of `hasMeaningfulProgress` for an already-parsed
+ * Progress object loaded from Firebase RTDB. Used as a fallback signal for
+ * accounts that predate the `nuxCompleted` flag.
+ */
+export const hasMeaningfulRemoteProgress = (progress: Progress | null) => {
+  if (!progress) {
+    return false
+  }
+  return hasMeaningfulProgressFields(progress)
 }
 
 /** Loads and persists first-run hint and onboarding state. */

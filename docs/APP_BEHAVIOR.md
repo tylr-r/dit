@@ -21,6 +21,33 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 - Beginner users enter the guided course, which introduces letters in small packs and advances automatically.
 - NUX status (`pending`, `completed`, `skipped`) is persisted so it only runs once unless replayed from Settings.
 
+#### Sign-in entry points (iOS)
+
+Two surfaces open the same sign-in bottom sheet:
+
+- **NUX welcome** — see the next subsection.
+- **Settings** — when signed out, the Account group shows a single **Sign in** row (the Apple / Google provider list was collapsed into the shared sheet). Tapping it closes the Settings modal first, then opens the shared sign-in sheet from the app root. The two surfaces never stack. On successful sign-in the sheet dismisses and Settings reopens so the user sees the signed-in state (email, Sign Out, Delete Account). On cancel the user returns to the main screen without Settings reopening.
+
+The shared sheet implementation lives at `apps/ios/src/components/SignInSheet.tsx`. `NuxModal.tsx` renders its own instance for the welcome-screen entry point; the Settings instance is rendered at the `App.tsx` root so it survives `SettingsModal` unmounting when Settings closes.
+
+#### Welcome-screen sign-in (iOS)
+
+- The welcome screen does not auto-advance. Signed-out users see two options fade in ~2 seconds after paint: **Sign in** (primary) and **Stay signed out** (secondary).
+- **Sign in** opens a bottom sheet with three provider rows: **Continue with Apple**, **Continue with Google**, and **Continue with Email**. Each row renders its provider logo (Apple's SF Symbol `applelogo`, the Google "G", and a mail icon) plus a Cancel row. On successful sign-in, remote progress loads via `useFirebaseProgressSync`. If the loaded snapshot has `nuxCompleted === true` or any meaningful progress (learner profile, guided course active, or non-zero scores), NUX is marked `'skipped'` and the user lands in the main app with their progress restored. Otherwise NUX continues at profile selection.
+- **Continue with Email** swaps the sheet content in-place to an email form: email field, password field, primary "Sign in", secondary "Create account", and a back chevron to the provider picker. Errors render inline above the primary button (see below). Form state resets whenever the sheet dismisses. No password-reset or email-verification flow in v1.
+  - **Sign in** calls `signInWithEmailAndPassword`; bad-credential errors (`auth/invalid-credential`, `auth/user-not-found`, `auth/wrong-password`) all show the same message, `"Email or password is incorrect."` — Firebase v11+ collapses these codes for enumeration resistance and we mirror that.
+  - **Create account** calls `createUserWithEmailAndPassword`; it creates the user and signs them in immediately. No confirm-password field.
+- **Stay signed out** advances to the next NUX step (profile selection), identical to the prior tap-anywhere behavior.
+- Cancel or error on the sign-in sheet returns to the welcome screen with both options still visible.
+- When a user is already signed in (e.g., replaying NUX from Settings), the two options are not rendered; the welcome screen keeps its single tap-anywhere advance so replay does not prompt for re-auth.
+
+#### `nuxCompleted` flag
+
+- Stored at `users/{uid}/progress/nuxCompleted: boolean` in Firebase RTDB, inside the existing progress object.
+- Written via the normal progress save path whenever a signed-in user's local NUX status is `'completed'` or `'skipped'`. The value is derived from the onboarding state in `useMorseSessionController`'s progress snapshot.
+- Read on sign-in inside `applyParsedProgress`: if `true` (or the `hasMeaningfulRemoteProgress` heuristic passes), NUX is marked skipped locally via `persistNuxStatus('skipped')`.
+- Accounts created before this flag existed fall back to the heuristic, so no returning user is forced back through NUX unexpectedly.
+
 ### Practice
 
 - A target character is shown with its Morse pattern.

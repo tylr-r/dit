@@ -6,6 +6,8 @@ import {
   createInitialPracticeConfig,
   enqueueListenOverlearnLetters,
   getDeleteAccountErrorMessage,
+  getEmailSignInErrorMessage,
+  getEmailSignUpErrorMessage,
   getGuidedPracticePool,
   getLevelForLetters,
   getListenOverlearnRepeats,
@@ -129,5 +131,43 @@ describe('appState utils', () => {
       /network/i,
     )
     expect(getSignInErrorMessage({})).toMatch(/could not sign you in/i)
+  })
+
+  it('maps email sign-in error codes to user-facing copy', () => {
+    expect(getEmailSignInErrorMessage({ code: 'auth/invalid-email' })).toMatch(
+      /not valid/i,
+    )
+    expect(
+      getEmailSignInErrorMessage({ code: 'auth/invalid-credential' }),
+    ).toMatch(/email or password is incorrect/i)
+    expect(getEmailSignInErrorMessage({ code: 'auth/wrong-password' })).toMatch(
+      /email or password is incorrect/i,
+    )
+    expect(getEmailSignInErrorMessage({ code: 'auth/user-not-found' })).toMatch(
+      /email or password is incorrect/i,
+    )
+    expect(getEmailSignInErrorMessage({ code: 'auth/user-disabled' })).toMatch(
+      /disabled/i,
+    )
+    expect(
+      getEmailSignInErrorMessage({ code: 'auth/too-many-requests' }),
+    ).toMatch(/too many/i)
+    expect(getEmailSignInErrorMessage({})).toMatch(/could not sign you in/i)
+  })
+
+  it('maps email sign-up error codes to user-facing copy', () => {
+    expect(getEmailSignUpErrorMessage({ code: 'auth/invalid-email' })).toMatch(
+      /not valid/i,
+    )
+    expect(
+      getEmailSignUpErrorMessage({ code: 'auth/email-already-in-use' }),
+    ).toMatch(/already exists/i)
+    expect(getEmailSignUpErrorMessage({ code: 'auth/weak-password' })).toMatch(
+      /at least 6/i,
+    )
+    expect(
+      getEmailSignUpErrorMessage({ code: 'auth/network-request-failed' }),
+    ).toMatch(/network/i)
+    expect(getEmailSignUpErrorMessage({})).toMatch(/could not create/i)
   })
 })

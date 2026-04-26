@@ -39,10 +39,11 @@ import { NuxModal } from './src/components/NuxModal'
 import { PhaseModal } from './src/components/PhaseModal'
 import { ReferenceModalSheet } from './src/components/ReferenceModalSheet'
 import { SettingsModal } from './src/components/SettingsModal'
+import { SignInSheet } from './src/components/SignInSheet'
 import { StageDisplay } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
 import { logAnalyticsEvent } from './src/analytics'
-import { database } from './src/firebase'
+import { auth, database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
 import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
 import { usePhaseModalState } from './src/hooks/usePhaseModalState'
@@ -99,6 +100,7 @@ function AppShell() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
+  const [settingsSignInSheetVisible, setSettingsSignInSheetVisible] = useState(false)
 
   const session = useMorseSessionController({
     user,
@@ -170,6 +172,38 @@ function AppShell() {
     dismissSettingsHint()
     setShowSettings((prev) => !prev)
   }, [dismissSettingsHint])
+
+  // Settings must close before the sign-in sheet opens so the surfaces never
+  // stack. The Settings animation takes ~280ms to unmount; we open the sheet
+  // on the next frame so the slide-up reads as a single continuous motion.
+  const handleRequestSignInFromSettings = useCallback(() => {
+    setters.flushPendingSave()
+    setShowSettings(false)
+    requestAnimationFrame(() => {
+      setSettingsSignInSheetVisible(true)
+    })
+  }, [setters])
+
+  const handleDismissSettingsSignInSheet = useCallback(() => {
+    setSettingsSignInSheetVisible(false)
+    // Email flow dismisses itself on success; by the time this fires,
+    // Firebase's synchronous currentUser is already set. Reopen Settings so
+    // the user sees the signed-in state. If they cancelled (no user), stay
+    // on the main screen.
+    if (auth.currentUser) {
+      setShowSettings(true)
+    }
+  }, [])
+
+  // Apple / Google don't dismiss the sheet themselves — their handlers return
+  // once Firebase resolves and `user` updates via useAuth. Watch that
+  // transition here to close the sheet and reopen Settings in one effect.
+  useEffect(() => {
+    if (settingsSignInSheetVisible && user) {
+      setSettingsSignInSheetVisible(false)
+      setShowSettings(true)
+    }
+  }, [settingsSignInSheetVisible, user])
 
   const {
     reminder,
@@ -286,8 +320,7 @@ function AppShell() {
               onUseRecommended={handlers.handleUseRecommended}
               onShowAbout={handleShowAbout}
               user={user}
-              onSignInWithApple={handlers.handleSignInWithApple}
-              onSignInWithGoogle={handlers.handleSignInWithGoogle}
+              onRequestSignIn={handleRequestSignInFromSettings}
               onSignOut={signOut}
               onDeleteAccount={handlers.handleDeleteAccount}
               onReplayNux={handlers.handleReplayNux}
@@ -455,6 +488,7 @@ function AppShell() {
             tutorialTapCount={state.tutorialTapCount}
             tutorialHoldCount={state.tutorialHoldCount}
             currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
+            user={user}
             onWelcomeDone={handlers.handleNuxWelcomeDone}
             onChooseProfile={handlers.handleNuxChooseProfile}
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
@@ -467,9 +501,22 @@ function AppShell() {
               void handlers.handleNuxSetReminder(time)
             }}
             onSkipReminder={handlers.handleNuxSkipReminder}
+            onSignInWithApple={handlers.handleSignInWithApple}
+            onSignInWithGoogle={handlers.handleSignInWithGoogle}
+            onSignInWithEmail={handlers.handleSignInWithEmail}
+            onCreateAccountWithEmail={handlers.handleCreateAccountWithEmail}
+            onStaySignedOut={handlers.handleNuxWelcomeDone}
           />
         ) : null}
       </View>
+      <SignInSheet
+        visible={settingsSignInSheetVisible}
+        onDismiss={handleDismissSettingsSignInSheet}
+        onSignInWithApple={handlers.handleSignInWithApple}
+        onSignInWithGoogle={handlers.handleSignInWithGoogle}
+        onSignInWithEmail={handlers.handleSignInWithEmail}
+        onCreateAccountWithEmail={handlers.handleCreateAccountWithEmail}
+      />
       <StatusBar style="light" />
     </SafeAreaProvider>
   )

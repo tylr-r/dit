@@ -52,6 +52,18 @@ export interface DialogAdapter {
 export interface AuthAdapter {
   signInWithGoogle(): Promise<void>
   signInWithApple?(): Promise<void>
+  /**
+   * Sign an existing user in with email + password. Throws if the account
+   * does not exist or the password is wrong; the caller is expected to
+   * surface a friendly message. Optional so platforms that do not wire up
+   * email/password yet omit it and the UI hides the affordance.
+   */
+  signInWithEmail?(email: string, password: string): Promise<void>
+  /**
+   * Create a new account with email + password. Throws on weak passwords,
+   * duplicate emails, or invalid inputs; the caller surfaces the message.
+   */
+  createAccountWithEmail?(email: string, password: string): Promise<void>
   signOut(): Promise<void>
   /**
    * Platform-specific preparation that must run before `deleteUser` on the Firebase side.

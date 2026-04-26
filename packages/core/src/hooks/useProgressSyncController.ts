@@ -22,12 +22,27 @@ import {
   LISTEN_WPM_MAX,
   LISTEN_WPM_MIN,
   PROGRESS_SAVE_DEBOUNCE_MS,
+  type NuxStatus,
 } from '../utils/appState'
 import { getAutoEffectiveWpm, normalizeListenSpeeds } from '../utils/listenSpeed'
 import { filterReviewQueue, type PracticeReviewItem } from '../utils/practiceReviewQueue'
 import { getLettersForLevel, getWordsForLetters } from '../utils/morseUtils'
 import { useFirebaseProgressSync } from './useFirebaseProgressSync'
+import { hasMeaningfulRemoteProgress } from './useOnboardingState'
 import { useProgressPersistence } from './useProgressPersistence'
+
+/**
+ * A returning, signed-in user should skip NUX when their remote snapshot
+ * signals prior engagement — either the durable `nuxCompleted` flag or the
+ * legacy `hasMeaningfulRemoteProgress` heuristic. Only applied while NUX is
+ * still pending so mid-replay users are never silently advanced.
+ */
+export const shouldSkipNuxForRemoteProgress = (
+  progress: Progress,
+  nuxStatus: NuxStatus,
+) =>
+  nuxStatus === 'pending' &&
+  (progress.nuxCompleted === true || hasMeaningfulRemoteProgress(progress))
 
 export type Mode = 'practice' | 'freestyle' | 'listen'
 
@@ -42,6 +57,8 @@ type UseProgressSyncControllerOptions = {
   user: User | null
   progressSnapshot: ProgressSnapshot
   onProgressSnapshotChange?: (snapshot: ProgressSnapshot) => void
+  nuxStatus: NuxStatus
+  persistNuxStatus: (next: NuxStatus) => void
   state: {
     setScores: Setter<ProgressSnapshot['scores']>
     setListenTtr: Setter<ListenTtrRecord>
@@ -121,7 +138,16 @@ type UseProgressSyncControllerOptions = {
 
 /** Applies persisted progress and coordinates local/remote progress syncing. */
 export const useProgressSyncController = (options: UseProgressSyncControllerOptions) => {
-  const { database, user, progressSnapshot, state, refs, helpers } = options
+  const {
+    database,
+    user,
+    progressSnapshot,
+    nuxStatus,
+    persistNuxStatus,
+    state,
+    refs,
+    helpers,
+  } = options
 
   const applyParsedProgress = useCallback(
     (progress: Progress) => {
@@ -341,8 +367,14 @@ export const useProgressSyncController = (options: UseProgressSyncControllerOpti
           helpers.setPracticeWordFromList(getWordsForLetters(nextLetters))
         }
       }
+
+      if (shouldSkipNuxForRemoteProgress(progress, nuxStatus)) {
+        persistNuxStatus('skipped')
+      }
     },
     [
+      nuxStatus,
+      persistNuxStatus,
       helpers.playListenSequenceForLetter,
       helpers.setNextLetterForLevel,
       helpers.setNextListenLetter,

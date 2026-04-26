@@ -57,8 +57,12 @@ type SettingsModalProps = {
   onReminderChange: (reminder: ReminderSettings | undefined) => void
   onUseRecommended: () => void
   onShowAbout: () => void
-  onSignInWithApple: () => Promise<unknown>
-  onSignInWithGoogle: () => Promise<unknown>
+  /**
+   * Fires when the signed-out user taps the "Sign in" row. The parent is
+   * expected to dismiss this modal before presenting the sign-in sheet so
+   * the two surfaces never stack.
+   */
+  onRequestSignIn: () => void
   onSignOut: () => Promise<unknown>
   onDeleteAccount: () => void
   onReplayNux?: () => void
@@ -190,8 +194,7 @@ export function SettingsModal({
   onReminderChange,
   onUseRecommended,
   onShowAbout,
-  onSignInWithApple,
-  onSignInWithGoogle,
+  onRequestSignIn,
   onSignOut,
   onDeleteAccount,
   onReplayNux,
@@ -865,25 +868,12 @@ export function SettingsModal({
                       />
                     </>
                   ) : (
-                    <>
-                      <ActionRow
-                        text="Sign in with Apple"
-                        onPress={() => {
-                          void onSignInWithApple()
-                        }}
-                        accessibilityLabel="Sign in with Apple"
-                        accessibilityHint="Connects your Dit account using Apple"
-                      />
-                      <View style={styles.separator} />
-                      <ActionRow
-                        text="Sign in with Google"
-                        onPress={() => {
-                          void onSignInWithGoogle()
-                        }}
-                        accessibilityLabel="Sign in with Google"
-                        accessibilityHint="Connects your Dit account using Google"
-                      />
-                    </>
+                    <ActionRow
+                      text="Sign in"
+                      onPress={onRequestSignIn}
+                      accessibilityLabel="Sign in"
+                      accessibilityHint="Closes settings and opens sign-in options"
+                    />
                   )}
                 </SettingsGroup>
 

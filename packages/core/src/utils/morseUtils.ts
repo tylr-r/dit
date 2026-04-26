@@ -517,6 +517,9 @@ export const parseProgress = (
   if (reminder) {
     progress.reminder = reminder
   }
+  if (typeof record.nuxCompleted === 'boolean') {
+    progress.nuxCompleted = record.nuxCompleted
+  }
   return progress
 }
 

@@ -304,4 +304,45 @@ export const getSignInErrorMessage = (error: unknown) => {
   return 'We could not sign you in. Please try again.'
 }
 
+export const getEmailSignInErrorMessage = (error: unknown) => {
+  if (isErrorWithCode(error, 'auth/invalid-email')) {
+    return 'That email address is not valid.'
+  }
+  if (
+    isErrorWithCode(error, 'auth/user-not-found') ||
+    isErrorWithCode(error, 'auth/wrong-password') ||
+    // Firebase v11+ consolidates wrong-email/wrong-password into this code to
+    // prevent account enumeration. We treat it the same way: bad credentials.
+    isErrorWithCode(error, 'auth/invalid-credential')
+  ) {
+    return 'Email or password is incorrect.'
+  }
+  if (isErrorWithCode(error, 'auth/user-disabled')) {
+    return 'This account has been disabled.'
+  }
+  if (isErrorWithCode(error, 'auth/too-many-requests')) {
+    return 'Too many attempts. Try again in a few minutes.'
+  }
+  if (isErrorWithCode(error, 'auth/network-request-failed')) {
+    return 'A network error interrupted sign-in. Try again on a stable connection.'
+  }
+  return 'We could not sign you in. Please try again.'
+}
+
+export const getEmailSignUpErrorMessage = (error: unknown) => {
+  if (isErrorWithCode(error, 'auth/invalid-email')) {
+    return 'That email address is not valid.'
+  }
+  if (isErrorWithCode(error, 'auth/email-already-in-use')) {
+    return 'An account already exists for that email. Sign in instead.'
+  }
+  if (isErrorWithCode(error, 'auth/weak-password')) {
+    return 'Password is too weak. Use at least 6 characters.'
+  }
+  if (isErrorWithCode(error, 'auth/network-request-failed')) {
+    return 'A network error interrupted sign-up. Try again on a stable connection.'
+  }
+  return 'We could not create your account. Please try again.'
+}
+
 export const createEmptyGuidedProgress = () => createGuidedLessonProgress()

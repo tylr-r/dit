@@ -1,9 +1,11 @@
 import { requireNativeModule } from 'expo-modules-core'
 import {
+  createUserWithEmailAndPassword,
   deleteUser,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithCredential,
+  signInWithEmailAndPassword,
   type User,
 } from '@firebase/auth'
 import { auth } from '../firebase'
@@ -81,6 +83,14 @@ export const signInWithApple = async () => {
   const credential = createAppleCredential(result)
 
   return signInWithCredential(auth, credential)
+}
+
+export const signInWithEmail = async (email: string, password: string) => {
+  return signInWithEmailAndPassword(auth, email, password)
+}
+
+export const createAccountWithEmail = async (email: string, password: string) => {
+  return createUserWithEmailAndPassword(auth, email, password)
 }
 
 export const signOut = async () => {

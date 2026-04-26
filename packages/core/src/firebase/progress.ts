@@ -10,13 +10,28 @@ export type FirebaseProgressAdapter = {
 export const progressPathForUser = (userId: string) =>
   `users/${userId}/progress`
 
+// Firebase Realtime Database rejects `undefined` values and throws synchronously
+// during validation, which bypasses promise .catch handlers. Strip them here so
+// unset optional fields (e.g. bestWpm for a new account) don't blow up saves.
+const stripUndefined = <T extends Record<string, unknown>>(value: T): T => {
+  const result: Record<string, unknown> = {}
+  for (const key of Object.keys(value)) {
+    const entry = value[key]
+    if (entry !== undefined) {
+      result[key] = entry
+    }
+  }
+  return result as T
+}
+
 export const createProgressPayload = (
   snapshot: ProgressSnapshot,
   updatedAt: number = Date.now(),
-): ProgressPayload => ({
-  ...snapshot,
-  updatedAt,
-})
+): ProgressPayload =>
+  stripUndefined({
+    ...snapshot,
+    updatedAt,
+  })
 
 export const createFirebaseProgressService = (
   adapter: FirebaseProgressAdapter,

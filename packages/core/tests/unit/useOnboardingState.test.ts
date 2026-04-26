@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   hasMeaningfulProgress,
+  hasMeaningfulRemoteProgress,
   isLearnerProfile,
   isNuxStep,
   parsePersistedNuxState,
 } from '../../src/hooks/useOnboardingState'
+import type { Progress } from '../../src/types'
 
 describe('isNuxStep', () => {
   it('accepts every known NUX step value', () => {
@@ -109,5 +111,40 @@ describe('hasMeaningfulProgress', () => {
   it('detects any positive score as real progress', () => {
     const raw = JSON.stringify({ scores: { A: 0, B: 3, C: 0 } })
     expect(hasMeaningfulProgress(raw)).toBe(true)
+  })
+})
+
+describe('hasMeaningfulRemoteProgress', () => {
+  it('returns false for null', () => {
+    expect(hasMeaningfulRemoteProgress(null)).toBe(false)
+  })
+
+  it('returns false for an empty progress object', () => {
+    expect(hasMeaningfulRemoteProgress({})).toBe(false)
+  })
+
+  it('returns false for a defaults-only snapshot', () => {
+    expect(
+      hasMeaningfulRemoteProgress({
+        guidedCourseActive: false,
+        scores: { A: 0, B: 0, C: 0 } as Progress['scores'],
+      }),
+    ).toBe(false)
+  })
+
+  it('detects a set learnerProfile as real progress', () => {
+    expect(hasMeaningfulRemoteProgress({ learnerProfile: 'beginner' })).toBe(true)
+  })
+
+  it('detects guidedCourseActive as real progress', () => {
+    expect(hasMeaningfulRemoteProgress({ guidedCourseActive: true })).toBe(true)
+  })
+
+  it('detects any positive score as real progress', () => {
+    expect(
+      hasMeaningfulRemoteProgress({
+        scores: { A: 0, B: 3 } as Progress['scores'],
+      }),
+    ).toBe(true)
   })
 })

@@ -2,10 +2,14 @@ import { deleteUser, type User } from '@firebase/auth'
 import { useCallback } from 'react'
 import {
   getDeleteAccountErrorMessage,
+  getEmailSignInErrorMessage,
+  getEmailSignUpErrorMessage,
   getSignInErrorMessage,
   isErrorWithCode,
 } from '../utils/appState'
 import { usePlatform } from '../platform'
+
+export type EmailAuthResult = { ok: true } | { ok: false; error: string }
 
 type UseAccountActionsOptions = {
   user: User | null
@@ -63,6 +67,46 @@ export const useAccountActions = ({
       dialog.alert('Could Not Sign In', getSignInErrorMessage(error))
     }
   }, [auth, dialog])
+
+  // Email handlers return an EmailAuthResult rather than using dialog.alert so
+  // the form can show errors inline under the input (better UX than a popup).
+  const handleSignInWithEmail = useCallback(
+    async (email: string, password: string): Promise<EmailAuthResult> => {
+      if (!auth.signInWithEmail) {
+        return {
+          ok: false,
+          error: 'Email sign-in is not available on this platform.',
+        }
+      }
+      try {
+        await auth.signInWithEmail(email, password)
+        return { ok: true }
+      } catch (error) {
+        console.error('Failed to sign in with email', error)
+        return { ok: false, error: getEmailSignInErrorMessage(error) }
+      }
+    },
+    [auth],
+  )
+
+  const handleCreateAccountWithEmail = useCallback(
+    async (email: string, password: string): Promise<EmailAuthResult> => {
+      if (!auth.createAccountWithEmail) {
+        return {
+          ok: false,
+          error: 'Account creation is not available on this platform.',
+        }
+      }
+      try {
+        await auth.createAccountWithEmail(email, password)
+        return { ok: true }
+      } catch (error) {
+        console.error('Failed to create account with email', error)
+        return { ok: false, error: getEmailSignUpErrorMessage(error) }
+      }
+    },
+    [auth],
+  )
 
   const performAccountDeletion = useCallback(
     async (currentUser: User) => {
@@ -139,6 +183,8 @@ export const useAccountActions = ({
   return {
     handleSignInWithApple,
     handleSignInWithGoogle,
+    handleSignInWithEmail,
+    handleCreateAccountWithEmail,
     handleDeleteAccount,
   }
 }

@@ -21,6 +21,7 @@ import DitLogo from './DitLogo'
 import { LetterDealChip } from './nux/LetterDealChip'
 import { MorphGhost, type MorphRect } from './nux/MorphGhost'
 import { SonarRipple } from './nux/SonarRipple'
+import { SignInSheet } from './SignInSheet'
 import { StageCard } from './nux/StageCard'
 import { StageConnector } from './nux/StageConnector'
 import {
@@ -48,6 +49,8 @@ type NuxModalProps = {
   tutorialTapCount: number
   tutorialHoldCount: number
   currentPack: string[]
+  /** Current Firebase user, if any. When null the welcome screen shows sign-in options. */
+  user: { uid: string } | null
   onWelcomeDone: () => void
   onChooseProfile: (profile: 'beginner' | 'known') => void
   onPlaySoundCheck: () => void
@@ -58,6 +61,18 @@ type NuxModalProps = {
   onStartBeginnerCourse: () => void
   onSetReminder: (time: string) => void
   onSkipReminder: () => void
+  onSignInWithApple: () => void
+  onSignInWithGoogle: () => void
+  onSignInWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>
+  onCreateAccountWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>
+  /** Fires when the user taps "Stay signed out" from the welcome options. */
+  onStaySignedOut: () => void
 }
 
 // ─── Step body transition ─────────────────────────────────────────────────────
@@ -281,12 +296,24 @@ function TutorialProgress({ count, required }: { count: number; required: number
 
 // ─── Welcome screen entrance ──────────────────────────────────────────────────
 
+// Signed-out users see two explicit options (Sign in / Stay signed out) that
+// fade in once the splash composition has settled. The pause lets the welcome
+// read as a beat of its own before asking for input.
+const WELCOME_OPTIONS_DELAY_MS = 2000
+const WELCOME_OPTIONS_FADE_MS = 600
+
 function WelcomeScreen({
   onWelcomeDone,
   reduceMotion,
+  user,
+  onRequestSignIn,
+  onStaySignedOut,
 }: {
   onWelcomeDone: () => void
   reduceMotion: boolean
+  user: { uid: string } | null
+  onRequestSignIn: () => void
+  onStaySignedOut: () => void
 }) {
   // This screen IS the splash. Every element is rendered at its resting state
   // on first paint so the native splash (bg color only) cross-fades directly
@@ -311,16 +338,63 @@ function WelcomeScreen({
     transform: [{ scale: logoScale.value }],
   }))
 
+  // Signed-in users (NUX replay) keep the single tap-anywhere advance; we
+  // hide the options entirely so the replay doesn't ask them to re-authenticate.
+  const showOptions = user === null
+  const [optionsVisible, setOptionsVisible] = useState(false)
+  const optionsOpacity = useSharedValue(0)
+
+  useEffect(() => {
+    if (!showOptions) return
+    const timer = setTimeout(() => setOptionsVisible(true), WELCOME_OPTIONS_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [showOptions])
+
+  useEffect(() => {
+    if (!optionsVisible) return
+    optionsOpacity.value = withTiming(1, {
+      duration: reduceMotion ? 0 : WELCOME_OPTIONS_FADE_MS,
+      easing: REasing.bezier(...BEZIER.out),
+    })
+  }, [optionsOpacity, optionsVisible, reduceMotion])
+
+  const optionsStyle = useAnimatedStyle(() => ({
+    opacity: optionsOpacity.value,
+  }))
+
   return (
     <Pressable
       style={styles.welcomeScreen}
-      onPress={onWelcomeDone}
+      onPress={showOptions ? undefined : onWelcomeDone}
       accessibilityLabel="Welcome to Dit"
     >
       <Reanimated.View style={logoStyle}>
         <DitLogo size={120} opacity={0.9} animated />
       </Reanimated.View>
       <Text style={styles.welcomeTitle}>Welcome to Dit</Text>
+      {showOptions && optionsVisible ? (
+        <Reanimated.View
+          style={[styles.welcomeOptions, optionsStyle]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            onPress={onRequestSignIn}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+            hitSlop={12}
+          >
+            <Text style={styles.welcomePrimaryOption}>Sign in</Text>
+          </Pressable>
+          <Pressable
+            onPress={onStaySignedOut}
+            accessibilityRole="button"
+            accessibilityLabel="Stay signed out"
+            hitSlop={12}
+          >
+            <Text style={styles.welcomeSecondaryOption}>Stay signed out</Text>
+          </Pressable>
+        </Reanimated.View>
+      ) : null}
     </Pressable>
   )
 }
@@ -580,6 +654,7 @@ export function NuxModal({
   tutorialTapCount,
   tutorialHoldCount,
   currentPack,
+  user,
   onWelcomeDone,
   onChooseProfile,
   onPlaySoundCheck,
@@ -590,6 +665,11 @@ export function NuxModal({
   onStartBeginnerCourse,
   onSetReminder,
   onSkipReminder,
+  onSignInWithApple,
+  onSignInWithGoogle,
+  onSignInWithEmail,
+  onCreateAccountWithEmail,
+  onStaySignedOut,
 }: NuxModalProps) {
   const insets = useSafeAreaInsets()
   const { width: windowWidth, height: windowHeight } = useWindowDimensions()
@@ -602,6 +682,17 @@ export function NuxModal({
   const [profileSelection, setProfileSelection] = useState<'beginner' | 'known' | null>(
     null,
   )
+  const [signInSheetVisible, setSignInSheetVisible] = useState(false)
+  const handleRequestSignIn = useCallback(() => setSignInSheetVisible(true), [])
+  const handleDismissSignInSheet = useCallback(() => setSignInSheetVisible(false), [])
+  const handleSignInWithAppleFromSheet = useCallback(() => {
+    setSignInSheetVisible(false)
+    onSignInWithApple()
+  }, [onSignInWithApple])
+  const handleSignInWithGoogleFromSheet = useCallback(() => {
+    setSignInSheetVisible(false)
+    onSignInWithGoogle()
+  }, [onSignInWithGoogle])
   const [reminderTime, setReminderTime] = useState('19:00')
   const reminderInitialDate = useMemo(() => {
     const now = new Date()
@@ -765,11 +856,10 @@ export function NuxModal({
     staggerOptions,
   )
 
-  useEffect(() => {
-    if (step !== 'welcome') return
-    const timer = setTimeout(onWelcomeDone, 2200)
-    return () => clearTimeout(timer)
-  }, [step, onWelcomeDone])
+  // Welcome no longer auto-advances. Signed-out users pick Sign in or Stay
+  // signed out; signed-in users (NUX replay) tap anywhere on the splash to
+  // proceed. Auto-advance would silently skip past the sign-in choice for
+  // returning users on a fresh install.
 
   // Connectors animate inline with the card stagger so the list feels like one
   // continuous draw rather than "all cards, then all lines". Each connector's
@@ -792,7 +882,13 @@ export function NuxModal({
       accessibilityViewIsModal={!isTutorial}
     >
       {displayedStep === 'welcome' ? (
-        <WelcomeScreen onWelcomeDone={onWelcomeDone} reduceMotion={reduceMotion} />
+        <WelcomeScreen
+          onWelcomeDone={onWelcomeDone}
+          reduceMotion={reduceMotion}
+          user={user}
+          onRequestSignIn={handleRequestSignIn}
+          onStaySignedOut={onStaySignedOut}
+        />
       ) : (
         <View
           style={[styles.content, { paddingTop, paddingBottom }]}
@@ -1132,6 +1228,14 @@ export function NuxModal({
         onComplete={handleMorphComplete}
         reduceMotion={reduceMotion}
       />
+      <SignInSheet
+        visible={signInSheetVisible}
+        onDismiss={handleDismissSignInSheet}
+        onSignInWithApple={handleSignInWithAppleFromSheet}
+        onSignInWithGoogle={handleSignInWithGoogleFromSheet}
+        onSignInWithEmail={onSignInWithEmail}
+        onCreateAccountWithEmail={onCreateAccountWithEmail}
+      />
     </Reanimated.View>
   )
 }
@@ -1152,6 +1256,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     textAlign: 'center',
+  },
+  welcomeOptions: {
+    position: 'absolute',
+    bottom: 72,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 14,
+  },
+  welcomePrimaryOption: {
+    color: 'rgba(230, 240, 255, 0.95)',
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  welcomeSecondaryOption: {
+    color: 'rgba(200, 210, 220, 0.5)',
+    fontSize: 13,
+    letterSpacing: 0.2,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   content: {
     flex: 1,
