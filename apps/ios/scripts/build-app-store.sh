@@ -14,6 +14,11 @@ PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
 BUILD_NUMBER="${1:-}"
 VERSION="${VERSION:-}"
 
+if [[ -n "$BUILD_NUMBER" && ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+  echo "Ignoring non-numeric build number argument: $BUILD_NUMBER" >&2
+  BUILD_NUMBER=""
+fi
+
 if [[ -z "$BUILD_NUMBER" ]]; then
   BUILD_NUMBER="$(
     node -e "const fs=require('fs');const path=require('path');const app=JSON.parse(fs.readFileSync(path.join(process.cwd(),'app.json'),'utf8'));const current=Number(app.expo?.ios?.buildNumber ?? 0);process.stdout.write(String(current + 1));"
