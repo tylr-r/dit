@@ -2625,3 +2625,25 @@
 .auth-button-destructive:hover:not(:disabled) {
   border-color: var(--color-border-error-strong, rgba(255, 90, 96, 0.7));
 }
+
+.reference-streak.is-at-risk {
+  border: 1px solid var(--color-border-error, rgba(255, 90, 96, 0.4));
+  background: rgba(255, 90, 96, 0.06);
+}
+
+.reference-card-button {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.reference-card-button:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.reference-card-button:focus-visible {
+  outline: 2px solid var(--color-border-strong, rgba(255, 255, 255, 0.5));
+  outline-offset: 2px;
+}

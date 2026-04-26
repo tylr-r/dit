@@ -120,8 +120,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Current streak | ✅ | ✅ | Both have data; verify web display |
 | Today's correct count | ✅ | ✅ | `todayStreakContribution` is wired in web App.tsx; verify modal display |
 | Guided course banner (pack/phase/letters) | ✅ | ❌ | |
-| Tap card to play character | ✅ | ❌ | Web cards have no `onClick` for playback |
-| Streak "at risk" treatment | ✅ | ❌ | |
+| Tap card to play character | ✅ | ✅ | |
+| Streak "at risk" treatment | ✅ | ✅ | |
 
 ## Scoring & metrics
 
@@ -133,7 +133,7 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 | `letterAccuracy` (rolling correctness) | ✅ | ✅ | ✅ | ✅ |
 | `bestWpm` | ✅ | ✅ | ✅ | ✅ |
 | `dailyActivity` (per-day correct + modes) | ✅ | ✅ | ✅ | ✅ |
-| `streak` (current + longest + at-risk) | ✅ | ✅ | ✅ | 🟡 |
+| `streak` (current + longest + at-risk) | ✅ | ✅ | ✅ | ✅ |
 | `hero` metric routing by profile | ✅ | — | ✅ | ✅ |
 
 ## Background behavior

@@ -25,6 +25,7 @@ import {
   MORSE_DATA,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
+  REFERENCE_WPM,
   TONE_FREQUENCY_RANGE,
   computeHero,
   createGuidedLessonProgress,
@@ -547,6 +548,24 @@ function MainApp() {
     void firebaseSignOut(getAuth())
   }, [])
 
+  const todayContribution = useMemo(
+    () => todayStreakContribution({ dailyActivity, streak }),
+    [dailyActivity, streak],
+  )
+
+  const handlePlayReferenceCharacter = useCallback(
+    (char: Letter) => {
+      void playMorseTone({
+        code: MORSE_DATA[char].code,
+        characterWpm: REFERENCE_WPM,
+        effectiveWpm: REFERENCE_WPM,
+        minUnitMs: LISTEN_MIN_UNIT_MS,
+        frequency: toneFrequency,
+      })
+    },
+    [toneFrequency],
+  )
+
   const pointerPressActiveRef = useRef(false)
   const handleButtonPointerDown = useCallback(() => {
     if (pointerPressActiveRef.current) {
@@ -817,10 +836,10 @@ function MainApp() {
             bestWpm,
           })}
           streak={streak}
-          todayCorrect={
-            todayStreakContribution({ dailyActivity, streak }).correct
-          }
+          todayCorrect={todayContribution.correct}
+          streakAtRisk={todayContribution.atRisk}
           letterAccuracy={letterAccuracy}
+          onPlayCharacter={handlePlayReferenceCharacter}
           courseProgress={
             guidedCourseActive
               ? {

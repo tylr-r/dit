@@ -120,8 +120,10 @@ export interface ReferenceModalProps {
   hero: HeroMetric
   streak?: StreakState
   todayCorrect: number
+  streakAtRisk: boolean
   letterAccuracy?: LetterAccuracyRecord
   courseProgress?: ReferenceCourseProgress | null
+  onPlayCharacter?: (char: Letter) => void
 }
 
 export interface LearningSheetProps {
