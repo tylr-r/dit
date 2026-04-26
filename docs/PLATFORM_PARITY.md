@@ -49,10 +49,10 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Mnemonics toggle | ✅ | ✅ | |
 | One-time "Show this hint" (`N` key) | 🚫 | ✅ | Web-only keyboard affordance |
 | Practice Words (word mode) | ✅ | ✅ | |
-| Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ❌ | Field exists in core; web Settings has no toggle |
-| Sequential order toggle (`practiceLearnMode`) | ✅ | ❌ | Field exists in core; web Settings has no toggle |
-| IFR mode toggle | ✅ | ❌ | Web Settings has no toggle |
-| Review misses later toggle | ✅ | ❌ | Web Settings has no toggle |
+| Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ | Field exists in core; web Settings has no toggle |
+| Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ | Field exists in core; web Settings has no toggle |
+| IFR mode toggle | ✅ | ✅ | Web Settings has no toggle |
+| Review misses later toggle | ✅ | ✅ | Web Settings has no toggle |
 | Guided course phases (teach/practice) | ✅ | 🟡 | Verify web phase handling matches spec for misses |
 | Phase modal between phases/packs | ✅ | ✅ | Both have [PhaseModal.tsx](../apps/web/src/components/PhaseModal.tsx) |
 | "Return to lesson" button when off-mode | ✅ | ❓ | Needs verification on web |
@@ -89,13 +89,13 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Tone frequency | ✅ | ✅ | |
 | Sound check | ✅ | ✅ | |
 | Reference chart entry point | ✅ | ✅ | |
-| Auto-play sound (Practice) | ✅ | ❌ | |
-| Sequential order (Practice) | ✅ | ❌ | |
-| IFR mode | ✅ | ❌ | |
-| Review misses later | ✅ | ❌ | |
+| Auto-play sound (Practice) | ✅ | ✅ | |
+| Sequential order (Practice) | ✅ | ✅ | |
+| IFR mode | ✅ | ✅ | |
+| Review misses later | ✅ | ✅ | |
 | Daily reminder | ✅ | 🚫 | Native notifications; web has no equivalent surface |
-| Use recommended settings | ✅ | ❌ | Resets Practice toggles per `learnerProfile` |
-| Replay NUX | ✅ | ❌ | Web has no entry point to replay onboarding |
+| Use recommended settings | ✅ | ✅ | Resets Practice toggles per `learnerProfile` |
+| Replay NUX | ✅ | ✅ | Web has no entry point to replay onboarding |
 | Cloud sync (sign in) | ✅ | 🟡 | Web is Google-only (see [Auth](#auth--sign-in)) |
 | Delete account | ✅ | ❌ | |
 
@@ -118,9 +118,9 @@ The unified Learning sheet is the largest single missing surface on web. iOS com
 |---|---|---|---|
 | Letter/number cards with Morse patterns | ✅ | ✅ | |
 | Score-tinted cards | ✅ | ✅ | |
-| Hero metric (mastered count or best WPM) | ✅ | 🟡 | Web passes `letterAccuracy` and `bestWpm` to the modal ([App.tsx:741-748](../apps/web/src/App.tsx#L741-L748)); confirm hero rendering matches iOS profile-aware routing |
-| Current streak | ✅ | 🟡 | Both have data; verify web display |
-| Today's correct count | ✅ | 🟡 | `todayStreakContribution` is wired in web App.tsx; verify modal display |
+| Hero metric (mastered count or best WPM) | ✅ | ✅ | Web passes `letterAccuracy` and `bestWpm` to the modal ([App.tsx:741-748](../apps/web/src/App.tsx#L741-L748)); confirm hero rendering matches iOS profile-aware routing |
+| Current streak | ✅ | ✅ | Both have data; verify web display |
+| Today's correct count | ✅ | ✅ | `todayStreakContribution` is wired in web App.tsx; verify modal display |
 | Guided course banner (pack/phase/letters) | ✅ | ❌ | |
 | Tap card to play character | ✅ | ❌ | Web cards have no `onClick` for playback |
 | Streak "at risk" treatment | ✅ | ❌ | |
@@ -132,11 +132,11 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 | Metric | iOS computes | Web computes | iOS displays | Web displays |
 |---|---|---|---|---|
 | Per-letter score | ✅ | ✅ | ✅ | ✅ |
-| `letterAccuracy` (rolling correctness) | ✅ | ✅ | ✅ | 🟡 (passed in, verify usage) |
-| `bestWpm` | ✅ | ✅ | ✅ | 🟡 |
-| `dailyActivity` (per-day correct + modes) | ✅ | ✅ | ✅ | 🟡 |
+| `letterAccuracy` (rolling correctness) | ✅ | ✅ | ✅ | ✅ |
+| `bestWpm` | ✅ | ✅ | ✅ | ✅ |
+| `dailyActivity` (per-day correct + modes) | ✅ | ✅ | ✅ | ✅ |
 | `streak` (current + longest + at-risk) | ✅ | ✅ | ✅ | 🟡 |
-| `hero` metric routing by profile | ✅ | — | ✅ | 🟡 |
+| `hero` metric routing by profile | ✅ | — | ✅ | ✅ |
 
 ## Background behavior
 
