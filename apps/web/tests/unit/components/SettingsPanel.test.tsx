@@ -68,4 +68,56 @@ describe('SettingsPanel', () => {
       screen.getByRole('button', { name: /sound check/i }),
     ).toBeDisabled()
   })
+
+  it('renders the four Practice toggles outside Freestyle', () => {
+    render(<SettingsPanel {...baseProps} />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /auto-play sound/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /sequential order/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /immediate flow recovery/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /review misses later/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('hides Sequential order while the guided course is active', () => {
+    render(<SettingsPanel {...baseProps} guidedCourseActive />)
+
+    expect(
+      screen.queryByRole('checkbox', { name: /sequential order/i }),
+    ).toBeNull()
+  })
+
+  it('disables Sequential order while Practice Words is on', () => {
+    render(<SettingsPanel {...baseProps} practiceWordMode />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /sequential order/i }),
+    ).toBeDisabled()
+  })
+
+  it('disables Review misses later when IFR is off', () => {
+    render(<SettingsPanel {...baseProps} practiceIfrMode={false} />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /review misses later/i }),
+    ).toBeDisabled()
+  })
+
+  it('omits Practice toggles in Freestyle mode', () => {
+    render(<SettingsPanel {...baseProps} isFreestyle />)
+
+    expect(
+      screen.queryByRole('checkbox', { name: /auto-play sound/i }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('checkbox', { name: /immediate flow recovery/i }),
+    ).toBeNull()
+  })
 })
