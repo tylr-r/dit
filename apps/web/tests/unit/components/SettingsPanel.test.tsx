@@ -13,6 +13,16 @@ const baseProps: SettingsPanelProps = {
   listenWpmMin: 10,
   maxLevel: 2,
   practiceWordMode: false,
+  practiceAutoPlay: true,
+  practiceLearnMode: true,
+  practiceIfrMode: false,
+  practiceReviewMisses: false,
+  guidedCourseActive: false,
+  onPracticeAutoPlayChange: vi.fn(),
+  onPracticeLearnModeChange: vi.fn(),
+  onPracticeIfrModeChange: vi.fn(),
+  onPracticeReviewMissesChange: vi.fn(),
+  onUseRecommended: vi.fn(),
   onListenWpmChange: vi.fn(),
   onMaxLevelChange: vi.fn(),
   onPracticeWordModeChange: vi.fn(),
@@ -57,5 +67,82 @@ describe('SettingsPanel', () => {
     expect(
       screen.getByRole('button', { name: /sound check/i }),
     ).toBeDisabled()
+  })
+
+  it('renders the four Practice toggles outside Freestyle', () => {
+    render(<SettingsPanel {...baseProps} />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /auto-play sound/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /sequential order/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /immediate flow recovery/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: /review misses later/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('hides Sequential order while the guided course is active', () => {
+    render(<SettingsPanel {...baseProps} guidedCourseActive />)
+
+    expect(
+      screen.queryByRole('checkbox', { name: /sequential order/i }),
+    ).toBeNull()
+  })
+
+  it('disables Sequential order while Practice Words is on', () => {
+    render(<SettingsPanel {...baseProps} practiceWordMode />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /sequential order/i }),
+    ).toBeDisabled()
+  })
+
+  it('disables Review misses later when IFR is off', () => {
+    render(<SettingsPanel {...baseProps} practiceIfrMode={false} />)
+
+    expect(
+      screen.getByRole('checkbox', { name: /review misses later/i }),
+    ).toBeDisabled()
+  })
+
+  it('omits Practice toggles in Freestyle mode', () => {
+    render(<SettingsPanel {...baseProps} isFreestyle />)
+
+    expect(
+      screen.queryByRole('checkbox', { name: /auto-play sound/i }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('checkbox', { name: /immediate flow recovery/i }),
+    ).toBeNull()
+  })
+
+  it('renders Use recommended settings and fires its callback', () => {
+    const onUseRecommended = vi.fn()
+    render(<SettingsPanel {...baseProps} onUseRecommended={onUseRecommended} />)
+
+    const button = screen.getByRole('button', { name: /use recommended settings/i })
+    button.click()
+
+    expect(onUseRecommended).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders Replay onboarding only when onReplayNux is provided', () => {
+    const onReplayNux = vi.fn()
+    const { rerender } = render(<SettingsPanel {...baseProps} />)
+
+    expect(
+      screen.queryByRole('button', { name: /replay onboarding/i }),
+    ).toBeNull()
+
+    rerender(<SettingsPanel {...baseProps} onReplayNux={onReplayNux} />)
+
+    const button = screen.getByRole('button', { name: /replay onboarding/i })
+    button.click()
+    expect(onReplayNux).toHaveBeenCalledTimes(1)
   })
 })

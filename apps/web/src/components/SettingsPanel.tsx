@@ -3,6 +3,7 @@ import type { SettingsPanelProps } from './componentProps'
 /** Settings dropdown content and mode-specific controls. */
 export function SettingsPanel({
   freestyleWordMode,
+  guidedCourseActive,
   isFreestyle,
   isListen,
   levels,
@@ -10,6 +11,10 @@ export function SettingsPanel({
   listenWpmMax,
   listenWpmMin,
   maxLevel,
+  practiceAutoPlay,
+  practiceIfrMode,
+  practiceLearnMode,
+  practiceReviewMisses,
   practiceWordMode,
   toneFrequency,
   toneFrequencyMin,
@@ -18,7 +23,13 @@ export function SettingsPanel({
   onToneFrequencyChange,
   onListenWpmChange,
   onMaxLevelChange,
+  onPracticeAutoPlayChange,
+  onPracticeIfrModeChange,
+  onPracticeLearnModeChange,
+  onPracticeReviewMissesChange,
   onPracticeWordModeChange,
+  onUseRecommended,
+  onReplayNux,
   onShowAbout,
   onShowHintChange,
   onShowMnemonicChange,
@@ -109,6 +120,50 @@ export function SettingsPanel({
           ) : null}
         </div>
       ) : null}
+      {!isFreestyle && !isListen ? (
+        <div className="panel-group">
+          <label className="toggle">
+            <span className="toggle-label">Auto-play sound</span>
+            <input
+              className="toggle-input"
+              type="checkbox"
+              checked={practiceAutoPlay}
+              onChange={onPracticeAutoPlayChange}
+            />
+          </label>
+          {!guidedCourseActive ? (
+            <label className="toggle">
+              <span className="toggle-label">Sequential order</span>
+              <input
+                className="toggle-input"
+                type="checkbox"
+                checked={practiceLearnMode}
+                onChange={onPracticeLearnModeChange}
+                disabled={practiceWordMode}
+              />
+            </label>
+          ) : null}
+          <label className="toggle">
+            <span className="toggle-label">Immediate flow recovery</span>
+            <input
+              className="toggle-input"
+              type="checkbox"
+              checked={practiceIfrMode}
+              onChange={onPracticeIfrModeChange}
+            />
+          </label>
+          <label className="toggle">
+            <span className="toggle-label">Review misses later</span>
+            <input
+              className="toggle-input"
+              type="checkbox"
+              checked={practiceReviewMisses}
+              onChange={onPracticeReviewMissesChange}
+              disabled={!practiceIfrMode}
+            />
+          </label>
+        </div>
+      ) : null}
       <div className="panel-group">
         <label className="toggle">
           <span className="toggle-label">Tone pitch</span>
@@ -182,6 +237,24 @@ export function SettingsPanel({
           </span>
         </div>
       ) : null}
+      <div className="panel-group">
+        <button
+          type="button"
+          className="panel-button"
+          onClick={onUseRecommended}
+        >
+          Use recommended settings
+        </button>
+        {onReplayNux ? (
+          <button
+            type="button"
+            className="panel-button"
+            onClick={onReplayNux}
+          >
+            Replay onboarding
+          </button>
+        ) : null}
+      </div>
       <div className="auth">
         {user ? (
           <>
