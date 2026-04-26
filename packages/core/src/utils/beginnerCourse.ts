@@ -14,6 +14,10 @@ export const BEGINNER_COURSE_PACKS: readonly Letter[][] = [
   ['F', 'P'],
   ['V', 'X'],
   ['Q', 'Y', 'Z'],
+  // Digits split at the rhythmic mid-point: 1-5 are dots-then-dashes,
+  // 6-0 are dashes-then-dots. Each pack has a coherent rhythmic identity.
+  ['1', '2', '3', '4', '5'],
+  ['6', '7', '8', '9', '0'],
 ]
 
 export const BEGINNER_TEACH_TARGET_REPEATS = 2

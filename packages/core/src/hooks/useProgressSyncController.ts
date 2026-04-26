@@ -90,6 +90,8 @@ type UseProgressSyncControllerOptions = {
     setLetterAccuracy: Setter<LetterAccuracyRecord>
     setBestWpm: Setter<number | undefined>
     setReminder: Setter<ReminderSettings | undefined>
+    setGuidedMaxPackReached: Setter<number>
+    setCustomLetters: Setter<Letter[]>
   }
   refs: {
     scoresRef: RefValue<ProgressSnapshot['scores']>
@@ -352,6 +354,15 @@ export const useProgressSyncController = (options: UseProgressSyncControllerOpti
         state.setReminder(progress.reminder)
       }
 
+      if (typeof progress.guidedMaxPackReached === 'number') {
+        const next = Math.max(0, Math.round(progress.guidedMaxPackReached))
+        state.setGuidedMaxPackReached((prev) => Math.max(prev, next))
+      }
+
+      if (Array.isArray(progress.customLetters)) {
+        state.setCustomLetters(progress.customLetters)
+      }
+
       if (typeof progress.practiceWordMode === 'boolean') {
         refs.practiceWordModeRef.current = progress.practiceWordMode
         refs.practiceWordStartRef.current = null
@@ -437,6 +448,8 @@ export const useProgressSyncController = (options: UseProgressSyncControllerOpti
       state.setLetterAccuracy,
       state.setBestWpm,
       state.setReminder,
+      state.setGuidedMaxPackReached,
+      state.setCustomLetters,
     ],
   )
 

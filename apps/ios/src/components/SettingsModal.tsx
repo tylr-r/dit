@@ -23,8 +23,6 @@ import { colors, radii, spacing } from '../design/tokens'
 type SettingsModalProps = {
   isFreestyle: boolean
   isListen: boolean
-  levels: readonly number[]
-  maxLevel: number
   practiceWordMode: boolean
   practiceAutoPlay: boolean
   practiceLearnMode: boolean
@@ -44,7 +42,6 @@ type SettingsModalProps = {
   user: User | null
   isDeletingAccount: boolean
   onClose: () => void
-  onMaxLevelChange: (value: number) => void
   onPracticeWordModeChange: (value: boolean) => void
   onPracticeAutoPlayChange: (value: boolean) => void
   onPracticeLearnModeChange: (value: boolean) => void
@@ -57,6 +54,12 @@ type SettingsModalProps = {
   onReminderChange: (reminder: ReminderSettings | undefined) => void
   onUseRecommended: () => void
   onShowAbout: () => void
+  /**
+   * Fires when the user taps the "Learning ›" row. Parent dismisses
+   * Settings first, then opens the Learning sheet — same anti-stack
+   * pattern as the sign-in sheet.
+   */
+  onRequestLearning: () => void
   /**
    * Fires when the signed-out user taps the "Sign in" row. The parent is
    * expected to dismiss this modal before presenting the sign-in sheet so
@@ -160,8 +163,6 @@ const SettingsGroup = ({ children }: { children: React.ReactNode }) => (
 export function SettingsModal({
   isFreestyle,
   isListen,
-  levels,
-  maxLevel = 3,
   practiceWordMode,
   practiceAutoPlay,
   practiceLearnMode,
@@ -181,7 +182,6 @@ export function SettingsModal({
   user,
   isDeletingAccount,
   onClose,
-  onMaxLevelChange,
   onPracticeWordModeChange,
   onPracticeAutoPlayChange,
   onPracticeLearnModeChange,
@@ -194,6 +194,7 @@ export function SettingsModal({
   onReminderChange,
   onUseRecommended,
   onShowAbout,
+  onRequestLearning,
   onRequestSignIn,
   onSignOut,
   onDeleteAccount,
@@ -217,12 +218,7 @@ export function SettingsModal({
   const afterCloseActionRef = React.useRef<(() => void) | null>(null)
 
   const showFreestyleWordToggle = isFreestyle
-  const showMaxLevelControl = !isFreestyle
-  const hasControlsBeforePlaybackSpeed =
-    showFreestyleWordToggle || showMaxLevelControl
-  const maxLevelIndex = levels.indexOf(maxLevel)
-  const canDecreaseMaxLevel = maxLevelIndex > 0
-  const canIncreaseMaxLevel = maxLevelIndex < levels.length - 1
+  const hasControlsBeforePlaybackSpeed = showFreestyleWordToggle
   const [practiceSettingsExpanded, setPracticeSettingsExpanded] =
     React.useState(false)
   const [helperExpanded, setHelperExpanded] = React.useState(false)
@@ -444,71 +440,6 @@ export function SettingsModal({
                       />
                       <Text style={styles.helperText}>
                         Build a running word from decoded letters in Freestyle.
-                      </Text>
-                    </>
-                  ) : null}
-                  {showMaxLevelControl ? (
-                    <>
-                      {showFreestyleWordToggle ? (
-                        <View style={styles.separator} />
-                      ) : null}
-                      <View style={styles.row}>
-                        <View style={styles.stepperInfo}>
-                          <Text style={styles.rowLabel}>Max Difficulty</Text>
-                          <Text style={styles.stepperValue}>
-                            Level {maxLevel}
-                          </Text>
-                        </View>
-                        <View style={styles.stepperGroup} accessible={false}>
-                          <Pressable
-                            onPress={() => {
-                              const newLevel = levels[maxLevelIndex - 1]
-                              if (newLevel !== undefined) {
-                                onMaxLevelChange(newLevel)
-                              }
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Decrease max level"
-                            accessibilityHint={`Changes max difficulty to level ${
-                              levels[maxLevelIndex - 1] ?? maxLevel
-                            }`}
-                            disabled={!canDecreaseMaxLevel}
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              !canDecreaseMaxLevel &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>-</Text>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              const newLevel = levels[maxLevelIndex + 1]
-                              if (newLevel !== undefined) {
-                                onMaxLevelChange(newLevel)
-                              }
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Increase max level"
-                            accessibilityHint={`Changes max difficulty to level ${
-                              levels[maxLevelIndex + 1] ?? maxLevel
-                            }`}
-                            disabled={!canIncreaseMaxLevel}
-                            style={({ pressed }) => [
-                              styles.stepperButton,
-                              pressed && styles.stepperButtonPressed,
-                              !canIncreaseMaxLevel &&
-                                styles.stepperButtonDisabled,
-                            ]}
-                          >
-                            <Text style={styles.stepperButtonText}>+</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                      <Text style={styles.helperText}>
-                        Limits Practice and Listen to the characters in this
-                        level.
                       </Text>
                     </>
                   ) : null}
@@ -801,6 +732,27 @@ export function SettingsModal({
                 </SettingsGroup>
 
                 <SettingsGroup>
+                  <Pressable
+                    onPress={onRequestLearning}
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && styles.pressedOpacity,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Learning"
+                    accessibilityHint="Pick course or free practice and choose what letters you're working on"
+                  >
+                    <Text style={styles.rowLabel}>Learning</Text>
+                    <View style={styles.rowValueWrap}>
+                      <Text style={styles.rowValue}>
+                        {guidedCourseActive ? 'Course' : 'Open practice'}
+                      </Text>
+                      <Text style={styles.rowChevron}>›</Text>
+                    </View>
+                  </Pressable>
+                </SettingsGroup>
+
+                <SettingsGroup>
                   <ActionRow
                     text="Use recommended settings"
                     onPress={onUseRecommended}
@@ -1082,5 +1034,18 @@ const styles = StyleSheet.create({
     marginRight: spacing.xl,
     fontSize: 13,
     color: colors.text.primary60,
+  },
+  rowValueWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rowValue: {
+    color: colors.text.primary60,
+    fontSize: 14,
+  },
+  rowChevron: {
+    color: colors.text.primary40,
+    fontSize: 16,
   },
 })

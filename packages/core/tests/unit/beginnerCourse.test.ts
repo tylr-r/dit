@@ -15,8 +15,53 @@ import {
 describe('beginner course helpers', () => {
   it('returns the expected beginner pack ordering', () => {
     expect(BEGINNER_COURSE_PACKS[0]).toEqual(['E', 'T'])
-    expect(BEGINNER_COURSE_PACKS.at(-1)).toEqual(['Q', 'Y', 'Z'])
+    expect(BEGINNER_COURSE_PACKS[11]).toEqual(['Q', 'Y', 'Z'])
+    expect(BEGINNER_COURSE_PACKS[12]).toEqual(['1', '2', '3', '4', '5'])
+    expect(BEGINNER_COURSE_PACKS.at(-1)).toEqual(['6', '7', '8', '9', '0'])
     expect(getBeginnerCoursePack(2)).toEqual(['I', 'M'])
+  })
+
+  it('unlocks the full alphabet plus digits when the course completes', () => {
+    const finalUnlocked = getBeginnerUnlockedLetters(13)
+    for (const letter of [
+      'E',
+      'T',
+      'A',
+      'N',
+      'I',
+      'M',
+      'R',
+      'S',
+      'O',
+      'D',
+      'U',
+      'W',
+      'G',
+      'K',
+      'H',
+      'L',
+      'B',
+      'C',
+      'F',
+      'P',
+      'V',
+      'X',
+      'Q',
+      'Y',
+      'Z',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '0',
+    ]) {
+      expect(finalUnlocked).toContain(letter)
+    }
   })
 
   it('collects unlocked letters through the current pack', () => {

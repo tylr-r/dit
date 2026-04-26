@@ -262,6 +262,8 @@ export const useMorseSessionController = ({
   const [practiceReviewMisses, setPracticeReviewMisses] = useState(DEFAULT_PRACTICE_REVIEW_MISSES)
   const [guidedCourseActive, setGuidedCourseActive] = useState(false)
   const [guidedPackIndex, setGuidedPackIndex] = useState(0)
+  const [guidedMaxPackReached, setGuidedMaxPackReached] = useState(0)
+  const [customLetters, setCustomLetters] = useState<Letter[]>([])
   const [guidedPhase, setGuidedPhase] = useState<GuidedPhase>('teach')
   const [guidedProgress, setGuidedProgress] = useState<GuidedLessonProgress>(
     createGuidedLessonProgress(),
@@ -319,7 +321,12 @@ export const useMorseSessionController = ({
   const userForSync = isDeletingAccount ? null : user
   const isReferencePanelActive = showReference
   const availableLetters = useMemo(() => getLettersForLevel(maxLevel), [maxLevel])
-  const activeLetters = guidedCourseActive ? guidedUnlockedLetters : availableLetters
+  const customLettersActive = !guidedCourseActive && customLetters.length > 0
+  const activeLetters = guidedCourseActive
+    ? guidedUnlockedLetters
+    : customLettersActive
+      ? customLetters
+      : availableLetters
   const activeLetterSet = useMemo(() => new Set(activeLetters), [activeLetters])
   const availablePracticeWords = useMemo(
     () => getWordsForLetters(activeLetters),
@@ -358,6 +365,8 @@ export const useMorseSessionController = ({
         onboarding.nuxStatus === 'completed' || onboarding.nuxStatus === 'skipped'
           ? true
           : undefined,
+      guidedMaxPackReached: guidedMaxPackReached > 0 ? guidedMaxPackReached : undefined,
+      customLetters: customLetters.length > 0 ? customLetters : undefined,
     }),
     [
       bestWpm,
@@ -387,6 +396,8 @@ export const useMorseSessionController = ({
       showMnemonic,
       streak,
       onboarding.nuxStatus,
+      guidedMaxPackReached,
+      customLetters,
     ],
   )
 
@@ -464,6 +475,29 @@ export const useMorseSessionController = ({
     const nextLevel = getLevelForLetters(getBeginnerUnlockedLetters(packIndex))
     maxLevelRef.current = nextLevel
     setMaxLevel(nextLevel)
+  }, [])
+
+  // The guided course narrows maxLevel down to whatever its current pack
+  // requires (via syncGuidedLevel). When the user explicitly leaves guided
+  // mode we bump maxLevel back to the default so they immediately have the
+  // full free-practice letter set instead of being stranded on the narrow
+  // pack-driven cap.
+  const handleSetGuidedCourseActive = useCallback((next: boolean) => {
+    setGuidedCourseActive(next)
+    guidedCourseActiveRef.current = next
+    if (!next) {
+      setMaxLevel((prev) => (prev < DEFAULT_MAX_LEVEL ? DEFAULT_MAX_LEVEL : prev))
+      if (maxLevelRef.current < DEFAULT_MAX_LEVEL) {
+        maxLevelRef.current = DEFAULT_MAX_LEVEL
+      }
+    }
+  }, [])
+
+  // Setting a tier preset clears any prior custom selection so the chosen
+  // tier is the active scope; setting a custom selection that's empty falls
+  // back to the level-based scope.
+  const handleSelectCustomLetters = useCallback((letters: Letter[]) => {
+    setCustomLetters(letters)
   }, [])
 
   const applyKnownLearnerDefaults = useCallback(() => {
@@ -940,6 +974,8 @@ export const useMorseSessionController = ({
     setLearnerProfile(null)
     setGuidedCourseActive(false)
     setGuidedPackIndex(0)
+    setGuidedMaxPackReached(0)
+    setCustomLetters([])
     setGuidedPhase('teach')
     setGuidedProgress(createGuidedLessonProgress())
     setDidCompleteSoundCheck(false)
@@ -1024,6 +1060,7 @@ export const useMorseSessionController = ({
   const moveIntoGuidedLesson = useCallback(
     (nextPhase: GuidedPhase, nextPackIndex: number, nextProgress: GuidedLessonProgress) => {
       setGuidedPhaseState(nextPhase, nextPackIndex, nextProgress)
+      setGuidedMaxPackReached((prev) => Math.max(prev, nextPackIndex))
       setShowSettings(false)
       setShowAbout(false)
       setShowReference(false)
@@ -1046,6 +1083,7 @@ export const useMorseSessionController = ({
 
   const unlockNextGuidedPack = useCallback(() => {
     const nextPackIndex = guidedPackIndexRef.current + 1
+    setGuidedMaxPackReached((prev) => Math.max(prev, nextPackIndex))
     if (nextPackIndex >= BEGINNER_COURSE_PACKS.length) {
       const completedProgress = createGuidedLessonProgress()
       guidedCourseActiveRef.current = false
@@ -1972,6 +2010,8 @@ export const useMorseSessionController = ({
       setLetterAccuracy,
       setBestWpm,
       setReminder,
+      setGuidedMaxPackReached,
+      setCustomLetters,
     },
     refs: {
       scoresRef,
@@ -2154,6 +2194,8 @@ export const useMorseSessionController = ({
       practiceReviewMisses,
       guidedCourseActive,
       guidedPackIndex,
+      guidedMaxPackReached,
+      customLetters,
       guidedPhase,
       guidedProgress,
       maxLevel,
@@ -2181,6 +2223,7 @@ export const useMorseSessionController = ({
       setShowHint,
       setShowMnemonic,
       setPracticeAutoPlay,
+      setGuidedCourseActive,
       flushPendingSave,
     },
     derived: {
@@ -2226,6 +2269,8 @@ export const useMorseSessionController = ({
       handleIntroPressIn,
       handlePressOut,
       handleMaxLevelChange,
+      handleSetGuidedCourseActive,
+      handleSelectCustomLetters,
       moveIntoGuidedLesson,
       resetProgressState,
       ...onboardingActions,

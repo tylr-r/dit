@@ -41,6 +41,68 @@ The shared sheet implementation lives at `apps/ios/src/components/SignInSheet.ts
 - Cancel or error on the sign-in sheet returns to the welcome screen with both options still visible.
 - When a user is already signed in (e.g., replaying NUX from Settings), the two options are not rendered; the welcome screen keeps its single tap-anywhere advance so replay does not prompt for re-auth.
 
+#### Learning sheet (iOS)
+
+Settings exposes a single **Learning ›** disclosure row above the Account
+group. Tapping it dismisses Settings and opens the Learning sheet from the
+app root, which unifies what used to be two competing controls (the
+Guided Learning group and the Max Difficulty stepper).
+
+Inside the sheet:
+
+- A segmented control switches between **Course** and **Open practice**.
+  Bound to `guidedCourseActive`. Switching is instant; pack/phase/progress
+  state on one side and `maxLevel`/`customLetters` on the other are
+  preserved, so toggling back and forth never loses position.
+- **Course** mode lists all 14 beginner packs as a scrollable list. The
+  current pack is highlighted; packs whose index is below
+  `guidedMaxPackReached` render with a checkmark. Selecting a pack
+  ensures `guidedCourseActive` is `true` and runs `moveIntoGuidedLesson`
+  with a fresh `teach` phase. The sheet dismisses.
+- **Open practice** mode lists four named tier presets, mapped 1:1 to
+  the underlying frequency-tier `maxLevel` values, plus a fifth
+  "Pick your own" row for fine-grained control:
+    - Beginner letters (level 1): A E I M N T
+    - Common letters (level 2): adds D G K O R S U W
+    - Full alphabet (level 3): adds B C F H J L P Q V X Y Z
+    - Full alphabet + digits (level 4): adds 0 1 2 3 4 5 6 7 8 9
+    - Pick your own ›: opens a grid for character-level selection.
+
+  Selecting a tier flips `guidedCourseActive` to `false`, clears any
+  prior custom selection, and sets `maxLevel` directly to the tier's
+  level. The sheet dismisses.
+
+  **Pick your own** swaps the sheet content in-place to a grid of all 36
+  characters (A-Z plus 0-9). Each character is a tappable chip; the
+  count of selected characters is shown in the subtitle. The Apply
+  button persists the selection to a new `customLetters` field on
+  `Progress` / `ProgressSnapshot`, sets `guidedCourseActive` to `false`,
+  and dismisses the sheet. While `customLetters` is non-empty and
+  guided mode is off, `activeLetters` resolves to that custom set
+  instead of the level-derived set.
+
+The course ends with two digit packs split at the rhythmic mid-point:
+Pack 13 (1 2 3 4 5, dots-then-dashes) and Pack 14 (6 7 8 9 0,
+dashes-then-dots). The course-complete celebration fires after Pack 14.
+
+The "passed" state is tracked by `guidedMaxPackReached` — a single
+non-decreasing number persisted alongside `guidedPackIndex` in RTDB. It
+bumps whenever the course unlocks the next pack via
+`unlockNextGuidedPack` or the user selects a higher pack from the
+Learning sheet, and never decreases when the user selects an earlier
+pack. `Pack N` is shown as completed when its index is strictly less
+than `guidedMaxPackReached`.
+
+When the user leaves Course mode (via the segmented control or by
+selecting a free-practice tier directly), the existing
+`handleSetGuidedCourseActive(false)` semantics fire: `maxLevel` snaps
+back up to at least `DEFAULT_MAX_LEVEL` if the course had narrowed it,
+so the user is never stranded with only their current pack's letters in
+free practice.
+
+Settings closes before the picker opens so the two sheets never stack.
+The picker is rendered at the app root so it survives Settings unmounting.
+
 #### `nuxCompleted` flag
 
 - Stored at `users/{uid}/progress/nuxCompleted: boolean` in Firebase RTDB, inside the existing progress object.

@@ -79,6 +79,8 @@ export type Progress = {
   bestWpm?: number
   reminder?: ReminderSettings
   nuxCompleted?: boolean
+  guidedMaxPackReached?: number
+  customLetters?: Letter[]
 }
 
 export type ProgressSnapshot = {
@@ -109,6 +111,8 @@ export type ProgressSnapshot = {
   bestWpm?: number
   reminder?: ReminderSettings
   nuxCompleted?: boolean
+  guidedMaxPackReached?: number
+  customLetters?: Letter[]
 }
 
 export type ParseProgressOptions = {

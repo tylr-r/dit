@@ -1,8 +1,8 @@
 import {
   BEGINNER_COURSE_PACKS,
   computeHero,
+  createGuidedLessonProgress,
   DEFAULT_CHARACTER_WPM,
-  LEVELS,
   LISTEN_MIN_UNIT_MS,
   LISTEN_WPM_MAX,
   LISTEN_WPM_MIN,
@@ -38,6 +38,7 @@ import { MorseLiquidSurface } from './src/components/MorseLiquidSurface'
 import { NuxModal } from './src/components/NuxModal'
 import { PhaseModal } from './src/components/PhaseModal'
 import { ReferenceModalSheet } from './src/components/ReferenceModalSheet'
+import { LearningSheet } from './src/components/LearningSheet'
 import { SettingsModal } from './src/components/SettingsModal'
 import { SignInSheet } from './src/components/SignInSheet'
 import { StageDisplay } from './src/components/StageDisplay'
@@ -101,6 +102,7 @@ function AppShell() {
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [settingsSignInSheetVisible, setSettingsSignInSheetVisible] = useState(false)
+  const [learningSheetVisible, setLearningSheetVisible] = useState(false)
 
   const session = useMorseSessionController({
     user,
@@ -205,6 +207,56 @@ function AppShell() {
     }
   }, [settingsSignInSheetVisible, user])
 
+  // Settings must close before the learning sheet opens so the two
+  // surfaces never stack. Same pattern as the sign-in sheet — Settings
+  // unmounts and the sheet is rendered at the app root so it survives.
+  const handleRequestLearning = useCallback(() => {
+    setters.flushPendingSave()
+    setShowSettings(false)
+    requestAnimationFrame(() => {
+      setLearningSheetVisible(true)
+    })
+  }, [setters])
+
+  const handleDismissLearning = useCallback(() => {
+    setLearningSheetVisible(false)
+  }, [])
+
+  const handleSelectPack = useCallback(
+    (packIndex: number) => {
+      setters.setGuidedCourseActive(true)
+      handlers.moveIntoGuidedLesson(
+        'teach',
+        packIndex,
+        createGuidedLessonProgress(),
+      )
+      setLearningSheetVisible(false)
+    },
+    [handlers, setters],
+  )
+
+  const handleSelectTier = useCallback(
+    (level: number) => {
+      handlers.handleSetGuidedCourseActive(false)
+      // Picking a tier preset clears any prior custom selection so the
+      // tier becomes the active scope.
+      handlers.handleSelectCustomLetters([])
+      handlers.handleMaxLevelChange(level)
+      setLearningSheetVisible(false)
+    },
+    [handlers],
+  )
+
+  const handleSelectCustomLetters = useCallback(
+    (letters: string[]) => {
+      handlers.handleSetGuidedCourseActive(false)
+      handlers.handleSelectCustomLetters(letters as Parameters<
+        typeof handlers.handleSelectCustomLetters
+      >[0])
+    },
+    [handlers],
+  )
+
   const {
     reminder,
     streak,
@@ -283,8 +335,6 @@ function AppShell() {
             <SettingsModal
               isFreestyle={derived.isFreestyle}
               isListen={derived.isListen}
-              levels={LEVELS}
-              maxLevel={state.maxLevel}
               practiceWordMode={derived.isFreestyle ? state.freestyleWordMode : state.practiceWordMode}
               practiceAutoPlay={state.practiceAutoPlay}
               practiceLearnMode={state.practiceLearnMode}
@@ -306,7 +356,6 @@ function AppShell() {
                 setters.flushPendingSave()
                 setShowSettings(false)
               }}
-              onMaxLevelChange={handlers.handleMaxLevelChange}
               onPracticeWordModeChange={handlers.handlePracticeWordModeChange}
               onPracticeAutoPlayChange={setters.setPracticeAutoPlay}
               onPracticeLearnModeChange={handlers.handlePracticeLearnModeChange}
@@ -320,6 +369,7 @@ function AppShell() {
               onUseRecommended={handlers.handleUseRecommended}
               onShowAbout={handleShowAbout}
               user={user}
+              onRequestLearning={handleRequestLearning}
               onRequestSignIn={handleRequestSignInFromSettings}
               onSignOut={signOut}
               onDeleteAccount={handlers.handleDeleteAccount}
@@ -525,6 +575,19 @@ function AppShell() {
         onSignInWithGoogle={handlers.handleSignInWithGoogle}
         onSignInWithEmail={handlers.handleSignInWithEmail}
         onCreateAccountWithEmail={handlers.handleCreateAccountWithEmail}
+      />
+      <LearningSheet
+        visible={learningSheetVisible}
+        guidedCourseActive={state.guidedCourseActive}
+        guidedPackIndex={state.guidedPackIndex}
+        guidedMaxPackReached={state.guidedMaxPackReached}
+        maxLevel={state.maxLevel}
+        customLetters={state.customLetters}
+        onDismiss={handleDismissLearning}
+        onSelectPack={handleSelectPack}
+        onSelectTier={handleSelectTier}
+        onSelectCustomLetters={handleSelectCustomLetters}
+        onSetGuidedCourseActive={handlers.handleSetGuidedCourseActive}
       />
       <StatusBar style="light" />
     </SafeAreaProvider>

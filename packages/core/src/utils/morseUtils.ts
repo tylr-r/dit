@@ -520,6 +520,19 @@ export const parseProgress = (
   if (typeof record.nuxCompleted === 'boolean') {
     progress.nuxCompleted = record.nuxCompleted
   }
+  if (
+    typeof record.guidedMaxPackReached === 'number' &&
+    Number.isFinite(record.guidedMaxPackReached)
+  ) {
+    progress.guidedMaxPackReached = Math.max(0, Math.round(record.guidedMaxPackReached))
+  }
+  if (Array.isArray(record.customLetters)) {
+    const valid = record.customLetters.filter(
+      (entry): entry is Letter =>
+        typeof entry === 'string' && Object.prototype.hasOwnProperty.call(MORSE_DATA, entry),
+    )
+    progress.customLetters = Array.from(new Set(valid))
+  }
   return progress
 }
 
