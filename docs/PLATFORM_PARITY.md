@@ -20,10 +20,10 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Google sign-in | ✅ | ✅ | iOS uses native flow; web uses Firebase popup |
-| Apple sign-in | ✅ | ❌ | iOS: [SignInSheet.tsx](../apps/ios/src/components/SignInSheet.tsx). Web has no equivalent. |
-| Email + password | ✅ | ❌ | iOS: bottom-sheet form with the collapsed-error string per spec |
-| Shared sign-in sheet | ✅ | ❌ | iOS: NUX welcome and Settings both open the same sheet at the app root |
-| Delete account | ✅ | ❌ | iOS: [services/auth.ts](../apps/ios/src/services/auth.ts) `prepareAppleAccountDeletion` |
+| Apple sign-in | ✅ | ✅ | Web uses Firebase OAuthProvider('apple.com') with popup and redirect fallback |
+| Email + password | ✅ | ✅ | Sign in + create account with the collapsed bad-credential message |
+| Shared sign-in sheet | ✅ | ✅ | Web sheet wired in Settings; NUX welcome reuse comes in PR5 |
+| Delete account | ✅ | ✅ | Web has no native session to revoke; Firebase deleteUser handles it |
 | Sign out | ✅ | ✅ | |
 
 ## NUX & onboarding
@@ -96,8 +96,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Daily reminder | ✅ | 🚫 | Native notifications; web has no equivalent surface |
 | Use recommended settings | ✅ | ✅ | Resets Practice toggles per `learnerProfile` |
 | Replay NUX | ✅ | ✅ | Web exposes the action only in dev builds (per __DEV__/import.meta.env.DEV gating) |
-| Cloud sync (sign in) | ✅ | 🟡 | Web is Google-only (see [Auth](#auth--sign-in)) |
-| Delete account | ✅ | ❌ | |
+| Cloud sync (sign in) | ✅ | ✅ | Apple, Google, Email all available |
+| Delete account | ✅ | ✅ | |
 
 ## Learning configuration
 
