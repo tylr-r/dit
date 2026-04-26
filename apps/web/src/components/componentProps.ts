@@ -134,3 +134,13 @@ export interface LearningSheetProps {
   onSelectCustomLetters: (letters: Letter[]) => void
   onSetGuidedCourseActive: (active: boolean) => void
 }
+
+export type EmailResult = { ok: true } | { ok: false; error: string }
+
+export interface SignInSheetProps {
+  onClose: () => void
+  onSignInWithApple: () => Promise<void>
+  onSignInWithGoogle: () => Promise<void>
+  onSignInWithEmail: (email: string, password: string) => Promise<EmailResult>
+  onCreateAccountWithEmail: (email: string, password: string) => Promise<EmailResult>
+}
