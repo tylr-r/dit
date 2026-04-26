@@ -158,6 +158,10 @@ function MainApp() {
     guidedCourseActive,
     guidedPackIndex,
     guidedPhase,
+    practiceAutoPlay,
+    practiceLearnMode,
+    practiceIfrMode,
+    practiceReviewMisses,
   } = state
   const {
     isFreestyle,
@@ -456,6 +460,42 @@ function MainApp() {
     [handlers],
   )
 
+  const handlePracticeAutoPlayToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setters.setPracticeAutoPlay(event.target.checked)
+    },
+    [setters],
+  )
+
+  const handlePracticeLearnModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlers.handlePracticeLearnModeChange(event.target.checked)
+    },
+    [handlers],
+  )
+
+  const handlePracticeIfrModeToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlers.handlePracticeIfrModeChange(event.target.checked)
+    },
+    [handlers],
+  )
+
+  const handlePracticeReviewMissesToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handlers.handlePracticeReviewMissesChange(event.target.checked)
+    },
+    [handlers],
+  )
+
+  const handleUseRecommended = useCallback(() => {
+    handlers.handleUseRecommended()
+  }, [handlers])
+
+  const handleReplayNux = useCallback(() => {
+    onboarding.persistNuxStatus('pending')
+  }, [onboarding])
+
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
       return
@@ -649,6 +689,17 @@ function MainApp() {
               authReady={authReady}
               onSignIn={handleSignIn}
               onSignOut={handleSignOut}
+              practiceAutoPlay={practiceAutoPlay}
+              practiceLearnMode={practiceLearnMode}
+              practiceIfrMode={practiceIfrMode}
+              practiceReviewMisses={practiceReviewMisses}
+              guidedCourseActive={guidedCourseActive}
+              onPracticeAutoPlayChange={handlePracticeAutoPlayToggle}
+              onPracticeLearnModeChange={handlePracticeLearnModeToggle}
+              onPracticeIfrModeChange={handlePracticeIfrModeToggle}
+              onPracticeReviewMissesChange={handlePracticeReviewMissesToggle}
+              onUseRecommended={handleUseRecommended}
+              onReplayNux={import.meta.env.DEV ? handleReplayNux : undefined}
             />
           ) : null}
         </div>

@@ -82,6 +82,17 @@ export interface SettingsPanelProps {
   showHint: boolean
   showMnemonic: boolean
   soundCheckStatus: 'idle' | 'playing'
+  practiceAutoPlay: boolean
+  practiceLearnMode: boolean
+  practiceIfrMode: boolean
+  practiceReviewMisses: boolean
+  guidedCourseActive: boolean
+  onPracticeAutoPlayChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onPracticeLearnModeChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onPracticeIfrModeChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onPracticeReviewMissesChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onUseRecommended: () => void
+  onReplayNux?: () => void
   user: FirebaseUser | null
   userLabel: string
   userInitial: string

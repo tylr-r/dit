@@ -20,7 +20,8 @@
 - TypeScript + React codebase; prefer 2-space indentation, single quotes, and no semicolons.
 - Exported components should include concise JSDoc (see `STYLE_GUIDE.md`).
 - Component files use `PascalCase.tsx`; hooks follow the `useThing` naming convention.
-- Reference `APP_BEHAVIOR.md` when changing app logic or flows to keep behavior consistent across platforms.
+- Reference `docs/APP_BEHAVIOR.md` when changing app logic or flows to keep behavior consistent across platforms.
+- Reference `docs/PLATFORM_PARITY.md` for the current iOS vs web feature delta and intentional differences. Update it when you close (or open) a gap.
 - Reference `design.md` before making UI, motion, or onboarding changes — it's the canonical source for visual/interaction direction and notes what we've tried and removed.
 
 ## Testing Guidelines
