@@ -157,7 +157,6 @@ These are not gaps. Don't open tickets to "fix" them.
 - **Daily local notification** — depends on iOS notification permissions; web has no equivalent app-foreground story
 - **Low Power Mode / idle animation pause** — iOS battery story
 - **Native date picker for reminder** — paired with the iOS-only reminder feature
-- **Sign in with Apple** — Apple-only provider
 
 ### Web-only by design
 

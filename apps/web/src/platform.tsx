@@ -97,6 +97,14 @@ const isPopupFallbackError = (error: unknown) =>
   (error.code === 'auth/popup-blocked' ||
     error.code === 'auth/operation-not-supported-in-this-environment')
 
+const isUserCancelledPopup = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error.code === 'auth/popup-closed-by-user' ||
+    error.code === 'auth/cancelled-popup-request' ||
+    error.code === 'auth/user-cancelled')
+
 const authAdapter: AuthAdapter = {
   signInWithGoogle: async () => {
     const auth = getAuth()
@@ -104,6 +112,9 @@ const authAdapter: AuthAdapter = {
     try {
       await signInWithPopup(auth, provider)
     } catch (error) {
+      if (isUserCancelledPopup(error)) {
+        return
+      }
       if (isPopupFallbackError(error)) {
         await signInWithRedirect(auth, provider)
         return
@@ -119,6 +130,9 @@ const authAdapter: AuthAdapter = {
     try {
       await signInWithPopup(auth, provider)
     } catch (error) {
+      if (isUserCancelledPopup(error)) {
+        return
+      }
       if (isPopupFallbackError(error)) {
         await signInWithRedirect(auth, provider)
         return

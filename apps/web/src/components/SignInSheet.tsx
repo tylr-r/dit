@@ -50,13 +50,16 @@ export function SignInSheet({
     setError(null)
     setSubmitting(true)
     const fn = mode === 'sign-in' ? onSignInWithEmail : onCreateAccountWithEmail
-    const result = await fn(email, password)
-    setSubmitting(false)
-    if (result.ok) {
-      handleClose()
-      return
+    try {
+      const result = await fn(email, password)
+      if (result.ok) {
+        handleClose()
+        return
+      }
+      setError(result.error)
+    } finally {
+      setSubmitting(false)
     }
-    setError(result.error)
   }
 
   return (
@@ -122,6 +125,7 @@ export function SignInSheet({
                 <button
                   type="button"
                   className="sign-in-provider"
+                  disabled={submitting}
                   onClick={() => {
                     setError(null)
                     setView('email')
