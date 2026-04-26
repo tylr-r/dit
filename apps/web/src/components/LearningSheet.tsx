@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { BEGINNER_COURSE_PACKS, type Letter } from '@dit/core'
 import type { LearningSheetProps } from './componentProps'
 
@@ -46,12 +46,6 @@ export function LearningSheet({
   const [draftSelection, setDraftSelection] = useState<readonly Letter[]>(
     customLetters,
   )
-
-  useEffect(() => {
-    if (view === 'custom') {
-      setDraftSelection(customLetters)
-    }
-  }, [view, customLetters])
 
   const handleSegmentChange = (next: 'course' | 'open') => {
     setView(next)
@@ -167,7 +161,10 @@ export function LearningSheet({
                 <button
                   type="button"
                   className={`learning-row ${customLetters.length > 0 ? 'is-selected' : ''}`}
-                  onClick={() => setView('custom')}
+                  onClick={() => {
+                    setDraftSelection(customLetters)
+                    setView('custom')
+                  }}
                 >
                   <span className="learning-row-text">
                     <span className="learning-row-title">Pick your own</span>
