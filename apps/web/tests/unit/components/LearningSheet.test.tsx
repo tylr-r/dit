@@ -30,9 +30,12 @@ describe('LearningSheet', () => {
     expect(screen.getByTestId('learning-course-placeholder')).toBeInTheDocument()
   })
 
-  it('starts on Open practice when guidedCourseActive is false', () => {
+  it('renders four tier rows in Open practice view', () => {
     render(<LearningSheet {...baseProps} />)
-    expect(screen.getByTestId('learning-open-placeholder')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /beginner letters/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /common letters/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /full alphabet adds b/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /full alphabet \+ digits/i })).toBeInTheDocument()
   })
 
   it('calls onSetGuidedCourseActive(true) when switching to Course', () => {
@@ -65,5 +68,41 @@ describe('LearningSheet', () => {
     render(<LearningSheet {...baseProps} onClose={onClose} />)
     screen.getByRole('button', { name: /^close$/i }).click()
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('marks the current tier as selected when no custom letters', () => {
+    render(<LearningSheet {...baseProps} maxLevel={2} />)
+    const button = screen.getByRole('button', { name: /common letters/i })
+    expect(button.className).toContain('is-selected')
+  })
+
+  it('does not mark any tier when custom letters are set', () => {
+    render(
+      <LearningSheet {...baseProps} maxLevel={2} customLetters={['A', 'B']} />,
+    )
+    const button = screen.getByRole('button', { name: /common letters/i })
+    expect(button.className).not.toContain('is-selected')
+  })
+
+  it('calls onSelectTier and onClose when a tier is chosen', () => {
+    const onSelectTier = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LearningSheet
+        {...baseProps}
+        onSelectTier={onSelectTier}
+        onClose={onClose}
+      />,
+    )
+    screen.getByRole('button', { name: /full alphabet \+ digits/i }).click()
+    expect(onSelectTier).toHaveBeenCalledWith(4)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the Pick your own row with selected count', () => {
+    render(<LearningSheet {...baseProps} customLetters={['A', 'B', 'C']} />)
+    expect(
+      screen.getByRole('button', { name: /pick your own/i }),
+    ).toHaveTextContent(/3 characters selected/i)
   })
 })
