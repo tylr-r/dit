@@ -48,3 +48,18 @@ docs/private/
 # Claude
 .claude/
 .superpowers/
+
+# Apple / Play Store signing material
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.jks
+*.keystore
+AuthKey_*.p8
+
+# Build outputs
+*.ipa
+*.apk
+*.aab
+coverage/
