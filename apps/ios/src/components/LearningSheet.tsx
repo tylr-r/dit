@@ -147,7 +147,7 @@ export function LearningSheet({
 
         {view === 'modes' ? (
           <>
-            <Text style={styles.title}>Learning</Text>
+            <Text style={styles.title}>Learning method</Text>
             <Text style={styles.subtitle}>How you want to practice.</Text>
 
             <View style={styles.segmented}>

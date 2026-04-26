@@ -563,6 +563,27 @@ export function SettingsModal({
                 </SettingsGroup>
 
                 <SettingsGroup>
+                  <Pressable
+                    onPress={onRequestLearning}
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && styles.pressedOpacity,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Learning method"
+                    accessibilityHint="Pick course or free practice and choose what letters you're working on"
+                  >
+                    <Text style={styles.rowLabel}>Learning method</Text>
+                    <View style={styles.rowValueWrap}>
+                      <Text style={styles.rowValue}>
+                        {guidedCourseActive ? 'Course' : 'Open practice'}
+                      </Text>
+                      <Text style={styles.rowChevron}>›</Text>
+                    </View>
+                  </Pressable>
+                </SettingsGroup>
+
+                <SettingsGroup>
                   {!isPractice ? (
                     <Pressable
                       onPress={() =>
@@ -729,27 +750,6 @@ export function SettingsModal({
                   <Text style={styles.helperText}>
                     One nudge per day, skipped once you hit today's goal.
                   </Text>
-                </SettingsGroup>
-
-                <SettingsGroup>
-                  <Pressable
-                    onPress={onRequestLearning}
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.pressedOpacity,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Learning"
-                    accessibilityHint="Pick course or free practice and choose what letters you're working on"
-                  >
-                    <Text style={styles.rowLabel}>Learning</Text>
-                    <View style={styles.rowValueWrap}>
-                      <Text style={styles.rowValue}>
-                        {guidedCourseActive ? 'Course' : 'Open practice'}
-                      </Text>
-                      <Text style={styles.rowChevron}>›</Text>
-                    </View>
-                  </Pressable>
                 </SettingsGroup>
 
                 <SettingsGroup>
