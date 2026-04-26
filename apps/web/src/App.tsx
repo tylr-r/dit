@@ -699,7 +699,7 @@ function MainApp() {
               onPracticeIfrModeChange={handlePracticeIfrModeToggle}
               onPracticeReviewMissesChange={handlePracticeReviewMissesToggle}
               onUseRecommended={handleUseRecommended}
-              onReplayNux={handleReplayNux}
+              onReplayNux={import.meta.env.DEV ? handleReplayNux : undefined}
             />
           ) : null}
         </div>

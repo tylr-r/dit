@@ -49,13 +49,13 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Mnemonics toggle | ✅ | ✅ | |
 | One-time "Show this hint" (`N` key) | 🚫 | ✅ | Web-only keyboard affordance |
 | Practice Words (word mode) | ✅ | ✅ | |
-| Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ | Field exists in core; web Settings has no toggle |
-| Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ | Field exists in core; web Settings has no toggle |
-| IFR mode toggle | ✅ | ✅ | Web Settings has no toggle |
-| Review misses later toggle | ✅ | ✅ | Web Settings has no toggle |
+| Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ |  |
+| Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ |  |
+| IFR mode toggle | ✅ | ✅ |  |
+| Review misses later toggle | ✅ | ✅ |  |
 | Guided course phases (teach/practice) | ✅ | 🟡 | Verify web phase handling matches spec for misses |
 | Phase modal between phases/packs | ✅ | ✅ | Both have [PhaseModal.tsx](../apps/web/src/components/PhaseModal.tsx) |
-| "Return to lesson" button when off-mode | ✅ | ❓ | Needs verification on web |
+| "Return to lesson" button when off-mode | ✅ | ✅ |  |
 
 ## Listen mode
 
@@ -95,7 +95,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Review misses later | ✅ | ✅ | |
 | Daily reminder | ✅ | 🚫 | Native notifications; web has no equivalent surface |
 | Use recommended settings | ✅ | ✅ | Resets Practice toggles per `learnerProfile` |
-| Replay NUX | ✅ | ✅ | Web has no entry point to replay onboarding |
+| Replay NUX | ✅ | ✅ | Web exposes the action only in dev builds (per __DEV__/import.meta.env.DEV gating) |
 | Cloud sync (sign in) | ✅ | 🟡 | Web is Google-only (see [Auth](#auth--sign-in)) |
 | Delete account | ✅ | ❌ | |
 
