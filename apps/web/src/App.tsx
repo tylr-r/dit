@@ -492,8 +492,8 @@ function MainApp() {
   }, [handlers])
 
   const handleReplayNux = useCallback(() => {
-    onboarding.persistNuxStatus('pending')
-  }, [onboarding])
+    handlers.handleReplayNux()
+  }, [handlers])
 
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
