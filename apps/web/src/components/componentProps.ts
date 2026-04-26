@@ -95,7 +95,9 @@ export interface SettingsPanelProps {
   userLabel: string
   userInitial: string
   authReady: boolean
-  onSignIn: () => void
+  onShowSignIn: () => void
+  onDeleteAccount: () => void
+  isDeletingAccount: boolean
   onSignOut: () => void
 }
 

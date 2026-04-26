@@ -2616,3 +2616,12 @@
   cursor: pointer;
   padding: 0 8px;
 }
+
+.auth-button-destructive {
+  color: var(--error, #ff5a60);
+  border-color: var(--color-border-error, rgba(255, 90, 96, 0.4));
+}
+
+.auth-button-destructive:hover:not(:disabled) {
+  border-color: var(--color-border-error-strong, rgba(255, 90, 96, 0.7));
+}
