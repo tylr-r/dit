@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { Footer } from './components/Footer'
+import { LearningSheet } from './components/LearningSheet'
 import {
   PrivacyPolicy,
   SupportPage,
@@ -25,6 +26,7 @@ import {
   REFERENCE_NUMBERS,
   TONE_FREQUENCY_RANGE,
   computeHero,
+  createGuidedLessonProgress,
   todayStreakContribution,
   useMorseSessionController,
   useOnboardingState,
@@ -41,8 +43,6 @@ import {
   stopMorseTone,
   stopTone,
 } from './utils/tone'
-
-const LEVELS = [1, 2, 3, 4] as const
 
 const playOnboardingTone = (symbol: '.' | '-') => {
   void playMorseTone({
@@ -112,6 +112,7 @@ function MainApp() {
     usePhaseModalState()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showLearning, setShowLearning] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
@@ -157,6 +158,8 @@ function MainApp() {
     dailyActivity,
     guidedCourseActive,
     guidedPackIndex,
+    guidedMaxPackReached,
+    customLetters,
     guidedPhase,
     practiceAutoPlay,
     practiceLearnMode,
@@ -411,13 +414,6 @@ function MainApp() {
     [handlers],
   )
 
-  const handleMaxLevelSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handlers.handleMaxLevelChange(Number(event.target.value))
-    },
-    [handlers],
-  )
-
   const handleListenWpmSelectChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
       handlers.handleListenWpmChange(Number(event.target.value))
@@ -664,9 +660,7 @@ function MainApp() {
               onShowMnemonicChange={handleShowMnemonicToggle}
               isFreestyle={isFreestyle}
               isListen={isListen}
-              levels={LEVELS}
-              maxLevel={state.maxLevel}
-              onMaxLevelChange={handleMaxLevelSelectChange}
+              onShowLearning={() => setShowLearning(true)}
               practiceWordMode={practiceWordMode}
               onPracticeWordModeChange={handlePracticeWordModeToggle}
               listenWpm={listenWpm}
@@ -807,6 +801,29 @@ function MainApp() {
                 }
               : null
           }
+        />
+      ) : null}
+      {showLearning ? (
+        <LearningSheet
+          guidedCourseActive={guidedCourseActive}
+          guidedPackIndex={guidedPackIndex}
+          guidedMaxPackReached={guidedMaxPackReached}
+          maxLevel={state.maxLevel}
+          customLetters={customLetters}
+          onClose={() => setShowLearning(false)}
+          onSelectPack={(packIndex) => {
+            handlers.moveIntoGuidedLesson('teach', packIndex, createGuidedLessonProgress())
+          }}
+          onSelectTier={(level) => {
+            handlers.handleSetGuidedCourseActive(false)
+            handlers.handleSelectCustomLetters([])
+            handlers.handleMaxLevelChange(level)
+          }}
+          onSelectCustomLetters={(letters) => {
+            handlers.handleSetGuidedCourseActive(false)
+            handlers.handleSelectCustomLetters(letters)
+          }}
+          onSetGuidedCourseActive={handlers.handleSetGuidedCourseActive}
         />
       ) : null}
       {phaseModal ? (

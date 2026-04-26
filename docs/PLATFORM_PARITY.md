@@ -101,15 +101,13 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 ## Learning configuration
 
-The unified Learning sheet is the largest single missing surface on web. iOS combines what used to be two competing controls; web still exposes only `maxLevel` as a stepper.
-
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Unified Learning sheet | ✅ | ❌ | iOS: [LearningSheet.tsx](../apps/ios/src/components/LearningSheet.tsx) |
-| Course / Open practice segmented control | ✅ | ❌ | |
-| Pack list with current + completed marks | ✅ | 🟡 | Verify web's guided-course UI surfaces the pack list |
-| Tier presets (Beginner / Common / Full / Full+digits) | ✅ | ❌ | |
-| "Pick your own" custom-letters grid | ✅ | ❌ | `customLetters` field already in core; web has no UI to set it |
+| Unified Learning sheet | ✅ | ✅ | |
+| Course / Open practice segmented control | ✅ | ✅ | |
+| Pack list with current + completed marks | ✅ | ✅ | |
+| Tier presets (Beginner / Common / Full / Full+digits) | ✅ | ✅ | |
+| "Pick your own" custom-letters grid | ✅ | ✅ | |
 | `guidedMaxPackReached` tracking | ✅ | ✅ | Shared via core |
 
 ## Reference modal
