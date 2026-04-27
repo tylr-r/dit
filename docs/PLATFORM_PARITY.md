@@ -34,9 +34,9 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
 | Sound check | ✅ | ✅ | |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
-| Welcome-screen sign-in options | ✅ | ❌ | Web has no Sign-in / Stay-signed-out fork on welcome |
+| Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the SignInSheet from PR3 |
 | Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped at [NuxModal.tsx:92-95](../apps/web/src/components/NuxModal.tsx#L92-L95) |
-| Known-user app tour | ✅ | ❌ | iOS: [tour/TourOverlay.tsx](../apps/ios/src/components/tour/TourOverlay.tsx). Web shows static text. |
+| Known-user app tour | ✅ | ✅ | Web tour spotlights real header elements via getBoundingClientRect + portal |
 | `nuxCompleted` persisted to RTDB | ✅ | ✅ | |
 
 ## Practice mode
