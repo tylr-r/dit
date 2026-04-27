@@ -333,6 +333,8 @@ export function NuxModal({
             </>
           ) : null}
 
+          {/* Dead branch: known_tour is handled by TourOverlay (App.tsx); NuxModal
+              is unmounted before this step is reached. Kept as spec reference. */}
           {displayedStep === 'known_tour' ? (
             <>
               <div className="nux-copy">
@@ -397,6 +399,7 @@ export function NuxModal({
               Continue
             </button>
           ) : null}
+          {/* Dead branch: see comment above. TourOverlay calls onFinishKnownTour. */}
           {displayedStep === 'known_tour' ? (
             <button type="button" className="nux-cta" onClick={onFinishKnownTour}>
               Start practicing

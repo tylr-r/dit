@@ -658,7 +658,9 @@ function MainApp() {
     <div
       className={`app status-idle mode-${mode}${
         isListen && useCustomKeyboard ? ' listen-focused' : ''
-      }${isNuxActive ? ' nux-active' : ''}`}
+      }${isNuxActive ? ' nux-active' : ''}${
+        isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
+      }`}
     >
       <header className="top-bar">
         <div className="logo">

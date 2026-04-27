@@ -2265,6 +2265,10 @@
   visibility: hidden;
 }
 
+.app.nux-tour-active > .top-bar {
+  visibility: visible;
+}
+
 /* ─── Listen mode visuals ────────────────────────────────────────── */
 
 .listen-visual {
