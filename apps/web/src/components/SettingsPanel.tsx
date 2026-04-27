@@ -6,11 +6,9 @@ export function SettingsPanel({
   guidedCourseActive,
   isFreestyle,
   isListen,
-  levels,
   listenWpm,
   listenWpmMax,
   listenWpmMin,
-  maxLevel,
   practiceAutoPlay,
   practiceIfrMode,
   practiceLearnMode,
@@ -22,13 +20,13 @@ export function SettingsPanel({
   toneFrequencyStep,
   onToneFrequencyChange,
   onListenWpmChange,
-  onMaxLevelChange,
   onPracticeAutoPlayChange,
   onPracticeIfrModeChange,
   onPracticeLearnModeChange,
   onPracticeReviewMissesChange,
   onPracticeWordModeChange,
   onUseRecommended,
+  onShowLearning,
   onReplayNux,
   onShowAbout,
   onShowHintChange,
@@ -74,20 +72,17 @@ export function SettingsPanel({
       </label>
       {!isFreestyle ? (
         <div className="panel-group">
-          <label className="toggle">
-            <span className="toggle-label">Max level</span>
-            <select
-              className="panel-select"
-              value={maxLevel}
-              onChange={onMaxLevelChange}
-            >
-              {levels.map((level) => (
-                <option key={level} value={level}>
-                  Level {level}
-                </option>
-              ))}
-            </select>
-          </label>
+          <button
+            type="button"
+            className="panel-button panel-button-row"
+            onClick={onShowLearning}
+          >
+            <span className="panel-button-label">Learning</span>
+            <span className="panel-button-value">
+              {guidedCourseActive ? 'Course' : 'Open practice'}
+              <span className="panel-button-chevron"> ›</span>
+            </span>
+          </button>
           {!isListen ? (
             <label className="toggle">
               <span className="toggle-label">Words</span>

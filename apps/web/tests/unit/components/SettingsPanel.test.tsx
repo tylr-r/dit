@@ -7,11 +7,9 @@ const baseProps: SettingsPanelProps = {
   freestyleWordMode: false,
   isFreestyle: false,
   isListen: false,
-  levels: [1, 2, 3],
   listenWpm: 20,
   listenWpmMax: 30,
   listenWpmMin: 10,
-  maxLevel: 2,
   practiceWordMode: false,
   practiceAutoPlay: true,
   practiceLearnMode: true,
@@ -23,8 +21,8 @@ const baseProps: SettingsPanelProps = {
   onPracticeIfrModeChange: vi.fn(),
   onPracticeReviewMissesChange: vi.fn(),
   onUseRecommended: vi.fn(),
+  onShowLearning: vi.fn(),
   onListenWpmChange: vi.fn(),
-  onMaxLevelChange: vi.fn(),
   onPracticeWordModeChange: vi.fn(),
   onShowAbout: vi.fn(),
   onShowHintChange: vi.fn(),
@@ -144,5 +142,29 @@ describe('SettingsPanel', () => {
     const button = screen.getByRole('button', { name: /replay onboarding/i })
     button.click()
     expect(onReplayNux).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the Learning disclosure row and fires onShowLearning', () => {
+    const onShowLearning = vi.fn()
+    render(<SettingsPanel {...baseProps} onShowLearning={onShowLearning} />)
+
+    const button = screen.getByRole('button', { name: /learning/i })
+    expect(button).toHaveTextContent(/open practice/i)
+    button.click()
+
+    expect(onShowLearning).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows "Course" in the Learning row when guided course is active', () => {
+    render(<SettingsPanel {...baseProps} guidedCourseActive />)
+    const button = screen.getByRole('button', { name: /learning/i })
+    expect(button).toHaveTextContent(/course/i)
+  })
+
+  it('hides the Learning row in Freestyle mode', () => {
+    render(<SettingsPanel {...baseProps} isFreestyle />)
+    expect(
+      screen.queryByRole('button', { name: /^learning/i }),
+    ).toBeNull()
   })
 })
