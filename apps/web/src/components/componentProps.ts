@@ -60,11 +60,9 @@ export interface SettingsPanelProps {
   freestyleWordMode: boolean
   isFreestyle: boolean
   isListen: boolean
-  levels: readonly number[]
   listenWpm: number
   listenWpmMax: number
   listenWpmMin: number
-  maxLevel: number
   practiceWordMode: boolean
   toneFrequency: number
   toneFrequencyMin: number
@@ -72,7 +70,6 @@ export interface SettingsPanelProps {
   toneFrequencyStep: number
   onToneFrequencyChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
-  onMaxLevelChange: (event: ChangeEvent<HTMLSelectElement>) => void
   onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   onShowAbout: () => void
   onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -92,6 +89,7 @@ export interface SettingsPanelProps {
   onPracticeIfrModeChange: (event: ChangeEvent<HTMLInputElement>) => void
   onPracticeReviewMissesChange: (event: ChangeEvent<HTMLInputElement>) => void
   onUseRecommended: () => void
+  onShowLearning: () => void
   onReplayNux?: () => void
   user: FirebaseUser | null
   userLabel: string
@@ -122,4 +120,17 @@ export interface ReferenceModalProps {
   todayCorrect: number
   letterAccuracy?: LetterAccuracyRecord
   courseProgress?: ReferenceCourseProgress | null
+}
+
+export interface LearningSheetProps {
+  guidedCourseActive: boolean
+  guidedPackIndex: number
+  guidedMaxPackReached: number
+  maxLevel: number
+  customLetters: Letter[]
+  onClose: () => void
+  onSelectPack: (packIndex: number) => void
+  onSelectTier: (level: number) => void
+  onSelectCustomLetters: (letters: Letter[]) => void
+  onSetGuidedCourseActive: (active: boolean) => void
 }
