@@ -11,6 +11,7 @@ import {
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
 import { NuxModal } from './components/NuxModal'
+import { TourOverlay } from './components/TourOverlay'
 import { Page404 } from './components/Page404'
 import { PhaseModal } from './components/PhaseModal'
 import { ReferenceModal } from './components/ReferenceModal'
@@ -492,8 +493,8 @@ function MainApp() {
   }, [handlers])
 
   const handleReplayNux = useCallback(() => {
-    onboarding.persistNuxStatus('pending')
-  }, [onboarding])
+    handlers.handleReplayNux()
+  }, [handlers])
 
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
@@ -657,7 +658,9 @@ function MainApp() {
     <div
       className={`app status-idle mode-${mode}${
         isListen && useCustomKeyboard ? ' listen-focused' : ''
-      }${isNuxActive ? ' nux-active' : ''}`}
+      }${isNuxActive ? ' nux-active' : ''}${
+        isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
+      }`}
     >
       <header className="top-bar">
         <div className="logo">
@@ -668,6 +671,7 @@ function MainApp() {
             aria-label="Open reference chart"
             aria-haspopup="dialog"
             aria-expanded={showReference}
+            data-tour-target="progress"
           >
             <img src="/Dit-logo.svg" alt="Dit" />
           </button>
@@ -677,6 +681,7 @@ function MainApp() {
           value={mode}
           onChange={handleModeSelectChange}
           aria-label="Mode"
+          data-tour-target="modes"
         >
           <option value="practice">Practice</option>
           <option value="freestyle">Freestyle</option>
@@ -691,6 +696,7 @@ function MainApp() {
             aria-expanded={showSettings}
             aria-controls="settings-panel"
             aria-label="Settings"
+            data-tour-target="settings"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -892,7 +898,10 @@ function MainApp() {
           onDismiss={handlePhaseModalDismiss}
         />
       ) : null}
-      {isNuxActive ? (
+      {isNuxActive && onboarding.nuxStep === 'known_tour' ? (
+        <TourOverlay onFinish={handlers.handleFinishKnownTour} />
+      ) : null}
+      {isNuxActive && onboarding.nuxStep !== 'known_tour' ? (
         <NuxModal
           step={onboarding.nuxStep}
           learnerProfile={state.learnerProfile}
@@ -901,6 +910,7 @@ function MainApp() {
           tutorialHoldCount={state.tutorialHoldCount}
           currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
           morseButton={nuxMorseButton}
+          user={user}
           onWelcomeDone={handlers.handleNuxWelcomeDone}
           onChooseProfile={handlers.handleNuxChooseProfile}
           onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
@@ -910,6 +920,7 @@ function MainApp() {
           onContinueFromStages={handlers.handleNuxContinueFromStages}
           onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
           onSkipReminder={handlers.handleNuxSkipReminder}
+          onRequestSignIn={handleShowSignIn}
         />
       ) : null}
       {showAbout ? (
