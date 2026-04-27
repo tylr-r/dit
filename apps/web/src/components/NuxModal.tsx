@@ -109,7 +109,6 @@ export function NuxModal({
   }, [step, onSkipReminder])
 
   const [displayedStep, setDisplayedStep] = useState(step)
-  const [soundRippleKey, setSoundRippleKey] = useState(0)
   const [soundCheckState, setSoundCheckState] = useState<
     'idle' | 'played' | 'heard' | 'not_heard'
   >('idle')
@@ -124,7 +123,6 @@ export function NuxModal({
   }, [step, displayedStep])
 
   const handlePlaySound = () => {
-    setSoundRippleKey((k) => k + 1)
     onPlaySoundCheck()
     setSoundCheckState((prev) => (prev === 'heard' ? 'heard' : 'played'))
   }
@@ -156,7 +154,7 @@ export function NuxModal({
               </button>
               <button
                 type="button"
-                className="welcome-option-button"
+                className="welcome-option-button welcome-option-secondary"
                 onClick={(e) => { e.stopPropagation(); onWelcomeDone() }}
               >
                 Stay signed out
@@ -231,20 +229,6 @@ export function NuxModal({
                 }`}
                 onClick={handlePlaySound}
               >
-                {soundRippleKey > 0 ? (
-                  <>
-                    <span
-                      key={`ring1-${soundRippleKey}`}
-                      className="nux-sound-ring"
-                      aria-hidden="true"
-                    />
-                    <span
-                      key={`ring2-${soundRippleKey}`}
-                      className="nux-sound-ring nux-sound-ring-delayed"
-                      aria-hidden="true"
-                    />
-                  </>
-                ) : null}
                 <span className="nux-sound-label">
                   {soundCheckState === 'idle' ? 'Play sound' : 'Play again'}
                 </span>

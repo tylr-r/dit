@@ -1712,35 +1712,6 @@
   z-index: 1;
 }
 
-.nux-sound-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid var(--color-accent-wave);
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(1);
-  animation: nux-sound-ripple var(--timing-ripple) var(--ease-out);
-}
-
-.nux-sound-ring-delayed {
-  animation-delay: 500ms;
-}
-
-@keyframes nux-sound-ripple {
-  0% {
-    opacity: 0;
-    transform: scale(1);
-  }
-  7% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2.4);
-  }
-}
-
 .nux-sound-button:hover {
   background: var(--color-surface-input-pressed);
 }
@@ -2659,10 +2630,14 @@
 }
 
 .welcome-options {
+  position: absolute;
+  bottom: 72px;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 32px;
+  align-items: center;
+  gap: 14px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 600ms ease;
@@ -2675,30 +2650,42 @@
 
 .welcome-option-button {
   appearance: none;
-  background: var(--color-surface-input);
-  border: 1px solid var(--color-border-subtle);
-  color: var(--text);
+  background: transparent;
+  border: 0;
   font: inherit;
-  padding: 12px 24px;
-  border-radius: 12px;
+  letter-spacing: 0.2px;
+  padding: 6px 12px;
   cursor: pointer;
-  min-width: 220px;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.welcome-option-button:hover {
-  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+  transition: opacity 120ms ease;
 }
 
 .welcome-option-primary {
-  background: var(--color-surface-panel-strong);
-  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+  color: rgba(230, 240, 255, 0.95);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.welcome-option-secondary {
+  color: rgba(200, 210, 220, 0.5);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.welcome-option-button:hover,
+.welcome-option-button:focus-visible {
+  opacity: 0.8;
+}
+
+.welcome-option-secondary:hover,
+.welcome-option-secondary:focus-visible {
+  opacity: 1;
+  color: rgba(200, 210, 220, 0.75);
 }
 
 .tour-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: transparent;
   z-index: 30;
   cursor: pointer;
 }
@@ -2706,24 +2693,25 @@
 .tour-spotlight {
   position: fixed;
   border-radius: 14px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
   background: transparent;
   pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--color-accent-wave, hsl(154, 88%, 58%)),
+    0 0 0 6px hsla(154, 88%, 58%, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.35);
   transition: top 200ms ease, left 200ms ease, width 200ms ease, height 200ms ease;
 }
 
 .tour-callout {
   position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(360px, calc(100% - 32px));
   background: var(--color-surface-panel-strong);
   border: 1px solid var(--color-border-subtle);
   border-radius: 16px;
   padding: 16px 18px;
   color: var(--text);
   pointer-events: none;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  max-width: calc(100vw - 32px);
 }
 
 .tour-callout-title {
