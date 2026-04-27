@@ -95,7 +95,9 @@ export interface SettingsPanelProps {
   userLabel: string
   userInitial: string
   authReady: boolean
-  onSignIn: () => void
+  onShowSignIn: () => void
+  onDeleteAccount: () => void
+  isDeletingAccount: boolean
   onSignOut: () => void
 }
 
@@ -118,8 +120,10 @@ export interface ReferenceModalProps {
   hero: HeroMetric
   streak?: StreakState
   todayCorrect: number
+  streakAtRisk: boolean
   letterAccuracy?: LetterAccuracyRecord
   courseProgress?: ReferenceCourseProgress | null
+  onPlayCharacter?: (char: Letter) => void
 }
 
 export interface LearningSheetProps {
@@ -133,4 +137,14 @@ export interface LearningSheetProps {
   onSelectTier: (level: number) => void
   onSelectCustomLetters: (letters: Letter[]) => void
   onSetGuidedCourseActive: (active: boolean) => void
+}
+
+export type EmailResult = { ok: true } | { ok: false; error: string }
+
+export interface SignInSheetProps {
+  onClose: () => void
+  onSignInWithApple: () => Promise<void>
+  onSignInWithGoogle: () => Promise<void>
+  onSignInWithEmail: (email: string, password: string) => Promise<EmailResult>
+  onCreateAccountWithEmail: (email: string, password: string) => Promise<EmailResult>
 }

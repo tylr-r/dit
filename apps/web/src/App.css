@@ -2265,6 +2265,10 @@
   visibility: hidden;
 }
 
+.app.nux-tour-active > .top-bar {
+  visibility: visible;
+}
+
 /* ─── Listen mode visuals ────────────────────────────────────────── */
 
 .listen-visual {
@@ -2511,4 +2515,253 @@
 .learning-custom-apply:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.sign-in-sheet {
+  width: min(420px, 100%);
+}
+
+.sign-in-body {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sign-in-providers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sign-in-provider {
+  appearance: none;
+  width: 100%;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  font: inherit;
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.sign-in-provider:hover:not(:disabled) {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.sign-in-provider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sign-in-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sign-in-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sign-in-field span {
+  font-size: 0.85em;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+}
+
+.sign-in-field input {
+  appearance: none;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.sign-in-error {
+  color: var(--error, #ff5a60);
+  font-size: 0.9em;
+}
+
+.sign-in-secondary {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  align-self: center;
+  padding: 4px 8px;
+}
+
+.sign-in-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.sign-in-back {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.auth-button-destructive {
+  color: var(--error, #ff5a60);
+  border-color: var(--color-border-error, rgba(255, 90, 96, 0.4));
+}
+
+.auth-button-destructive:hover:not(:disabled) {
+  border-color: var(--color-border-error-strong, rgba(255, 90, 96, 0.7));
+}
+
+.reference-streak.is-at-risk {
+  border: 1px solid var(--color-border-error, rgba(255, 90, 96, 0.4));
+  background: rgba(255, 90, 96, 0.06);
+}
+
+.reference-card-button {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reference-card-button:hover {
+  background:
+    linear-gradient(
+      0deg,
+      rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0)),
+      rgba(var(--score-tint, 0, 0, 0), var(--score-alpha, 0))
+    ),
+    var(--color-surface-input-hover, rgba(255, 255, 255, 0.08));
+}
+
+.reference-card-button:focus-visible {
+  outline: 2px solid var(--color-border-strong, rgba(255, 255, 255, 0.5));
+  outline-offset: 2px;
+}
+
+.welcome-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+
+.welcome-options.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.welcome-option-button {
+  appearance: none;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  font: inherit;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  min-width: 220px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.welcome-option-button:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.welcome-option-primary {
+  background: var(--color-surface-panel-strong);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+}
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 30;
+  cursor: pointer;
+}
+
+.tour-spotlight {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  background: transparent;
+  pointer-events: none;
+  transition: top 200ms ease, left 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+.tour-callout {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  background: var(--color-surface-panel-strong);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.tour-callout-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tour-callout-body {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.8));
+  margin-bottom: 12px;
+}
+
+.tour-callout-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tour-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tour-dot.is-active {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tour-callout-cta {
+  font-size: 0.85em;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
 }

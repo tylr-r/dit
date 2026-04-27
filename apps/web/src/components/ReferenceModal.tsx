@@ -48,10 +48,12 @@ const StreakRow = ({
   streak,
   todayCorrect,
   goal,
+  atRisk,
 }: {
   streak?: StreakState
   todayCorrect: number
   goal: number
+  atRisk: boolean
 }) => {
   const current = streak?.current ?? 0
   const filled = Math.min(todayCorrect, goal)
@@ -61,7 +63,7 @@ const StreakRow = ({
   const detailText =
     todayCorrect >= goal ? 'Today counted' : `${todayCorrect} / ${goal} today`
   return (
-    <div className="reference-streak">
+    <div className={`reference-streak${atRisk ? ' is-at-risk' : ''}`}>
       <div className="reference-streak-header">
         <span className="reference-streak-text">{streakText}</span>
         <span className="reference-streak-detail">{detailText}</span>
@@ -87,8 +89,10 @@ export function ReferenceModal({
   hero,
   streak,
   todayCorrect,
+  streakAtRisk,
   letterAccuracy,
   courseProgress,
+  onPlayCharacter,
 }: ReferenceModalProps) {
   const masteryProgress = { scores, letterAccuracy }
   const renderReferenceCard = (char: Letter) => {
@@ -101,12 +105,9 @@ export function ReferenceModal({
           ? 'score-negative'
           : 'score-neutral'
     const code = morseData[char].code
-    return (
-      <div
-        key={char}
-        className={`reference-card${mastered ? ' reference-card-mastered' : ''}`}
-        style={getScoreStyle(scoreValue)}
-      >
+    const className = `reference-card${mastered ? ' reference-card-mastered' : ''}`
+    const inner = (
+      <>
         <div className="reference-head">
           <div className="reference-letter">{char}</div>
           <div className={`reference-score ${scoreClass}`}>
@@ -124,6 +125,30 @@ export function ReferenceModal({
             </span>
           ))}
         </div>
+      </>
+    )
+
+    if (onPlayCharacter) {
+      return (
+        <button
+          key={char}
+          type="button"
+          className={`${className} reference-card-button`}
+          style={getScoreStyle(scoreValue)}
+          aria-label={`Play Morse for ${char}`}
+          onClick={() => onPlayCharacter(char)}
+        >
+          {inner}
+        </button>
+      )
+    }
+    return (
+      <div
+        key={char}
+        className={className}
+        style={getScoreStyle(scoreValue)}
+      >
+        {inner}
       </div>
     )
   }
@@ -158,6 +183,7 @@ export function ReferenceModal({
             streak={streak}
             todayCorrect={todayCorrect}
             goal={STREAK_DAILY_GOAL}
+            atRisk={streakAtRisk}
           />
           {courseProgress ? (
             <div className="reference-course-banner">
