@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { Footer } from './components/Footer'
 import { LearningSheet } from './components/LearningSheet'
+import { SignInSheet } from './components/SignInSheet'
 import {
   PrivacyPolicy,
   SupportPage,
@@ -10,6 +11,7 @@ import {
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
 import { NuxModal } from './components/NuxModal'
+import { TourOverlay } from './components/TourOverlay'
 import { Page404 } from './components/Page404'
 import { PhaseModal } from './components/PhaseModal'
 import { ReferenceModal } from './components/ReferenceModal'
@@ -24,6 +26,7 @@ import {
   MORSE_DATA,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
+  REFERENCE_WPM,
   TONE_FREQUENCY_RANGE,
   computeHero,
   createGuidedLessonProgress,
@@ -111,6 +114,7 @@ function MainApp() {
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } =
     usePhaseModalState()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showLearning, setShowLearning] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -489,8 +493,8 @@ function MainApp() {
   }, [handlers])
 
   const handleReplayNux = useCallback(() => {
-    onboarding.persistNuxStatus('pending')
-  }, [onboarding])
+    handlers.handleReplayNux()
+  }, [handlers])
 
   const handleSoundCheck = useCallback(async () => {
     if (soundCheckStatus !== 'idle') {
@@ -511,13 +515,57 @@ function MainApp() {
     }
   }, [soundCheckStatus, toneFrequency])
 
-  const handleSignIn = useCallback(() => {
-    void handlers.handleSignInWithGoogle()
+  const handleShowSignIn = useCallback(() => {
+    setShowSignIn(true)
+  }, [])
+
+  const handleSignInWithApple = useCallback(async () => {
+    await handlers.handleSignInWithApple()
+  }, [handlers])
+
+  const handleSignInWithGoogle = useCallback(async () => {
+    await handlers.handleSignInWithGoogle()
+  }, [handlers])
+
+  const handleSignInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      return handlers.handleSignInWithEmail(email, password)
+    },
+    [handlers],
+  )
+
+  const handleCreateAccountWithEmail = useCallback(
+    async (email: string, password: string) => {
+      return handlers.handleCreateAccountWithEmail(email, password)
+    },
+    [handlers],
+  )
+
+  const handleDeleteAccount = useCallback(() => {
+    handlers.handleDeleteAccount()
   }, [handlers])
 
   const handleSignOut = useCallback(() => {
     void firebaseSignOut(getAuth())
   }, [])
+
+  const todayContribution = useMemo(
+    () => todayStreakContribution({ dailyActivity, streak }),
+    [dailyActivity, streak],
+  )
+
+  const handlePlayReferenceCharacter = useCallback(
+    (char: Letter) => {
+      void playMorseTone({
+        code: MORSE_DATA[char].code,
+        characterWpm: REFERENCE_WPM,
+        effectiveWpm: REFERENCE_WPM,
+        minUnitMs: LISTEN_MIN_UNIT_MS,
+        frequency: toneFrequency,
+      })
+    },
+    [toneFrequency],
+  )
 
   const pointerPressActiveRef = useRef(false)
   const handleButtonPointerDown = useCallback(() => {
@@ -610,7 +658,9 @@ function MainApp() {
     <div
       className={`app status-idle mode-${mode}${
         isListen && useCustomKeyboard ? ' listen-focused' : ''
-      }${isNuxActive ? ' nux-active' : ''}`}
+      }${isNuxActive ? ' nux-active' : ''}${
+        isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
+      }`}
     >
       <header className="top-bar">
         <div className="logo">
@@ -621,6 +671,7 @@ function MainApp() {
             aria-label="Open reference chart"
             aria-haspopup="dialog"
             aria-expanded={showReference}
+            data-tour-target="progress"
           >
             <img src="/Dit-logo.svg" alt="Dit" />
           </button>
@@ -630,6 +681,7 @@ function MainApp() {
           value={mode}
           onChange={handleModeSelectChange}
           aria-label="Mode"
+          data-tour-target="modes"
         >
           <option value="practice">Practice</option>
           <option value="freestyle">Freestyle</option>
@@ -644,6 +696,7 @@ function MainApp() {
             aria-expanded={showSettings}
             aria-controls="settings-panel"
             aria-label="Settings"
+            data-tour-target="settings"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -681,7 +734,9 @@ function MainApp() {
               userLabel={userLabel}
               userInitial={userInitial}
               authReady={authReady}
-              onSignIn={handleSignIn}
+              onShowSignIn={handleShowSignIn}
+              onDeleteAccount={handleDeleteAccount}
+              isDeletingAccount={isDeletingAccount}
               onSignOut={handleSignOut}
               practiceAutoPlay={practiceAutoPlay}
               practiceLearnMode={practiceLearnMode}
@@ -787,10 +842,10 @@ function MainApp() {
             bestWpm,
           })}
           streak={streak}
-          todayCorrect={
-            todayStreakContribution({ dailyActivity, streak }).correct
-          }
+          todayCorrect={todayContribution.correct}
+          streakAtRisk={todayContribution.atRisk}
           letterAccuracy={letterAccuracy}
+          onPlayCharacter={handlePlayReferenceCharacter}
           courseProgress={
             guidedCourseActive
               ? {
@@ -828,13 +883,25 @@ function MainApp() {
           onSetGuidedCourseActive={handlers.handleSetGuidedCourseActive}
         />
       ) : null}
+      {showSignIn ? (
+        <SignInSheet
+          onClose={() => setShowSignIn(false)}
+          onSignInWithApple={handleSignInWithApple}
+          onSignInWithGoogle={handleSignInWithGoogle}
+          onSignInWithEmail={handleSignInWithEmail}
+          onCreateAccountWithEmail={handleCreateAccountWithEmail}
+        />
+      ) : null}
       {phaseModal ? (
         <PhaseModal
           content={phaseModal}
           onDismiss={handlePhaseModalDismiss}
         />
       ) : null}
-      {isNuxActive ? (
+      {isNuxActive && onboarding.nuxStep === 'known_tour' ? (
+        <TourOverlay onFinish={handlers.handleFinishKnownTour} />
+      ) : null}
+      {isNuxActive && onboarding.nuxStep !== 'known_tour' ? (
         <NuxModal
           step={onboarding.nuxStep}
           learnerProfile={state.learnerProfile}
@@ -843,6 +910,7 @@ function MainApp() {
           tutorialHoldCount={state.tutorialHoldCount}
           currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
           morseButton={nuxMorseButton}
+          user={user}
           onWelcomeDone={handlers.handleNuxWelcomeDone}
           onChooseProfile={handlers.handleNuxChooseProfile}
           onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
@@ -852,6 +920,7 @@ function MainApp() {
           onContinueFromStages={handlers.handleNuxContinueFromStages}
           onStartBeginnerCourse={handlers.handleStartBeginnerCourse}
           onSkipReminder={handlers.handleNuxSkipReminder}
+          onRequestSignIn={handleShowSignIn}
         />
       ) : null}
       {showAbout ? (

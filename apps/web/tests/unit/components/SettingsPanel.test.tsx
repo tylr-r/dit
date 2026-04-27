@@ -36,7 +36,9 @@ const baseProps: SettingsPanelProps = {
   userLabel: 'Guest',
   userInitial: 'G',
   authReady: true,
-  onSignIn: vi.fn(),
+  onShowSignIn: vi.fn(),
+  onDeleteAccount: vi.fn(),
+  isDeletingAccount: false,
   onSignOut: vi.fn(),
 }
 
@@ -166,5 +168,37 @@ describe('SettingsPanel', () => {
     expect(
       screen.queryByRole('button', { name: /^learning/i }),
     ).toBeNull()
+  })
+
+  it('renders Sign in button when signed out', () => {
+    render(<SettingsPanel {...baseProps} />)
+    expect(
+      screen.getByRole('button', { name: /^sign in$/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('fires onShowSignIn when Sign in is clicked', () => {
+    const onShowSignIn = vi.fn()
+    render(<SettingsPanel {...baseProps} onShowSignIn={onShowSignIn} />)
+    screen.getByRole('button', { name: /^sign in$/i }).click()
+    expect(onShowSignIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders Sign out and Delete account when signed in', () => {
+    const user = { email: 'a@b.com', photoURL: null } as unknown as Parameters<typeof SettingsPanel>[0]['user']
+    render(<SettingsPanel {...baseProps} user={user} />)
+    expect(screen.getByRole('button', { name: /^sign out$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^delete account$/i })).toBeInTheDocument()
+  })
+
+  it('shows "Deleting" and disables actions during deletion', () => {
+    const user = { email: 'a@b.com', photoURL: null } as unknown as Parameters<typeof SettingsPanel>[0]['user']
+    render(
+      <SettingsPanel {...baseProps} user={user} isDeletingAccount />,
+    )
+    expect(
+      screen.getByRole('button', { name: /deleting/i }),
+    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^sign out$/i })).toBeDisabled()
   })
 })

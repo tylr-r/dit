@@ -2,6 +2,8 @@ import type { LearnerProfile, NuxStep } from '@dit/core'
 import { useEffect, useState } from 'react'
 import { isIOS } from '../platform/device'
 
+type AuthUser = { uid: string }
+
 const TUTORIAL_REQUIRED = 3
 
 const STEP_ORDER: readonly NuxStep[] = [
@@ -22,6 +24,7 @@ type NuxModalProps = {
   tutorialHoldCount: number
   currentPack: readonly string[]
   morseButton: React.ReactNode
+  user: AuthUser | null
   onWelcomeDone: () => void
   onChooseProfile: (profile: LearnerProfile) => void
   onPlaySoundCheck: () => void
@@ -31,6 +34,7 @@ type NuxModalProps = {
   onContinueFromStages: () => void
   onStartBeginnerCourse: () => void
   onSkipReminder: () => void
+  onRequestSignIn: () => void
 }
 
 const ProgressDots = ({ step }: { step: NuxStep }) => {
@@ -56,6 +60,7 @@ export function NuxModal({
   tutorialHoldCount,
   currentPack,
   morseButton,
+  user,
   onWelcomeDone,
   onChooseProfile,
   onPlaySoundCheck,
@@ -65,14 +70,23 @@ export function NuxModal({
   onContinueFromStages,
   onStartBeginnerCourse,
   onSkipReminder,
+  onRequestSignIn,
 }: NuxModalProps) {
+  const [optionsVisible, setOptionsVisible] = useState(false)
+
   useEffect(() => {
     if (step !== 'welcome') {
       return
     }
-    const timer = window.setTimeout(onWelcomeDone, 2200)
-    return () => window.clearTimeout(timer)
-  }, [step, onWelcomeDone])
+    if (user) {
+      // Already signed in (replay scenario): auto-advance after a short delay
+      const timer = window.setTimeout(onWelcomeDone, 2200)
+      return () => window.clearTimeout(timer)
+    }
+    // Signed-out: show sign-in options after 2s instead of auto-advancing
+    const t = window.setTimeout(() => setOptionsVisible(true), 2000)
+    return () => window.clearTimeout(t)
+  }, [step, user, onWelcomeDone])
 
   useEffect(() => {
     if (step !== 'button_tutorial') {
@@ -121,11 +135,34 @@ export function NuxModal({
 
   if (step === 'welcome') {
     return (
-      <div className="nux-overlay nux-overlay-welcome" role="dialog" aria-modal="true">
+      <div
+        className="nux-overlay nux-overlay-welcome"
+        role="dialog"
+        aria-modal="true"
+        onClick={user ? onWelcomeDone : undefined}
+      >
         <div className="nux-welcome">
           <img src="/Dit-logo.svg" alt="Dit" className="nux-welcome-logo" />
           <p className="nux-welcome-title">Dit</p>
           <p className="nux-welcome-sub">Learn Morse by ear.</p>
+          {!user ? (
+            <div className={`welcome-options${optionsVisible ? ' is-visible' : ''}`}>
+              <button
+                type="button"
+                className="welcome-option-button welcome-option-primary"
+                onClick={(e) => { e.stopPropagation(); onRequestSignIn() }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className="welcome-option-button"
+                onClick={(e) => { e.stopPropagation(); onWelcomeDone() }}
+              >
+                Stay signed out
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     )
@@ -296,6 +333,8 @@ export function NuxModal({
             </>
           ) : null}
 
+          {/* Dead branch: known_tour is handled by TourOverlay (App.tsx); NuxModal
+              is unmounted before this step is reached. Kept as spec reference. */}
           {displayedStep === 'known_tour' ? (
             <>
               <div className="nux-copy">
@@ -360,6 +399,7 @@ export function NuxModal({
               Continue
             </button>
           ) : null}
+          {/* Dead branch: see comment above. TourOverlay calls onFinishKnownTour. */}
           {displayedStep === 'known_tour' ? (
             <button type="button" className="nux-cta" onClick={onFinishKnownTour}>
               Start practicing

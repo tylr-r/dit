@@ -20,10 +20,10 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Google sign-in | ✅ | ✅ | iOS uses native flow; web uses Firebase popup |
-| Apple sign-in | ✅ | ❌ | iOS: [SignInSheet.tsx](../apps/ios/src/components/SignInSheet.tsx). Web has no equivalent. |
-| Email + password | ✅ | ❌ | iOS: bottom-sheet form with the collapsed-error string per spec |
-| Shared sign-in sheet | ✅ | ❌ | iOS: NUX welcome and Settings both open the same sheet at the app root |
-| Delete account | ✅ | ❌ | iOS: [services/auth.ts](../apps/ios/src/services/auth.ts) `prepareAppleAccountDeletion` |
+| Apple sign-in | ✅ | ✅ | Web uses Firebase OAuthProvider('apple.com') with popup and redirect fallback |
+| Email + password | ✅ | ✅ | Sign in + create account with the collapsed bad-credential message |
+| Shared sign-in sheet | ✅ | ✅ | Web sheet wired in Settings; NUX welcome reuse comes in PR5 |
+| Delete account | ✅ | ✅ | Web has no native session to revoke; Firebase deleteUser handles it |
 | Sign out | ✅ | ✅ | |
 
 ## NUX & onboarding
@@ -34,9 +34,9 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
 | Sound check | ✅ | ✅ | |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
-| Welcome-screen sign-in options | ✅ | ❌ | Web has no Sign-in / Stay-signed-out fork on welcome |
+| Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the SignInSheet from PR3 |
 | Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped at [NuxModal.tsx:92-95](../apps/web/src/components/NuxModal.tsx#L92-L95) |
-| Known-user app tour | ✅ | ❌ | iOS: [tour/TourOverlay.tsx](../apps/ios/src/components/tour/TourOverlay.tsx). Web shows static text. |
+| Known-user app tour | ✅ | ✅ | Web tour spotlights real header elements via getBoundingClientRect + portal |
 | `nuxCompleted` persisted to RTDB | ✅ | ✅ | |
 
 ## Practice mode
@@ -96,8 +96,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Daily reminder | ✅ | 🚫 | Native notifications; web has no equivalent surface |
 | Use recommended settings | ✅ | ✅ | Resets Practice toggles per `learnerProfile` |
 | Replay NUX | ✅ | ✅ | Web exposes the action only in dev builds (per __DEV__/import.meta.env.DEV gating) |
-| Cloud sync (sign in) | ✅ | 🟡 | Web is Google-only (see [Auth](#auth--sign-in)) |
-| Delete account | ✅ | ❌ | |
+| Cloud sync (sign in) | ✅ | ✅ | Apple, Google, Email all available |
+| Delete account | ✅ | ✅ | |
 
 ## Learning configuration
 
@@ -120,8 +120,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Current streak | ✅ | ✅ | Both have data; verify web display |
 | Today's correct count | ✅ | ✅ | `todayStreakContribution` is wired in web App.tsx; verify modal display |
 | Guided course banner (pack/phase/letters) | ✅ | ❌ | |
-| Tap card to play character | ✅ | ❌ | Web cards have no `onClick` for playback |
-| Streak "at risk" treatment | ✅ | ❌ | |
+| Tap card to play character | ✅ | ✅ | |
+| Streak "at risk" treatment | ✅ | ✅ | |
 
 ## Scoring & metrics
 
@@ -133,7 +133,7 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 | `letterAccuracy` (rolling correctness) | ✅ | ✅ | ✅ | ✅ |
 | `bestWpm` | ✅ | ✅ | ✅ | ✅ |
 | `dailyActivity` (per-day correct + modes) | ✅ | ✅ | ✅ | ✅ |
-| `streak` (current + longest + at-risk) | ✅ | ✅ | ✅ | 🟡 |
+| `streak` (current + longest + at-risk) | ✅ | ✅ | ✅ | ✅ |
 | `hero` metric routing by profile | ✅ | — | ✅ | ✅ |
 
 ## Background behavior
@@ -157,7 +157,6 @@ These are not gaps. Don't open tickets to "fix" them.
 - **Daily local notification** — depends on iOS notification permissions; web has no equivalent app-foreground story
 - **Low Power Mode / idle animation pause** — iOS battery story
 - **Native date picker for reminder** — paired with the iOS-only reminder feature
-- **Sign in with Apple** — Apple-only provider
 
 ### Web-only by design
 
