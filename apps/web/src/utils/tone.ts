@@ -12,6 +12,7 @@ let contextRef: AudioContext | null = null
 let holdOscillator: OscillatorNode | null = null
 let holdGain: GainNode | null = null
 let morseNodes: { oscillator: OscillatorNode; gain: GainNode } | null = null
+let graphWarmed = false
 
 const ensureContext = async (): Promise<AudioContext | null> => {
   if (!contextRef) {
@@ -28,6 +29,33 @@ const ensureContext = async (): Promise<AudioContext | null> => {
     }
   }
   return contextRef
+}
+
+const warmAudioGraph = (context: AudioContext) => {
+  if (graphWarmed) {
+    return
+  }
+  graphWarmed = true
+  const oscillator = context.createOscillator()
+  const gain = context.createGain()
+  gain.gain.value = 0
+  oscillator.connect(gain)
+  gain.connect(context.destination)
+  const startTime = context.currentTime
+  const stopTime = startTime + 0.05
+  oscillator.start(startTime)
+  oscillator.stop(stopTime)
+  oscillator.onended = () => {
+    oscillator.disconnect()
+    gain.disconnect()
+  }
+}
+
+const getScheduleHeadroom = (context: AudioContext) => {
+  const latency =
+    (typeof context.outputLatency === 'number' ? context.outputLatency : 0) ||
+    (typeof context.baseLatency === 'number' ? context.baseLatency : 0)
+  return Math.max(0.12, latency + 0.05)
 }
 
 const createToneNodes = (
@@ -60,7 +88,10 @@ const scheduleEnvelope = (
 }
 
 export const prepareToneEngine = async () => {
-  await ensureContext()
+  const context = await ensureContext()
+  if (context) {
+    warmAudioGraph(context)
+  }
 }
 
 export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
@@ -128,10 +159,12 @@ export const playMorseTone = async ({
   const effectiveUnitMs = getListenUnitMs(resolvedEffectiveWpm, minUnitMs)
   const characterUnitSeconds = characterUnitMs / 1000
   const effectiveUnitSeconds = effectiveUnitMs / 1000
+  warmAudioGraph(context)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   morseNodes = { oscillator, gain }
   const rampSeconds = 0.005
-  let cursor = context.currentTime + 0.03
+  const startOffset = getScheduleHeadroom(context)
+  let cursor = context.currentTime + startOffset
   for (let index = 0; index < code.length; index += 1) {
     const symbol = code[index]
     if (symbol === ' ') {

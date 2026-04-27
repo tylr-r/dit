@@ -26,6 +26,9 @@ const TOUR_STOPS: readonly TourStop[] = [
 ]
 
 const SPOTLIGHT_PADDING = 8
+const CALLOUT_GAP = 12
+const CALLOUT_WIDTH = 320
+const VIEWPORT_MARGIN = 16
 
 type TourOverlayProps = {
   onFinish: () => void
@@ -39,6 +42,22 @@ const measure = (selector: string): Rect => {
   if (!el) return null
   const r = el.getBoundingClientRect()
   return { top: r.top, left: r.left, width: r.width, height: r.height }
+}
+
+const computeCalloutPosition = (rect: NonNullable<Rect>) => {
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const targetCenterX = rect.left + rect.width / 2
+  const halfWidth = CALLOUT_WIDTH / 2
+  const minLeft = VIEWPORT_MARGIN
+  const maxLeft = viewportWidth - VIEWPORT_MARGIN - CALLOUT_WIDTH
+  const left = Math.max(minLeft, Math.min(maxLeft, targetCenterX - halfWidth))
+  const belowTop = rect.top + rect.height + SPOTLIGHT_PADDING + CALLOUT_GAP
+  const placeBelow = belowTop + 140 < viewportHeight - VIEWPORT_MARGIN
+  const top = placeBelow
+    ? belowTop
+    : Math.max(VIEWPORT_MARGIN, rect.top - SPOTLIGHT_PADDING - CALLOUT_GAP - 140)
+  return { top, left }
 }
 
 /**
@@ -85,6 +104,7 @@ export function TourOverlay({ onFinish }: TourOverlayProps) {
         height: rect.height + SPOTLIGHT_PADDING * 2,
       }
     : null
+  const calloutPos = rect ? computeCalloutPosition(rect) : null
 
   return createPortal(
     <div
@@ -106,7 +126,14 @@ export function TourOverlay({ onFinish }: TourOverlayProps) {
           aria-hidden="true"
         />
       ) : null}
-      <div className="tour-callout">
+      <div
+        className="tour-callout"
+        style={
+          calloutPos
+            ? { top: calloutPos.top, left: calloutPos.left, width: CALLOUT_WIDTH }
+            : undefined
+        }
+      >
         <div className="tour-callout-title">{stop.title}</div>
         <div className="tour-callout-body">{stop.body}</div>
         <div className="tour-callout-meta">
