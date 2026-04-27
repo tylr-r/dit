@@ -2265,6 +2265,10 @@
   visibility: hidden;
 }
 
+.app.nux-tour-active > .top-bar {
+  visibility: visible;
+}
+
 /* ─── Listen mode visuals ────────────────────────────────────────── */
 
 .listen-visual {
@@ -2652,4 +2656,112 @@
 .reference-card-button:focus-visible {
   outline: 2px solid var(--color-border-strong, rgba(255, 255, 255, 0.5));
   outline-offset: 2px;
+}
+
+.welcome-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+
+.welcome-options.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.welcome-option-button {
+  appearance: none;
+  background: var(--color-surface-input);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--text);
+  font: inherit;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  min-width: 220px;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.welcome-option-button:hover {
+  background: var(--color-surface-input-hover, rgba(255, 255, 255, 0.06));
+}
+
+.welcome-option-primary {
+  background: var(--color-surface-panel-strong);
+  border-color: var(--color-border-strong, rgba(255, 255, 255, 0.32));
+}
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 30;
+  cursor: pointer;
+}
+
+.tour-spotlight {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  background: transparent;
+  pointer-events: none;
+  transition: top 200ms ease, left 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+.tour-callout {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  background: var(--color-surface-panel-strong);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 16px 18px;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.tour-callout-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.tour-callout-body {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.8));
+  margin-bottom: 12px;
+}
+
+.tour-callout-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tour-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tour-dot.is-active {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tour-callout-cta {
+  font-size: 0.85em;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
 }
