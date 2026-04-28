@@ -18,6 +18,7 @@ export function MorseButton({
   onPointerDown,
   onPointerLeave,
   onPointerUp,
+  showShortcutHint,
 }: MorseButtonProps) {
   const preventDefault = (event: SyntheticEvent) => {
     event.preventDefault()
@@ -94,6 +95,7 @@ export function MorseButton({
         onKeyUp={onKeyUp}
         onBlur={onBlur}
         aria-label="Tap for dot, hold for dah"
+        title={showShortcutHint ? 'Tap or press Space (hold for dah)' : undefined}
       >
         <span className="fluid-container" aria-hidden="true">
           <span className="fluid-paint" />

@@ -651,13 +651,14 @@ function MainApp() {
       onKeyDown={handleButtonKeyDown}
       onKeyUp={handleButtonKeyUp}
       onBlur={handleButtonPointerEnd}
+      showShortcutHint={!useCustomKeyboard}
     />
   )
 
   return (
     <div
       className={`app status-idle mode-${mode}${
-        isListen && useCustomKeyboard ? ' listen-focused' : ''
+        isListen ? ' listen-focused' : ''
       }${isNuxActive ? ' nux-active' : ''}${
         isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
       }`}
@@ -681,6 +682,11 @@ function MainApp() {
           value={mode}
           onChange={handleModeSelectChange}
           aria-label="Mode"
+          title={
+            useCustomKeyboard
+              ? undefined
+              : 'Switch mode — shortcuts: L Practice, F Freestyle, I Listen'
+          }
           data-tour-target="modes"
         >
           <option value="practice">Practice</option>
@@ -808,10 +814,11 @@ function MainApp() {
         ) : null}
         {isListen ? (
           <ListenControls
+            availableLetters={derived.activeLetters}
             listenStatus={listenStatus}
             onReplay={handlers.handleListenReplay}
             onSubmitAnswer={handlers.submitListenAnswer}
-            useCustomKeyboard={useCustomKeyboard}
+            showShortcutHints={!useCustomKeyboard}
           />
         ) : (
           <MorseButton
@@ -824,6 +831,7 @@ function MainApp() {
             onKeyDown={handleButtonKeyDown}
             onKeyUp={handleButtonKeyUp}
             onBlur={handleButtonPointerEnd}
+            showShortcutHint={!useCustomKeyboard}
           />
         )}
       </div>

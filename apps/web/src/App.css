@@ -972,18 +972,11 @@
 }
 
 .listen-controls {
-  width: min(560px, 100%);
+  width: min(640px, 100%);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-}
-
-.listen-controls-custom {
-  width: min(640px, 100%);
-  flex-direction: column;
-  flex-wrap: nowrap;
   gap: 14px;
 }
 
@@ -1030,6 +1023,32 @@
 .keyboard-key:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.keyboard-key.keyboard-key-unavailable {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.listen-shortcut-hint {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-primary-70, var(--text));
+  opacity: 0.7;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.listen-shortcut-hint kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-input);
+  font-family: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  margin: 0 2px;
 }
 
 .modal-overlay {
