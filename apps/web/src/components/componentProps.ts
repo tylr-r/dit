@@ -15,10 +15,11 @@ import type {
 } from '@dit/core'
 
 export interface ListenControlsProps {
+  availableLetters: readonly Letter[]
   listenStatus: 'idle' | 'success' | 'error'
   onReplay: () => void
   onSubmitAnswer: (value: Letter) => void
-  useCustomKeyboard: boolean
+  showShortcutHints: boolean
 }
 
 export interface MorseButtonProps {
@@ -31,6 +32,7 @@ export interface MorseButtonProps {
   onPointerDown: (event: PointerEvent<HTMLButtonElement>) => void
   onPointerLeave: () => void
   onPointerUp: (event: PointerEvent<HTMLButtonElement>) => void
+  showShortcutHint?: boolean
 }
 
 export interface StageDisplayProps {

@@ -62,7 +62,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Playback at WPM | ✅ | ✅ | |
-| On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys |
+| On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys; on-screen keyboard now always visible (unavailable letters dimmed) on both platforms |
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
 | Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
 | Time-to-respond indicator | ❓ | ❌ | Spec says iOS-only; not located in either codebase. Confirm whether spec is aspirational or feature exists under another name. |
