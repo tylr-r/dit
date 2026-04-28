@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { HeroMetric, Letter, StreakState } from '@dit/core'
 import { STREAK_DAILY_GOAL, isMastered } from '@dit/core'
+import { useScreenTracker } from '../lib/analytics'
 import type { ReferenceModalProps } from './componentProps'
 
 const SCORE_INTENSITY_MAX = 15
@@ -94,6 +95,8 @@ export function ReferenceModal({
   courseProgress,
   onPlayCharacter,
 }: ReferenceModalProps) {
+  useScreenTracker('reference')
+
   const masteryProgress = { scores, letterAccuracy }
   const renderReferenceCard = (char: Letter) => {
     const scoreValue = scores[char] ?? 0

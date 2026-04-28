@@ -48,9 +48,9 @@ describe('appState utils', () => {
       E: { averageMs: 1000, samples: 10 },
     }
     const next = applyListenTtrSample(record, 'E', LISTEN_TTR_MAX_MS * 2)
-    expect(next.E.samples).toBe(11)
-    expect(next.E.averageMs).toBeGreaterThan(1000)
-    expect(next.E.averageMs).toBeLessThanOrEqual(LISTEN_TTR_MAX_MS)
+    expect(next.E!.samples).toBe(11)
+    expect(next.E!.averageMs).toBeGreaterThan(1000)
+    expect(next.E!.averageMs).toBeLessThanOrEqual(LISTEN_TTR_MAX_MS)
   })
 
   it('ignores invalid TTR samples', () => {

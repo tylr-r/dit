@@ -46,6 +46,8 @@ import {
   stopMorseTone,
   stopTone,
 } from './utils/tone'
+import { analytics, logEvent as trackEvent, useScreenTracker } from './lib/analytics'
+import { useNuxStepTracker } from '@dit/core'
 
 const playOnboardingTone = (symbol: '.' | '-') => {
   void playMorseTone({
@@ -54,13 +56,6 @@ const playOnboardingTone = (symbol: '.' | '-') => {
     effectiveWpm: DEFAULT_CHARACTER_WPM,
     minUnitMs: LISTEN_MIN_UNIT_MS,
   })
-}
-
-const trackEvent = (event: string, params?: Record<string, unknown>) => {
-  if (typeof window === 'undefined' || !window.gtag) {
-    return
-  }
-  window.gtag('event', event, params ?? {})
 }
 
 const ensureNotificationPermission = async () => {
@@ -186,8 +181,16 @@ function MainApp() {
     isPressingRef.current = isPressing
   }, [isPressing])
 
+  useScreenTracker(session.state.mode)
+
   const { nuxReady, nuxStatus } = onboarding
   const isNuxActive = nuxReady && nuxStatus === 'pending'
+
+  useNuxStepTracker(onboarding.nuxStep, isNuxActive, trackEvent)
+
+  useEffect(() => {
+    analytics.setUserId(user?.uid ?? null)
+  }, [user])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -394,7 +397,6 @@ function MainApp() {
     setShowSettings(false)
     setShowAbout(false)
     setShowReference(true)
-    trackEvent('reference_open')
   }, [])
 
   const handleShowAbout = useCallback(() => {

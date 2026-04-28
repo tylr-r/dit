@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useScreenTracker } from '../lib/analytics'
 
 type TourStop = {
   target: string
@@ -83,6 +84,8 @@ export function TourOverlay({ onFinish }: TourOverlayProps) {
       window.removeEventListener('scroll', update, true)
     }
   }, [stop.target])
+
+  useScreenTracker('tour')
 
   const handleAdvance = () => {
     if (stepIndex < TOUR_STOPS.length - 1) {

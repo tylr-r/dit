@@ -26,7 +26,7 @@ const buildOptions = (overrides: Partial<Options> = {}): Options => {
     practiceCorrect: 0,
     listenAttempts: 0,
     listenCorrect: 0,
-  } as GuidedLessonProgress)
+  } as unknown as GuidedLessonProgress)
   const practiceLearnModeRef = makeRef(false)
   const practiceIfrModeRef = makeRef(false)
   const practiceReviewMissesRef = makeRef(false)

@@ -1,6 +1,7 @@
 import type { LearnerProfile, NuxStep } from '@dit/core'
 import { useEffect, useState } from 'react'
 import { isIOS } from '../platform/device'
+import { useScreenTracker } from '../lib/analytics'
 
 type AuthUser = { uid: string }
 
@@ -126,6 +127,8 @@ export function NuxModal({
     onPlaySoundCheck()
     setSoundCheckState((prev) => (prev === 'heard' ? 'heard' : 'played'))
   }
+
+  useScreenTracker('nux')
 
   if (step === 'reminder') {
     return null

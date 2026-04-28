@@ -247,8 +247,9 @@ export const useOnboardingActions = ({
   )
 
   const handleNuxSkipReminder = useCallback(() => {
+    logAnalyticsEvent('nux_step_skipped', { step: 'reminder' })
     completeAfterReminderStep()
-  }, [completeAfterReminderStep])
+  }, [completeAfterReminderStep, logAnalyticsEvent])
 
   const handleReplayNux = useCallback(() => {
     setShowSettings(false)

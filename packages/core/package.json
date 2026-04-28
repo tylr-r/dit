@@ -15,7 +15,7 @@
     "build": "tsc -b",
     "test:unit": "vitest",
     "test:unit:run": "vitest run",
-    "test:types": "tsc -b --pretty false"
+    "test:types": "tsc -p tsconfig.test.json --pretty false"
   },
   "devDependencies": {
     "vitest": "^4.1.5"

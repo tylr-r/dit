@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LearningSheet } from '../../../src/components/LearningSheet'
 import type { LearningSheetProps } from '../../../src/components/componentProps'
 
@@ -17,6 +17,13 @@ const baseProps: LearningSheetProps = {
 }
 
 describe('LearningSheet', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('renders Course and Open practice segments', () => {
     render(<LearningSheet {...baseProps} />)
     expect(screen.getByRole('tab', { name: /course/i })).toBeInTheDocument()

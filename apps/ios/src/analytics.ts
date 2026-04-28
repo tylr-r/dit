@@ -22,7 +22,9 @@ const createClient = (): AnalyticsClient => {
     const instance = getAnalytics(getApp())
     return {
       logEvent: (name, ...params) => {
-        logEvent(instance, name, params[0]).catch(() => {})
+        // Cast name to string to avoid Firebase's CustomEventName<T> constraint,
+        // which rejects names that overlap with Firebase reserved event names.
+        logEvent(instance, name as string, params[0]).catch(() => {})
       },
       setUserId: (id) => {
         setUserId(instance, id).catch(() => {})

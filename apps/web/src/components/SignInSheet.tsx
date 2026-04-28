@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useScreenTracker } from '../lib/analytics'
 import type { SignInSheetProps } from './componentProps'
 
 type View = 'picker' | 'email'
@@ -12,6 +13,8 @@ export function SignInSheet({
   onSignInWithEmail,
   onCreateAccountWithEmail,
 }: SignInSheetProps) {
+  useScreenTracker('sign_in')
+
   const [view, setView] = useState<View>('picker')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

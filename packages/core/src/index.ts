@@ -13,12 +13,14 @@ export {
 } from './design/color'
 export { BEZIER, cubicBezier, CTA_SLOT_HEIGHT, TIMING } from './design/motion'
 export type { BezierToken, TimingToken } from './design/motion'
-export { noopAnalyticsClient } from './analytics'
-export type {
-  AnalyticsClient,
-  AnalyticsEvent,
-  AnalyticsEventName,
-  AnalyticsEventParams,
+export {
+  noopAnalyticsClient,
+  type AnalyticsClient,
+  type AnalyticsEvent,
+  type AnalyticsEventName,
+  type AnalyticsEventParams,
+  type ScreenName,
+  type SettingChangeValue,
 } from './analytics'
 export {
   createNoopPlatform,
@@ -85,6 +87,7 @@ export { useOnboardingState } from './hooks/useOnboardingState'
 export { useProgressPersistence } from './hooks/useProgressPersistence'
 export { useProgressSyncController } from './hooks/useProgressSyncController'
 export type { Mode } from './hooks/useProgressSyncController'
+export { useNuxStepTracker } from './hooks/useNuxStepTracker'
 export { useMorseSessionController } from './hooks/useMorseSessionController'
 export type {
   PhaseModalContent,
