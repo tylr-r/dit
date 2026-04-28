@@ -126,6 +126,7 @@ export type PhaseModalContent = {
   subtitle?: string
   letters?: readonly string[]
   buttonText?: string
+  phase?: GuidedPhase
 }
 
 /** Shape for the per-symbol pips the StageDisplay renders below the target letter. */
@@ -440,6 +441,8 @@ export const useMorseSessionController = ({
   const guidedCourseActiveRef = useRef(guidedCourseActive)
   const guidedPackIndexRef = useRef(guidedPackIndex)
   const guidedPhaseRef = useRef<GuidedPhase>(guidedPhase)
+  const prevGuidedPhaseRef = useRef<GuidedPhase | null>(null)
+  const guidedPhaseSettledRef = useRef(false)
   const guidedProgressRef = useRef<GuidedLessonProgress>(guidedProgress)
 
   const setPracticeWordFromList = useCallback((words: string[], avoidWord?: string) => {
@@ -752,6 +755,39 @@ export const useMorseSessionController = ({
     scores,
   ])
 
+  useEffect(() => {
+    // Mark settled on the next tick so initial hydration of `guidedPhase` from
+    // persisted progress does not register as a user-initiated transition. Any
+    // change after this fires real analytics events.
+    const id = setTimeout(() => {
+      guidedPhaseSettledRef.current = true
+    }, 0)
+    return () => clearTimeout(id)
+  }, [])
+
+  useEffect(() => {
+    const prev = prevGuidedPhaseRef.current
+    if (prev === null) {
+      prevGuidedPhaseRef.current = guidedPhase
+      return
+    }
+    if (prev === guidedPhase) {
+      return
+    }
+    if (!guidedPhaseSettledRef.current) {
+      prevGuidedPhaseRef.current = guidedPhase
+      return
+    }
+    logAnalyticsEvent('guided_phase_advance', {
+      from_phase: prev,
+      to_phase: guidedPhase,
+    })
+    if (guidedPhase === 'complete') {
+      logAnalyticsEvent('guided_phase_complete', { phase: guidedPhase })
+    }
+    prevGuidedPhaseRef.current = guidedPhase
+  }, [guidedPhase, logAnalyticsEvent])
+
   const stopTonePlayback = useCallback(() => {
     void stopTone()
   }, [stopTone])
@@ -924,6 +960,9 @@ export const useMorseSessionController = ({
           streakRef.current = next.streak
           setStreak(next.streak)
         }
+        if (isCorrect) {
+          logAnalyticsEvent('mode_correct_answer', { mode: attemptMode })
+        }
         return
       }
       const next = recordLetterAttempt(
@@ -1095,11 +1134,12 @@ export const useMorseSessionController = ({
       showPhaseModal({
         title: 'Course complete',
         subtitle: 'You unlocked all beginner letter packs.',
+        phase: 'complete',
       })
       return
     }
     const nextPack = getBeginnerCoursePack(nextPackIndex)
-    showPhaseModal({ title: 'New letters unlocked', letters: nextPack }, () => {
+    showPhaseModal({ title: 'New letters unlocked', letters: nextPack, phase: 'teach' }, () => {
       moveIntoGuidedLesson('teach', nextPackIndex, createGuidedLessonProgress())
     })
   }, [moveIntoGuidedLesson, showPhaseModal])
@@ -1116,7 +1156,7 @@ export const useMorseSessionController = ({
     }
     const packIndex = guidedPackIndexRef.current
     showPhaseModal(
-      { title: 'Keep going', subtitle: 'One more practice round before new letters.' },
+      { title: 'Keep going', subtitle: 'One more practice round before new letters.', phase: 'practice' },
       () => {
         moveIntoGuidedLesson('practice', packIndex, nextProgress)
       },
@@ -1414,7 +1454,7 @@ export const useMorseSessionController = ({
                   }
                   const packIdx = guidedPackIndexRef.current
                   showPhaseModal(
-                    { title: 'Next up', subtitle: 'Practice in mixed order.', letters: currentPack },
+                    { title: 'Next up', subtitle: 'Practice in mixed order.', letters: currentPack, phase: 'practice' },
                     () => {
                       moveIntoGuidedLesson('practice', packIdx, practiceProgress)
                     },
@@ -1446,7 +1486,7 @@ export const useMorseSessionController = ({
                 }
                 const listenPackIdx = guidedPackIndexRef.current
                 showPhaseModal(
-                  { title: 'Ready to listen', subtitle: 'Hear and identify these letters.', letters: currentPack },
+                  { title: 'Ready to listen', subtitle: 'Hear and identify these letters.', letters: currentPack, phase: 'listen' },
                   () => {
                     moveIntoGuidedLesson('listen', listenPackIdx, listenProgress)
                   },

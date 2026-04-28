@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BEGINNER_COURSE_PACKS, type Letter } from '@dit/core'
+import { useScreenTracker } from '../lib/analytics'
 import type { LearningSheetProps } from './componentProps'
 
 type View = 'course' | 'open' | 'custom'
@@ -39,6 +40,8 @@ export function LearningSheet({
   onSelectCustomLetters,
   onSetGuidedCourseActive,
 }: LearningSheetProps) {
+  useScreenTracker('learning')
+
   const [view, setView] = useState<View>(
     guidedCourseActive ? 'course' : 'open',
   )

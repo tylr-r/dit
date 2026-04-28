@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsPanel } from '../../../src/components/SettingsPanel'
 import type { SettingsPanelProps } from '../../../src/components/componentProps'
 
@@ -43,6 +43,13 @@ const baseProps: SettingsPanelProps = {
 }
 
 describe('SettingsPanel', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('disables hint toggles in freestyle mode', () => {
     render(<SettingsPanel {...baseProps} isFreestyle />)
 

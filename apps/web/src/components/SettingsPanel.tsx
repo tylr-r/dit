@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef } from 'react'
+import { logEvent, useScreenTracker } from '../lib/analytics'
 import type { SettingsPanelProps } from './componentProps'
 
 /** Settings dropdown content and mode-specific controls. */
@@ -45,6 +47,38 @@ export function SettingsPanel({
   isDeletingAccount,
   onSignOut,
 }: SettingsPanelProps) {
+  useScreenTracker('settings')
+
+  const settingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({})
+
+  useEffect(() => () => {
+    Object.values(settingTimersRef.current).forEach((t) => {
+      if (t) clearTimeout(t)
+    })
+  }, [])
+
+  const reportSettingChange = useCallback(
+    (
+      setting: string,
+      value: string | number | boolean,
+      debounceMs: number = 0,
+    ) => {
+      const timers = settingTimersRef.current
+      if (timers[setting]) {
+        clearTimeout(timers[setting]!)
+      }
+      if (debounceMs === 0) {
+        logEvent('setting_changed', { setting, value })
+        return
+      }
+      timers[setting] = setTimeout(() => {
+        logEvent('setting_changed', { setting, value })
+        timers[setting] = undefined
+      }, debounceMs)
+    },
+    [],
+  )
+
   return (
     <div
       className="settings-panel"
@@ -58,7 +92,10 @@ export function SettingsPanel({
           className="toggle-input"
           type="checkbox"
           checked={showHint}
-          onChange={onShowHintChange}
+          onChange={(e) => {
+            reportSettingChange('show_hint', e.target.checked)
+            onShowHintChange(e)
+          }}
           disabled={isFreestyle || isListen}
         />
       </label>
@@ -68,7 +105,10 @@ export function SettingsPanel({
           className="toggle-input"
           type="checkbox"
           checked={showMnemonic}
-          onChange={onShowMnemonicChange}
+          onChange={(e) => {
+            reportSettingChange('show_mnemonic', e.target.checked)
+            onShowMnemonicChange(e)
+          }}
           disabled={isFreestyle || isListen}
         />
       </label>
@@ -92,7 +132,10 @@ export function SettingsPanel({
                 className="toggle-input"
                 type="checkbox"
                 checked={practiceWordMode}
-                onChange={onPracticeWordModeChange}
+                onChange={(e) => {
+                  reportSettingChange('practice_word_mode', e.target.checked)
+                  onPracticeWordModeChange(e)
+                }}
               />
             </label>
           ) : null}
@@ -102,7 +145,10 @@ export function SettingsPanel({
               <select
                 className="panel-select"
                 value={listenWpm}
-                onChange={onListenWpmChange}
+                onChange={(e) => {
+                  reportSettingChange('listen_wpm', Number(e.target.value), 500)
+                  onListenWpmChange(e)
+                }}
               >
                 {Array.from(
                   { length: listenWpmMax - listenWpmMin + 1 },
@@ -125,7 +171,10 @@ export function SettingsPanel({
               className="toggle-input"
               type="checkbox"
               checked={practiceAutoPlay}
-              onChange={onPracticeAutoPlayChange}
+              onChange={(e) => {
+                reportSettingChange('practice_auto_play', e.target.checked)
+                onPracticeAutoPlayChange(e)
+              }}
             />
           </label>
           {!guidedCourseActive ? (
@@ -135,7 +184,10 @@ export function SettingsPanel({
                 className="toggle-input"
                 type="checkbox"
                 checked={practiceLearnMode}
-                onChange={onPracticeLearnModeChange}
+                onChange={(e) => {
+                  reportSettingChange('practice_learn_mode', e.target.checked)
+                  onPracticeLearnModeChange(e)
+                }}
                 disabled={practiceWordMode}
               />
             </label>
@@ -146,7 +198,10 @@ export function SettingsPanel({
               className="toggle-input"
               type="checkbox"
               checked={practiceIfrMode}
-              onChange={onPracticeIfrModeChange}
+              onChange={(e) => {
+                reportSettingChange('practice_ifr_mode', e.target.checked)
+                onPracticeIfrModeChange(e)
+              }}
             />
           </label>
           <label className="toggle">
@@ -155,7 +210,10 @@ export function SettingsPanel({
               className="toggle-input"
               type="checkbox"
               checked={practiceReviewMisses}
-              onChange={onPracticeReviewMissesChange}
+              onChange={(e) => {
+                reportSettingChange('practice_review_misses', e.target.checked)
+                onPracticeReviewMissesChange(e)
+              }}
               disabled={!practiceIfrMode}
             />
           </label>
@@ -167,7 +225,10 @@ export function SettingsPanel({
           <select
             className="panel-select"
             value={toneFrequency}
-            onChange={onToneFrequencyChange}
+            onChange={(e) => {
+              reportSettingChange('tone_frequency', Number(e.target.value), 500)
+              onToneFrequencyChange(e)
+            }}
           >
             {Array.from(
               {
@@ -192,7 +253,10 @@ export function SettingsPanel({
             className="toggle-input"
             type="checkbox"
             checked={freestyleWordMode}
-            onChange={onWordModeChange}
+            onChange={(e) => {
+              reportSettingChange('practice_word_mode', e.target.checked)
+              onWordModeChange(e)
+            }}
           />
         </label>
       ) : null}

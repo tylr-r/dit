@@ -1,8 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TourOverlay } from '../../../src/components/TourOverlay'
 
 describe('TourOverlay', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('renders the first stop title', () => {
     render(<TourOverlay onFinish={vi.fn()} />)
     expect(screen.getByText(/^Modes$/)).toBeInTheDocument()

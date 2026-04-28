@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NuxModal } from '../../../src/components/NuxModal'
 
 const baseProps = {
@@ -23,6 +23,13 @@ const baseProps = {
 }
 
 describe('NuxModal welcome screen', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('renders Sign in / Stay signed out after 2s when user is null', () => {
     vi.useFakeTimers()
     const onRequestSignIn = vi.fn()

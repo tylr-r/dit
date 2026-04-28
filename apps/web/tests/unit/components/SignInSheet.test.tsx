@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SignInSheet } from '../../../src/components/SignInSheet'
 import type { SignInSheetProps } from '../../../src/components/componentProps'
 
@@ -12,6 +12,13 @@ const baseProps: SignInSheetProps = {
 }
 
 describe('SignInSheet', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('renders the three provider buttons in picker view', () => {
     render(<SignInSheet {...baseProps} />)
     expect(screen.getByRole('button', { name: /continue with apple/i })).toBeInTheDocument()

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ReferenceModal } from '../../../src/components/ReferenceModal'
 import { MORSE_DATA, initializeScores } from '@dit/core'
 
@@ -18,6 +18,13 @@ const baseProps = {
 }
 
 describe('ReferenceModal', () => {
+  beforeEach(() => {
+    window.gtag = vi.fn()
+  })
+  afterEach(() => {
+    delete window.gtag
+  })
+
   it('fires reset and close actions', async () => {
     const onClose = vi.fn()
     const onResetScores = vi.fn()

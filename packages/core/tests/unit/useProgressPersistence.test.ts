@@ -78,7 +78,7 @@ const createStorageMock = (seed?: Record<string, string>): StorageMock => {
 const createPlatform = (storage: StorageAdapter): Platform =>
   createNoopPlatform({ storage })
 
-const wrap = (platform: Platform, child: ReactNode): ReactNode =>
+const wrap = (platform: Platform, child: ReactNode): React.ReactElement =>
   React.createElement(
     PlatformProvider,
     { value: platform },

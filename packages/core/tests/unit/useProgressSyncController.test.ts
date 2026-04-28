@@ -77,6 +77,8 @@ const makeState = () => ({
   setLetterAccuracy: vi.fn(),
   setBestWpm: vi.fn(),
   setReminder: vi.fn(),
+  setGuidedMaxPackReached: vi.fn(),
+  setCustomLetters: vi.fn(),
 })
 
 const makeRefs = () => ({
@@ -126,6 +128,8 @@ const makeOptions = (overrides: Partial<ControllerOptions> = {}): ControllerOpti
   database: {} as ControllerOptions['database'],
   user: null,
   progressSnapshot: baseSnapshot,
+  nuxStatus: 'completed',
+  persistNuxStatus: vi.fn(),
   state: makeState(),
   refs: makeRefs(),
   helpers: makeHelpers(),
@@ -171,7 +175,7 @@ describe('useProgressSyncController', () => {
     }).not.toThrow()
 
     // No remote progress was received, so none of the state setters should have fired.
-    const state = options.state as Record<string, ReturnType<typeof vi.fn>>
+    const state = options.state as unknown as Record<string, ReturnType<typeof vi.fn>>
     for (const key of Object.keys(state)) {
       expect(state[key]).not.toHaveBeenCalled()
     }

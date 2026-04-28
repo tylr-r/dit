@@ -1,5 +1,6 @@
 import type { PhaseModalContent } from '@dit/core'
 import { useCallback, useEffect } from 'react'
+import { logEvent, useScreenTracker } from '../lib/analytics'
 
 type PhaseModalProps = {
   content: PhaseModalContent
@@ -8,9 +9,12 @@ type PhaseModalProps = {
 
 /** Overlay shown at guided-course phase transitions (teach → practice → listen). */
 export function PhaseModal({ content, onDismiss }: PhaseModalProps) {
+  useScreenTracker('phase_modal')
+
   const handleDismiss = useCallback(() => {
+    logEvent('phase_modal_dismissed', { phase: content.phase })
     onDismiss()
-  }, [onDismiss])
+  }, [content.phase, onDismiss])
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
