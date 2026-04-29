@@ -378,6 +378,12 @@ function MainApp() {
     setShowAbout(true)
   }, [])
 
+  const handleCloseSettings = useCallback(() => {
+    setShowSettings(false)
+    // Defer to next tick so React unmounts the modal first.
+    queueMicrotask(() => settingsButtonRef.current?.focus())
+  }, [])
+
   const handleModeSelectChange = useCallback(
     (event: React.ChangeEvent<HTMLSelectElement>) => {
       const value = event.target.value
@@ -661,7 +667,7 @@ function MainApp() {
               onPracticeReviewMissesChange={(next) => handlers.handlePracticeReviewMissesChange(next)}
               onUseRecommended={handleUseRecommended}
               onReplayNux={import.meta.env.DEV ? handleReplayNux : undefined}
-              onClose={() => setShowSettings(false)}
+              onClose={handleCloseSettings}
             />
           ) : null}
         </div>
