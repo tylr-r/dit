@@ -1,6 +1,65 @@
+import type React from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 import { logEvent, useScreenTracker } from '../lib/analytics'
 import type { SettingsPanelProps } from './componentProps'
+
+type SettingsSectionProps = {
+  title?: string
+  helper?: string
+  isFirst?: boolean
+  children: React.ReactNode
+}
+
+function SettingsSection({
+  title,
+  helper,
+  isFirst = false,
+  children,
+}: SettingsSectionProps) {
+  return (
+    <section
+      className={`settings-modal-section${isFirst ? ' settings-modal-section--first' : ''}`}
+    >
+      {title ? (
+        <h3 className="settings-modal-section-title">{title}</h3>
+      ) : null}
+      {helper ? (
+        <p className="settings-modal-section-helper">{helper}</p>
+      ) : null}
+      <div className="settings-modal-section-rows">{children}</div>
+    </section>
+  )
+}
+
+type SettingsRowProps = {
+  label: React.ReactNode
+  helper?: React.ReactNode
+  control?: React.ReactNode
+  htmlFor?: string
+}
+
+function SettingsRow({
+  label,
+  helper,
+  control,
+  htmlFor,
+}: SettingsRowProps) {
+  return (
+    <div className="settings-modal-row">
+      <div className="settings-modal-row-line">
+        <label className="settings-modal-row-label" htmlFor={htmlFor}>
+          {label}
+        </label>
+        {control ? (
+          <div className="settings-modal-row-control">{control}</div>
+        ) : null}
+      </div>
+      {helper ? (
+        <p className="settings-modal-row-helper">{helper}</p>
+      ) : null}
+    </div>
+  )
+}
 
 /** Centered glass modal containing sectioned settings controls. */
 export function SettingsPanel(props: SettingsPanelProps) {
@@ -64,9 +123,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
     event.stopPropagation()
   }, [])
 
-  // Suppress unused-prop warnings while sections are wired in later tasks.
+  // Suppress unused-prop/component warnings while sections are wired in later tasks.
   void props
   void reportSettingChange
+  void SettingsSection
+  void SettingsRow
 
   return (
     <div className="settings-modal-backdrop" onClick={handleBackdropClick}>

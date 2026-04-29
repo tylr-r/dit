@@ -3143,6 +3143,74 @@
   padding: 8px 24px 24px;
 }
 
+.settings-modal-section {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.settings-modal-section--first {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.settings-modal-section-title {
+  margin: 0 0 16px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-primary-70);
+}
+
+.settings-modal-section-helper {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--color-text-primary-60);
+}
+
+.settings-modal-section-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-row {
+  padding: 12px 0;
+}
+
+.settings-modal-row + .settings-modal-row {
+  border-top: 1px solid var(--color-border-subtle);
+  border-top-color: hsla(0, 0%, 100%, 0.06);
+}
+
+.settings-modal-row-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 36px;
+}
+
+.settings-modal-row-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: default;
+}
+
+.settings-modal-row-control {
+  flex-shrink: 0;
+}
+
+.settings-modal-row-helper {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-primary-60);
+}
+
 @keyframes settingsModalBackdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
