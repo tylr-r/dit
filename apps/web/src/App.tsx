@@ -120,7 +120,6 @@ function MainApp() {
   )
   const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const isPressingRef = useRef(false)
-  const settingsRef = useRef<HTMLDivElement | null>(null)
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const session = useMorseSessionController({
@@ -286,32 +285,6 @@ function MainApp() {
     }
   }, [showReference])
 
-  useEffect(() => {
-    if (!showSettings) {
-      return
-    }
-    const closeSettings = () => {
-      setShowSettings(false)
-      settingsButtonRef.current?.blur()
-    }
-    const handlePointerDown = (event: PointerEvent) => {
-      const container = settingsRef.current
-      if (container && !container.contains(event.target as Node)) {
-        closeSettings()
-      }
-    }
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeSettings()
-      }
-    }
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('keydown', handleKey)
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('keydown', handleKey)
-    }
-  }, [showSettings])
 
   useEffect(() => {
     if (typeof document === 'undefined' || !showReference) {
@@ -695,7 +668,7 @@ function MainApp() {
           <option value="freestyle">Freestyle</option>
           <option value="listen">Listen</option>
         </select>
-        <div className="settings" ref={settingsRef}>
+        <div className="settings">
           <button
             ref={settingsButtonRef}
             type="button"
@@ -757,6 +730,7 @@ function MainApp() {
               onPracticeReviewMissesChange={handlePracticeReviewMissesToggle}
               onUseRecommended={handleUseRecommended}
               onReplayNux={import.meta.env.DEV ? handleReplayNux : undefined}
+              onClose={() => setShowSettings(false)}
             />
           ) : null}
         </div>
