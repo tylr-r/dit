@@ -379,7 +379,8 @@ Haptics mirror Morse audio. They are pattern, not punctuation.
 - **Don't pulse an enabled CTA.** Its presence is the signal.
 - **Don't present two equal CTAs.** One primary, one tertiary text link.
 - **Don't add new hex values or one-off sizes.** Extend the token scales.
-- **Don't add ambient decoration** (gradients, glows, background drift).
+- **Don't add ambient decoration** (gradients, glows, background drift)
+  to app surfaces. Long-form editorial pages are an exception — see §11.
 
 ### Removed — do not re-add without a stated reason
 
@@ -421,3 +422,101 @@ browser breakpoints.
 - **Vertical flex, not media queries.** Use `flex: 1` fill regions.
 - **Web:** single column, max content width 480pt, background full-bleed.
   Hover states only on pointer devices (`@media (hover: hover)`).
+
+---
+
+## 11. Long-form pages (Privacy, Terms, Support)
+
+These pages are **editorial documents**, not app surfaces. They follow
+different rules than the practice/NUX flows because their job is to be
+read, scanned, and trusted — not used. Code lives in
+[apps/web/src/components/LegalPage.tsx](apps/web/src/components/LegalPage.tsx)
+and the `.legal-*` styles in [apps/web/src/App.css](apps/web/src/App.css).
+
+### Layout
+
+- **Top nav row spans full viewport** ("Back to Dit" left, page links right),
+  respecting only the page's outer horizontal padding. Do not constrain it
+  to the reading column.
+- **Reading column: `min(720px, 100%)`** for hero text and body sections.
+  Wider would tank readability; narrower would feel cramped.
+- **Side-rail section numbers on desktop (≥1100px).** CSS counter on
+  `.legal-card`, incremented per `.legal-section`. Below 1100px the
+  number falls back inline with the section h2.
+- **Page padding:** clamp(40, 7vw, 80) top / clamp(64, 10vw, 120) bottom /
+  clamp(18, 6vw, 80) horizontal. Generous; legal pages aren't dashboards.
+- **Region gap:** clamp(56, 10vw, 112). Nav → hero → body → footer all
+  separated by this.
+
+### Hero
+
+| Property        | Value                                              |
+| --------------- | -------------------------------------------------- |
+| Eyebrow         | Morse mark (`— · ·` for "D") + "Dit" label         |
+| Title           | clamp(2.6, 6vw, 4.8)rem, weight 500, tracking -0.025em |
+| Intro           | clamp(1.05, 1.4vw, 1.2)rem, line-height 1.55       |
+| Last Updated    | 0.7rem uppercase, tracking 0.24em, `text.primary40` |
+
+Title weight 500 (not 600+) at large size reads more editorial / less
+SaaS. Stagger hero children on page-load (~70ms apart, 520ms each,
+`BEZIER.out`) — page-load is a rare moment where motion is allowed.
+
+### "At a glance" callout
+
+Above the numbered sections on the privacy page only. NOT a `LegalSection`
+(it does not get a number). Treatment:
+
+- "AT A GLANCE" eyebrow in `accent.wave` with a leading 18px rule
+- 2x2 grid of bold one-line title + soft supporting sentence, bracketed
+  by top + bottom hairlines at `border.subtle`, **symmetric 36px padding**
+- Stacks to single column under 600px
+
+This is the scannable summary; the body sections carry the detail.
+
+### Body
+
+- Section h2 in tracked uppercase (0.78rem, 0.22em tracking, `text.primary70`),
+  prefixed by zero-padded counter (`01`, `02`, …) in tabular numerals.
+- h2 wraps the title in an `<a href="#slug">` so each section is
+  deep-linkable. Anchor styling looks like text; brightens to `accent.wave`
+  on hover.
+- List bullets are 4px `accent.wave` dots (no default disc).
+- `<strong>` lifts to `--color-text-primary` (full opacity) at weight 600.
+  Use it sparingly for key reassurances ("without signing in", "We do not
+  sell"), not for emphasis-by-default.
+
+### Links (body)
+
+| State | Color                  | Underline                       |
+| ----- | ---------------------- | ------------------------------- |
+| Rest  | `text.primary90`       | 1px, `text.primary40`, offset 3px |
+| Hover | `text.primary` (full)  | thickens to `text.primary80`    |
+
+The body link color is **not** `accent.wave`. The accent is reserved for
+brand marks (Morse glyph, list bullets, the at-a-glance label, the
+scroll progress bar). Tinting body links the same orange devalues the
+accent.
+
+### Atmospheric background — exception to §9
+
+`.legal-page::before` paints two soft radial gradients (warm orange at
+top-center, cool navy top-right) at very low opacity. **This is the
+documented exception to the "no ambient decoration" rule in §9.** Legal
+pages have no logo or interactive focal point to compete with; the glow
+adds atmosphere and brand presence without distracting from anything.
+**Do not port this to app surfaces.**
+
+### Scroll progress indicator
+
+A 2px fixed bar at `top: 0` of the viewport, `accent.wave`, scales from
+left to right as the page scrolls. Driven by CSS scroll-driven animations:
+`scroll-timeline-name: --legal-scroll` on `.legal-page`, referenced via
+`animation-timeline: --legal-scroll` on the bar. No JS. Falls back to
+hidden in browsers without scroll-timeline support (Firefox).
+
+### Motion budget
+
+Scroll-driven progress, hero+section page-load stagger, and a
+sequence-pulse on the Morse mark on hover. Everything else respects
+`@media (prefers-reduced-motion: reduce)` — opacity stays, transforms
+strip out.
