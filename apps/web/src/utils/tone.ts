@@ -13,6 +13,7 @@ let holdOscillator: OscillatorNode | null = null
 let holdGain: GainNode | null = null
 let morseNodes: { oscillator: OscillatorNode; gain: GainNode } | null = null
 let graphWarmed = false
+let firstPrimedSoundDone = false
 
 const ensureContext = async (): Promise<AudioContext | null> => {
   if (!contextRef) {
@@ -38,11 +39,11 @@ const warmAudioGraph = (context: AudioContext) => {
   graphWarmed = true
   const oscillator = context.createOscillator()
   const gain = context.createGain()
-  gain.gain.value = 0
+  gain.gain.setValueAtTime(0, context.currentTime)
   oscillator.connect(gain)
   gain.connect(context.destination)
   const startTime = context.currentTime
-  const stopTime = startTime + 0.05
+  const stopTime = startTime + 0.08
   oscillator.start(startTime)
   oscillator.stop(stopTime)
   oscillator.onended = () => {
@@ -67,7 +68,7 @@ const createToneNodes = (
   const gain = context.createGain()
   oscillator.type = 'sine'
   oscillator.frequency.value = frequency
-  gain.gain.value = initialGain
+  gain.gain.setValueAtTime(initialGain, context.currentTime)
   oscillator.connect(gain)
   gain.connect(context.destination)
   return { oscillator, gain }
@@ -103,9 +104,12 @@ export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   const startTime = context.currentTime
-  gain.gain.setValueAtTime(0, startTime)
-  gain.gain.linearRampToValueAtTime(resolvedVolume, startTime + 0.005)
-  oscillator.start(startTime)
+  const lookahead = firstPrimedSoundDone ? 0 : 0.04
+  const effectiveStart = startTime + lookahead
+  gain.gain.setValueAtTime(0, effectiveStart)
+  gain.gain.linearRampToValueAtTime(resolvedVolume, effectiveStart + 0.005)
+  oscillator.start(effectiveStart)
+  firstPrimedSoundDone = true
   holdOscillator = oscillator
   holdGain = gain
 }
@@ -178,8 +182,12 @@ export const playMorseTone = async ({
       cursor += effectiveUnitSeconds
     }
   }
-  oscillator.start(context.currentTime)
+  const oscillatorStart = firstPrimedSoundDone
+    ? context.currentTime
+    : Math.max(context.currentTime, cursor - 0.04)
+  oscillator.start(oscillatorStart)
   oscillator.stop(cursor + 0.05)
+  firstPrimedSoundDone = true
   oscillator.onended = () => {
     oscillator.disconnect()
     gain.disconnect()
