@@ -310,6 +310,8 @@ export function SettingsPanel(props: SettingsPanelProps) {
     dialogRef.current?.focus()
   }, [])
 
+  const [helpersExpanded, setHelpersExpanded] = useState(false)
+
   const handleBackdropClick = useCallback(() => {
     onClose()
   }, [onClose])
@@ -354,40 +356,64 @@ export function SettingsPanel(props: SettingsPanelProps) {
           </button>
         </header>
         <div className="settings-modal-body" ref={bodyRef}>
-          <SettingsSection title="Helpers" isFirst>
-            <SettingsRow
-              label="Show hints"
-              htmlFor="setting-show-hint"
-              helper="Show the dit/dah pattern under the prompt letter."
-              control={
-                <SettingsToggle
-                  id="setting-show-hint"
-                  checked={props.showHint}
-                  disabled={props.isFreestyle}
-                  onChange={(next) => {
-                    reportSettingChange('show_hint', next)
-                    props.onShowHintChange(next)
-                  }}
+          <section
+            className={`settings-modal-section settings-modal-section--first settings-modal-helpers${helpersExpanded ? ' settings-modal-helpers--expanded' : ''}`}
+          >
+            <button
+              type="button"
+              className="settings-modal-helpers-trigger"
+              onClick={() => setHelpersExpanded((prev) => !prev)}
+              aria-expanded={helpersExpanded}
+              aria-controls="settings-modal-helpers-body"
+            >
+              <span className="settings-modal-section-title">Helpers</span>
+              <span
+                className="settings-modal-helpers-chevron"
+                aria-hidden="true"
+              >
+                ›
+              </span>
+            </button>
+            {helpersExpanded ? (
+              <div
+                id="settings-modal-helpers-body"
+                className="settings-modal-section-rows"
+              >
+                <SettingsRow
+                  label="Show hints"
+                  htmlFor="setting-show-hint"
+                  helper="Show the dit/dah pattern under the prompt letter."
+                  control={
+                    <SettingsToggle
+                      id="setting-show-hint"
+                      checked={props.showHint}
+                      disabled={props.isFreestyle}
+                      onChange={(next) => {
+                        reportSettingChange('show_hint', next)
+                        props.onShowHintChange(next)
+                      }}
+                    />
+                  }
                 />
-              }
-            />
-            <SettingsRow
-              label="Show mnemonics"
-              htmlFor="setting-show-mnemonic"
-              helper="Show the memory phrase below the prompt letter."
-              control={
-                <SettingsToggle
-                  id="setting-show-mnemonic"
-                  checked={props.showMnemonic}
-                  disabled={props.isFreestyle}
-                  onChange={(next) => {
-                    reportSettingChange('show_mnemonic', next)
-                    props.onShowMnemonicChange(next)
-                  }}
+                <SettingsRow
+                  label="Show mnemonics"
+                  htmlFor="setting-show-mnemonic"
+                  helper="Show the memory phrase below the prompt letter."
+                  control={
+                    <SettingsToggle
+                      id="setting-show-mnemonic"
+                      checked={props.showMnemonic}
+                      disabled={props.isFreestyle}
+                      onChange={(next) => {
+                        reportSettingChange('show_mnemonic', next)
+                        props.onShowMnemonicChange(next)
+                      }}
+                    />
+                  }
                 />
-              }
-            />
-          </SettingsSection>
+              </div>
+            ) : null}
+          </section>
 
           <SettingsSection title="Learning">
             <SettingsButtonRow

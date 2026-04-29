@@ -84,8 +84,11 @@ describe('SettingsPanel', () => {
     })
   })
 
-  it('disables hint toggles in freestyle mode', () => {
+  it('disables hint toggles in freestyle mode (when expanded)', () => {
     render(<SettingsPanel {...baseProps} isFreestyle />)
+    // Helpers is collapsed by default; expand it
+    const helpersTrigger = screen.getByRole('button', { name: /helpers/i })
+    fireEvent.click(helpersTrigger)
 
     const showHints = screen.getByRole('checkbox', { name: /show hints/i })
     const showMnemonic = screen.getByRole('checkbox', {
@@ -94,6 +97,19 @@ describe('SettingsPanel', () => {
 
     expect(showHints).toBeDisabled()
     expect(showMnemonic).toBeDisabled()
+  })
+
+  it('hides Helpers toggles by default and reveals them when expanded', () => {
+    render(<SettingsPanel {...baseProps} />)
+    // Default: collapsed — toggles not in document
+    expect(screen.queryByRole('checkbox', { name: /show hints/i })).toBeNull()
+    // Trigger is present and reports collapsed via aria-expanded
+    const trigger = screen.getByRole('button', { name: /helpers/i })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    // Click to expand
+    fireEvent.click(trigger)
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('checkbox', { name: /show hints/i })).toBeInTheDocument()
   })
 
   it('disables sound check while playing', () => {

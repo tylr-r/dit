@@ -3556,3 +3556,46 @@
     animation: none;
   }
 }
+
+.settings-modal-helpers-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 16px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  transition: color var(--timing-snap) var(--ease-out);
+}
+
+.settings-modal-helpers-trigger:hover .settings-modal-section-title {
+  color: var(--color-text-primary);
+}
+
+.settings-modal-helpers-trigger:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.settings-modal-helpers-chevron {
+  display: inline-block;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-text-primary-40);
+  transition: transform var(--timing-snap) var(--ease-out);
+  transform: rotate(0deg);
+}
+
+.settings-modal-helpers--expanded .settings-modal-helpers-chevron {
+  transform: rotate(90deg);
+}
+
+.settings-modal-helpers .settings-modal-section-title {
+  margin: 0;
+  transition: color var(--timing-snap) var(--ease-out);
+}
