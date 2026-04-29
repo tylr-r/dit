@@ -61,6 +61,136 @@ function SettingsRow({
   )
 }
 
+type SettingsToggleProps = {
+  id: string
+  label: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (next: boolean) => void
+}
+
+function SettingsToggle({
+  id,
+  label,
+  checked,
+  disabled = false,
+  onChange,
+}: SettingsToggleProps) {
+  return (
+    <label
+      className={`settings-modal-toggle${disabled ? ' settings-modal-toggle--disabled' : ''}`}
+      htmlFor={id}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        className="settings-modal-toggle-input"
+        checked={checked}
+        disabled={disabled}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="settings-modal-toggle-track" aria-hidden="true">
+        <span className="settings-modal-toggle-thumb" />
+      </span>
+    </label>
+  )
+}
+
+type SettingsSliderProps = {
+  id: string
+  label: string
+  value: number
+  min: number
+  max: number
+  step?: number
+  valueDisplay?: string
+  onChange: (next: number) => void
+}
+
+function SettingsSlider({
+  id,
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  valueDisplay,
+  onChange,
+}: SettingsSliderProps) {
+  const percent = ((value - min) / (max - min)) * 100
+  return (
+    <div className="settings-modal-slider">
+      <div className="settings-modal-slider-line">
+        <label className="settings-modal-slider-label" htmlFor={id}>
+          {label}
+        </label>
+        <span className="settings-modal-slider-value">
+          {valueDisplay ?? value}
+        </span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        className="settings-modal-slider-input"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        aria-label={label}
+        style={{ '--slider-fill': `${percent}%` } as React.CSSProperties}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </div>
+  )
+}
+
+type SettingsButtonRowProps = {
+  label: string
+  value?: string
+  helper?: string
+  variant?: 'default' | 'quiet'
+  disabled?: boolean
+  trailing?: React.ReactNode
+  onClick: () => void
+}
+
+function SettingsButtonRow({
+  label,
+  value,
+  helper,
+  variant = 'default',
+  disabled = false,
+  trailing,
+  onClick,
+}: SettingsButtonRowProps) {
+  return (
+    <div className="settings-modal-row">
+      <button
+        type="button"
+        className={`settings-modal-button-row settings-modal-button-row--${variant}`}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        <span className="settings-modal-button-row-label">{label}</span>
+        <span className="settings-modal-button-row-trailing">
+          {value ? (
+            <span className="settings-modal-button-row-value">{value}</span>
+          ) : null}
+          {trailing ?? (
+            <span className="settings-modal-button-row-chevron" aria-hidden="true">
+              ›
+            </span>
+          )}
+        </span>
+      </button>
+      {helper ? (
+        <p className="settings-modal-row-helper">{helper}</p>
+      ) : null}
+    </div>
+  )
+}
+
 /** Centered glass modal containing sectioned settings controls. */
 export function SettingsPanel(props: SettingsPanelProps) {
   const { onClose } = props
@@ -128,6 +258,9 @@ export function SettingsPanel(props: SettingsPanelProps) {
   void reportSettingChange
   void SettingsSection
   void SettingsRow
+  void SettingsToggle
+  void SettingsSlider
+  void SettingsButtonRow
 
   return (
     <div className="settings-modal-backdrop" onClick={handleBackdropClick}>
