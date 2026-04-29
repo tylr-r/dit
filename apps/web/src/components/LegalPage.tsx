@@ -9,6 +9,14 @@ type LegalPageLayoutProps = {
   children: ReactNode;
 };
 
+const DitMark = () => (
+  <span className="legal-eyebrow-mark" aria-hidden="true">
+    <span className="dah" />
+    <span className="dit" />
+    <span className="dit" />
+  </span>
+)
+
 const LegalPageLayout = ({
   title,
   intro,
@@ -18,38 +26,40 @@ const LegalPageLayout = ({
 }: LegalPageLayoutProps) => {
   return (
     <div className="legal-page">
-      <header className="legal-header">
-        <div className="legal-top">
-          <a className="legal-back" href="/">
-            Back to Dit
+      <div className="legal-progress" aria-hidden="true" />
+      <div className="legal-top">
+        <a className="legal-back" href="/">
+          Back to Dit
+        </a>
+        <nav className="legal-nav" aria-label="Legal">
+          <a
+            href="/privacy"
+            aria-current={current === 'privacy' ? 'page' : undefined}
+          >
+            Privacy
           </a>
-          <nav className="legal-nav" aria-label="Legal">
-            <a
-              href="/privacy"
-              aria-current={current === 'privacy' ? 'page' : undefined}
-            >
-              Privacy
-            </a>
-            <a
-              href="/terms"
-              aria-current={current === 'terms' ? 'page' : undefined}
-            >
-              Terms
-            </a>
-            <a
-              href="/support"
-              aria-current={current === 'support' ? 'page' : undefined}
-            >
-              Support
-            </a>
-          </nav>
-        </div>
-        <div className="legal-hero">
-          <p className="legal-eyebrow">Dit</p>
-          <h1 className="legal-title">{title}</h1>
-          <p className="legal-intro">{intro}</p>
-          <p className="legal-updated">Last Updated: {lastUpdated}</p>
-        </div>
+          <a
+            href="/terms"
+            aria-current={current === 'terms' ? 'page' : undefined}
+          >
+            Terms
+          </a>
+          <a
+            href="/support"
+            aria-current={current === 'support' ? 'page' : undefined}
+          >
+            Support
+          </a>
+        </nav>
+      </div>
+      <header className="legal-hero">
+        <p className="legal-eyebrow">
+          <DitMark />
+          <span>Dit</span>
+        </p>
+        <h1 className="legal-title">{title}</h1>
+        <p className="legal-intro">{intro}</p>
+        <p className="legal-updated">Last Updated: {lastUpdated}</p>
       </header>
       <article className="legal-card">{children}</article>
       <Footer />
@@ -62,12 +72,23 @@ type LegalSectionProps = {
   children: ReactNode;
 };
 
-const LegalSection = ({ title, children }: LegalSectionProps) => (
-  <section className="legal-section">
-    <h2>{title}</h2>
-    {children}
-  </section>
-)
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+const LegalSection = ({ title, children }: LegalSectionProps) => {
+  const id = slugify(title)
+  return (
+    <section className="legal-section" id={id}>
+      <h2>
+        <a href={`#${id}`}>{title}</a>
+      </h2>
+      {children}
+    </section>
+  )
+}
 
 /** Privacy policy content page for Dit. */
 export function PrivacyPolicy() {
@@ -78,18 +99,53 @@ export function PrivacyPolicy() {
       lastUpdated="April 2026"
       current="privacy"
     >
+      <section className="legal-glance" aria-labelledby="glance-label">
+        <p id="glance-label" className="legal-glance-label">
+          At a glance
+        </p>
+        <div className="legal-highlights">
+          <div className="legal-highlight">
+            <p className="legal-highlight-title">No account needed</p>
+            <p className="legal-highlight-body">
+              Use Dit fully without signing in or sharing any personal
+              information.
+            </p>
+          </div>
+          <div className="legal-highlight">
+            <p className="legal-highlight-title">Local first</p>
+            <p className="legal-highlight-body">
+              Your settings and progress live in your browser or on your
+              device unless you sign in to sync.
+            </p>
+          </div>
+          <div className="legal-highlight">
+            <p className="legal-highlight-title">Delete anytime</p>
+            <p className="legal-highlight-body">
+              Delete your account and all synced data from Settings on web
+              or iOS, in one place.
+            </p>
+          </div>
+          <div className="legal-highlight">
+            <p className="legal-highlight-title">Never sold</p>
+            <p className="legal-highlight-body">
+              We do not sell your information to anyone, ever.
+            </p>
+          </div>
+        </div>
+      </section>
       <LegalSection title="Information we collect">
         <ul>
           <li>
             Local settings and progress needed to run Dit, such as mode,
             learning progress, scores, hint preferences, and listen speed. On
-            the web this lives in your browser; on iOS it lives on your
-            device.
+            the web this <strong>stays in your browser</strong>; on iOS it{' '}
+            <strong>stays on your device</strong>.
           </li>
           <li>
             Account information if you sign in, including your email address,
-            display name, and authentication provider details. Both the web
-            and iOS apps support Google, Apple, and email/password sign-in.
+            display name, and authentication provider details.{' '}
+            <strong>Sign-in is optional.</strong> Both the web and iOS apps
+            support Google, Apple, and email/password sign-in.
           </li>
           <li>
             Progress and preferences synced to our servers when you sign in,
@@ -134,13 +190,15 @@ export function PrivacyPolicy() {
             Google Analytics
           </a>{' '}
           on the web. Sign-in providers (Google and Apple) handle
-          authentication data under their own privacy policies. We do not
-          sell personal information.
+          authentication data under their own privacy policies.{' '}
+          <strong>We do not sell personal information.</strong>
         </p>
       </LegalSection>
       <LegalSection title="Your choices">
         <ul>
-          <li>You can use Dit without signing in.</li>
+          <li>
+            You can use Dit <strong>without signing in</strong>.
+          </li>
           <li>
             On the web, you can clear locally stored data through your
             browser settings.
@@ -151,10 +209,10 @@ export function PrivacyPolicy() {
       </LegalSection>
       <LegalSection title="Data deletion">
         <p>
-          On both the web and iOS apps, signed-in users can delete their
-          account from Settings. That removes your Dit account, synced
-          progress, and the local progress on that device. If you need help,
-          email{' '}
+          On both the web and iOS apps, signed-in users can{' '}
+          <strong>delete their account from Settings</strong>. That removes
+          your Dit account, synced progress, and the local progress on that
+          device. If you need help, email{' '}
           <a href="mailto:tyler@tylerobinson.com">tyler@tylerobinson.com</a>.
         </p>
       </LegalSection>
