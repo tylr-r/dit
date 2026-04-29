@@ -253,15 +253,6 @@ export function SettingsPanel(props: SettingsPanelProps) {
     event.stopPropagation()
   }, [])
 
-  // Suppress unused-prop/component warnings while sections are wired in later tasks.
-  void props
-  void reportSettingChange
-  void SettingsSection
-  void SettingsRow
-  void SettingsToggle
-  void SettingsSlider
-  void SettingsButtonRow
-
   return (
     <div className="settings-modal-backdrop" onClick={handleBackdropClick}>
       <div
@@ -294,7 +285,196 @@ export function SettingsPanel(props: SettingsPanelProps) {
           </button>
         </header>
         <div className="settings-modal-body">
-          {/* sections wired in later tasks */}
+          <SettingsSection title="Helpers" isFirst>
+            <SettingsRow
+              label="Show hints"
+              helper="Show the dit/dah pattern under the prompt letter."
+              control={
+                <SettingsToggle
+                  id="setting-show-hint"
+                  label="Show hints"
+                  checked={props.showHint}
+                  disabled={props.isFreestyle}
+                  onChange={(next) => {
+                    reportSettingChange('show_hint', next)
+                    props.onShowHintChange(next)
+                  }}
+                />
+              }
+            />
+            <SettingsRow
+              label="Show mnemonics"
+              helper="Show the memory phrase below the prompt letter."
+              control={
+                <SettingsToggle
+                  id="setting-show-mnemonic"
+                  label="Show mnemonics"
+                  checked={props.showMnemonic}
+                  disabled={props.isFreestyle}
+                  onChange={(next) => {
+                    reportSettingChange('show_mnemonic', next)
+                    props.onShowMnemonicChange(next)
+                  }}
+                />
+              }
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Learning">
+            <SettingsButtonRow
+              label="Learning method"
+              value={props.guidedCourseActive ? 'Course' : 'Open practice'}
+              onClick={() => {
+                props.onShowLearning()
+              }}
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Practice"
+            helper={
+              props.isPractice
+                ? undefined
+                : 'Applies when you switch back to Practice mode.'
+            }
+          >
+            <SettingsRow
+              label="Practice Words"
+              helper={
+                props.guidedCourseActive && props.isPractice
+                  ? 'Unavailable while the guided beginner course is active.'
+                  : 'Practice full words instead of single characters.'
+              }
+              control={
+                <SettingsToggle
+                  id="setting-practice-words"
+                  label="Practice Words"
+                  checked={props.practiceWordMode}
+                  disabled={props.guidedCourseActive && props.isPractice}
+                  onChange={(next) => {
+                    reportSettingChange('practice_word_mode', next)
+                    props.onPracticeWordModeChange(next)
+                  }}
+                />
+              }
+            />
+            <SettingsRow
+              label="Auto-play sound"
+              helper="Automatically plays the current Practice target."
+              control={
+                <SettingsToggle
+                  id="setting-practice-auto-play"
+                  label="Auto-play sound"
+                  checked={props.practiceAutoPlay}
+                  onChange={(next) => {
+                    reportSettingChange('practice_auto_play', next)
+                    props.onPracticeAutoPlayChange(next)
+                  }}
+                />
+              }
+            />
+            {!props.guidedCourseActive ? (
+              <SettingsRow
+                label="Sequential order"
+                helper="Cycle through letters in order instead of randomly."
+                control={
+                  <SettingsToggle
+                    id="setting-practice-learn-mode"
+                    label="Sequential order"
+                    checked={props.practiceLearnMode}
+                    disabled={props.practiceWordMode}
+                    onChange={(next) => {
+                      reportSettingChange('practice_learn_mode', next)
+                      props.onPracticeLearnModeChange(next)
+                    }}
+                  />
+                }
+              />
+            ) : null}
+            <SettingsRow
+              label="Immediate flow recovery"
+              helper="When you miss, immediately replay the same letter."
+              control={
+                <SettingsToggle
+                  id="setting-practice-ifr-mode"
+                  label="Immediate flow recovery"
+                  checked={props.practiceIfrMode}
+                  onChange={(next) => {
+                    reportSettingChange('practice_ifr_mode', next)
+                    props.onPracticeIfrModeChange(next)
+                  }}
+                />
+              }
+            />
+            <SettingsRow
+              label="Review misses later"
+              helper="Re-queue letters you miss so they come back soon."
+              control={
+                <SettingsToggle
+                  id="setting-practice-review-misses"
+                  label="Review misses later"
+                  checked={props.practiceReviewMisses}
+                  disabled={!props.practiceIfrMode}
+                  onChange={(next) => {
+                    reportSettingChange('practice_review_misses', next)
+                    props.onPracticeReviewMissesChange(next)
+                  }}
+                />
+              }
+            />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Listen"
+            helper={props.isListen ? undefined : 'Applies in Listen mode.'}
+          >
+            <SettingsSlider
+              id="setting-listen-wpm"
+              label="Listen WPM"
+              value={props.listenWpm}
+              min={props.listenWpmMin}
+              max={props.listenWpmMax}
+              valueDisplay={`${props.listenWpm}`}
+              onChange={(next) => {
+                reportSettingChange('listen_wpm', next, 500)
+                props.onListenWpmChange(next)
+              }}
+            />
+            <SettingsButtonRow
+              label="Use recommended settings"
+              onClick={() => props.onUseRecommended()}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Audio">
+            <SettingsSlider
+              id="setting-tone-frequency"
+              label="Tone frequency"
+              value={props.toneFrequency}
+              min={props.toneFrequencyMin}
+              max={props.toneFrequencyMax}
+              step={props.toneFrequencyStep}
+              valueDisplay={`${props.toneFrequency} Hz`}
+              onChange={(next) => {
+                reportSettingChange('tone_frequency', next, 500)
+                props.onToneFrequencyChange(next)
+              }}
+            />
+            <SettingsButtonRow
+              label="Sound check"
+              disabled={props.soundCheckStatus === 'playing'}
+              onClick={() => props.onSoundCheck()}
+              trailing={
+                <span
+                  className={`settings-modal-test-pill${
+                    props.soundCheckStatus === 'playing' ? ' settings-modal-test-pill--playing' : ''
+                  }`}
+                >
+                  {props.soundCheckStatus === 'playing' ? 'Playing' : 'Test'}
+                </span>
+              }
+            />
+          </SettingsSection>
         </div>
       </div>
     </div>

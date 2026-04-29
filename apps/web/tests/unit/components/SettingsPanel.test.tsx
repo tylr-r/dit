@@ -7,6 +7,7 @@ const baseProps: SettingsPanelProps = {
   freestyleWordMode: false,
   isFreestyle: false,
   isListen: false,
+  isPractice: false,
   listenWpm: 20,
   listenWpmMax: 30,
   listenWpmMin: 10,
@@ -150,15 +151,14 @@ describe('SettingsPanel', () => {
     ).toBeDisabled()
   })
 
-  it('omits Practice toggles in Freestyle mode', () => {
-    render(<SettingsPanel {...baseProps} isFreestyle />)
-
+  it('shows Practice toggles in Freestyle mode with a "Applies when…" helper', () => {
+    render(<SettingsPanel {...baseProps} isPractice={false} isFreestyle />)
     expect(
-      screen.queryByRole('checkbox', { name: /auto-play sound/i }),
-    ).toBeNull()
+      screen.getByRole('checkbox', { name: /auto-play sound/i }),
+    ).toBeInTheDocument()
     expect(
-      screen.queryByRole('checkbox', { name: /immediate flow recovery/i }),
-    ).toBeNull()
+      screen.getByText(/applies when you switch back to practice mode/i),
+    ).toBeInTheDocument()
   })
 
   it('renders Use recommended settings and fires its callback', () => {
@@ -203,11 +203,11 @@ describe('SettingsPanel', () => {
     expect(button).toHaveTextContent(/course/i)
   })
 
-  it('hides the Learning row in Freestyle mode', () => {
-    render(<SettingsPanel {...baseProps} isFreestyle />)
+  it('shows the Learning row in Freestyle mode', () => {
+    render(<SettingsPanel {...baseProps} isPractice={false} isFreestyle />)
     expect(
-      screen.queryByRole('button', { name: /^learning/i }),
-    ).toBeNull()
+      screen.getByRole('button', { name: /learning method/i }),
+    ).toBeInTheDocument()
   })
 
   it('renders Sign in button when signed out', () => {
