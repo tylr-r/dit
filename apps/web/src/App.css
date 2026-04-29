@@ -3482,3 +3482,113 @@
   color: var(--color-text-primary);
   border-color: var(--color-accent-wave);
 }
+
+.settings-modal-footer-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.settings-modal-identity-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-surface-input);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.settings-modal-identity-label {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.settings-modal-destructive {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--color-border-error);
+  border-radius: 12px;
+  color: var(--color-feedback-error);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--timing-snap) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out),
+    transform var(--timing-press) var(--ease-out);
+}
+
+.settings-modal-destructive:hover:not(:disabled) {
+  background: hsla(0, 100%, 71%, 0.08);
+  border-color: var(--color-border-error-strong);
+  border-width: 1.5px;
+}
+
+.settings-modal-destructive:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.settings-modal-destructive:focus-visible {
+  outline: 2px solid var(--color-feedback-error);
+  outline-offset: 2px;
+}
+
+.settings-modal-destructive:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-modal-destructive-confirm {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-error);
+  background: hsla(0, 100%, 71%, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-modal-destructive-helper {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.settings-modal-destructive-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.settings-modal-destructive-cancel {
+  padding: 8px 14px;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-primary-70);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings-modal-destructive-cancel:hover {
+  color: var(--color-text-primary);
+}
+
+.settings-modal-destructive--confirming {
+  margin-top: 0;
+  width: auto;
+}

@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { logEvent, useScreenTracker } from '../lib/analytics'
 import type { SettingsPanelProps } from './componentProps'
 
@@ -188,6 +188,64 @@ function SettingsButtonRow({
         <p className="settings-modal-row-helper">{helper}</p>
       ) : null}
     </div>
+  )
+}
+
+type SettingsDestructiveButtonProps = {
+  label: string
+  confirmingLabel: string
+  confirmingHelper: string
+  loadingLabel?: string
+  disabled?: boolean
+  onConfirm: () => void
+}
+
+function SettingsDestructiveButton({
+  label,
+  confirmingLabel,
+  confirmingHelper,
+  loadingLabel,
+  disabled = false,
+  onConfirm,
+}: SettingsDestructiveButtonProps) {
+  const [confirming, setConfirming] = useState(false)
+
+  if (confirming) {
+    return (
+      <div className="settings-modal-destructive-confirm">
+        <p className="settings-modal-destructive-helper">{confirmingHelper}</p>
+        <div className="settings-modal-destructive-actions">
+          <button
+            type="button"
+            className="settings-modal-destructive-cancel"
+            onClick={() => setConfirming(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="settings-modal-destructive settings-modal-destructive--confirming"
+            onClick={() => {
+              setConfirming(false)
+              onConfirm()
+            }}
+          >
+            {confirmingLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className="settings-modal-destructive"
+      onClick={() => setConfirming(true)}
+      disabled={disabled}
+    >
+      {loadingLabel ?? label}
+    </button>
   )
 }
 
@@ -474,6 +532,54 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 </span>
               }
             />
+          </SettingsSection>
+
+          {/* Footer actions: utility links, no section header */}
+          <div className="settings-modal-footer-actions">
+            <SettingsButtonRow
+              label="About Dit"
+              variant="quiet"
+              onClick={() => props.onShowAbout()}
+            />
+            {props.onReplayNux ? (
+              <SettingsButtonRow
+                label="Replay onboarding"
+                variant="quiet"
+                onClick={() => props.onReplayNux!()}
+              />
+            ) : null}
+          </div>
+
+          <SettingsSection title="Account">
+            {props.user ? (
+              <>
+                <div className="settings-modal-identity">
+                  <span className="settings-modal-identity-avatar" aria-hidden="true">
+                    {props.userInitial}
+                  </span>
+                  <span className="settings-modal-identity-label">{props.userLabel}</span>
+                </div>
+                <SettingsButtonRow
+                  label={props.isDeletingAccount ? 'Deleting…' : 'Sign out'}
+                  disabled={!props.authReady || props.isDeletingAccount}
+                  onClick={() => props.onSignOut()}
+                />
+                <SettingsDestructiveButton
+                  label="Delete account"
+                  confirmingLabel="Delete account"
+                  confirmingHelper="Permanently delete your account and all synced data?"
+                  disabled={!props.authReady || props.isDeletingAccount}
+                  loadingLabel={props.isDeletingAccount ? 'Deleting…' : undefined}
+                  onConfirm={() => props.onDeleteAccount()}
+                />
+              </>
+            ) : (
+              <SettingsButtonRow
+                label="Sign in"
+                disabled={!props.authReady}
+                onClick={() => props.onShowSignIn()}
+              />
+            )}
           </SettingsSection>
         </div>
       </div>
