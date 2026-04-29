@@ -2734,6 +2734,10 @@
 
 .sign-in-provider {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   width: 100%;
   background: var(--color-surface-input);
   border: 1px solid var(--color-border-subtle);
@@ -2744,6 +2748,10 @@
   text-align: left;
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
+}
+
+.sign-in-provider svg {
+  flex-shrink: 0;
 }
 
 .sign-in-provider:hover:not(:disabled) {
