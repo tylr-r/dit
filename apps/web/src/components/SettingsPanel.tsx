@@ -63,7 +63,6 @@ function SettingsRow({
 
 type SettingsToggleProps = {
   id: string
-  label: string
   checked: boolean
   disabled?: boolean
   onChange: (next: boolean) => void
@@ -71,7 +70,6 @@ type SettingsToggleProps = {
 
 function SettingsToggle({
   id,
-  label,
   checked,
   disabled = false,
   onChange,
@@ -87,7 +85,6 @@ function SettingsToggle({
         className="settings-modal-toggle-input"
         checked={checked}
         disabled={disabled}
-        aria-label={label}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span className="settings-modal-toggle-track" aria-hidden="true">
@@ -137,7 +134,6 @@ function SettingsSlider({
         min={min}
         max={max}
         step={step}
-        aria-label={label}
         style={{ '--slider-fill': `${percent}%` } as React.CSSProperties}
         onChange={(event) => onChange(Number(event.target.value))}
       />
@@ -226,8 +222,8 @@ function SettingsDestructiveButton({
             type="button"
             className="settings-modal-destructive settings-modal-destructive--confirming"
             onClick={() => {
-              setConfirming(false)
               onConfirm()
+              setConfirming(false)
             }}
           >
             {confirmingLabel}
@@ -361,11 +357,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <SettingsSection title="Helpers" isFirst>
             <SettingsRow
               label="Show hints"
+              htmlFor="setting-show-hint"
               helper="Show the dit/dah pattern under the prompt letter."
               control={
                 <SettingsToggle
                   id="setting-show-hint"
-                  label="Show hints"
                   checked={props.showHint}
                   disabled={props.isFreestyle}
                   onChange={(next) => {
@@ -377,11 +373,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
             />
             <SettingsRow
               label="Show mnemonics"
+              htmlFor="setting-show-mnemonic"
               helper="Show the memory phrase below the prompt letter."
               control={
                 <SettingsToggle
                   id="setting-show-mnemonic"
-                  label="Show mnemonics"
                   checked={props.showMnemonic}
                   disabled={props.isFreestyle}
                   onChange={(next) => {
@@ -413,6 +409,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           >
             <SettingsRow
               label="Practice Words"
+              htmlFor="setting-practice-words"
               helper={
                 props.guidedCourseActive && props.isPractice
                   ? 'Unavailable while the guided beginner course is active.'
@@ -421,7 +418,6 @@ export function SettingsPanel(props: SettingsPanelProps) {
               control={
                 <SettingsToggle
                   id="setting-practice-words"
-                  label="Practice Words"
                   checked={props.practiceWordMode}
                   disabled={props.guidedCourseActive && props.isPractice}
                   onChange={(next) => {
@@ -433,11 +429,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
             />
             <SettingsRow
               label="Auto-play sound"
+              htmlFor="setting-practice-auto-play"
               helper="Automatically plays the current Practice target."
               control={
                 <SettingsToggle
                   id="setting-practice-auto-play"
-                  label="Auto-play sound"
                   checked={props.practiceAutoPlay}
                   onChange={(next) => {
                     reportSettingChange('practice_auto_play', next)
@@ -449,11 +445,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
             {!props.guidedCourseActive ? (
               <SettingsRow
                 label="Sequential order"
+                htmlFor="setting-practice-learn-mode"
                 helper="Cycle through letters in order instead of randomly."
                 control={
                   <SettingsToggle
                     id="setting-practice-learn-mode"
-                    label="Sequential order"
                     checked={props.practiceLearnMode}
                     disabled={props.practiceWordMode}
                     onChange={(next) => {
@@ -466,11 +462,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
             ) : null}
             <SettingsRow
               label="Immediate flow recovery"
+              htmlFor="setting-practice-ifr-mode"
               helper="When you miss, immediately replay the same letter."
               control={
                 <SettingsToggle
                   id="setting-practice-ifr-mode"
-                  label="Immediate flow recovery"
                   checked={props.practiceIfrMode}
                   onChange={(next) => {
                     reportSettingChange('practice_ifr_mode', next)
@@ -481,11 +477,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
             />
             <SettingsRow
               label="Review misses later"
+              htmlFor="setting-practice-review-misses"
               helper="Re-queue letters you miss so they come back soon."
               control={
                 <SettingsToggle
                   id="setting-practice-review-misses"
-                  label="Review misses later"
                   checked={props.practiceReviewMisses}
                   disabled={!props.practiceIfrMode}
                   onChange={(next) => {
@@ -568,7 +564,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <SettingsSection title="Account">
             {props.user ? (
               <>
-                <div className="settings-modal-identity">
+                <div
+                  className="settings-modal-identity"
+                  role="group"
+                  aria-label="Signed-in account"
+                >
                   <span className="settings-modal-identity-avatar" aria-hidden="true">
                     {props.userInitial}
                   </span>
