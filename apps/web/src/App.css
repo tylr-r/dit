@@ -35,7 +35,7 @@
 }
 
 .top-bar {
-  width: min(960px, 100%);
+  width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: start;
@@ -789,31 +789,34 @@
 }
 
 .settings-button {
-  width: 40px;
-  height: 40px;
+  padding: 6px;
+  border: 0;
   border-radius: 999px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-panel);
-  backdrop-filter: blur(10px) saturate(150%);
+  background: transparent;
   display: grid;
   place-items: center;
-  color: var(--text);
-  box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: transform var(--timing-exit) var(--ease-out), border var(--timing-standard) var(--ease-out), filter var(--timing-standard) var(--ease-out), box-shadow var(--timing-standard) var(--ease-out);
+  color: var(--color-text-primary-60);
+  cursor: pointer;
+  transition:
+    color var(--timing-snap) var(--ease-out),
+    transform var(--timing-exit) var(--ease-out);
 }
 
 .settings-button:hover {
-  filter: brightness(1.2);
+  color: var(--color-text-primary);
 }
 
 .settings-button:hover svg {
   animation: settingsGearSpin var(--timing-morph) var(--ease-in-out);
 }
 
+.settings-button:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 4px;
+}
+
 .settings-button[aria-expanded="true"] {
-  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
 }
 
 .settings-button:active {
@@ -826,8 +829,8 @@
 }
 
 .settings-button svg {
-  width: 18px;
-  height: 18px;
+  width: 68px;
+  height: 68px;
 }
 
 .settings-panel {
