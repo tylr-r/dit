@@ -256,11 +256,23 @@ export function SettingsPanel(props: SettingsPanelProps) {
 
   const settingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({})
   const dialogRef = useRef<HTMLDivElement | null>(null)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => () => {
     Object.values(settingTimersRef.current).forEach((t) => {
       if (t) clearTimeout(t)
     })
+  }, [])
+
+  useEffect(() => {
+    const body = bodyRef.current
+    if (!body) return
+    const onScroll = () => {
+      setScrolled(body.scrollTop > 4)
+    }
+    body.addEventListener('scroll', onScroll, { passive: true })
+    return () => body.removeEventListener('scroll', onScroll)
   }, [])
 
   const reportSettingChange = useCallback(
@@ -322,7 +334,10 @@ export function SettingsPanel(props: SettingsPanelProps) {
         tabIndex={-1}
         onClick={stopPropagation}
       >
-        <header className="settings-modal-header">
+        <header
+          className="settings-modal-header"
+          data-scrolled={scrolled ? 'true' : undefined}
+        >
           <h2 id="settings-modal-title" className="settings-modal-title">
             Settings
           </h2>
@@ -342,7 +357,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
             </svg>
           </button>
         </header>
-        <div className="settings-modal-body">
+        <div className="settings-modal-body" ref={bodyRef}>
           <SettingsSection title="Helpers" isFirst>
             <SettingsRow
               label="Show hints"
