@@ -393,76 +393,6 @@ function MainApp() {
     [handlers],
   )
 
-  const handleListenWpmSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handlers.handleListenWpmChange(Number(event.target.value))
-    },
-    [handlers],
-  )
-
-  const handleToneFrequencySelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      handlers.handleToneFrequencyChange(Number(event.target.value))
-    },
-    [handlers],
-  )
-
-  const handleShowHintToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setters.setShowHint(event.target.checked)
-    },
-    [setters],
-  )
-
-  const handleShowMnemonicToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setters.setShowMnemonic(event.target.checked)
-    },
-    [setters],
-  )
-
-  const handlePracticeWordModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlers.handlePracticeWordModeChange(event.target.checked)
-    },
-    [handlers],
-  )
-
-  const handleWordModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlers.handlePracticeWordModeChange(event.target.checked)
-    },
-    [handlers],
-  )
-
-  const handlePracticeAutoPlayToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setters.setPracticeAutoPlay(event.target.checked)
-    },
-    [setters],
-  )
-
-  const handlePracticeLearnModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlers.handlePracticeLearnModeChange(event.target.checked)
-    },
-    [handlers],
-  )
-
-  const handlePracticeIfrModeToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlers.handlePracticeIfrModeChange(event.target.checked)
-    },
-    [handlers],
-  )
-
-  const handlePracticeReviewMissesToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handlers.handlePracticeReviewMissesChange(event.target.checked)
-    },
-    [handlers],
-  )
-
   const handleUseRecommended = useCallback(() => {
     handlers.handleUseRecommended()
   }, [handlers])
@@ -689,26 +619,27 @@ function MainApp() {
           {showSettings ? (
             <SettingsPanel
               showHint={showHint}
-              onShowHintChange={handleShowHintToggle}
+              onShowHintChange={(next) => setters.setShowHint(next)}
               showMnemonic={showMnemonic}
-              onShowMnemonicChange={handleShowMnemonicToggle}
+              onShowMnemonicChange={(next) => setters.setShowMnemonic(next)}
               isFreestyle={isFreestyle}
               isListen={isListen}
+              isPractice={mode === 'practice'}
               onShowLearning={() => setShowLearning(true)}
               practiceWordMode={practiceWordMode}
-              onPracticeWordModeChange={handlePracticeWordModeToggle}
+              onPracticeWordModeChange={(next) => handlers.handlePracticeWordModeChange(next)}
               listenWpm={listenWpm}
               listenWpmMin={LISTEN_WPM_MIN}
               listenWpmMax={LISTEN_WPM_MAX}
               onShowAbout={handleShowAbout}
-              onListenWpmChange={handleListenWpmSelectChange}
+              onListenWpmChange={(next) => handlers.handleListenWpmChange(next)}
               toneFrequency={toneFrequency}
               toneFrequencyMin={TONE_FREQUENCY_RANGE.min}
               toneFrequencyMax={TONE_FREQUENCY_RANGE.max}
               toneFrequencyStep={TONE_FREQUENCY_RANGE.step}
-              onToneFrequencyChange={handleToneFrequencySelectChange}
+              onToneFrequencyChange={(next) => handlers.handleToneFrequencyChange(next)}
               freestyleWordMode={freestyleWordMode}
-              onWordModeChange={handleWordModeToggle}
+              onWordModeChange={(next) => handlers.handlePracticeWordModeChange(next)}
               onSoundCheck={handleSoundCheck}
               soundCheckStatus={soundCheckStatus}
               user={user}
@@ -724,10 +655,10 @@ function MainApp() {
               practiceIfrMode={practiceIfrMode}
               practiceReviewMisses={practiceReviewMisses}
               guidedCourseActive={guidedCourseActive}
-              onPracticeAutoPlayChange={handlePracticeAutoPlayToggle}
-              onPracticeLearnModeChange={handlePracticeLearnModeToggle}
-              onPracticeIfrModeChange={handlePracticeIfrModeToggle}
-              onPracticeReviewMissesChange={handlePracticeReviewMissesToggle}
+              onPracticeAutoPlayChange={(next) => setters.setPracticeAutoPlay(next)}
+              onPracticeLearnModeChange={(next) => handlers.handlePracticeLearnModeChange(next)}
+              onPracticeIfrModeChange={(next) => handlers.handlePracticeIfrModeChange(next)}
+              onPracticeReviewMissesChange={(next) => handlers.handlePracticeReviewMissesChange(next)}
               onUseRecommended={handleUseRecommended}
               onReplayNux={import.meta.env.DEV ? handleReplayNux : undefined}
               onClose={() => setShowSettings(false)}

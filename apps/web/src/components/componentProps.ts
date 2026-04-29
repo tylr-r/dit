@@ -1,5 +1,4 @@
 import type {
-  ChangeEvent,
   KeyboardEvent,
   PointerEvent,
   ReactNode,
@@ -62,6 +61,7 @@ export interface SettingsPanelProps {
   freestyleWordMode: boolean
   isFreestyle: boolean
   isListen: boolean
+  isPractice: boolean
   listenWpm: number
   listenWpmMax: number
   listenWpmMin: number
@@ -70,14 +70,14 @@ export interface SettingsPanelProps {
   toneFrequencyMin: number
   toneFrequencyMax: number
   toneFrequencyStep: number
-  onToneFrequencyChange: (event: ChangeEvent<HTMLSelectElement>) => void
-  onListenWpmChange: (event: ChangeEvent<HTMLSelectElement>) => void
-  onPracticeWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onToneFrequencyChange: (next: number) => void
+  onListenWpmChange: (next: number) => void
+  onPracticeWordModeChange: (next: boolean) => void
   onShowAbout: () => void
-  onShowHintChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onShowMnemonicChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onShowHintChange: (next: boolean) => void
+  onShowMnemonicChange: (next: boolean) => void
   onSoundCheck: () => void
-  onWordModeChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onWordModeChange: (next: boolean) => void
   showHint: boolean
   showMnemonic: boolean
   soundCheckStatus: 'idle' | 'playing'
@@ -86,10 +86,10 @@ export interface SettingsPanelProps {
   practiceIfrMode: boolean
   practiceReviewMisses: boolean
   guidedCourseActive: boolean
-  onPracticeAutoPlayChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onPracticeLearnModeChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onPracticeIfrModeChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onPracticeReviewMissesChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onPracticeAutoPlayChange: (next: boolean) => void
+  onPracticeLearnModeChange: (next: boolean) => void
+  onPracticeIfrModeChange: (next: boolean) => void
+  onPracticeReviewMissesChange: (next: boolean) => void
   onUseRecommended: () => void
   onShowLearning: () => void
   onReplayNux?: () => void
