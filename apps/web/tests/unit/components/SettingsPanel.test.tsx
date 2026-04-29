@@ -236,9 +236,47 @@ describe('SettingsPanel', () => {
     render(
       <SettingsPanel {...baseProps} user={user} isDeletingAccount />,
     )
+    screen.getAllByRole('button', { name: /deleting/i }).forEach((btn) => {
+      expect(btn).toBeDisabled()
+    })
+  })
+
+  it('requires confirmation before firing onDeleteAccount', () => {
+    const onDeleteAccount = vi.fn()
+    render(
+      <SettingsPanel
+        {...baseProps}
+        user={{ uid: 'u1', email: 'a@b.c' } as unknown as Parameters<typeof SettingsPanel>[0]['user']}
+        onDeleteAccount={onDeleteAccount}
+      />,
+    )
+    // First click shows the confirm strip
+    fireEvent.click(screen.getByRole('button', { name: /^delete account$/i }))
+    expect(onDeleteAccount).not.toHaveBeenCalled()
     expect(
-      screen.getByRole('button', { name: /deleting/i }),
-    ).toBeDisabled()
-    expect(screen.getByRole('button', { name: /^sign out$/i })).toBeDisabled()
+      screen.getByText(/permanently delete your account/i),
+    ).toBeInTheDocument()
+
+    // Second click confirms — there are now multiple "Delete account" buttons
+    // (the original is replaced by the confirm strip's destructive button).
+    fireEvent.click(screen.getAllByRole('button', { name: /^delete account$/i })[0])
+    expect(onDeleteAccount).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancel button reverts the delete confirm without firing', () => {
+    const onDeleteAccount = vi.fn()
+    render(
+      <SettingsPanel
+        {...baseProps}
+        user={{ uid: 'u1', email: 'a@b.c' } as unknown as Parameters<typeof SettingsPanel>[0]['user']}
+        onDeleteAccount={onDeleteAccount}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^delete account$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+    expect(onDeleteAccount).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: /^delete account$/i }),
+    ).toBeInTheDocument()
   })
 })
