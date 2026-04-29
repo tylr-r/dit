@@ -93,6 +93,10 @@ export interface SettingsPanelProps {
   onUseRecommended: () => void
   onShowLearning: () => void
   onReplayNux?: () => void
+  /**
+   * Fires when the user dismisses the modal (ESC, backdrop click, or close button).
+   */
+  onClose: () => void
   user: FirebaseUser | null
   userLabel: string
   userInitial: string

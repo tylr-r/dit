@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsPanel } from '../../../src/components/SettingsPanel'
 import type { SettingsPanelProps } from '../../../src/components/componentProps'
@@ -40,6 +40,7 @@ const baseProps: SettingsPanelProps = {
   onDeleteAccount: vi.fn(),
   isDeletingAccount: false,
   onSignOut: vi.fn(),
+  onClose: vi.fn(),
 }
 
 describe('SettingsPanel', () => {
@@ -48,6 +49,38 @@ describe('SettingsPanel', () => {
   })
   afterEach(() => {
     delete window.gtag
+  })
+
+  describe('modal shell', () => {
+    it('renders a dialog with title "Settings" and a close button', () => {
+      render(<SettingsPanel {...baseProps} />)
+      expect(screen.getByRole('dialog', { name: /settings/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /close settings/i })).toBeInTheDocument()
+    })
+
+    it('fires onClose when the close button is clicked', () => {
+      const onClose = vi.fn()
+      render(<SettingsPanel {...baseProps} onClose={onClose} />)
+      screen.getByRole('button', { name: /close settings/i }).click()
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires onClose when Escape is pressed', () => {
+      const onClose = vi.fn()
+      render(<SettingsPanel {...baseProps} onClose={onClose} />)
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires onClose when the backdrop is clicked', () => {
+      const onClose = vi.fn()
+      const { container } = render(<SettingsPanel {...baseProps} onClose={onClose} />)
+      const backdrop = container.querySelector('.settings-modal-backdrop')
+      expect(backdrop).not.toBeNull()
+      fireEvent.click(backdrop!)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('disables hint toggles in freestyle mode', () => {
