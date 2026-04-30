@@ -1,6 +1,7 @@
 import type { Letter } from '@dit/core'
 import { useMemo } from 'react'
 import type { ListenControlsProps } from './componentProps'
+import { Tooltip } from './Tooltip'
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
@@ -24,40 +25,47 @@ export function ListenControls({
   )
   return (
     <div className="listen-controls">
-      <button
-        type="button"
-        className="hint-button"
-        onClick={onReplay}
-        disabled={!isIdle}
-        title={showShortcutHints ? 'Replay (Space)' : undefined}
+      <Tooltip
+        label="Replay sound"
+        shortcut={showShortcutHints ? 'Space' : undefined}
+        placement="top"
       >
-        Play
-      </button>
-      <div className="listen-keyboard" role="group" aria-label="Keyboard">
-        {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
-          <div className="keyboard-row" key={`row-${rowIndex}`}>
-            {row.map((key) => {
-              const isAvailable = availableSet.has(key)
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`keyboard-key${isAvailable ? '' : ' keyboard-key-unavailable'}`}
-                  onClick={() => onSubmitAnswer(key)}
-                  disabled={!isIdle || !isAvailable}
-                  aria-label={
-                    isAvailable
-                      ? `Type ${key}`
-                      : `${key} is not in this set`
-                  }
-                >
-                  {key}
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </div>
+        <button
+          type="button"
+          className="hint-button"
+          onClick={onReplay}
+          disabled={!isIdle}
+        >
+          Play
+        </button>
+      </Tooltip>
+      {!showShortcutHints ? (
+        <div className="listen-keyboard" role="group" aria-label="Keyboard">
+          {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (
+            <div className="keyboard-row" key={`row-${rowIndex}`}>
+              {row.map((key) => {
+                const isAvailable = availableSet.has(key)
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`keyboard-key${isAvailable ? '' : ' keyboard-key-unavailable'}`}
+                    onClick={() => onSubmitAnswer(key)}
+                    disabled={!isIdle || !isAvailable}
+                    aria-label={
+                      isAvailable
+                        ? `Type ${key}`
+                        : `${key} is not in this set`
+                    }
+                  >
+                    {key}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {showShortcutHints ? (
         <p className="listen-shortcut-hint" aria-hidden="true">
           Type the letter you hear, or press <kbd>Space</kbd> to replay
