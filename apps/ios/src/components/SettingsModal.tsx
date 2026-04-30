@@ -38,6 +38,7 @@ type SettingsModalProps = {
   listenCharacterWpmMax: number
   showHint: boolean
   showMnemonic: boolean
+  hapticsEnabled: boolean
   reminder: ReminderSettings | undefined
   user: User | null
   isDeletingAccount: boolean
@@ -51,6 +52,7 @@ type SettingsModalProps = {
   onListenCharacterWpmChange: (value: number) => void
   onShowHintChange: (value: boolean) => void
   onShowMnemonicChange: (value: boolean) => void
+  onHapticsEnabledChange: (value: boolean) => void
   onReminderChange: (reminder: ReminderSettings | undefined) => void
   onUseRecommended: () => void
   onShowAbout: () => void
@@ -178,6 +180,7 @@ export function SettingsModal({
   listenCharacterWpmMax,
   showHint,
   showMnemonic,
+  hapticsEnabled,
   reminder,
   user,
   isDeletingAccount,
@@ -191,6 +194,7 @@ export function SettingsModal({
   onListenCharacterWpmChange,
   onShowHintChange,
   onShowMnemonicChange,
+  onHapticsEnabledChange,
   onReminderChange,
   onUseRecommended,
   onShowAbout,
@@ -558,6 +562,16 @@ export function SettingsModal({
                     <Text style={styles.helperText}>
                       The frequency of the CW sidetone. Lower is deeper, higher
                       is sharper.
+                    </Text>
+                    <View style={styles.separator} />
+                    <ToggleRow
+                      label="Haptics"
+                      value={hapticsEnabled}
+                      onValueChange={onHapticsEnabledChange}
+                    />
+                    <Text style={styles.helperText}>
+                      Vibrate alongside the tone when keying or playing back
+                      Morse.
                     </Text>
                   </>
                 </SettingsGroup>

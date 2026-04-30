@@ -410,6 +410,9 @@ export const parseProgress = (
   if (typeof record.showMnemonic === 'boolean') {
     progress.showMnemonic = record.showMnemonic
   }
+  if (typeof record.hapticsEnabled === 'boolean') {
+    progress.hapticsEnabled = record.hapticsEnabled
+  }
   if (typeof record.wordMode === 'boolean') {
     progress.wordMode = record.wordMode
   }

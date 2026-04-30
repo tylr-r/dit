@@ -64,6 +64,7 @@ type UseProgressSyncControllerOptions = {
     setListenTtr: Setter<ListenTtrRecord>
     setShowHint: Setter<boolean>
     setShowMnemonic: Setter<boolean>
+    setHapticsEnabled: Setter<boolean>
     setPracticeIfrMode: Setter<boolean>
     setPracticeReviewMisses: Setter<boolean>
     setLearnerProfile: Setter<LearnerProfile | null>
@@ -172,6 +173,10 @@ export const useProgressSyncController = (options: UseProgressSyncControllerOpti
 
       if (typeof progress.showMnemonic === 'boolean') {
         state.setShowMnemonic(progress.showMnemonic)
+      }
+
+      if (typeof progress.hapticsEnabled === 'boolean') {
+        state.setHapticsEnabled(progress.hapticsEnabled)
       }
 
       if (typeof progress.practiceAutoPlay === 'boolean') {
@@ -443,6 +448,7 @@ export const useProgressSyncController = (options: UseProgressSyncControllerOpti
       state.setScores,
       state.setShowHint,
       state.setShowMnemonic,
+      state.setHapticsEnabled,
       state.setDailyActivity,
       state.setStreak,
       state.setLetterAccuracy,

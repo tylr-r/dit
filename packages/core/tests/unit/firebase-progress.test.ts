@@ -13,6 +13,7 @@ const baseSnapshot: ProgressSnapshot = {
   scores: {} as ProgressSnapshot['scores'],
   showHint: true,
   showMnemonic: true,
+  hapticsEnabled: true,
   wordMode: false,
 }
 

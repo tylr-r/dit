@@ -39,6 +39,7 @@ const baseSnapshot: ProgressSnapshot = {
   scores: initializeScores(),
   showHint: false,
   showMnemonic: false,
+  hapticsEnabled: true,
   wordMode: false,
 }
 
@@ -51,6 +52,7 @@ const makeState = () => ({
   setListenTtr: vi.fn(),
   setShowHint: vi.fn(),
   setShowMnemonic: vi.fn(),
+  setHapticsEnabled: vi.fn(),
   setPracticeIfrMode: vi.fn(),
   setPracticeReviewMisses: vi.fn(),
   setLearnerProfile: vi.fn(),

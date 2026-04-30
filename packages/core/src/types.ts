@@ -72,6 +72,7 @@ export type Progress = {
   guidedProgress?: GuidedLessonProgress
   scores?: ScoreRecord
   showHint?: boolean
+  hapticsEnabled?: boolean
   wordMode?: boolean
   dailyActivity?: DailyActivity
   streak?: StreakState
@@ -99,6 +100,7 @@ export type ProgressSnapshot = {
   scores: ScoreRecord
   showHint: boolean
   showMnemonic: boolean
+  hapticsEnabled: boolean
   wordMode: boolean
   learnerProfile?: LearnerProfile
   guidedCourseActive?: boolean

@@ -323,9 +323,17 @@ private final class HapticController {
   private var activePlayer: CHHapticPatternPlayer?
   private var keyingPlayer: CHHapticPatternPlayer?
   private let supportsHaptics: Bool
+  private var isEnabled: Bool = true
 
   init() {
     supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+  }
+
+  func setEnabled(_ enabled: Bool) {
+    isEnabled = enabled
+    if !enabled {
+      stopAll()
+    }
   }
 
   private func ensureEngine() -> CHHapticEngine? {
@@ -350,6 +358,7 @@ private final class HapticController {
   /// Start a continuous haptic that lasts until `stopKeying` is called.
   /// Used when the user is holding the Morse key so the buzz tracks the tone.
   func startKeying() {
+    guard isEnabled else { return }
     guard let engine = ensureEngine() else { return }
     stopKeying()
     let event = CHHapticEvent(
@@ -385,6 +394,7 @@ private final class HapticController {
     characterUnitMs: Double,
     effectiveUnitMs: Double
   ) {
+    guard isEnabled else { return }
     guard let engine = ensureEngine() else { return }
     guard characterUnitMs > 0, effectiveUnitMs > 0 else { return }
     stopSequence()
@@ -766,6 +776,11 @@ public final class DitNativeModule: Module {
 
     AsyncFunction("getLowPowerModeEnabled") { () -> Bool in
       ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
+    AsyncFunction("setHapticsEnabled") { (enabled: Bool) -> Bool in
+      self.hapticController.setEnabled(enabled)
+      return true
     }
 
     AsyncFunction("startTone") { (frequency: Double, volume: Double) -> Bool in
