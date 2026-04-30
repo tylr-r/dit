@@ -357,6 +357,9 @@ Haptics mirror Morse audio. They are pattern, not punctuation.
   transitions, button presses, confirmations, or arrivals — let sound
   carry the rhythm, not touch.
 - Haptics ignore `useReduceMotion()` — they are an accessibility aid.
+- **Users can mute haptics** from Settings ("Haptics" toggle). The toggle
+  flips an `isEnabled` flag inside the native `HapticController` so the
+  audio path stays untouched.
 
 ---
 

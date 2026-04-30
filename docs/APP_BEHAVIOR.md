@@ -135,16 +135,17 @@ The picker is rendered at the app root so it survives Settings unmounting.
 - Tap a sequence and pause to submit.
 - Result shows the decoded letter or "No match".
 - Word mode appends decoded letters into a running word and auto-inserts spaces after word gaps.
-- Clear and Backspace remove the current input (web also binds `N` to clear and `Backspace` to delete).
+- Both platforms display a live sine wave that pulses with the keyed tone; resolved letters and the running word overlay the wave instead of showing raw dits/dashes.
+- The Clear button resets the in-progress input. Web also binds `N` to clear.
 
 ### Listen
 
 - The app plays a Morse letter at the selected WPM.
-- The user answers with keyboard input (on-screen or physical).
+- The user answers with keyboard input (on-screen or physical). On web, the on-screen keyboard renders only on coarse-pointer (touch) devices; with a physical keyboard attached the Play button and shortcut hint stand alone.
 - Correct: score +1, next playback.
 - Incorrect: score -1, reveal the correct letter, then move on.
 - Replay plays the current letter again (web binds this to the spacebar).
-- iOS displays a sine wave visualization of the playback and a time-to-respond indicator.
+- Both platforms display a sine wave visualization of the playback. iOS adds a time-to-respond indicator.
 
 ## Settings
 
@@ -155,12 +156,13 @@ Toggles and controls available across both platforms unless noted.
 - Max level (letter set size, 1 through 4)
 - Word mode (Freestyle)
 - Practice Words (Practice word mode)
-- Auto-play sound (Practice, iOS)
-- Sequential order (Practice, iOS)
+- Auto-play sound (Practice)
+- Sequential order (Practice)
 - IFR mode, aka Immediate flow recovery
 - Review misses later
 - Listen speed (WPM). Dit length in ms = 1200 / WPM.
 - Tone frequency
+- Haptics (iOS): toggles the dit/dah CoreHaptics pulses that mirror tone playback. On by default.
 - Sound check
 - Reference chart modal
 - Daily reminder (iOS): picks a local notification time using the native date picker. Requires notification permission, which the app requests on first enable.
@@ -182,19 +184,18 @@ Availability rules:
 - `F`: Freestyle
 - `I`: Listen
 - `L`: Practice
-- `H`: toggle Show hints (Practice only)
-- `W`: toggle Word mode (Freestyle only)
-- `N`: show this hint once (Practice) / clear input (Freestyle)
-- `Backspace`: delete last symbol (Freestyle)
-- `Space`: replay current letter (Listen)
+- `N`: clear input (Freestyle)
+- `Space`: hold to key (Practice/Freestyle), tap to replay current letter (Listen)
 - `Esc`: close the reference modal
 - Any letter or digit key while in Listen submits that character as the answer.
+
+Top-bar buttons, the morse key, the Play button in Listen, and the Clear button in Freestyle all surface their action label and (where applicable) the shortcut chip on hover or focus.
 
 ## Feedback
 
 - Visual: success/error states on the main display, plus the pip row that fills in as input matches the target.
 - Audio: tone on press, and playback in Listen and for the Practice Play button.
-- Haptics (iOS): dit, dah, and success feedback.
+- Haptics (iOS): dit/dah pulses mirror tone playback while keying or during Morse playback. User-toggleable in Settings.
 - Background animation pauses when the device is in Low Power Mode or the user has been idle, so the app doesn't cook the battery while sitting on a desk.
 
 ## Scoring and progression

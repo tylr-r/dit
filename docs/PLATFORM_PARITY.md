@@ -62,7 +62,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Playback at WPM | ✅ | ✅ | |
-| On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys; on-screen keyboard now always visible (unavailable letters dimmed) on both platforms |
+| On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys. iOS always shows the on-screen keyboard (unavailable letters dimmed); web only shows it on coarse-pointer devices and hides it when a hardware keyboard is detected. |
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
 | Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
 | Time-to-respond indicator | ❓ | ❌ | Spec says iOS-only; not located in either codebase. Confirm whether spec is aspirational or feature exists under another name. |
@@ -75,8 +75,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Word mode (running word + auto-spaces) | ✅ | ✅ | |
 | Live waveform while keying | ✅ | ✅ | Both share [@dit/core](../packages/core) tone-level helpers; `ListenSineWave` accepts `liveActive` |
 | Suppress raw dits/dashes from big stage | ✅ | ✅ | Stage shows resolved letter / running word; mid-input pattern reads as the wave + status text |
-| Clear / Backspace controls | ✅ | ✅ | |
-| Keyboard `N` (clear) and `Backspace` | 🚫 | ✅ | Web-only |
+| Clear button | ✅ | ✅ | |
+| Keyboard `N` to clear | 🚫 | ✅ | Web-only; tooltip on the Clear button surfaces the chip |
 
 ## Settings
 
@@ -95,6 +95,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Sequential order (Practice) | ✅ | ✅ | |
 | IFR mode | ✅ | ✅ | |
 | Review misses later | ✅ | ✅ | |
+| Haptics on/off | ✅ | 🚫 | iOS-only since web has no haptic surface |
 | Daily reminder | ✅ | 🚫 | Native notifications; web has no equivalent surface |
 | Use recommended settings | ✅ | ✅ | Resets Practice toggles per `learnerProfile` |
 | Replay NUX | ✅ | ✅ | Web exposes the action only in dev builds (per __DEV__/import.meta.env.DEV gating) |
@@ -177,8 +178,9 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Keyboard shortcuts** (`F`/`I`/`L` mode switching, `H` toggle hints, `W` toggle word mode, `N` show-this-hint / clear, `Backspace` delete, `Space` replay, `Esc` close reference, letter/digit keys to answer in Listen) — physical keyboard is web's affordance, not iOS's
-- **One-time "Show this hint" button in Practice** — paired with the `N` shortcut
+- **Keyboard shortcuts** (`F`/`I`/`L` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, letter/digit keys to answer in Listen) — physical keyboard is web's affordance, not iOS's. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
+- **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.
 - **Google popup auth flow** — different transport from iOS's native Google sign-in, same provider
 
 ### Shared but implemented natively per platform
