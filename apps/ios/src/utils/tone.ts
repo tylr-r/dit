@@ -14,6 +14,13 @@ export async function prepareToneEngine() {
   return DitNative.prepareToneEngine()
 }
 
+export async function setHapticsEnabled(enabled: boolean) {
+  if (typeof DitNative.setHapticsEnabled !== 'function') {
+    return false
+  }
+  return DitNative.setHapticsEnabled(enabled)
+}
+
 export async function startTone({ frequency, volume }: ToneDefaults = {}) {
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   return DitNative.startTone(frequency ?? AUDIO_FREQUENCY, resolvedVolume)

@@ -70,6 +70,7 @@ const mergeProgressSnapshot = (
   scores: progress.scores ?? base.scores,
   showHint: progress.showHint ?? base.showHint,
   showMnemonic: progress.showMnemonic ?? base.showMnemonic,
+  hapticsEnabled: progress.hapticsEnabled ?? base.hapticsEnabled,
   wordMode: progress.wordMode ?? base.wordMode,
   dailyActivity: progress.dailyActivity ?? base.dailyActivity,
   streak: progress.streak ?? base.streak,

@@ -58,6 +58,7 @@ import { signOut } from './src/services/auth'
 import {
   playMorseTone,
   prepareToneEngine,
+  setHapticsEnabled,
   startTone,
   stopMorseTone,
   stopTone,
@@ -323,6 +324,10 @@ function AppShell() {
   }, [progressForSideEffects])
 
   useEffect(() => {
+    void setHapticsEnabled(state.hapticsEnabled)
+  }, [state.hapticsEnabled])
+
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
         void rescheduleReminder(progressForSideEffects)
@@ -381,6 +386,7 @@ function AppShell() {
               listenCharacterWpmMax={LISTEN_WPM_MAX}
               showHint={state.showHint}
               showMnemonic={state.showMnemonic}
+              hapticsEnabled={state.hapticsEnabled}
               reminder={state.reminder}
               isDeletingAccount={isDeletingAccount}
               onClose={() => {
@@ -396,6 +402,7 @@ function AppShell() {
               onListenCharacterWpmChange={handlers.handleListenWpmChange}
               onShowHintChange={setters.setShowHint}
               onShowMnemonicChange={setters.setShowMnemonic}
+              onHapticsEnabledChange={setters.setHapticsEnabled}
               onReminderChange={handlers.handleReminderChange}
               onUseRecommended={handlers.handleUseRecommended}
               onShowAbout={handleShowAbout}

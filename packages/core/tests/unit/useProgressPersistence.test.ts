@@ -35,6 +35,7 @@ const baseSnapshot: ProgressSnapshot = {
   scores: initializeScores(),
   showHint: false,
   showMnemonic: false,
+  hapticsEnabled: true,
   wordMode: false,
 }
 

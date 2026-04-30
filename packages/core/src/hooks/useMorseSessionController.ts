@@ -257,6 +257,7 @@ export const useMorseSessionController = ({
   const [mode, setMode] = useState<Mode>('practice')
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
+  const [hapticsEnabled, setHapticsEnabled] = useState(true)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
   const [practiceIfrMode, setPracticeIfrMode] = useState(DEFAULT_PRACTICE_IFR_MODE)
@@ -356,6 +357,7 @@ export const useMorseSessionController = ({
       scores,
       showHint,
       showMnemonic,
+      hapticsEnabled,
       wordMode: freestyleWordMode,
       dailyActivity,
       streak,
@@ -395,6 +397,7 @@ export const useMorseSessionController = ({
       scores,
       showHint,
       showMnemonic,
+      hapticsEnabled,
       streak,
       onboarding.nuxStatus,
       guidedMaxPackReached,
@@ -1006,6 +1009,7 @@ export const useMorseSessionController = ({
     setMode('practice')
     setShowHint(false)
     setShowMnemonic(false)
+    setHapticsEnabled(true)
     setPracticeAutoPlay(true)
     setPracticeLearnMode(true)
     setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
@@ -2024,6 +2028,7 @@ export const useMorseSessionController = ({
       setListenTtr,
       setShowHint,
       setShowMnemonic,
+      setHapticsEnabled,
       setPracticeIfrMode,
       setPracticeReviewMisses,
       setLearnerProfile,
@@ -2228,6 +2233,7 @@ export const useMorseSessionController = ({
       mode,
       showHint,
       showMnemonic,
+      hapticsEnabled,
       practiceAutoPlay,
       practiceLearnMode,
       practiceIfrMode,
@@ -2262,6 +2268,7 @@ export const useMorseSessionController = ({
     setters: {
       setShowHint,
       setShowMnemonic,
+      setHapticsEnabled,
       setPracticeAutoPlay,
       setGuidedCourseActive,
       flushPendingSave,
