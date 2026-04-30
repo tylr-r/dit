@@ -7,6 +7,7 @@ type TintStatus = 'idle' | 'success' | 'error'
 type ListenSineWaveProps = {
   playback: ListenWavePlayback | null
   tintStatus?: TintStatus
+  liveActive?: boolean
 }
 
 const SAMPLE_POINTS = 80
@@ -75,7 +76,11 @@ const buildPath = (
 }
 
 /** Listen-mode multi-line sine wave that reacts to Morse playback. */
-export function ListenSineWave({ playback, tintStatus = 'idle' }: ListenSineWaveProps) {
+export function ListenSineWave({
+  playback,
+  tintStatus = 'idle',
+  liveActive = false,
+}: ListenSineWaveProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const svgLowerRefs = useRef<(SVGPathElement | null)[]>([])
   const svgUpperRefs = useRef<(SVGPathElement | null)[]>([])
@@ -85,8 +90,14 @@ export function ListenSineWave({ playback, tintStatus = 'idle' }: ListenSineWave
     energy: IDLE_ENERGY,
     elapsedMs: 0,
     lastFrameMs: 0,
+    liveLevel: 0,
   })
   const playbackRef = useRef<ListenWavePlayback | null>(null)
+  const liveActiveRef = useRef(liveActive)
+
+  useEffect(() => {
+    liveActiveRef.current = liveActive
+  }, [liveActive])
 
   useEffect(() => {
     playbackRef.current = playback
@@ -127,7 +138,12 @@ export function ListenSineWave({ playback, tintStatus = 'idle' }: ListenSineWave
             pb.interCharacterGapMs,
           )
         : 0
-      const targetEnergy = IDLE_ENERGY + toneLevel * (1 - IDLE_ENERGY)
+      const liveTarget = liveActiveRef.current ? 1 : 0
+      const liveTau = liveActiveRef.current ? 90 : 140
+      const liveBlend = 1 - Math.exp(-deltaMs / liveTau)
+      state.liveLevel += (liveTarget - state.liveLevel) * liveBlend
+      const effectiveTone = Math.max(toneLevel, state.liveLevel)
+      const targetEnergy = IDLE_ENERGY + effectiveTone * (1 - IDLE_ENERGY)
       const attack = 1 - Math.exp(-deltaMs / 62)
       const decay = 1 - Math.exp(-deltaMs / 190)
       const blend = targetEnergy > state.energy ? attack : decay

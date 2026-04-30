@@ -675,6 +675,7 @@ function MainApp() {
       <StageDisplay
         freestyleDisplay={freestyleDisplay}
         hasFreestyleDisplay={hasFreestyleDisplay}
+        freestyleToneActive={isFreestyle && isPressing}
         hintVisible={hintVisible}
         isFreestyle={isFreestyle}
         isListen={isListen}

@@ -415,6 +415,26 @@ export function SettingsPanel(props: SettingsPanelProps) {
             ) : null}
           </section>
 
+          {props.isFreestyle ? (
+            <SettingsSection title="Freestyle">
+              <SettingsRow
+                label="Word mode"
+                htmlFor="setting-freestyle-word-mode"
+                helper="Build a running word from decoded letters."
+                control={
+                  <SettingsToggle
+                    id="setting-freestyle-word-mode"
+                    checked={props.freestyleWordMode}
+                    onChange={(next) => {
+                      reportSettingChange('freestyle_word_mode', next)
+                      props.onWordModeChange(next)
+                    }}
+                  />
+                }
+              />
+            </SettingsSection>
+          ) : null}
+
           <SettingsSection title="Learning">
             <SettingsButtonRow
               label="Learning method"

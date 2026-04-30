@@ -37,6 +37,7 @@ export interface MorseButtonProps {
 export interface StageDisplayProps {
   freestyleDisplay: string
   hasFreestyleDisplay: boolean
+  freestyleToneActive: boolean
   hintVisible: boolean
   isFreestyle: boolean
   isListen: boolean

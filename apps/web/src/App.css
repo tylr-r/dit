@@ -2508,6 +2508,18 @@
   animation: listen-letter-in var(--timing-snap) var(--ease-out);
 }
 
+.freestyle-overlay-letter {
+  font-family: inherit;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  font-size: clamp(56px, 14vw, 140px);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  padding: 0 12px;
+}
+
 @keyframes listen-letter-in {
   from {
     opacity: 0;

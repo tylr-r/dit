@@ -5,6 +5,7 @@ import { ListenSineWave } from './ListenSineWave'
 export function StageDisplay({
   freestyleDisplay,
   hasFreestyleDisplay,
+  freestyleToneActive,
   hintVisible,
   isFreestyle,
   isListen,
@@ -25,16 +26,26 @@ export function StageDisplay({
   target,
 }: StageDisplayProps) {
   const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
+  const freestylePatternVisible =
+    hasFreestyleDisplay && /^[.-]+$/.test(freestyleDisplay)
+  const showFreestyleOverlayLetter =
+    hasFreestyleDisplay &&
+    freestyleDisplay !== '?' &&
+    !freestylePatternVisible
   return (
     <main className="stage">
       {isFreestyle ? (
-        <div
-          className={`letter ${
-            hasFreestyleDisplay ? '' : 'letter-placeholder'
-          }`}
-          aria-live="polite"
-        >
-          {freestyleDisplay}
+        <div className="listen-visual freestyle-visual">
+          <ListenSineWave playback={null} liveActive={freestyleToneActive} />
+          {showFreestyleOverlayLetter ? (
+            <div
+              key={freestyleDisplay}
+              className="listen-overlay-letter freestyle-overlay-letter"
+              aria-live="polite"
+            >
+              {freestyleDisplay}
+            </div>
+          ) : null}
         </div>
       ) : isListen ? (
         <>

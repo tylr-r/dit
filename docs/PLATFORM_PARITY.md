@@ -73,6 +73,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Tap-and-pause to submit | ✅ | ✅ | |
 | Word mode (running word + auto-spaces) | ✅ | ✅ | |
+| Live waveform while keying | ✅ | ✅ | Both share [@dit/core](../packages/core) tone-level helpers; `ListenSineWave` accepts `liveActive` |
+| Suppress raw dits/dashes from big stage | ✅ | ✅ | Stage shows resolved letter / running word; mid-input pattern reads as the wave + status text |
 | Clear / Backspace controls | ✅ | ✅ | |
 | Keyboard `N` (clear) and `Backspace` | 🚫 | ✅ | Web-only |
 
