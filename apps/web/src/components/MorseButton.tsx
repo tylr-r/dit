@@ -6,6 +6,7 @@
 import type { SyntheticEvent } from 'react'
 import './MorseButton.css'
 import type { MorseButtonProps } from './componentProps'
+import { Tooltip } from './Tooltip'
 
 /** Tap/press input button for dot/dah entry. */
 export function MorseButton({
@@ -81,28 +82,34 @@ export function MorseButton({
         </filter>
       </svg>
 
-      <button
-        type="button"
-        className={`morse-button ${isPressing ? 'pressing' : ''}`}
-        ref={buttonRef}
-        onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onPointerLeave={onPointerLeave}
-        onContextMenu={preventDefault}
-        onDoubleClick={preventDefault}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
-        onBlur={onBlur}
-        aria-label="Tap for dot, hold for dah"
-        title={showShortcutHint ? 'Tap or press Space (hold for dah)' : undefined}
+      <Tooltip
+        label="Tap for dit, hold for dah"
+        shortcut={showShortcutHint ? 'Space' : undefined}
+        placement="top"
+        block
       >
-        <span className="fluid-container" aria-hidden="true">
-          <span className="fluid-paint" />
-        </span>
-        <span className="fluid-glow" aria-hidden="true" />
-        <span className="fluid-glass" aria-hidden="true" />
-      </button>
+        <button
+          type="button"
+          className={`morse-button ${isPressing ? 'pressing' : ''}`}
+          ref={buttonRef}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          onPointerLeave={onPointerLeave}
+          onContextMenu={preventDefault}
+          onDoubleClick={preventDefault}
+          onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          onBlur={onBlur}
+          aria-label="Tap for dot, hold for dah"
+        >
+          <span className="fluid-container" aria-hidden="true">
+            <span className="fluid-paint" />
+          </span>
+          <span className="fluid-glow" aria-hidden="true" />
+          <span className="fluid-glass" aria-hidden="true" />
+        </button>
+      </Tooltip>
     </div>
   )
 }

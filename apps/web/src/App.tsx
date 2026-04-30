@@ -17,6 +17,7 @@ import { PhaseModal } from './components/PhaseModal'
 import { ReferenceModal } from './components/ReferenceModal'
 import { SettingsPanel } from './components/SettingsPanel'
 import { StageDisplay } from './components/StageDisplay'
+import { Tooltip } from './components/Tooltip'
 import {
   BEGINNER_COURSE_PACKS,
   DEFAULT_CHARACTER_WPM,
@@ -338,6 +339,11 @@ function MainApp() {
         handlers.handleModeChange('practice')
         return
       }
+      if (isFreestyle && key === 'n') {
+        event.preventDefault()
+        handlers.handleFreestyleClear()
+        return
+      }
       if (event.code === 'Space' || event.key === ' ') {
         if (isPressingRef.current) {
           return
@@ -364,7 +370,7 @@ function MainApp() {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handlers, isListen, showReference])
+  }, [handlers, isFreestyle, isListen, showReference])
 
   const handleShowReference = useCallback(() => {
     setShowSettings(false)
@@ -576,17 +582,19 @@ function MainApp() {
     >
       <header className="top-bar">
         <div className="logo">
-          <button
-            type="button"
-            className="logo-button"
-            onClick={handleShowReference}
-            aria-label="Open reference chart"
-            aria-haspopup="dialog"
-            aria-expanded={showReference}
-            data-tour-target="progress"
-          >
-            <img src="/Dit-logo.svg" alt="Dit" />
-          </button>
+          <Tooltip label="Reference & progress">
+            <button
+              type="button"
+              className="logo-button"
+              onClick={handleShowReference}
+              aria-label="Open reference chart"
+              aria-haspopup="dialog"
+              aria-expanded={showReference}
+              data-tour-target="progress"
+            >
+              <img src="/Dit-logo.svg" alt="Dit" />
+            </button>
+          </Tooltip>
         </div>
         <select
           className="mode-select"
@@ -605,6 +613,7 @@ function MainApp() {
           <option value="listen">Listen</option>
         </select>
         <div className="settings">
+          <Tooltip label="Settings">
           <button
             ref={settingsButtonRef}
             type="button"
@@ -622,6 +631,7 @@ function MainApp() {
               />
             </svg>
           </button>
+          </Tooltip>
           {showSettings ? (
             <SettingsPanel
               showHint={showHint}
@@ -717,13 +727,19 @@ function MainApp() {
             <div className="freestyle-status" aria-live="polite">
               {freestyleStatusText}
             </div>
-            <button
-              type="button"
-              className="hint-button submit-button"
-              onClick={handlers.handleFreestyleClear}
+            <Tooltip
+              label="Clear input"
+              shortcut={useCustomKeyboard ? undefined : 'N'}
+              placement="top"
             >
-              Clear
-            </button>
+              <button
+                type="button"
+                className="hint-button submit-button"
+                onClick={handlers.handleFreestyleClear}
+              >
+                Clear
+              </button>
+            </Tooltip>
           </>
         ) : null}
         {isListen ? (

@@ -3611,3 +3611,83 @@
   margin: 0;
   transition: color var(--timing-snap) var(--ease-out);
 }
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tooltip-wrap--block {
+  display: block;
+  width: 100%;
+}
+
+.tooltip-bubble {
+  position: absolute;
+  left: 50%;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: hsla(217, 26%, 8%, 0.96);
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid hsla(0, 0%, 100%, 0.08);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translate(-50%, -2px);
+  pointer-events: none;
+  transition:
+    opacity var(--timing-snap) var(--ease-out),
+    transform var(--timing-snap) var(--ease-out);
+}
+
+.tooltip-wrap--bottom .tooltip-bubble {
+  top: calc(100% + 8px);
+}
+
+.tooltip-wrap--top .tooltip-bubble {
+  bottom: calc(100% + 8px);
+}
+
+.tooltip-wrap:hover > .tooltip-bubble,
+.tooltip-wrap:focus-within > .tooltip-bubble {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 120ms;
+}
+
+.tooltip-label {
+  font-weight: 500;
+}
+
+.tooltip-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: hsla(0, 0%, 100%, 0.08);
+  border: 1px solid hsla(0, 0%, 100%, 0.14);
+  color: hsla(0, 0%, 100%, 0.84);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (hover: none) {
+  .tooltip-bubble {
+    display: none;
+  }
+}
