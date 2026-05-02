@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { BackgroundGlow } from './components/BackgroundGlow'
+import { DitLogo } from './components/DitLogo'
 import { Footer } from './components/Footer'
 import { LearningSheet } from './components/LearningSheet'
+import { ModeSwitcher } from './components/ModeSwitcher'
 import { MorseLiquidSurface } from './components/MorseLiquidSurface'
 import { SignInSheet } from './components/SignInSheet'
 import {
@@ -392,21 +394,6 @@ function MainApp() {
     queueMicrotask(() => settingsButtonRef.current?.focus())
   }, [])
 
-  const handleModeSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = event.target.value
-      const nextMode =
-        value === 'freestyle'
-          ? 'freestyle'
-          : value === 'listen'
-            ? 'listen'
-            : 'practice'
-      handlers.handleModeChange(nextMode)
-      event.currentTarget.blur()
-    },
-    [handlers],
-  )
-
   const handleUseRecommended = useCallback(() => {
     handlers.handleUseRecommended()
   }, [handlers])
@@ -596,26 +583,15 @@ function MainApp() {
               aria-expanded={showReference}
               data-tour-target="progress"
             >
-              <img src="/Dit-logo.svg" alt="Dit" />
+              <DitLogo />
             </button>
           </Tooltip>
         </div>
-        <select
-          className="mode-select"
-          value={mode}
-          onChange={handleModeSelectChange}
-          aria-label="Mode"
-          title={
-            useCustomKeyboard
-              ? undefined
-              : 'Switch mode — shortcuts: L Practice, F Freestyle, I Listen'
-          }
-          data-tour-target="modes"
-        >
-          <option value="practice">Practice</option>
-          <option value="freestyle">Freestyle</option>
-          <option value="listen">Listen</option>
-        </select>
+        <ModeSwitcher
+          mode={mode as 'practice' | 'freestyle' | 'listen'}
+          onChange={(next) => handlers.handleModeChange(next)}
+          showShortcutHints={!useCustomKeyboard}
+        />
         <div className="settings">
           <Tooltip label="Settings">
           <button
