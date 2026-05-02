@@ -1,4 +1,8 @@
-import type { ReminderSettings } from '@dit/core'
+import {
+  resolveSchemaFor,
+  type ReminderSettings,
+  type SettingsMode,
+} from '@dit/core'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { datePickerStyle } from '@expo/ui/swift-ui/modifiers'
 import type { User } from '@firebase/auth'
@@ -207,6 +211,38 @@ export function SettingsModal({
   const { height: viewportHeight } = useWindowDimensions()
   const insets = useSafeAreaInsets()
   const isPractice = !isFreestyle && !isListen
+
+  const mode: SettingsMode = isPractice
+    ? 'practice'
+    : isFreestyle
+      ? 'freestyle'
+      : 'listen'
+  const sections = React.useMemo(() => resolveSchemaFor('ios', mode), [mode])
+
+  // Dev-only contract check: the hardcoded card layout below must render
+  // sections in the canonical schema order. If schema sections change, this
+  // fires and we update the layout (or the schema). Web drives its render
+  // directly from resolveSchemaFor; iOS validates against it.
+  React.useEffect(() => {
+    if (!__DEV__) return
+    const schemaOrder = sections.map((s) => s.id)
+    const expected = [
+      'word-mode',
+      'playback',
+      'learning',
+      'practice',
+      'helpers',
+      'reminder',
+      'app-actions',
+      'account',
+    ].filter((id) => schemaOrder.includes(id))
+    if (schemaOrder.join(',') !== expected.join(',')) {
+      console.warn(
+        '[SettingsModal] iOS render order has drifted from schema:',
+        { schemaOrder, expected },
+      )
+    }
+  }, [sections])
 
   const maxSheetHeight = Math.max(
     SHEET_MIN_HEIGHT,

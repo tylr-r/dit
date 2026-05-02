@@ -107,19 +107,56 @@
   border-radius: 16px;
 }
 
-.logo img {
+.logo img,
+.logo .dit-logo {
   width: clamp(44px, 5vw, 64px);
   height: auto;
   display: block;
   opacity: 0.5;
-  transition:
-    opacity var(--timing-snap) var(--ease-out),
-    transform var(--timing-morph) var(--ease-out);
+  transition: opacity var(--timing-snap) var(--ease-out);
 }
 
-.logo-button:hover img {
+.logo-button:hover img,
+.logo-button:hover .dit-logo {
   opacity: 1;
-  transform: rotate(15deg);
+}
+
+.dit-logo__outer,
+.dit-logo__inner {
+  transform-origin: 403px 403px;
+  transform-box: view-box;
+}
+
+.dit-logo__outer {
+  animation: dit-logo-spin-outer 30s linear infinite;
+  animation-play-state: paused;
+}
+
+.dit-logo__inner {
+  animation: dit-logo-spin-inner 20s linear infinite;
+  animation-play-state: paused;
+}
+
+.logo-button:hover .dit-logo__outer,
+.logo-button:hover .dit-logo__inner {
+  animation-play-state: running;
+}
+
+@keyframes dit-logo-spin-outer {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dit-logo-spin-inner {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dit-logo__outer,
+  .dit-logo__inner {
+    animation: none;
+  }
 }
 
 .legal-page {
@@ -780,39 +817,153 @@
   opacity: 0.6;
 }
 
-.mode-select {
+.mode-switcher {
+  position: relative;
+  justify-self: center;
+}
+
+.mode-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   appearance: none;
   border-radius: 999px;
   border: 1px solid var(--color-border-subtle);
   background: var(--color-surface-input);
-  backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   color: var(--text);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
-  background-image: linear-gradient(
-      45deg,
-      transparent 50%,
-      rgba(255, 255, 255, 0.6) 50%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.6) 50%,
-      transparent 50%
-    );
-  background-position:
-    calc(100% - 14px) 55%,
-    calc(100% - 9px) 55%;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
-  justify-self: center;
-  padding: 8px 26px 8px 12px;
+  padding: 8px 14px 8px 14px;
   font-size: 0.72rem;
+  transition:
+    background var(--timing-snap) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out),
+    transform var(--timing-press) var(--ease-out);
 }
 
-:is(.mode-select, .settings-button):focus-visible {
+.mode-switcher-trigger:hover {
+  background: var(--color-surface-input-pressed);
+  border-color: var(--color-border-hover);
+}
+
+.mode-switcher-trigger:active {
+  transform: scale(0.98);
+}
+
+.mode-switcher-trigger[aria-expanded='true'] {
+  background: var(--color-surface-input-pressed);
+  border-color: var(--color-border-hover);
+}
+
+.mode-switcher-trigger-chevron {
+  font-size: 0.6rem;
+  line-height: 1;
+  color: var(--color-text-primary-60);
+  transition: transform var(--timing-snap) var(--ease-out);
+}
+
+.mode-switcher-trigger[aria-expanded='true'] .mode-switcher-trigger-chevron {
+  transform: rotate(180deg);
+  color: var(--color-text-primary);
+}
+
+:is(.mode-switcher-trigger, .settings-button):focus-visible {
   outline: 3px solid var(--color-text-primary-70);
   outline-offset: 3px;
+}
+
+.mode-switcher-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border-subtle);
+  background: hsla(207, 33%, 7%, 0.92);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 10px 30px hsla(0, 0%, 0%, 0.4);
+  z-index: 10;
+  outline: none;
+  animation: mode-switcher-popover-in var(--timing-snap) var(--ease-out);
+}
+
+@keyframes mode-switcher-popover-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.mode-switcher-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-primary-80);
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--timing-snap) var(--ease-out),
+    color var(--timing-snap) var(--ease-out);
+}
+
+.mode-switcher-option--highlight,
+.mode-switcher-option:focus-visible {
+  background: var(--color-surface-input);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.mode-switcher-option--current {
+  color: var(--color-text-primary);
+}
+
+.mode-switcher-option--current .mode-switcher-option-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: var(--color-accent-wave);
+  vertical-align: middle;
+}
+
+.mode-switcher-option-label {
+  flex: 1;
+  text-align: left;
+}
+
+.mode-switcher-option-shortcut {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-input);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-text-primary-60);
 }
 
 .settings-button {
@@ -833,10 +984,6 @@
   color: var(--color-text-primary);
 }
 
-.settings-button:hover svg {
-  animation: settingsGearSpin var(--timing-morph) var(--ease-in-out);
-}
-
 .settings-button:focus-visible {
   outline: 2px solid var(--color-text-primary-70);
   outline-offset: 4px;
@@ -850,14 +997,14 @@
   transform: scale(0.95);
 }
 
-@keyframes settingsGearSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(90deg); }
-}
-
 .settings-button svg {
   width: clamp(40px, 4vw, 52px);
   height: clamp(40px, 4vw, 52px);
+  transition: transform var(--timing-morph) var(--ease-in-out);
+}
+
+.settings-button:hover svg {
+  transform: rotate(90deg);
 }
 
 
@@ -1657,8 +1804,8 @@
 }
 
 @media (max-width: 480px) {
-  .mode-select {
-    padding: 6px 22px 6px 10px;
+  .mode-switcher-trigger {
+    padding: 6px 10px;
     font-size: 0.66rem;
   }
 }
