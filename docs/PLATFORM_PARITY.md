@@ -178,7 +178,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Keyboard shortcuts** (`F`/`I`/`L` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, letter/digit keys to answer in Listen) — physical keyboard is web's affordance, not iOS's. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, letter/digit keys to answer in Listen) — physical keyboard is web's affordance, not iOS's. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.
 - **Google popup auth flow** — different transport from iOS's native Google sign-in, same provider

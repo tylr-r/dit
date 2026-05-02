@@ -329,12 +329,12 @@ function MainApp() {
         handlers.handleModeChange('freestyle')
         return
       }
-      if (key === 'i') {
+      if (key === 'l') {
         event.preventDefault()
         handlers.handleModeChange('listen')
         return
       }
-      if (key === 'l') {
+      if (key === 'p') {
         event.preventDefault()
         handlers.handleModeChange('practice')
         return
