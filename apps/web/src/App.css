@@ -50,7 +50,7 @@
 }
 
 .logo-button {
-  padding: 0;
+  padding: 8px;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -65,7 +65,7 @@
 }
 
 .logo img {
-  width: clamp(44px, 6vw, 72px);
+  width: clamp(44px, 5vw, 64px);
   height: auto;
   display: block;
   opacity: 0.5;
@@ -773,7 +773,7 @@
 }
 
 .settings-button {
-  padding: 6px;
+  padding: 8px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -813,8 +813,8 @@
 }
 
 .settings-button svg {
-  width: 68px;
-  height: 68px;
+  width: clamp(40px, 4vw, 52px);
+  height: clamp(40px, 4vw, 52px);
 }
 
 
@@ -943,7 +943,7 @@
 
 .letter {
   font-family: inherit;
-  font-size: clamp(96px, 24vw, 200px);
+  font-size: clamp(72px, 22vw, 200px);
   line-height: 0.9;
   letter-spacing: 0.12em;
   font-weight: 500;
@@ -956,7 +956,7 @@
 
 .word-display {
   font-family: inherit;
-  font-size: clamp(52px, 14vw, 160px);
+  font-size: clamp(40px, 12vw, 160px);
   line-height: 0.95;
   letter-spacing: 0.12em;
   font-weight: 500;
@@ -1599,10 +1599,6 @@
     font-size: 0.8rem;
     letter-spacing: 0.1em;
   }
-  .settings-button {
-    width: 36px;
-    height: 36px;
-  }
   .auth-name {
     display: none;
   }
@@ -1614,6 +1610,13 @@
   }
   .signal.dah {
     width: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mode-select {
+    padding: 6px 22px 6px 10px;
+    font-size: 0.66rem;
   }
 }
 
@@ -2514,7 +2517,7 @@
   text-transform: uppercase;
   color: var(--text);
   text-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
-  font-size: clamp(56px, 14vw, 140px);
+  font-size: clamp(44px, 12vw, 140px);
   line-height: 1;
   letter-spacing: 0.08em;
   padding: 0 12px;
