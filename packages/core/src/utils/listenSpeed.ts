@@ -51,3 +51,25 @@ export const getAutoEffectiveWpm = (characterWpm: number, correctCount: number) 
 
 export const getListenUnitMs = (wpm: number, minUnitMs: number) =>
   Math.max(Math.round(1200 / wpm), minUnitMs)
+
+/**
+ * Farnsworth unit (t_fdit) in ms per the ARRL/Bloom 1990 standard:
+ *   t_fdit = (300·Wc − 186·Wf) / (95·Wc·Wf)  seconds
+ * "PARIS " is 31 character-speed units inside characters plus 19 Farnsworth
+ * units between characters/words, summing to 60/Wf seconds total throughput.
+ * When Wf >= Wc no stretching is needed and the character unit is returned.
+ */
+export const getFarnsworthUnitMs = (
+  characterWpm: number,
+  effectiveWpm: number,
+  minUnitMs: number,
+) => {
+  const characterUnitMs = getListenUnitMs(characterWpm, minUnitMs)
+  if (effectiveWpm >= characterWpm) {
+    return characterUnitMs
+  }
+  const tFditSeconds =
+    (300 * characterWpm - 186 * effectiveWpm) /
+    (95 * characterWpm * effectiveWpm)
+  return Math.max(Math.round(tFditSeconds * 1000), characterUnitMs, minUnitMs)
+}

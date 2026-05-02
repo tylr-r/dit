@@ -1,4 +1,9 @@
-import { AUDIO_FREQUENCY, AUDIO_VOLUME, getListenUnitMs } from '@dit/core'
+import {
+  AUDIO_FREQUENCY,
+  AUDIO_VOLUME,
+  getFarnsworthUnitMs,
+  getListenUnitMs,
+} from '@dit/core'
 import { createAudioContext } from '../platform/audio'
 
 type ToneDefaults = {
@@ -160,26 +165,43 @@ export const playMorseTone = async ({
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   const characterUnitMs = getListenUnitMs(characterWpm, minUnitMs)
   const resolvedEffectiveWpm = Math.min(characterWpm, effectiveWpm ?? characterWpm)
-  const effectiveUnitMs = getListenUnitMs(resolvedEffectiveWpm, minUnitMs)
+  const farnsworthUnitMs = getFarnsworthUnitMs(
+    characterWpm,
+    resolvedEffectiveWpm,
+    minUnitMs,
+  )
   const characterUnitSeconds = characterUnitMs / 1000
-  const effectiveUnitSeconds = effectiveUnitMs / 1000
+  const farnsworthUnitSeconds = farnsworthUnitMs / 1000
+  const interCharacterGapSeconds = farnsworthUnitSeconds * 3
+  const interWordGapSeconds = farnsworthUnitSeconds * 7
   warmAudioGraph(context)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   morseNodes = { oscillator, gain }
   const rampSeconds = 0.005
   const startOffset = getScheduleHeadroom(context)
   let cursor = context.currentTime + startOffset
-  for (let index = 0; index < code.length; index += 1) {
-    const symbol = code[index]
-    if (symbol === ' ') {
-      cursor += effectiveUnitSeconds * 2
+  const tokens = code
+    .split(' ')
+    .filter((token) => token === '/' || /[.-]/.test(token))
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const token = tokens[tokenIndex]
+    if (token === '/') {
+      cursor += interWordGapSeconds
       continue
     }
-    const duration = symbol === '.' ? characterUnitSeconds : characterUnitSeconds * 3
-    scheduleEnvelope(gain, resolvedVolume, cursor, duration, rampSeconds)
-    cursor += duration
-    if (index < code.length - 1 && code[index + 1] !== ' ') {
-      cursor += effectiveUnitSeconds
+    const symbols = token.split('').filter((s) => s === '.' || s === '-')
+    for (let symbolIndex = 0; symbolIndex < symbols.length; symbolIndex += 1) {
+      const symbol = symbols[symbolIndex]
+      const duration =
+        symbol === '.' ? characterUnitSeconds : characterUnitSeconds * 3
+      scheduleEnvelope(gain, resolvedVolume, cursor, duration, rampSeconds)
+      cursor += duration
+      if (symbolIndex < symbols.length - 1) {
+        cursor += characterUnitSeconds
+      }
+    }
+    if (tokenIndex < tokens.length - 1 && tokens[tokenIndex + 1] !== '/') {
+      cursor += interCharacterGapSeconds
     }
   }
   const oscillatorStart = firstPrimedSoundDone

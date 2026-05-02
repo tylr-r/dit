@@ -186,11 +186,11 @@ private final class ToneGenerator {
   func playMorseSequence(
     code: String,
     characterUnitMs: Double,
-    effectiveUnitMs: Double,
+    farnsworthUnitMs: Double,
     frequency: Double,
     volume: Double
   ) -> Bool {
-    guard frequency > 0, characterUnitMs > 0, effectiveUnitMs > 0 else {
+    guard frequency > 0, characterUnitMs > 0, farnsworthUnitMs > 0 else {
       return false
     }
     if !setupIfNeeded() {
@@ -205,9 +205,9 @@ private final class ToneGenerator {
       return false
     }
     let characterUnitFrames = max(1, Int((characterUnitMs / 1000) * sampleRate))
-    let effectiveUnitFrames = max(1, Int((effectiveUnitMs / 1000) * sampleRate))
-    let interCharacterGapFrames = max(characterUnitFrames * 3, effectiveUnitFrames * 3)
-    let interWordGapFrames = max(characterUnitFrames * 7, effectiveUnitFrames * 7)
+    let farnsworthUnitFrames = max(1, Int((farnsworthUnitMs / 1000) * sampleRate))
+    let interCharacterGapFrames = farnsworthUnitFrames * 3
+    let interWordGapFrames = farnsworthUnitFrames * 7
     var totalFrames = 0
     var segments: [(isTone: Bool, frames: Int)] = []
     let tokens = code.split(separator: " ", omittingEmptySubsequences: true)
@@ -392,17 +392,17 @@ private final class HapticController {
   func playMorseSequence(
     code: String,
     characterUnitMs: Double,
-    effectiveUnitMs: Double
+    farnsworthUnitMs: Double
   ) {
     guard isEnabled else { return }
     guard let engine = ensureEngine() else { return }
-    guard characterUnitMs > 0, effectiveUnitMs > 0 else { return }
+    guard characterUnitMs > 0, farnsworthUnitMs > 0 else { return }
     stopSequence()
 
     let characterUnit = characterUnitMs / 1000
-    let effectiveUnit = effectiveUnitMs / 1000
-    let interCharGap = max(characterUnit * 3, effectiveUnit * 3)
-    let interWordGap = max(characterUnit * 7, effectiveUnit * 7)
+    let farnsworthUnit = farnsworthUnitMs / 1000
+    let interCharGap = farnsworthUnit * 3
+    let interWordGap = farnsworthUnit * 7
 
     var events: [CHHapticEvent] = []
     var cursor: TimeInterval = 0
@@ -808,11 +808,11 @@ public final class DitNativeModule: Module {
       return self.toneGenerator.start(frequency: 640, volume: 0)
     }
 
-    AsyncFunction("playMorseSequence") { (code: String, characterUnitMs: Double, effectiveUnitMs: Double, frequency: Double, volume: Double) -> Bool in
+    AsyncFunction("playMorseSequence") { (code: String, characterUnitMs: Double, farnsworthUnitMs: Double, frequency: Double, volume: Double) -> Bool in
       let started = self.toneGenerator.playMorseSequence(
         code: code,
         characterUnitMs: characterUnitMs,
-        effectiveUnitMs: effectiveUnitMs,
+        farnsworthUnitMs: farnsworthUnitMs,
         frequency: frequency,
         volume: volume
       )
@@ -820,7 +820,7 @@ public final class DitNativeModule: Module {
         self.hapticController.playMorseSequence(
           code: code,
           characterUnitMs: characterUnitMs,
-          effectiveUnitMs: effectiveUnitMs
+          farnsworthUnitMs: farnsworthUnitMs
         )
       }
       return started
