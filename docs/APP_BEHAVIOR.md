@@ -182,8 +182,8 @@ Availability rules:
 ## Keyboard shortcuts (web)
 
 - `F`: Freestyle
-- `I`: Listen
-- `L`: Practice
+- `L`: Listen
+- `P`: Practice
 - `N`: clear input (Freestyle)
 - `Space`: hold to key (Practice/Freestyle), tap to replay current letter (Listen)
 - `Esc`: close the reference modal
