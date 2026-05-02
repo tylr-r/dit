@@ -13,21 +13,30 @@ describe('listenWave utils', () => {
     expect(getListenUnitMs(100, 40)).toBe(40)
   })
 
-  it('computes widened character gaps from effective wpm', () => {
+  it('computes ARRL Farnsworth-stretched character gaps', () => {
+    // Wc=12, Wf=8 → t_fdit = (300·12 − 186·8) / (95·12·8) ≈ 0.2316 s ≈ 232 ms
+    // inter-character gap = 3 · t_fdit ≈ 696 ms
     const timing = getListenTiming(12, 8, 40)
     expect(timing.unitMs).toBe(100)
-    expect(timing.interCharacterGapMs).toBe(450)
+    expect(timing.interCharacterGapMs).toBe(696)
+  })
+
+  it('returns the character unit when effective speed matches or exceeds it', () => {
+    // No Farnsworth stretching: 1:3:1:3:7 standard ratios apply.
+    const timing = getListenTiming(20, 20, 40)
+    expect(timing.unitMs).toBe(60)
+    expect(timing.interCharacterGapMs).toBe(180)
   })
 
   it('computes playback duration including symbol and character gaps', () => {
-    expect(getListenPlaybackDurationMs('.-', 100, 450)).toBe(950)
-    expect(getListenPlaybackDurationMs(' . x - ', 100, 450)).toBe(950)
-    expect(getListenPlaybackDurationMs('', 100, 450)).toBe(0)
+    expect(getListenPlaybackDurationMs('.-', 100, 696)).toBe(1196)
+    expect(getListenPlaybackDurationMs(' . x - ', 100, 696)).toBe(1196)
+    expect(getListenPlaybackDurationMs('', 100, 696)).toBe(0)
   })
 
   it('returns expected tone levels for dot and dash segments', () => {
     const unitMs = 100
-    const interCharacterGapMs = 450
+    const interCharacterGapMs = 696
     const dotLevel = getListenToneLevelAtElapsedMs(
       '.-',
       unitMs,
@@ -49,7 +58,7 @@ describe('listenWave utils', () => {
     const tailGapLevel = getListenToneLevelAtElapsedMs(
       '.-',
       unitMs,
-      780,
+      900,
       interCharacterGapMs,
     )
 

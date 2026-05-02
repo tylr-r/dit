@@ -1,4 +1,7 @@
-import { getListenUnitMs as getListenUnitMsFromWpm } from './listenSpeed'
+import {
+  getFarnsworthUnitMs,
+  getListenUnitMs as getListenUnitMsFromWpm,
+} from './listenSpeed'
 
 export type ListenWavePlayback = {
   sequence: number
@@ -19,10 +22,14 @@ export const getListenTiming = (
   minUnitMs: number,
 ) => {
   const unitMs = getListenUnitMs(characterWpm, minUnitMs)
-  const effectiveUnitMs = getListenUnitMs(effectiveWpm, minUnitMs)
+  const farnsworthUnitMs = getFarnsworthUnitMs(
+    characterWpm,
+    effectiveWpm,
+    minUnitMs,
+  )
   return {
     unitMs,
-    interCharacterGapMs: Math.max(unitMs * 3, effectiveUnitMs * 3),
+    interCharacterGapMs: farnsworthUnitMs * 3,
   }
 }
 

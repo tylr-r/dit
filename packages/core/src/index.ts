@@ -162,6 +162,7 @@ export {
   clampListenEffectiveWpm,
   clampListenWpm,
   getAutoEffectiveWpm,
+  getFarnsworthUnitMs,
   getListenAutoTighteningStage,
   getListenUnitMs,
   LISTEN_AUTO_TIGHTENING_STAGE_THRESHOLDS,
