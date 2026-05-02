@@ -13,9 +13,52 @@
     var(--app-pad-x) calc(var(--app-pad-y) + env(safe-area-inset-bottom, 0px));
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.morse-liquid-surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: -3;
+  background: var(--color-surface-solid-backdrop);
+}
+
+.background-dim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.background-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(
+      ellipse 700px 500px at 25% 85%,
+      rgba(168, 192, 255, 0.08) 0%,
+      rgba(168, 192, 255, 0) 60%
+    ),
+    radial-gradient(
+      ellipse 600px 450px at 75% 15%,
+      rgba(196, 181, 253, 0.06) 0%,
+      rgba(196, 181, 253, 0) 65%
+    ),
+    radial-gradient(
+      ellipse 500px 400px at 50% 50%,
+      rgba(245, 199, 247, 0.04) 0%,
+      rgba(245, 199, 247, 0) 70%
+    );
 }
 
 .app.mode-listen.listen-focused {
@@ -3427,12 +3470,6 @@
   border-color: var(--color-accent-wave);
 }
 
-.settings-modal-footer-actions {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-}
-
 .settings-modal-identity {
   display: flex;
   align-items: center;
@@ -3550,12 +3587,6 @@
 .settings-modal-section:nth-child(5) { animation-delay: 300ms; }
 .settings-modal-section:nth-child(n+6) { animation-delay: 350ms; }
 
-.settings-modal-footer-actions {
-  opacity: 0;
-  transform: translateY(8px);
-  animation: settingsSectionIn var(--timing-medium) var(--ease-out) 350ms both;
-}
-
 @keyframes settingsSectionIn {
   to {
     opacity: 1;
@@ -3564,15 +3595,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .settings-modal-section,
-  .settings-modal-footer-actions {
+  .settings-modal-section {
     opacity: 1;
     transform: none;
     animation: none;
   }
 }
 
-.settings-modal-helpers-trigger {
+.settings-modal-collapsible-trigger {
   width: 100%;
   display: flex;
   align-items: center;
@@ -3587,17 +3617,17 @@
   transition: color var(--timing-snap) var(--ease-out);
 }
 
-.settings-modal-helpers-trigger:hover .settings-modal-section-title {
+.settings-modal-collapsible-trigger:hover .settings-modal-section-title {
   color: var(--color-text-primary);
 }
 
-.settings-modal-helpers-trigger:focus-visible {
+.settings-modal-collapsible-trigger:focus-visible {
   outline: 2px solid var(--color-text-primary-70);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-.settings-modal-helpers-chevron {
+.settings-modal-collapsible-chevron {
   display: inline-block;
   font-size: 1.1rem;
   line-height: 1;
@@ -3606,11 +3636,11 @@
   transform: rotate(0deg);
 }
 
-.settings-modal-helpers--expanded .settings-modal-helpers-chevron {
+.settings-modal-collapsible--expanded .settings-modal-collapsible-chevron {
   transform: rotate(90deg);
 }
 
-.settings-modal-helpers .settings-modal-section-title {
+.settings-modal-collapsible .settings-modal-section-title {
   margin: 0;
   transition: color var(--timing-snap) var(--ease-out);
 }

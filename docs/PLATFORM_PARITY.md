@@ -80,6 +80,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 ## Settings
 
+Information architecture (section order, grouping, headers, collapse behavior, per-row platform availability) is shared via [`packages/core/src/settings/schema.ts`](../packages/core/src/settings/schema.ts). Web fully consumes the schema; iOS adoption is deferred. Control idioms (sliders vs steppers, RN Switch vs HTML toggle), modal chrome, and section card layout stay per-platform.
+
 | Setting | iOS | Web | Notes |
 |---|---|---|---|
 | Show hints | ✅ | ✅ | |
@@ -143,8 +145,11 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
+| Liquid shader background | ✅ | ✅ | iOS: Skia GLSL via [MorseLiquidSurface.tsx](../apps/ios/src/components/MorseLiquidSurface.tsx). Web: WebGL port at [MorseLiquidSurface.tsx](../apps/web/src/components/MorseLiquidSurface.tsx). Hue and cycle constants share `shader` tokens in `@dit/core`. |
+| Soft radial glow overlay | ✅ | ✅ | iOS: SVG radial gradients. Web: CSS `radial-gradient`. RGB and alpha values match across platforms. |
 | Pause animation in Low Power Mode | ✅ | 🚫 | iOS: [hooks/useSystemLowPowerMode.ts](../apps/ios/src/hooks/useSystemLowPowerMode.ts). Web has no Low Power Mode API. |
-| Pause animation when idle/backgrounded | ✅ | 🚫 | Web tabs hide via `visibilitychange`; not currently wired |
+| Pause animation when idle/backgrounded | ✅ | ✅ | iOS: `useBackgroundIdle`. Web: `document.visibilitychange` with 420ms / 320ms cross-fade. |
+| Honor `prefers-reduced-motion` | ✅ | ✅ | Both freeze the shader at `t=0` instead of animating. |
 | Reschedule daily reminder on foreground | ✅ | 🚫 | iOS-only by design |
 
 ## Analytics & telemetry

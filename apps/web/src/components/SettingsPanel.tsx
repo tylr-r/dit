@@ -1,5 +1,10 @@
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  resolveSchemaFor,
+  type SettingsMode,
+  type SettingsRowId,
+} from '@dit/core'
 import { logEvent, useScreenTracker } from '../lib/analytics'
 import type { SettingsPanelProps } from './componentProps'
 
@@ -27,6 +32,57 @@ function SettingsSection({
         <p className="settings-modal-section-helper">{helper}</p>
       ) : null}
       <div className="settings-modal-section-rows">{children}</div>
+    </section>
+  )
+}
+
+type CollapsibleSectionProps = {
+  id: string
+  title: string
+  helper?: string
+  isFirst?: boolean
+  expanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}
+
+function CollapsibleSection({
+  id,
+  title,
+  helper,
+  isFirst = false,
+  expanded,
+  onToggle,
+  children,
+}: CollapsibleSectionProps) {
+  const bodyId = `settings-modal-${id}-body`
+  return (
+    <section
+      className={`settings-modal-section${isFirst ? ' settings-modal-section--first' : ''} settings-modal-collapsible${expanded ? ' settings-modal-collapsible--expanded' : ''}`}
+    >
+      <button
+        type="button"
+        className="settings-modal-collapsible-trigger"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+      >
+        <span className="settings-modal-section-title">{title}</span>
+        <span
+          className="settings-modal-collapsible-chevron"
+          aria-hidden="true"
+        >
+          ›
+        </span>
+      </button>
+      {expanded ? (
+        <div id={bodyId} className="settings-modal-section-rows">
+          {helper ? (
+            <p className="settings-modal-section-helper">{helper}</p>
+          ) : null}
+          {children}
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -245,6 +301,372 @@ function SettingsDestructiveButton({
   )
 }
 
+type ReportSettingChange = (
+  setting: string,
+  value: string | number | boolean,
+  debounceMs?: number,
+) => void
+
+type RenderRowFn = (rowId: SettingsRowId) => React.ReactNode | null
+
+function buildRowRenderer(
+  props: SettingsPanelProps,
+  reportSettingChange: ReportSettingChange,
+): RenderRowFn {
+  return (rowId: SettingsRowId) => {
+    switch (rowId) {
+    case 'word-mode':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Word mode"
+          htmlFor="setting-freestyle-word-mode"
+          helper="Build a running word from decoded letters."
+          control={
+            <SettingsToggle
+              id="setting-freestyle-word-mode"
+              checked={props.freestyleWordMode}
+              onChange={(next) => {
+                reportSettingChange('freestyle_word_mode', next)
+                props.onWordModeChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'playback-wpm':
+      return (
+        <div className="settings-modal-row" key={rowId}>
+          <SettingsSlider
+            id="setting-listen-wpm"
+            label="Playback letter speed"
+            value={props.listenWpm}
+            min={props.listenWpmMin}
+            max={props.listenWpmMax}
+            valueDisplay={`${props.listenWpm} WPM`}
+            onChange={(next) => {
+              reportSettingChange('listen_wpm', next, 500)
+              props.onListenWpmChange(next)
+            }}
+          />
+          <p className="settings-modal-row-helper">
+            Used whenever Dit plays Morse for you. Higher = faster dits and dahs.
+          </p>
+        </div>
+      )
+
+    case 'playback-tone':
+      return (
+        <div className="settings-modal-row" key={rowId}>
+          <SettingsSlider
+            id="setting-tone-frequency"
+            label="Tone pitch"
+            value={props.toneFrequency}
+            min={props.toneFrequencyMin}
+            max={props.toneFrequencyMax}
+            step={props.toneFrequencyStep}
+            valueDisplay={`${props.toneFrequency} Hz`}
+            onChange={(next) => {
+              reportSettingChange('tone_frequency', next, 500)
+              props.onToneFrequencyChange(next)
+            }}
+          />
+          <p className="settings-modal-row-helper">
+            The frequency of the CW sidetone. Lower is deeper, higher is sharper.
+          </p>
+        </div>
+      )
+
+    case 'sound-check':
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Sound check"
+          disabled={props.soundCheckStatus === 'playing'}
+          onClick={() => props.onSoundCheck()}
+          trailing={
+            <span
+              className={`settings-modal-test-pill${
+                props.soundCheckStatus === 'playing' ? ' settings-modal-test-pill--playing' : ''
+              }`}
+            >
+              {props.soundCheckStatus === 'playing' ? 'Playing' : 'Test'}
+            </span>
+          }
+        />
+      )
+
+    case 'learning-method':
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Learning method"
+          value={props.guidedCourseActive ? 'Course' : 'Open practice'}
+          onClick={() => props.onShowLearning()}
+        />
+      )
+
+    case 'practice-words':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Practice Words"
+          htmlFor="setting-practice-words"
+          helper={
+            props.guidedCourseActive && props.isPractice
+              ? 'Unavailable while the guided beginner course is active.'
+              : 'Practice full words instead of single characters.'
+          }
+          control={
+            <SettingsToggle
+              id="setting-practice-words"
+              checked={props.practiceWordMode}
+              disabled={props.guidedCourseActive && props.isPractice}
+              onChange={(next) => {
+                reportSettingChange('practice_word_mode', next)
+                props.onPracticeWordModeChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'practice-autoplay':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Auto-play sound"
+          htmlFor="setting-practice-auto-play"
+          helper="Automatically plays the current Practice target."
+          control={
+            <SettingsToggle
+              id="setting-practice-auto-play"
+              checked={props.practiceAutoPlay}
+              onChange={(next) => {
+                reportSettingChange('practice_auto_play', next)
+                props.onPracticeAutoPlayChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'practice-sequential':
+      if (props.guidedCourseActive) return null
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Sequential order"
+          htmlFor="setting-practice-learn-mode"
+          helper={
+            props.practiceWordMode
+              ? 'Unavailable while Practice Words is on.'
+              : 'Cycles letters in order. It does not unlock new letters.'
+          }
+          control={
+            <SettingsToggle
+              id="setting-practice-learn-mode"
+              checked={props.practiceLearnMode}
+              disabled={props.practiceWordMode}
+              onChange={(next) => {
+                reportSettingChange('practice_learn_mode', next)
+                props.onPracticeLearnModeChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'practice-ifr':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Immediate flow recovery"
+          htmlFor="setting-practice-ifr-mode"
+          helper="On a miss, move on to the next target instead of repeating the same one."
+          control={
+            <SettingsToggle
+              id="setting-practice-ifr-mode"
+              checked={props.practiceIfrMode}
+              onChange={(next) => {
+                reportSettingChange('practice_ifr_mode', next)
+                props.onPracticeIfrModeChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'practice-review-misses':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Review misses later"
+          htmlFor="setting-practice-review-misses"
+          helper={
+            !props.practiceIfrMode
+              ? 'Requires Immediate flow recovery.'
+              : 'Brings missed targets back after a short delay.'
+          }
+          control={
+            <SettingsToggle
+              id="setting-practice-review-misses"
+              checked={props.practiceReviewMisses}
+              disabled={!props.practiceIfrMode}
+              onChange={(next) => {
+                reportSettingChange('practice_review_misses', next)
+                props.onPracticeReviewMissesChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'helpers-hints':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Show hints"
+          htmlFor="setting-show-hint"
+          helper="Not recommended. This can be tempting at first, but learning by ear improves recall."
+          control={
+            <SettingsToggle
+              id="setting-show-hint"
+              checked={props.showHint}
+              disabled={props.isFreestyle}
+              onChange={(next) => {
+                reportSettingChange('show_hint', next)
+                props.onShowHintChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'helpers-mnemonics':
+      return (
+        <SettingsRow
+          key={rowId}
+          label="Show mnemonics"
+          htmlFor="setting-show-mnemonic"
+          helper="Memory aids for Morse patterns. Best used temporarily."
+          control={
+            <SettingsToggle
+              id="setting-show-mnemonic"
+              checked={props.showMnemonic}
+              disabled={props.isFreestyle}
+              onChange={(next) => {
+                reportSettingChange('show_mnemonic', next)
+                props.onShowMnemonicChange(next)
+              }}
+            />
+          }
+        />
+      )
+
+    case 'use-recommended':
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Use recommended settings"
+          onClick={() => props.onUseRecommended()}
+        />
+      )
+
+    case 'about':
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="About Dit"
+          variant="quiet"
+          onClick={() => props.onShowAbout()}
+        />
+      )
+
+    case 'replay-nux':
+      if (!props.onReplayNux) return null
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Replay onboarding"
+          variant="quiet"
+          onClick={() => props.onReplayNux!()}
+        />
+      )
+
+    case 'account-identity':
+      if (props.user) {
+        return (
+          <div
+            key={rowId}
+            className="settings-modal-identity"
+            role="group"
+            aria-label="Signed-in account"
+          >
+            <span className="settings-modal-identity-avatar" aria-hidden="true">
+              {props.userInitial}
+            </span>
+            <span className="settings-modal-identity-label">{props.userLabel}</span>
+          </div>
+        )
+      }
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Sign in"
+          disabled={!props.authReady}
+          onClick={() => props.onShowSignIn()}
+        />
+      )
+
+    case 'account-signout':
+      if (!props.user) return null
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label={props.isDeletingAccount ? 'Deleting…' : 'Sign out'}
+          disabled={!props.authReady || props.isDeletingAccount}
+          onClick={() => props.onSignOut()}
+        />
+      )
+
+    case 'account-delete':
+      if (!props.user) return null
+      return (
+        <SettingsDestructiveButton
+          key={rowId}
+          label="Delete account"
+          confirmingLabel="Delete account"
+          confirmingHelper="Permanently delete your account and all synced data?"
+          disabled={!props.authReady || props.isDeletingAccount}
+          loadingLabel={props.isDeletingAccount ? 'Deleting…' : undefined}
+          onConfirm={() => props.onDeleteAccount()}
+        />
+      )
+
+    // Rows filtered out by ROW_AVAILABILITY on web; reach this only if the
+    // schema and renderer drift apart.
+    case 'playback-haptics':
+    case 'daily-reminder':
+    case 'daily-reminder-time':
+      return null
+
+      default: {
+        const _exhaustive: never = rowId
+        return _exhaustive
+      }
+    }
+  }
+}
+
+function pickMode(props: SettingsPanelProps): SettingsMode {
+  if (props.isPractice) return 'practice'
+  if (props.isFreestyle) return 'freestyle'
+  if (props.isListen) return 'listen'
+  return 'practice'
+}
+
 /** Centered glass modal containing sectioned settings controls. */
 export function SettingsPanel(props: SettingsPanelProps) {
   const { onClose } = props
@@ -310,7 +732,13 @@ export function SettingsPanel(props: SettingsPanelProps) {
     dialogRef.current?.focus()
   }, [])
 
-  const [helpersExpanded, setHelpersExpanded] = useState(false)
+  const mode = pickMode(props)
+  const sections = useMemo(() => resolveSchemaFor('web', mode), [mode])
+  const [expandedById, setExpandedById] = useState<Record<string, boolean>>({})
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedById((prev) => ({ ...prev, [id]: !prev[id] }))
+  }, [])
 
   const handleBackdropClick = useCallback(() => {
     onClose()
@@ -320,6 +748,59 @@ export function SettingsPanel(props: SettingsPanelProps) {
   const stopPropagation = useCallback((event: React.MouseEvent) => {
     event.stopPropagation()
   }, [])
+
+  // reportSettingChange is a useCallback that reads settingTimersRef inside
+  // its body, but only ever fires from JSX onChange handlers. The lint rule
+  // can't see through the indirection and flags the function ref as
+  // render-phase ref access — it isn't.
+  // eslint-disable-next-line react-hooks/refs
+  const renderRow = buildRowRenderer(props, reportSettingChange)
+
+  const renderedSections: React.ReactNode[] = []
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i]
+    const renderedRows: React.ReactNode[] = []
+    for (const rowId of section.rows) {
+      const node = renderRow(rowId)
+      if (node != null && node !== false) {
+        renderedRows.push(node)
+      }
+    }
+
+    if (renderedRows.length === 0) continue
+
+    const isFirst = i === 0
+    if (section.collapsed) {
+      const expanded = !!expandedById[section.id]
+      const helper =
+        section.id === 'practice'
+          ? 'Applies when you switch back to Practice mode.'
+          : undefined
+      renderedSections.push(
+        <CollapsibleSection
+          key={section.id}
+          id={section.id}
+          title={section.title ?? section.id}
+          helper={helper}
+          isFirst={isFirst}
+          expanded={expanded}
+          onToggle={() => toggleExpanded(section.id)}
+        >
+          {renderedRows}
+        </CollapsibleSection>,
+      )
+    } else {
+      renderedSections.push(
+        <SettingsSection
+          key={section.id}
+          title={section.title}
+          isFirst={isFirst}
+        >
+          {renderedRows}
+        </SettingsSection>,
+      )
+    }
+  }
 
   return (
     <div className="settings-modal-backdrop" onClick={handleBackdropClick}>
@@ -356,292 +837,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           </button>
         </header>
         <div className="settings-modal-body" ref={bodyRef}>
-          <section
-            className={`settings-modal-section settings-modal-section--first settings-modal-helpers${helpersExpanded ? ' settings-modal-helpers--expanded' : ''}`}
-          >
-            <button
-              type="button"
-              className="settings-modal-helpers-trigger"
-              onClick={() => setHelpersExpanded((prev) => !prev)}
-              aria-expanded={helpersExpanded}
-              aria-controls="settings-modal-helpers-body"
-            >
-              <span className="settings-modal-section-title">Helpers</span>
-              <span
-                className="settings-modal-helpers-chevron"
-                aria-hidden="true"
-              >
-                ›
-              </span>
-            </button>
-            {helpersExpanded ? (
-              <div
-                id="settings-modal-helpers-body"
-                className="settings-modal-section-rows"
-              >
-                <SettingsRow
-                  label="Show hints"
-                  htmlFor="setting-show-hint"
-                  helper="Show the dit/dah pattern under the prompt letter."
-                  control={
-                    <SettingsToggle
-                      id="setting-show-hint"
-                      checked={props.showHint}
-                      disabled={props.isFreestyle}
-                      onChange={(next) => {
-                        reportSettingChange('show_hint', next)
-                        props.onShowHintChange(next)
-                      }}
-                    />
-                  }
-                />
-                <SettingsRow
-                  label="Show mnemonics"
-                  htmlFor="setting-show-mnemonic"
-                  helper="Show the memory phrase below the prompt letter."
-                  control={
-                    <SettingsToggle
-                      id="setting-show-mnemonic"
-                      checked={props.showMnemonic}
-                      disabled={props.isFreestyle}
-                      onChange={(next) => {
-                        reportSettingChange('show_mnemonic', next)
-                        props.onShowMnemonicChange(next)
-                      }}
-                    />
-                  }
-                />
-              </div>
-            ) : null}
-          </section>
-
-          {props.isFreestyle ? (
-            <SettingsSection title="Freestyle">
-              <SettingsRow
-                label="Word mode"
-                htmlFor="setting-freestyle-word-mode"
-                helper="Build a running word from decoded letters."
-                control={
-                  <SettingsToggle
-                    id="setting-freestyle-word-mode"
-                    checked={props.freestyleWordMode}
-                    onChange={(next) => {
-                      reportSettingChange('freestyle_word_mode', next)
-                      props.onWordModeChange(next)
-                    }}
-                  />
-                }
-              />
-            </SettingsSection>
-          ) : null}
-
-          <SettingsSection title="Learning">
-            <SettingsButtonRow
-              label="Learning method"
-              value={props.guidedCourseActive ? 'Course' : 'Open practice'}
-              onClick={() => {
-                props.onShowLearning()
-              }}
-            />
-          </SettingsSection>
-
-          <SettingsSection
-            title="Practice"
-            helper={
-              props.isPractice
-                ? undefined
-                : 'Applies when you switch back to Practice mode.'
-            }
-          >
-            <SettingsRow
-              label="Practice Words"
-              htmlFor="setting-practice-words"
-              helper={
-                props.guidedCourseActive && props.isPractice
-                  ? 'Unavailable while the guided beginner course is active.'
-                  : 'Practice full words instead of single characters.'
-              }
-              control={
-                <SettingsToggle
-                  id="setting-practice-words"
-                  checked={props.practiceWordMode}
-                  disabled={props.guidedCourseActive && props.isPractice}
-                  onChange={(next) => {
-                    reportSettingChange('practice_word_mode', next)
-                    props.onPracticeWordModeChange(next)
-                  }}
-                />
-              }
-            />
-            <SettingsRow
-              label="Auto-play sound"
-              htmlFor="setting-practice-auto-play"
-              helper="Automatically plays the current Practice target."
-              control={
-                <SettingsToggle
-                  id="setting-practice-auto-play"
-                  checked={props.practiceAutoPlay}
-                  onChange={(next) => {
-                    reportSettingChange('practice_auto_play', next)
-                    props.onPracticeAutoPlayChange(next)
-                  }}
-                />
-              }
-            />
-            {!props.guidedCourseActive ? (
-              <SettingsRow
-                label="Sequential order"
-                htmlFor="setting-practice-learn-mode"
-                helper="Cycle through letters in order instead of randomly."
-                control={
-                  <SettingsToggle
-                    id="setting-practice-learn-mode"
-                    checked={props.practiceLearnMode}
-                    disabled={props.practiceWordMode}
-                    onChange={(next) => {
-                      reportSettingChange('practice_learn_mode', next)
-                      props.onPracticeLearnModeChange(next)
-                    }}
-                  />
-                }
-              />
-            ) : null}
-            <SettingsRow
-              label="Immediate flow recovery"
-              htmlFor="setting-practice-ifr-mode"
-              helper="When you miss, immediately replay the same letter."
-              control={
-                <SettingsToggle
-                  id="setting-practice-ifr-mode"
-                  checked={props.practiceIfrMode}
-                  onChange={(next) => {
-                    reportSettingChange('practice_ifr_mode', next)
-                    props.onPracticeIfrModeChange(next)
-                  }}
-                />
-              }
-            />
-            <SettingsRow
-              label="Review misses later"
-              htmlFor="setting-practice-review-misses"
-              helper="Re-queue letters you miss so they come back soon."
-              control={
-                <SettingsToggle
-                  id="setting-practice-review-misses"
-                  checked={props.practiceReviewMisses}
-                  disabled={!props.practiceIfrMode}
-                  onChange={(next) => {
-                    reportSettingChange('practice_review_misses', next)
-                    props.onPracticeReviewMissesChange(next)
-                  }}
-                />
-              }
-            />
-          </SettingsSection>
-
-          <SettingsSection
-            title="Listen"
-            helper={props.isListen ? undefined : 'Applies in Listen mode.'}
-          >
-            <SettingsSlider
-              id="setting-listen-wpm"
-              label="Listen WPM"
-              value={props.listenWpm}
-              min={props.listenWpmMin}
-              max={props.listenWpmMax}
-              valueDisplay={`${props.listenWpm}`}
-              onChange={(next) => {
-                reportSettingChange('listen_wpm', next, 500)
-                props.onListenWpmChange(next)
-              }}
-            />
-            <SettingsButtonRow
-              label="Use recommended settings"
-              onClick={() => props.onUseRecommended()}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Audio">
-            <SettingsSlider
-              id="setting-tone-frequency"
-              label="Tone frequency"
-              value={props.toneFrequency}
-              min={props.toneFrequencyMin}
-              max={props.toneFrequencyMax}
-              step={props.toneFrequencyStep}
-              valueDisplay={`${props.toneFrequency} Hz`}
-              onChange={(next) => {
-                reportSettingChange('tone_frequency', next, 500)
-                props.onToneFrequencyChange(next)
-              }}
-            />
-            <SettingsButtonRow
-              label="Sound check"
-              disabled={props.soundCheckStatus === 'playing'}
-              onClick={() => props.onSoundCheck()}
-              trailing={
-                <span
-                  className={`settings-modal-test-pill${
-                    props.soundCheckStatus === 'playing' ? ' settings-modal-test-pill--playing' : ''
-                  }`}
-                >
-                  {props.soundCheckStatus === 'playing' ? 'Playing' : 'Test'}
-                </span>
-              }
-            />
-          </SettingsSection>
-
-          {/* Footer actions: utility links, no section header */}
-          <div className="settings-modal-footer-actions">
-            <SettingsButtonRow
-              label="About Dit"
-              variant="quiet"
-              onClick={() => props.onShowAbout()}
-            />
-            {props.onReplayNux ? (
-              <SettingsButtonRow
-                label="Replay onboarding"
-                variant="quiet"
-                onClick={() => props.onReplayNux!()}
-              />
-            ) : null}
-          </div>
-
-          <SettingsSection title="Account">
-            {props.user ? (
-              <>
-                <div
-                  className="settings-modal-identity"
-                  role="group"
-                  aria-label="Signed-in account"
-                >
-                  <span className="settings-modal-identity-avatar" aria-hidden="true">
-                    {props.userInitial}
-                  </span>
-                  <span className="settings-modal-identity-label">{props.userLabel}</span>
-                </div>
-                <SettingsButtonRow
-                  label={props.isDeletingAccount ? 'Deleting…' : 'Sign out'}
-                  disabled={!props.authReady || props.isDeletingAccount}
-                  onClick={() => props.onSignOut()}
-                />
-                <SettingsDestructiveButton
-                  label="Delete account"
-                  confirmingLabel="Delete account"
-                  confirmingHelper="Permanently delete your account and all synced data?"
-                  disabled={!props.authReady || props.isDeletingAccount}
-                  loadingLabel={props.isDeletingAccount ? 'Deleting…' : undefined}
-                  onConfirm={() => props.onDeleteAccount()}
-                />
-              </>
-            ) : (
-              <SettingsButtonRow
-                label="Sign in"
-                disabled={!props.authReady}
-                onClick={() => props.onShowSignIn()}
-              />
-            )}
-          </SettingsSection>
+          {renderedSections}
         </div>
       </div>
     </div>

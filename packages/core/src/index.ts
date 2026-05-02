@@ -38,6 +38,20 @@ export type {
   StorageAdapter,
 } from './platform'
 export { MORSE_DATA } from './data/morse'
+export {
+  isRowAvailable,
+  resolveSchemaFor,
+  ROW_AVAILABILITY,
+  SETTINGS_SCHEMA,
+} from './settings/schema'
+export type {
+  ResolvedSettingsSection,
+  SettingsCollapseRule,
+  SettingsMode,
+  SettingsPlatform,
+  SettingsRowId,
+  SettingsSection,
+} from './settings/schema'
 export { PRACTICE_WORDS } from './data/practiceWords'
 export {
   BEGINNER_COURSE_PACKS,
