@@ -96,6 +96,16 @@ All HSL. Opacities derive from a single hue per role.
 - **No decorative glows.** Profile-card green halo, CTA success-glow pulse,
   and sound-check green wash were all removed for the same reason.
 
+### Liquid shader background (iOS + web)
+
+A procedural blue swirl shader runs full-viewport behind app content on both
+platforms. iOS uses Skia GLSL; web uses a WebGL port of the same fragment
+shader. Hue and cycle constants are shared via the `shader` token in
+`@dit/core`. The shader honors `prefers-reduced-motion` (frozen at `t=0`)
+and pauses with a cross-fade when the tab is hidden / app is backgrounded.
+The "no ambient motion" rule still applies to *content* surfaces — the
+shader is the single, expected exception, layered behind everything.
+
 ### NUX welcome (iOS)
 
 - **Welcome auto-advance removed (2026-04-23).** The 2.2s `setTimeout` that

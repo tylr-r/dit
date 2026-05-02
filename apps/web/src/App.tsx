@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import { BackgroundGlow } from './components/BackgroundGlow'
 import { Footer } from './components/Footer'
 import { LearningSheet } from './components/LearningSheet'
+import { MorseLiquidSurface } from './components/MorseLiquidSurface'
 import { SignInSheet } from './components/SignInSheet'
 import {
   PrivacyPolicy,
@@ -580,6 +582,8 @@ function MainApp() {
         isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
       }`}
     >
+      <MorseLiquidSurface />
+      <BackgroundGlow />
       <header className="top-bar">
         <div className="logo">
           <Tooltip label="Reference & progress">
