@@ -1,10 +1,13 @@
 # DESIGN.md
 
+<!-- TODO: remove arbritrary values unless platform/views are specified -->
+
 Canonical design reference for Dit. Covers visual, motion, and interaction
 decisions only — implementation, architecture, and app behavior live
 elsewhere (`CLAUDE.md`, `docs/APP_BEHAVIOR.md`, `docs/STYLE_GUIDE.md`).
 
 Token source of truth:
+
 - `apps/ios/src/design/tokens.ts` — colors, spacing, radii
 - `apps/ios/src/components/nux/animationTokens.ts` — TIMING, BEZIER, SPRING
 
@@ -18,7 +21,7 @@ If a value here disagrees with code, update the code.
   does not compete with it.
 - **Density:** generous whitespace. One primary action per screen.
 - **"Premium" here means:** tight timing, custom easing, haptics that
-  mirror the Morse audio. It does *not* mean glows, gradients, or ambient
+  mirror the Morse audio. Avoid unnecessary glows, gradients, or ambient
   decoration.
 
 ---
@@ -38,15 +41,15 @@ All HSL. Opacities derive from a single hue per role.
 
 ### Text (ink)
 
-| Token            | Value                         | Use                          |
-| ---------------- | ----------------------------- | ---------------------------- |
-| `text.primary`   | `hsl(24, 29%, 97%)`           | Headlines, active copy       |
-| `text.primary90` | `hsla(24, 29%, 97%, 0.9)`     | Near-primary, high-emphasis  |
-| `text.primary80` | `hsla(24, 29%, 97%, 0.8)`     | De-emphasized primary        |
-| `text.primary70` | `hsla(24, 29%, 97%, 0.7)`     | Between body and primary     |
-| `text.primary60` | `hsla(24, 29%, 97%, 0.6)`     | Secondary copy               |
-| `text.primary40` | `hsla(24, 29%, 97%, 0.4)`     | Hints, disabled, meta labels |
-| `text.primary20` | `hsla(24, 29%, 97%, 0.2)`     | Separators, connector lines  |
+| Token            | Value                     | Use                          |
+| ---------------- | ------------------------- | ---------------------------- |
+| `text.primary`   | `hsl(24, 29%, 97%)`       | Headlines, active copy       |
+| `text.primary90` | `hsla(24, 29%, 97%, 0.9)` | Near-primary, high-emphasis  |
+| `text.primary80` | `hsla(24, 29%, 97%, 0.8)` | De-emphasized primary        |
+| `text.primary70` | `hsla(24, 29%, 97%, 0.7)` | Between body and primary     |
+| `text.primary60` | `hsla(24, 29%, 97%, 0.6)` | Secondary copy               |
+| `text.primary40` | `hsla(24, 29%, 97%, 0.4)` | Hints, disabled, meta labels |
+| `text.primary20` | `hsla(24, 29%, 97%, 0.2)` | Separators, connector lines  |
 
 ### Accent
 
@@ -56,16 +59,16 @@ All HSL. Opacities derive from a single hue per role.
 
 ### Surfaces
 
-| Token                   | Value                       | Use                            |
-| ----------------------- | --------------------------- | ------------------------------ |
-| `surface.solidBackdrop` | `hsla(207, 40%, 4%, 1)`     | App background                 |
-| `surface.backdrop`      | `hsla(207, 40%, 4%, 0.72)`  | Full-screen modal backdrop     |
-| `surface.backdropSoft`  | `hsla(207, 40%, 4%, 0.35)`  | Soft scrim                     |
-| `surface.panelStrong`   | `hsla(207, 33%, 7%, 0.92)`  | Cards, option cards, chips     |
-| `surface.panel`         | `hsla(0, 0%, 0%, 0.4)`      | Panels over content            |
-| `surface.card`          | `hsla(209, 34%, 12%, 0.45)` | Secondary cards                |
-| `surface.input`         | `hsla(0, 0%, 100%, 0.06)`   | Text inputs, inactive toggles  |
-| `surface.inputPressed`  | `hsla(0, 0%, 100%, 0.12)`   | Pressed inputs                 |
+| Token                   | Value                       | Use                           |
+| ----------------------- | --------------------------- | ----------------------------- |
+| `surface.solidBackdrop` | `hsla(207, 40%, 4%, 1)`     | App background                |
+| `surface.backdrop`      | `hsla(207, 40%, 4%, 0.72)`  | Full-screen modal backdrop    |
+| `surface.backdropSoft`  | `hsla(207, 40%, 4%, 0.35)`  | Soft scrim                    |
+| `surface.panelStrong`   | `hsla(207, 33%, 7%, 0.92)`  | Cards, option cards, chips    |
+| `surface.panel`         | `hsla(0, 0%, 0%, 0.4)`      | Panels over content           |
+| `surface.card`          | `hsla(209, 34%, 12%, 0.45)` | Secondary cards               |
+| `surface.input`         | `hsla(0, 0%, 100%, 0.06)`   | Text inputs, inactive toggles |
+| `surface.inputPressed`  | `hsla(0, 0%, 100%, 0.12)`   | Pressed inputs                |
 
 ### Borders
 
@@ -76,15 +79,16 @@ All HSL. Opacities derive from a single hue per role.
 
 ### Feedback
 
-| Token              | Value                | Use                       |
-| ------------------ | -------------------- | ------------------------- |
+| Token              | Value                | Use                         |
+| ------------------ | -------------------- | --------------------------- |
 | `feedback.success` | `hsl(154, 88%, 58%)` | Checkmarks, confirmed state |
-| `feedback.error`   | `hsl(0, 100%, 71%)`  | Error text, error state   |
+| `feedback.error`   | `hsl(0, 100%, 71%)`  | Error text, error state     |
 
 **Semantic rules.**
-- Success green is for *confirmation of a check*, not selection or reward. A
+
+- Success green is for _confirmation of a check_, not selection or reward. A
   checkmark may be green; a selected card may not.
-- Accent orange signals *direction or progress*. Do not use orange for
+- Accent orange signals _direction or progress_. Do not use orange for
   success or error.
 - Never introduce a new text shade — use the `primary{20,40,60,70,80,90}`
   scale.
@@ -103,7 +107,7 @@ platforms. iOS uses Skia GLSL; web uses a WebGL port of the same fragment
 shader. Hue and cycle constants are shared via the `shader` token in
 `@dit/core`. The shader honors `prefers-reduced-motion` (frozen at `t=0`)
 and pauses with a cross-fade when the tab is hidden / app is backgrounded.
-The "no ambient motion" rule still applies to *content* surfaces — the
+The "no ambient motion" rule still applies to _content_ surfaces — the
 shader is the single, expected exception, layered behind everything.
 
 ### NUX welcome (iOS)
@@ -148,8 +152,6 @@ Body line-height: 20. Others: default.
 - **Hint-in-parens** pairs an action with a Morse term: `Tap (dit)`,
   `Hold (dah)`. Action first, term in parens at 400 weight with
   `letterSpacing: 0.4`.
-- **Buttons commit in 2–3 words.** "Continue", "Start first lesson". Never
-  "Next" or "OK".
 - **No exclamation points. No marketing voice.**
 
 ---
@@ -169,11 +171,11 @@ Body line-height: 20. Others: default.
 
 ### Morse key (`MorseButton`)
 
-| Property | Value                       |
-| -------- | --------------------------- |
-| Width    | `min(screen - 48, 480)`     |
-| Height   | 96                          |
-| Radius   | 48                          |
+| Property | Value                   |
+| -------- | ----------------------- |
+| Width    | `min(screen - 48, 480)` |
+| Height   | 96                      |
+| Radius   | 48                      |
 
 ### Pressable (`ScalePressable`)
 
@@ -183,14 +185,14 @@ same behavior — don't duplicate it.
 
 ### Option card
 
-| Property    | Value                                          |
-| ----------- | ---------------------------------------------- |
-| Background  | `surface.panelStrong`                          |
-| Border      | 1px `border.subtle`                            |
-| Radius      | `radii.lg` (20)                                |
-| Padding     | `spacing.xl` (24)                              |
-| Child gap   | `spacing.sm` (8)                               |
-| Selection   | scale 1.02 over 200ms `BEZIER.out`. No color change, no shadow. |
+| Property   | Value                                                           |
+| ---------- | --------------------------------------------------------------- |
+| Background | `surface.panelStrong`                                           |
+| Border     | 1px `border.subtle`                                             |
+| Radius     | `radii.lg` (20)                                                 |
+| Padding    | `spacing.xl` (24)                                               |
+| Child gap  | `spacing.sm` (8)                                                |
+| Selection  | scale 1.02 over 200ms `BEZIER.out`. No color change, no shadow. |
 
 ### Stage card
 
@@ -213,11 +215,11 @@ Background `surface.input`, shifts to `surface.inputPressed` on focus.
 
 ### Progress dots
 
-| State    | Width | Color              |
-| -------- | ----- | ------------------ |
-| Inactive | 6     | `text.primary40`   |
-| Active   | 18    | `accent.wave`      |
-| Done     | 6     | `text.primary80`   |
+| State    | Width | Color            |
+| -------- | ----- | ---------------- |
+| Inactive | 6     | `text.primary40` |
+| Active   | 18    | `accent.wave`    |
+| Done     | 6     | `text.primary80` |
 
 Transition: `TIMING.snap` (160ms).
 
@@ -233,6 +235,8 @@ and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
 `BEZIER.inOut`.
 
 ### Icons
+
+<!-- TODO: see if expo-symbols are available on Android and web -->
 
 - iOS: SF Symbols via `expo-symbols`.
 - Android fallback: `MaterialIcons`.
@@ -257,13 +261,13 @@ No one-off values (`10`, `18`, `20`, etc). Extend the scale instead.
 
 ### Radii scale
 
-| Token        | Value | Use                         |
-| ------------ | ----- | --------------------------- |
-| `sm`         | 10    | Small pressables, pips      |
-| `md`         | 14    | Inputs, secondary cards     |
-| `lg`         | 20    | Cards, chips                |
-| `pill`       | 999   | CTAs, active progress dots  |
-| `iconCircle` | 36    | Circular icon containers    |
+| Token        | Value | Use                        |
+| ------------ | ----- | -------------------------- |
+| `sm`         | 10    | Small pressables, pips     |
+| `md`         | 14    | Inputs, secondary cards    |
+| `lg`         | 20    | Cards, chips               |
+| `pill`       | 999   | CTAs, active progress dots |
+| `iconCircle` | 36    | Circular icon containers   |
 
 ### Structure
 
@@ -305,27 +309,29 @@ shadows.
 
 ### Timing (ms)
 
-| Token          | Value | Use                                  |
-| -------------- | ----- | ------------------------------------ |
-| `press`        | 120   | Press feedback                       |
-| `exit`         | 140   | Step exit                            |
-| `snap`         | 160   | Small state changes                  |
-| `standard`     | 240   | Step content reveal                  |
-| `medium`       | 320   | Step enter                           |
-| `wash`         | 320   | Sound-check washes, short overlays   |
-| `circleDraw`   | 500   | Stage ring draw                      |
-| `morph`        | 520   | Shared-element morphs (rare)         |
-| `connector`    | 700   | Stage connector draw                 |
-| `ripple`       | 1200  | Sonar-style ripple rings             |
-| `breath`       | 3000  | Welcome-logo breathing (once)        |
+<!-- Keep these values consistent across all platforms -->
+
+| Token        | Value | Use                                |
+| ------------ | ----- | ---------------------------------- |
+| `press`      | 120   | Press feedback                     |
+| `exit`       | 140   | Step exit                          |
+| `snap`       | 160   | Small state changes                |
+| `standard`   | 240   | Step content reveal                |
+| `medium`     | 320   | Step enter                         |
+| `wash`       | 320   | Sound-check washes, short overlays |
+| `circleDraw` | 500   | Stage ring draw                    |
+| `morph`      | 520   | Shared-element morphs (rare)       |
+| `connector`  | 700   | Stage connector draw               |
+| `ripple`     | 1200  | Sonar-style ripple rings           |
+| `breath`     | 3000  | Welcome-logo breathing (once)      |
 
 ### Bezier curves
 
-| Token    | Value                    | Use                                  |
-| -------- | ------------------------ | ------------------------------------ |
-| `out`    | `(0.23, 1, 0.32, 1)`     | Entrances, exits, press feedback     |
-| `inOut`  | `(0.77, 0, 0.175, 1)`    | Morphs, on-screen movement           |
-| `drawer` | `(0.32, 0.72, 0, 1)`     | iOS-style sheet/drawer slides        |
+| Token    | Value                 | Use                              |
+| -------- | --------------------- | -------------------------------- |
+| `out`    | `(0.23, 1, 0.32, 1)`  | Entrances, exits, press feedback |
+| `inOut`  | `(0.77, 0, 0.175, 1)` | Morphs, on-screen movement       |
+| `drawer` | `(0.32, 0.72, 0, 1)`  | iOS-style sheet/drawer slides    |
 
 ### Reanimated springs
 
@@ -350,24 +356,23 @@ shadows.
 
 ### Reduced motion
 
-All *decorative* animation honors `useReduceMotion()` and degrades to an
-opacity fade. *Functional* animation (progress dot widening, pip fill,
+All _decorative_ animation honors `useReduceMotion()` and degrades to an
+opacity fade. _Functional_ animation (progress dot widening, pip fill,
 connector draw state) keeps the state change but drops the motion.
 
 ---
 
 ## 8. Haptics
 
-Haptics mirror Morse audio. They are pattern, not punctuation.
+Haptics mirror Morse audio.
 
-- **Haptics only fire when a Morse sound is playing.** A dit sound pairs
-  with a dit-length haptic; a dah sound pairs with a dah-length haptic.
+- **Haptics only fire when a Morse sound is playing.**
   The haptic pattern matches the audio pattern one-to-one.
 - **Silence is the default for UI.** No haptics on selections, step
   transitions, button presses, confirmations, or arrivals — let sound
   carry the rhythm, not touch.
 - Haptics ignore `useReduceMotion()` — they are an accessibility aid.
-- **Users can mute haptics** from Settings ("Haptics" toggle). The toggle
+- **iOS/Android users can mute haptics** from Settings ("Haptics" toggle). The toggle
   flips an `isEnabled` flag inside the native `HapticController` so the
   audio path stays untouched.
 
@@ -397,8 +402,7 @@ Haptics mirror Morse audio. They are pattern, not punctuation.
 
 ### Removed — do not re-add without a stated reason
 
-- **AuroraGlow** — welcome background radial drift. Pulled focus from the
-  logo.
+- **AuroraGlow** — this looks like slop so do not add unnecessary glows around UI.
 - **SuccessWash** — green radial wash on sound-check confirmation. Loud,
   competed with the checkmark pop.
 - **CtaPulse** — shadow pulse on Continue when it became enabled. Enabled
@@ -415,12 +419,12 @@ browser breakpoints.
 
 ### iOS targets
 
-| Device           | Design anchor                               |
-| ---------------- | ------------------------------------------- |
-| iPhone SE / mini | 320pt — every layout must fit here          |
-| iPhone standard  | 390pt — default design target               |
-| iPhone Pro Max   | 430pt — don't leave unused whitespace       |
-| iPad             | Out of scope this phase                     |
+| Device           | Design anchor                         |
+| ---------------- | ------------------------------------- |
+| iPhone SE / mini | 320pt — every layout must fit here    |
+| iPhone standard  | 390pt — default design target         |
+| iPhone Pro Max   | 430pt — don't leave unused whitespace |
+| iPad             | Out of scope this phase               |
 
 ### Touch targets
 
@@ -463,12 +467,11 @@ and the `.legal-*` styles in [apps/web/src/App.css](apps/web/src/App.css).
 
 ### Hero
 
-| Property        | Value                                              |
-| --------------- | -------------------------------------------------- |
-| Eyebrow         | Morse mark (`— · ·` for "D") + "Dit" label         |
-| Title           | clamp(2.6, 6vw, 4.8)rem, weight 500, tracking -0.025em |
-| Intro           | clamp(1.05, 1.4vw, 1.2)rem, line-height 1.55       |
-| Last Updated    | 0.7rem uppercase, tracking 0.24em, `text.primary40` |
+| Property     | Value                                                  |
+| ------------ | ------------------------------------------------------ |
+| Title        | clamp(2.6, 6vw, 4.8)rem, weight 500, tracking -0.025em |
+| Intro        | clamp(1.05, 1.4vw, 1.2)rem, line-height 1.55           |
+| Last Updated | 0.7rem uppercase, tracking 0.24em, `text.primary40`    |
 
 Title weight 500 (not 600+) at large size reads more editorial / less
 SaaS. Stagger hero children on page-load (~70ms apart, 520ms each,
@@ -479,7 +482,6 @@ SaaS. Stagger hero children on page-load (~70ms apart, 520ms each,
 Above the numbered sections on the privacy page only. NOT a `LegalSection`
 (it does not get a number). Treatment:
 
-- "AT A GLANCE" eyebrow in `accent.wave` with a leading 18px rule
 - 2x2 grid of bold one-line title + soft supporting sentence, bracketed
   by top + bottom hairlines at `border.subtle`, **symmetric 36px padding**
 - Stacks to single column under 600px
@@ -500,10 +502,10 @@ This is the scannable summary; the body sections carry the detail.
 
 ### Links (body)
 
-| State | Color                  | Underline                       |
-| ----- | ---------------------- | ------------------------------- |
-| Rest  | `text.primary90`       | 1px, `text.primary40`, offset 3px |
-| Hover | `text.primary` (full)  | thickens to `text.primary80`    |
+| State | Color                 | Underline                         |
+| ----- | --------------------- | --------------------------------- |
+| Rest  | `text.primary90`      | 1px, `text.primary40`, offset 3px |
+| Hover | `text.primary` (full) | thickens to `text.primary80`      |
 
 The body link color is **not** `accent.wave`. The accent is reserved for
 brand marks (Morse glyph, list bullets, the at-a-glance label, the
