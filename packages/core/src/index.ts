@@ -146,20 +146,29 @@ export type {
   StreakState,
 } from './types'
 export {
+  classifyLetter,
   computeHero,
   countsAnswer,
   dateKey,
+  getAverageRecognitionMs,
+  getRecognitionFillRatio,
   isMastered,
   MASTERY_ACCURACY_MIN,
   MASTERY_RECENT_WINDOW,
   MASTERY_SCORE_MIN,
+  RECOGNITION_FAST_MS,
+  RECOGNITION_SLOW_MS,
   recordCorrectAnswer,
   recordLetterAttempt,
   STREAK_DAILY_GOAL,
   todayStreakContribution,
   updateBestWpm,
 } from './utils/retention'
-export type { HeroMetric, RecordAnswerInput } from './utils/retention'
+export type {
+  HeroMetric,
+  LetterStatus,
+  RecordAnswerInput,
+} from './utils/retention'
 export type {
   FirebaseSignInMethod,
   FirebaseSyncService,

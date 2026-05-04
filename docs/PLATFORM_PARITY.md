@@ -117,16 +117,21 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 
 ## Reference modal
 
+Web shipped a redesign that splits the grid into status-based sections (Known by ear / Now learning / Not yet) and replaces the score-tinted cards with per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. iOS still ships the legacy score-tinted grid; iOS adoption of the new layout is deferred. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core so iOS can consume them when it adopts.
+
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Letter/number cards with Morse patterns | ✅ | ✅ | |
-| Score-tinted cards | ✅ | ✅ | |
-| Hero metric (mastered count or best WPM) | ✅ | ✅ | Web passes `letterAccuracy` and `bestWpm` to the modal ([App.tsx:741-748](../apps/web/src/App.tsx#L741-L748)); confirm hero rendering matches iOS profile-aware routing |
-| Current streak | ✅ | ✅ | Both have data; verify web display |
-| Today's correct count | ✅ | ✅ | `todayStreakContribution` is wired in web App.tsx; verify modal display |
-| Guided course banner (pack/phase/letters) | ✅ | ❌ | |
+| Letter/number cards with Morse patterns | ✅ | ✅ | Web shows pattern only on mastered tiles ("train the ear" for in-progress letters) |
+| Score-tinted cards | ✅ | 🚫 | Web replaced score tint with status sectioning + recognition bar |
+| Sectioned by mastery status | 🚫 | ✅ | Web-only for now; iOS adoption deferred |
+| Per-letter recognition bar (Listen TTR fill) | 🚫 | ✅ | Web only; `getRecognitionFillRatio` lives in core |
+| Avg recognition (ms) summary | 🚫 | ✅ | Web only; `getAverageRecognitionMs` lives in core |
+| Hero metric (mastered count or best WPM) | ✅ | ✅ | Web shows mastered count + total in stats card |
+| Current streak | ✅ | ✅ | Both render in stats card |
+| Today's correct count | ✅ | ✅ | Both render with progress bar |
+| Guided course banner (pack/phase/letters) | ✅ | 🚫 | Web redesign drops the banner; the section grid carries the same signal |
 | Tap card to play character | ✅ | ✅ | |
-| Streak "at risk" treatment | ✅ | ✅ | |
+| Streak "at risk" treatment | ✅ | ✅ | Web tints the streak fill red when at-risk |
 
 ## Scoring & metrics
 

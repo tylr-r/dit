@@ -3,6 +3,7 @@ import type {
   ActivityMode,
   DailyActivity,
   LetterAccuracyRecord,
+  ListenTtrRecord,
   Progress,
   StreakState,
 } from '../types'
@@ -207,4 +208,64 @@ export const updateBestWpm = (progress: Progress, wpm: number): Progress => {
     return progress
   }
   return { ...progress, bestWpm: Math.round(wpm * 10) / 10 }
+}
+
+export type LetterStatus = 'mastered' | 'learning' | 'not-yet'
+
+/**
+ * Classifies a letter by where the user stands on it:
+ *   - mastered: meets the isMastered bar (score + recent-window accuracy)
+ *   - learning: has at least one practice attempt and is not yet mastered
+ *   - not-yet:  no recorded attempts at all
+ *
+ * Driven entirely by progress state, never a guided-pack assignment, so the
+ * "Now learning" UI reflects what the user is actually working on.
+ */
+export const classifyLetter = (
+  progress: Progress,
+  letter: Letter,
+): LetterStatus => {
+  if (isMastered(progress, letter)) return 'mastered'
+  const attempts = progress.letterAccuracy?.[letter]?.recent.length ?? 0
+  return attempts > 0 ? 'learning' : 'not-yet'
+}
+
+/** Recognition speed bounds used by the recognition-bar legend and tile fills. */
+export const RECOGNITION_FAST_MS = 200
+export const RECOGNITION_SLOW_MS = 2000
+
+/**
+ * Maps a Listen TTR EMA in ms to a 0..1 fill ratio for the per-letter
+ * recognition bar. 1.0 at or below RECOGNITION_FAST_MS (saturated "fast"),
+ * 0.0 at or above RECOGNITION_SLOW_MS (empty "slow"), linear in between.
+ */
+export const getRecognitionFillRatio = (ttrMs: number | null | undefined): number => {
+  if (ttrMs == null || !Number.isFinite(ttrMs)) return 0
+  if (ttrMs <= RECOGNITION_FAST_MS) return 1
+  if (ttrMs >= RECOGNITION_SLOW_MS) return 0
+  return 1 - (ttrMs - RECOGNITION_FAST_MS) / (RECOGNITION_SLOW_MS - RECOGNITION_FAST_MS)
+}
+
+/**
+ * Average of per-letter Listen TTR EMAs across mastered letters only.
+ * Pre-mastery TTRs are noisy and would dilute the metric. Returns null when
+ * no mastered letter has a TTR sample yet (don't show a misleading 0).
+ */
+export const getAverageRecognitionMs = (
+  progress: Progress,
+  listenTtr: ListenTtrRecord | undefined,
+): number | null => {
+  if (!listenTtr) return null
+  let sum = 0
+  let count = 0
+  for (const key of Object.keys(MORSE_DATA)) {
+    const letter = key as Letter
+    if (!isMastered(progress, letter)) continue
+    const entry = listenTtr[letter]
+    if (!entry) continue
+    sum += entry.averageMs
+    count += 1
+  }
+  if (count === 0) return null
+  return Math.round(sum / count)
 }
