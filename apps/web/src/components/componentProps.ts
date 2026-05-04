@@ -33,6 +33,7 @@ export interface MorseButtonProps {
   onPointerLeave: () => void
   onPointerUp: (event: PointerEvent<HTMLButtonElement>) => void
   showShortcutHint?: boolean
+  showTapHint?: boolean
 }
 
 export interface StageDisplayProps {

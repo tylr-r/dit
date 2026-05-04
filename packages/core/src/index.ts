@@ -14,6 +14,16 @@ export {
 export { BEZIER, cubicBezier, CTA_SLOT_HEIGHT, TIMING } from './design/motion'
 export type { BezierToken, TimingToken } from './design/motion'
 export {
+  MORSE_BUTTON_A11Y_LABEL,
+  MORSE_BUTTON_HEIGHT,
+  MORSE_BUTTON_MAX_WIDTH,
+  MORSE_BUTTON_RADIUS,
+  TAP_HINT_ICON_COLOR,
+  TAP_HINT_ICON_SIZE,
+  TAP_HINT_PULSE_MS,
+} from './components/morseButton'
+export type { MorseButtonState } from './components/morseButton'
+export {
   noopAnalyticsClient,
   type AnalyticsClient,
   type AnalyticsEvent,

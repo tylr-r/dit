@@ -171,11 +171,30 @@ Body line-height: 20. Others: default.
 
 ### Morse key (`MorseButton`)
 
-| Property | Value                   |
-| -------- | ----------------------- |
-| Width    | `min(screen - 48, 480)` |
-| Height   | 96                      |
-| Radius   | 48                      |
+| Property | Value                                            |
+| -------- | ------------------------------------------------ |
+| Width    | `min(screen - 48, 480)`                          |
+| Height   | 96                                               |
+| Radius   | 48                                               |
+| Press    | scale 0.98, `TIMING.press` (120ms), `BEZIER.out` |
+| Disabled | opacity 0.6, no press response                   |
+
+Both platforms use a glass surface. iOS renders via `expo-glass-effect`'s
+`GlassView` (`glassEffectStyle="clear"`). Web renders the same look via
+CSS `backdrop-filter: blur(24px) saturate(140%)` on a translucent
+`rgba(255,255,255,0.08)` surface with a 1px subtle border and a soft
+inset highlight, falling back to a flat `rgba(0,0,0,0.35)` where
+`backdrop-filter` is unsupported.
+
+Optional `showTapHint` pulses a centered fingerprint icon (40px,
+`rgba(244,247,249,0.45)`) at `TAP_HINT_PULSE_MS` (1200ms each direction)
+during the NUX button-tutorial step on both platforms. Optional
+`showShortcutHint` (web only) renders a small "Space" pill beneath the
+button on pointer-and-keyboard devices.
+
+Shared dimensions, timings, accessibility labels, and the
+`MorseButtonState` contract live in
+`@dit/core/components/morseButton`.
 
 ### Pressable (`ScalePressable`)
 
