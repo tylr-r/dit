@@ -3,9 +3,11 @@
  * Features a liquid/gel-style appearance with SVG displacement filters.
  */
 
+// TODO: get web morseButton design in parity with iOS
+
 import type { SyntheticEvent } from 'react'
-import './MorseButton.css'
 import type { MorseButtonProps } from './componentProps'
+import './MorseButton.css'
 import { Tooltip } from './Tooltip'
 
 /** Tap/press input button for dot/dah entry. */
