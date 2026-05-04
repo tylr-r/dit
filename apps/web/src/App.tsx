@@ -44,6 +44,7 @@ import { getAuth, signOut as firebaseSignOut } from 'firebase/auth'
 import { database } from './firebase'
 import { useAuth } from './hooks/useAuth'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
+import { isKeyboardModality } from './utils/inputModality'
 import {
   playMorseTone,
   prepareToneEngine,
@@ -391,7 +392,10 @@ function MainApp() {
 
   const handleCloseSettings = useCallback(() => {
     setShowSettings(false)
-    // Defer to next tick so React unmounts the modal first.
+    // Only restore focus to the trigger for keyboard users; for mouse users it
+    // would leave a focus ring on the button as soon as the next shortcut key
+    // flips on the :focus-visible heuristic.
+    if (!isKeyboardModality()) return
     queueMicrotask(() => settingsButtonRef.current?.focus())
   }, [])
 
