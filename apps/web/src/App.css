@@ -1167,12 +1167,10 @@
 
 .word-letter.done {
   opacity: 0.6;
-  color: var(--color-accent-wave);
 }
 
 .word-letter.active {
   opacity: 1;
-  color: var(--color-accent-wave);
   transform: translateY(-4px);
 }
 
