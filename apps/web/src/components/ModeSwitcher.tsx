@@ -1,3 +1,5 @@
+// TODO: fix spacebar keyboard shortcut directly after mode change selection
+
 import { useEffect, useRef, useState } from 'react'
 
 export type ModeSwitcherMode = 'practice' | 'freestyle' | 'listen'
