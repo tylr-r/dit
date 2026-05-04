@@ -2262,6 +2262,7 @@ export const useMorseSessionController = ({
       dailyActivity,
       streak,
       letterAccuracy,
+      listenTtr,
       bestWpm,
       reminder,
     },

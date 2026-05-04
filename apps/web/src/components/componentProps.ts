@@ -9,6 +9,7 @@ import type {
   HeroMetric,
   Letter,
   LetterAccuracyRecord,
+  ListenTtrRecord,
   ListenWavePlayback,
   StreakState,
 } from '@dit/core'
@@ -129,6 +130,7 @@ export interface ReferenceModalProps {
   todayCorrect: number
   streakAtRisk: boolean
   letterAccuracy?: LetterAccuracyRecord
+  listenTtr?: ListenTtrRecord
   courseProgress?: ReferenceCourseProgress | null
   onPlayCharacter?: (char: Letter) => void
 }

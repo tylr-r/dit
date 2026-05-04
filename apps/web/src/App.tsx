@@ -168,6 +168,7 @@ function MainApp() {
     practiceLearnMode,
     practiceIfrMode,
     practiceReviewMisses,
+    listenTtr,
   } = state
   const {
     isFreestyle,
@@ -763,6 +764,7 @@ function MainApp() {
           todayCorrect={todayContribution.correct}
           streakAtRisk={todayContribution.atRisk}
           letterAccuracy={letterAccuracy}
+          listenTtr={listenTtr}
           onPlayCharacter={handlePlayReferenceCharacter}
           courseProgress={
             guidedCourseActive

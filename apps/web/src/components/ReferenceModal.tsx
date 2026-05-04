@@ -1,85 +1,67 @@
-import type { CSSProperties } from 'react'
-import type { HeroMetric, Letter, StreakState } from '@dit/core'
-import { STREAK_DAILY_GOAL, isMastered } from '@dit/core'
+import {
+  classifyLetter,
+  getAverageRecognitionMs,
+  getRecognitionFillRatio,
+  STREAK_DAILY_GOAL,
+  type Letter,
+} from '@dit/core'
+import { useCallback, useRef, useState, type CSSProperties } from 'react'
 import { useScreenTracker } from '../lib/analytics'
 import type { ReferenceModalProps } from './componentProps'
 
-const SCORE_INTENSITY_MAX = 15
+const LONG_PRESS_MS = 350
+const SCORE_TINT_MAX_ALPHA = 0.18
+// Need at least this much spread across mastered scores before showing
+// relative tints — small spreads make the "best vs worst" signal noisy.
+const RELATIVE_TINT_MIN_DEVIATION = 3
+// Mastered tiles always show at least this much bar fill, so a letter mastered
+// via Practice (no Listen TTR yet) doesn't read identically to "very slow."
+const MASTERED_MIN_FILL = 0.05
 
-const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
+const computeMedian = (values: number[]): number => {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2
+}
 
-const getScoreStyle = (
+const getRelativeTintStyle = (
   scoreValue: number,
+  status: 'mastered' | 'learning' | 'not-yet',
+  medianScore: number,
+  maxDeviation: number,
 ): CSSProperties | undefined => {
-  if (scoreValue === 0) {
-    return
-  }
-  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
-  const intensity = Math.min(Math.max(normalized, 0.2), 1)
-  const alpha = 0.35 * intensity
-  const tint = scoreValue > 0 ? '56, 242, 162' : '255, 90, 96'
+  if (status !== 'mastered') return undefined
+  if (maxDeviation < RELATIVE_TINT_MIN_DEVIATION) return undefined
+  const relative = (scoreValue - medianScore) / maxDeviation
+  const intensity = Math.abs(relative)
+  if (intensity < 0.1) return undefined
+  const alpha = SCORE_TINT_MAX_ALPHA * intensity
+  const tint = relative > 0 ? '56, 242, 162' : '255, 90, 96'
   return {
     '--score-tint': tint,
     '--score-alpha': String(alpha),
   } as CSSProperties
 }
 
-const ProgressHero = ({ hero }: { hero: HeroMetric }) => {
-  if (hero.kind === 'wpm') {
-    const display = hero.value > 0 ? hero.value.toFixed(1) : '—'
-    return (
-      <div className="reference-hero">
-        <div className="reference-hero-value">{display}</div>
-        <div className="reference-hero-label">Best WPM</div>
-      </div>
-    )
-  }
-  return (
-    <div className="reference-hero">
-      <div className="reference-hero-value">
-        {hero.count}
-        <span className="reference-hero-value-muted"> / {hero.total}</span>
-      </div>
-      <div className="reference-hero-label">Letters mastered</div>
-    </div>
-  )
-}
+const renderMorseGlyph = (code: string) =>
+  code.split('').map((symbol, index) => (
+    <span key={index} className="reference-tile-symbol">
+      {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
+    </span>
+  ))
 
-const StreakRow = ({
-  streak,
-  todayCorrect,
-  goal,
-  atRisk,
-}: {
-  streak?: StreakState
-  todayCorrect: number
-  goal: number
-  atRisk: boolean
-}) => {
-  const current = streak?.current ?? 0
-  const filled = Math.min(todayCorrect, goal)
-  const ratio = goal > 0 ? filled / goal : 0
-  const streakText =
-    current > 0 ? `${current}-day streak` : 'No active streak'
-  const detailText =
-    todayCorrect >= goal ? 'Today counted' : `${todayCorrect} / ${goal} today`
-  return (
-    <div className={`reference-streak${atRisk ? ' is-at-risk' : ''}`}>
-      <div className="reference-streak-header">
-        <span className="reference-streak-text">{streakText}</span>
-        <span className="reference-streak-detail">{detailText}</span>
-      </div>
-      <div className="reference-streak-track">
-        <div
-          className="reference-streak-fill"
-          style={{ width: `${Math.round(ratio * 100)}%` }}
-        />
-      </div>
-    </div>
-  )
-}
+const RecognitionLegend = () => (
+  <div className="reference-legend" aria-hidden="true">
+    <span className="reference-legend-label">slow</span>
+    <span className="reference-legend-bar" />
+    <span className="reference-legend-label">fast</span>
+  </div>
+)
 
-/** Modal overlay with hero metric, streak, guided-course banner, and Morse reference grid. */
+/** Modal overlay with progress stats, letter-status sections, and a Morse reference grid. */
 export function ReferenceModal({
   letters,
   morseData,
@@ -92,65 +74,194 @@ export function ReferenceModal({
   todayCorrect,
   streakAtRisk,
   letterAccuracy,
-  courseProgress,
+  listenTtr,
   onPlayCharacter,
 }: ReferenceModalProps) {
   useScreenTracker('reference')
 
-  const masteryProgress = { scores, letterAccuracy }
-  const renderReferenceCard = (char: Letter) => {
+  const progressForClassify = { scores, letterAccuracy }
+  const allChars: Letter[] = [...letters, ...numbers]
+
+  const mastered: Letter[] = []
+  const learning: Letter[] = []
+  const notYet: Letter[] = []
+  for (const ch of allChars) {
+    const status = classifyLetter(progressForClassify, ch)
+    if (status === 'mastered') mastered.push(ch)
+    else if (status === 'learning') learning.push(ch)
+    else notYet.push(ch)
+  }
+
+  const avgRecognitionMs = getAverageRecognitionMs(progressForClassify, listenTtr)
+
+  const masteredScores = mastered.map((c) => scores[c] ?? 0)
+  const masteredScoreMedian = computeMedian(masteredScores)
+  const masteredScoreMaxDeviation = masteredScores.reduce(
+    (max, s) => Math.max(max, Math.abs(s - masteredScoreMedian)),
+    0,
+  )
+
+  const masteredCount = hero.kind === 'mastered' ? hero.count : mastered.length
+  const totalCount = hero.kind === 'mastered' ? hero.total : allChars.length
+  const currentStreak = streak?.current ?? 0
+  const streakClamp = Math.min(todayCorrect, STREAK_DAILY_GOAL)
+  const streakRatio = STREAK_DAILY_GOAL > 0 ? streakClamp / STREAK_DAILY_GOAL : 0
+  const streakHeader =
+    currentStreak > 0 ? `Today's goal · ${currentStreak}-day streak` : "Today's goal"
+
+  const [revealedChar, setRevealedChar] = useState<Letter | null>(null)
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressTriggeredRef = useRef(false)
+
+  const hasHover =
+    typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+  const interactionHint = hasHover
+    ? 'Click any letter to hear it. Hover to peek at the pattern.'
+    : 'Tap any letter to hear it.'
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }, [])
+
+  const handlePointerDown = useCallback(
+    (char: Letter) => {
+      cancelLongPress()
+      longPressTriggeredRef.current = false
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true
+        setRevealedChar(char)
+        longPressTimerRef.current = null
+      }, LONG_PRESS_MS)
+    },
+    [cancelLongPress],
+  )
+
+  const handlePointerEnd = useCallback(() => {
+    cancelLongPress()
+    setRevealedChar(null)
+  }, [cancelLongPress])
+
+  const handleClick = useCallback(
+    (char: Letter) => {
+      if (longPressTriggeredRef.current) {
+        longPressTriggeredRef.current = false
+        return
+      }
+      onPlayCharacter?.(char)
+    },
+    [onPlayCharacter],
+  )
+
+  const renderTile = (char: Letter, status: 'mastered' | 'learning' | 'not-yet') => {
+    const ttrEma = listenTtr?.[char]?.averageMs ?? null
+    const rawFillRatio = getRecognitionFillRatio(ttrEma)
+    const fillRatio =
+      status === 'mastered'
+        ? Math.max(rawFillRatio, MASTERED_MIN_FILL)
+        : rawFillRatio
+    const interactive = Boolean(onPlayCharacter)
+    const isRevealed = revealedChar === char
+    const className = `reference-tile reference-tile--${status}${
+      isRevealed ? ' reference-tile--revealed' : ''
+    }`
+
+    if (status === 'not-yet') {
+      const inner = <span className="reference-tile-letter">{char}</span>
+      if (interactive) {
+        return (
+          <button
+            key={char}
+            type="button"
+            className={`${className} reference-tile-button`}
+            aria-label={`Play Morse for ${char}`}
+            onClick={() => handleClick(char)}
+            onPointerDown={() => handlePointerDown(char)}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
+            onPointerLeave={handlePointerEnd}
+          >
+            {inner}
+          </button>
+        )
+      }
+      return (
+        <div key={char} className={className}>
+          {inner}
+        </div>
+      )
+    }
+
     const scoreValue = scores[char] ?? 0
-    const mastered = isMastered(masteryProgress, char)
-    const scoreClass =
-      scoreValue > 0
-        ? 'score-positive'
-        : scoreValue < 0
-          ? 'score-negative'
-          : 'score-neutral'
-    const code = morseData[char].code
-    const className = `reference-card${mastered ? ' reference-card-mastered' : ''}`
+    // Show the score (and tint the tile) only on mastered tiles. Pre-mastery,
+    // these would signal struggle on a letter the user is still figuring out
+    // — the kind of negative reinforcement the pedagogy guidance warns against.
+    const tintStyle = getRelativeTintStyle(
+      scoreValue,
+      status,
+      masteredScoreMedian,
+      masteredScoreMaxDeviation,
+    )
+    // Score is delta from median so it agrees with the relative tint.
+    // Rounded to a whole number for display; an even-count median produces
+    // half-integer deltas otherwise. Shown on every mastered tile once
+    // there's meaningful spread — letters at the median display "0" so the
+    // chip's presence stays consistent across the section.
+    const relativeScore =
+      status === 'mastered'
+        ? Math.round(scoreValue - masteredScoreMedian)
+        : 0
+    const showScore =
+      status === 'mastered' &&
+      masteredScoreMaxDeviation >= RELATIVE_TINT_MIN_DEVIATION
     const inner = (
       <>
-        <div className="reference-head">
-          <div className="reference-letter">{char}</div>
-          <div className={`reference-score ${scoreClass}`}>
-            {scoreValue === 0 ? '' : formatScore(scoreValue)}
-          </div>
-        </div>
-        <div className="reference-code" aria-label={code}>
-          {code.split('').map((symbol, index) => (
-            <span key={`${char}-${index}`} className="reference-symbol">
-              {symbol === '.'
-                ? '•'
-                : symbol === '-'
-                  ? '—'
-                  : symbol}
-            </span>
-          ))}
-        </div>
+        {showScore ? (
+          <span
+            className={`reference-tile-score${
+              relativeScore < 0 ? ' reference-tile-score--negative' : ''
+            }`}
+            aria-hidden="true"
+          >
+            {relativeScore > 0 ? `+${relativeScore}` : String(relativeScore)}
+          </span>
+        ) : null}
+        <span className="reference-tile-stage">
+          <span className="reference-tile-letter">{char}</span>
+          <span className="reference-tile-pattern" aria-label={morseData[char].code}>
+            {renderMorseGlyph(morseData[char].code)}
+          </span>
+        </span>
+        <span
+          className="reference-tile-bar"
+          aria-hidden="true"
+          style={{ '--fill': `${Math.round(fillRatio * 100)}%` } as CSSProperties}
+        />
       </>
     )
 
-    if (onPlayCharacter) {
+    if (interactive) {
       return (
         <button
           key={char}
           type="button"
-          className={`${className} reference-card-button`}
-          style={getScoreStyle(scoreValue)}
+          className={`${className} reference-tile-button`}
           aria-label={`Play Morse for ${char}`}
-          onClick={() => onPlayCharacter(char)}
+          style={tintStyle}
+          onClick={() => handleClick(char)}
+          onPointerDown={() => handlePointerDown(char)}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+          onPointerLeave={handlePointerEnd}
         >
           {inner}
         </button>
       )
     }
     return (
-      <div
-        key={char}
-        className={className}
-        style={getScoreStyle(scoreValue)}
-      >
+      <div key={char} className={className} style={tintStyle}>
         {inner}
       </div>
     )
@@ -159,52 +270,128 @@ export function ReferenceModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
+        className="modal reference-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Morse reference"
+        aria-label="Progress"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="modal-header">
-          <div className="modal-title">Progress</div>
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="modal-close modal-reset"
-              onClick={onResetScores}
+        <div className="reference-header">
+          <h2 className="reference-title">Progress</h2>
+          <button
+            type="button"
+            className="reference-close"
+            onClick={onClose}
+            aria-label="Close progress"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                d="M6 6 L18 18 M18 6 L6 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="reference-scroll">
+          <div className="reference-stats">
+            <div className="reference-stat">
+              <div className="reference-stat-value">
+                {masteredCount}
+                <span className="reference-stat-value-muted">
+                  {' / '}
+                  {totalCount}
+                </span>
+              </div>
+              <div className="reference-stat-label">Letters mastered</div>
+            </div>
+            <div className="reference-stat-divider" aria-hidden="true" />
+            <div className="reference-stat">
+              <div className="reference-stat-value">
+                {avgRecognitionMs != null ? avgRecognitionMs : '—'}
+                {avgRecognitionMs != null ? (
+                  <span className="reference-stat-value-unit">ms</span>
+                ) : null}
+              </div>
+              <div className="reference-stat-label">Avg recognition</div>
+            </div>
+            <div className="reference-stat-divider" aria-hidden="true" />
+            <div
+              className={`reference-stat reference-stat-streak${streakAtRisk ? ' is-at-risk' : ''}`}
             >
+              <div className="reference-stat-streak-detail">
+                <div className="reference-stat-value reference-stat-streak-counts">
+                  {streakClamp}
+                  <span className="reference-stat-value-muted">
+                    {' / '}
+                    {STREAK_DAILY_GOAL}
+                  </span>
+                </div>
+                <div className="reference-stat-streak-track">
+                  <div
+                    className="reference-stat-streak-fill"
+                    style={{ width: `${Math.round(streakRatio * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <div className="reference-stat-label">{streakHeader}</div>
+            </div>
+          </div>
+
+          <p className="reference-caption">
+            {interactionHint}{' '}Bars track recognition speed. The +/- is relative to your average score.
+          </p>
+
+          {mastered.length > 0 ? (
+            <section className="reference-section">
+              <div className="reference-section-header">
+                <h3 className="reference-section-title">
+                  Known by ear
+                  <span className="reference-section-count">{mastered.length}</span>
+                </h3>
+                <RecognitionLegend />
+              </div>
+              <div className="reference-section-grid">
+                {mastered.map((c) => renderTile(c, 'mastered'))}
+              </div>
+            </section>
+          ) : null}
+
+          {learning.length > 0 ? (
+            <section className="reference-section">
+              <div className="reference-section-header">
+                <h3 className="reference-section-title">
+                  Still learning
+                  <span className="reference-section-count">{learning.length}</span>
+                </h3>
+                {mastered.length === 0 ? <RecognitionLegend /> : null}
+              </div>
+              <div className="reference-section-grid">
+                {learning.map((c) => renderTile(c, 'learning'))}
+              </div>
+            </section>
+          ) : null}
+
+          {notYet.length > 0 ? (
+            <section className="reference-section reference-section--locked">
+              <div className="reference-section-header">
+                <h3 className="reference-section-title">
+                  Not started
+                  <span className="reference-section-count">{notYet.length}</span>
+                </h3>
+              </div>
+              <div className="reference-section-grid">
+                {notYet.map((c) => renderTile(c, 'not-yet'))}
+              </div>
+            </section>
+          ) : null}
+
+          <div className="reference-footer">
+            <button type="button" className="reference-reset" onClick={onResetScores}>
               Reset scores
             </button>
-            <button type="button" className="modal-close" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </div>
-        <div className="reference-scroll">
-          <ProgressHero hero={hero} />
-          <StreakRow
-            streak={streak}
-            todayCorrect={todayCorrect}
-            goal={STREAK_DAILY_GOAL}
-            atRisk={streakAtRisk}
-          />
-          {courseProgress ? (
-            <div className="reference-course-banner">
-              <div className="reference-course-banner-title">
-                Pack {courseProgress.packIndex + 1}/{courseProgress.totalPacks}
-                {' · '}
-                {courseProgress.phase}
-              </div>
-              <div className="reference-course-banner-letters">
-                {courseProgress.packLetters.map((l) => `"${l}"`).join(' ')}
-              </div>
-            </div>
-          ) : null}
-          <div className="reference-grid">
-            {letters.map(renderReferenceCard)}
-            <div className="reference-row">
-              {numbers.map(renderReferenceCard)}
-            </div>
           </div>
         </div>
       </div>
