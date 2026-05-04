@@ -559,6 +559,7 @@ function MainApp() {
       onKeyUp={handleButtonKeyUp}
       onBlur={handleButtonPointerEnd}
       showShortcutHint={!useCustomKeyboard}
+      showTapHint={state.tutorialTapCount === 0 && state.tutorialHoldCount === 0}
     />
   )
 

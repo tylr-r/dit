@@ -1,15 +1,24 @@
 import { MaterialIcons } from '@expo/vector-icons'
+import {
+  MORSE_BUTTON_A11Y_LABEL,
+  MORSE_BUTTON_HEIGHT,
+  MORSE_BUTTON_MAX_WIDTH,
+  MORSE_BUTTON_RADIUS,
+  TAP_HINT_ICON_COLOR,
+  TAP_HINT_ICON_SIZE,
+  TAP_HINT_PULSE_MS,
+} from '@dit/core'
 import { GlassView } from 'expo-glass-effect'
 import React, { useEffect, useRef } from 'react'
 import { Animated, Pressable, StyleSheet } from 'react-native'
 
 type MorseButtonProps = {
-  disabled?: boolean;
-  isPressing: boolean;
-  onPressIn: () => void;
-  onPressOut: () => void;
-  showTapHint?: boolean;
-};
+  disabled?: boolean
+  isPressing: boolean
+  onPressIn: () => void
+  onPressOut: () => void
+  showTapHint?: boolean
+}
 
 /** Tap/press input button for dot/dah entry. */
 export function MorseButton({
@@ -30,12 +39,12 @@ export function MorseButton({
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 0.3,
-          duration: 1200,
+          duration: TAP_HINT_PULSE_MS,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1200,
+          duration: TAP_HINT_PULSE_MS,
           useNativeDriver: true,
         }),
       ]),
@@ -51,7 +60,7 @@ export function MorseButton({
       onPressOut={onPressOut}
       accessibilityState={{ disabled }}
       accessibilityRole="button"
-      accessibilityLabel="Tap for dot, hold for dah"
+      accessibilityLabel={MORSE_BUTTON_A11Y_LABEL}
       style={styles.morsePressable}
     >
       {({ pressed }) => {
@@ -63,12 +72,16 @@ export function MorseButton({
               styles.morseWrap,
               isActive && styles.morseWrapPressed,
               disabled && styles.morseWrapDisabled,
-              { borderRadius: 48 },
+              { borderRadius: MORSE_BUTTON_RADIUS },
             ]}
           >
             {showTapHint && !isActive ? (
               <Animated.View style={[styles.tapHint, { opacity: pulseAnim }]}>
-                <MaterialIcons name="fingerprint" size={40} color="rgba(244, 247, 249, 0.45)" />
+                <MaterialIcons
+                  name="fingerprint"
+                  size={TAP_HINT_ICON_SIZE}
+                  color={TAP_HINT_ICON_COLOR}
+                />
               </Animated.View>
             ) : null}
           </GlassView>
@@ -81,12 +94,12 @@ export function MorseButton({
 const styles = StyleSheet.create({
   morsePressable: {
     width: '100%',
-    maxWidth: 480,
+    maxWidth: MORSE_BUTTON_MAX_WIDTH,
     alignSelf: 'center',
   },
   morseWrap: {
     width: '100%',
-    height: 96,
+    height: MORSE_BUTTON_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     transform: [{ scale: 1 }],

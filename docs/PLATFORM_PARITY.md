@@ -196,7 +196,7 @@ These are not gaps. Don't open tickets to "fix" them.
 ### Shared but implemented natively per platform
 
 - Audio playback (Web Audio API vs native via [@dit/dit-native](../modules/dit-native))
-- Glass surfaces (CSS vs `expo-glass-effect`)
+- Glass surfaces — iOS uses `expo-glass-effect` (`GlassView`), web uses CSS `backdrop-filter`. Same visual treatment, two primitives. The Morse key (`MorseButton`) shares dimensions, timings, accessibility labels, and the `MorseButtonState` type via [packages/core/src/components/morseButton](../packages/core/src/components/morseButton).
 - Modal/sheet chrome (custom React vs UIKit / `@expo/ui`)
 - Sign-in transport (Firebase popup vs native OAuth)
 
