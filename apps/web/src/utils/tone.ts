@@ -18,7 +18,27 @@ let holdOscillator: OscillatorNode | null = null
 let holdGain: GainNode | null = null
 let morseNodes: { oscillator: OscillatorNode; gain: GainNode } | null = null
 let graphWarmed = false
-let firstPrimedSoundDone = false
+
+// Bumped every time a play is requested or an external stop happens. A pending
+// playMorseTone that's still waiting on AudioContext.resume() (page-load
+// auto-play) compares its captured token after each await; if it diverged, the
+// call aborts so it can't overlap with whatever the user just did.
+let morsePlayToken = 0
+
+const cleanupMorseNodes = () => {
+  const nodes = morseNodes
+  morseNodes = null
+  if (!nodes) {
+    return
+  }
+  try {
+    nodes.oscillator.stop()
+  } catch {
+    // Already stopped.
+  }
+  nodes.oscillator.disconnect()
+  nodes.gain.disconnect()
+}
 
 const ensureContext = async (): Promise<AudioContext | null> => {
   if (!contextRef) {
@@ -109,12 +129,9 @@ export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   const startTime = context.currentTime
-  const lookahead = firstPrimedSoundDone ? 0 : 0.04
-  const effectiveStart = startTime + lookahead
-  gain.gain.setValueAtTime(0, effectiveStart)
-  gain.gain.linearRampToValueAtTime(resolvedVolume, effectiveStart + 0.005)
-  oscillator.start(effectiveStart)
-  firstPrimedSoundDone = true
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(resolvedVolume, startTime + 0.005)
+  oscillator.start(startTime)
   holdOscillator = oscillator
   holdGain = gain
 }
@@ -156,11 +173,12 @@ export const playMorseTone = async ({
   frequency?: number
   volume?: number
 }) => {
+  const myToken = ++morsePlayToken
   const context = await ensureContext()
-  if (!context) {
+  if (!context || myToken !== morsePlayToken) {
     return
   }
-  await stopMorseTone()
+  cleanupMorseNodes()
   const resolvedFrequency = frequency ?? AUDIO_FREQUENCY
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   const characterUnitMs = getListenUnitMs(characterWpm, minUnitMs)
@@ -204,12 +222,8 @@ export const playMorseTone = async ({
       cursor += interCharacterGapSeconds
     }
   }
-  const oscillatorStart = firstPrimedSoundDone
-    ? context.currentTime
-    : Math.max(context.currentTime, cursor - 0.04)
-  oscillator.start(oscillatorStart)
+  oscillator.start(context.currentTime)
   oscillator.stop(cursor + 0.05)
-  firstPrimedSoundDone = true
   oscillator.onended = () => {
     oscillator.disconnect()
     gain.disconnect()
@@ -220,18 +234,6 @@ export const playMorseTone = async ({
 }
 
 export const stopMorseTone = async () => {
-  const context = contextRef
-  const nodes = morseNodes
-  if (!context || !nodes) {
-    morseNodes = null
-    return
-  }
-  try {
-    nodes.oscillator.stop()
-  } catch {
-    // Already stopped.
-  }
-  nodes.oscillator.disconnect()
-  nodes.gain.disconnect()
-  morseNodes = null
+  morsePlayToken += 1
+  cleanupMorseNodes()
 }
