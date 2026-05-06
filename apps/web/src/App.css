@@ -4473,3 +4473,17 @@
   color: var(--color-text-primary, hsl(24, 29%, 97%));
   font-weight: 600;
 }
+
+.custom-listen-keyboard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.custom-listen-keyboard .keyboard-row-fn {
+  margin-top: 4px;
+}
+.custom-listen-keyboard .keyboard-key-wide {
+  flex: 2;
+}

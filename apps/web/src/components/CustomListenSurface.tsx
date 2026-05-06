@@ -17,6 +17,8 @@ export type CustomListenSurfaceProps = {
   encodedCode: string
   /** Total playback duration in ms for the current saved text. */
   playDurationMs: number
+  /** When true, render an on-screen keyboard instead of focusing the system keyboard. */
+  useCustomKeyboard: boolean
   onPlay: () => void
   onPause: () => void
   onResume: () => void
@@ -48,6 +50,13 @@ const renderTokens = (tokens: DiffToken[]) =>
     </span>
   ))
 
+const TYPEALONG_KEYBOARD_ROWS: readonly string[][] = [
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
+]
+
 /** In-mode surface for custom-listen Setup / Playback / Reveal phases. */
 export function CustomListenSurface({
   phase,
@@ -56,6 +65,7 @@ export function CustomListenSurface({
   typedCopy,
   encodedCode,
   playDurationMs,
+  useCustomKeyboard,
   onPlay,
   onPause,
   onResume,
@@ -79,12 +89,12 @@ export function CustomListenSurface({
     audioEndedRef.current = audioEnded
   }, [audioEnded])
 
-  // Auto-focus the type-along when playback begins.
+  // Auto-focus the type-along when playback begins (skip on touch devices that use the on-screen keyboard).
   useEffect(() => {
-    if (phase === 'playing' && isTypeAlong) {
+    if (phase === 'playing' && isTypeAlong && !useCustomKeyboard) {
       typedCopyRef.current?.focus()
     }
-  }, [phase, isTypeAlong])
+  }, [phase, isTypeAlong, useCustomKeyboard])
 
   // RAF loop that drives the progress bar during playback.
   // Reads elapsed time from the AudioContext clock via getPlaybackElapsedMs(),
@@ -189,6 +199,8 @@ export function CustomListenSurface({
             value={typedCopy}
             onChange={(event) => onTypedCopyChange(event.target.value)}
             disabled={phase === 'setup' || phase === 'paused'}
+            readOnly={useCustomKeyboard}
+            inputMode={useCustomKeyboard ? 'none' : undefined}
             placeholder={
               phase === 'setup'
                 ? 'Press Play, then type as you hear it.'
@@ -196,6 +208,46 @@ export function CustomListenSurface({
             }
             aria-label="Type along"
           />
+          {isTypeAlong && useCustomKeyboard && (phase === 'playing' || phase === 'paused') ? (
+            <div className="custom-listen-keyboard" role="group" aria-label="Type along keyboard">
+              {TYPEALONG_KEYBOARD_ROWS.map((row, rowIndex) => (
+                <div className="keyboard-row" key={`row-${rowIndex}`}>
+                  {row.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className="keyboard-key"
+                      onClick={() => onTypedCopyChange(typedCopy + key)}
+                      disabled={phase === 'paused'}
+                      aria-label={`Type ${key}`}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              <div className="keyboard-row keyboard-row-fn">
+                <button
+                  type="button"
+                  className="keyboard-key keyboard-key-wide"
+                  onClick={() => onTypedCopyChange(typedCopy + ' ')}
+                  disabled={phase === 'paused'}
+                  aria-label="Space"
+                >
+                  Space
+                </button>
+                <button
+                  type="button"
+                  className="keyboard-key"
+                  onClick={() => onTypedCopyChange(typedCopy.slice(0, -1))}
+                  disabled={phase === 'paused' || typedCopy.length === 0}
+                  aria-label="Backspace"
+                >
+                  ⌫
+                </button>
+              </div>
+            </div>
+          ) : null}
         </>
       ) : null}
 

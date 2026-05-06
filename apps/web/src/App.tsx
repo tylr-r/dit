@@ -776,6 +776,7 @@ function MainApp() {
             typedCopy={customListen.typedCopy}
             encodedCode={customListen.encoded.code}
             playDurationMs={customListen.playDurationMs}
+            useCustomKeyboard={useCustomKeyboard}
             onPlay={() => void customListen.play()}
             onPause={() => void customListen.pause()}
             onResume={() => void customListen.resume()}
