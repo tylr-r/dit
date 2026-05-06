@@ -66,6 +66,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
 | Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
 | Time-to-respond indicator | ❓ | ❌ | Spec says iOS-only; not located in either codebase. Confirm whether spec is aspirational or feature exists under another name. |
+| Custom text playback (head copy) | ❌ | ✅ | Web-only sub-mode of Listen — paste a passage, hear it as Morse, optionally type along with a char-level diff after. iOS adoption deferred. |
 
 ## Freestyle mode
 

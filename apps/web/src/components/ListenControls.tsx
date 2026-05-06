@@ -10,13 +10,15 @@ const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ]
 
-/** Listen mode controls: Play (replay) button plus an on-screen keyboard with unavailable keys dimmed. */
+/** Listen mode controls: Play (replay) button, on-screen keyboard, and the
+ * "Use custom" chip that opens the custom-text sheet. */
 export function ListenControls({
   availableLetters,
   listenStatus,
   onReplay,
   onSubmitAnswer,
   showShortcutHints,
+  onUseCustom,
 }: ListenControlsProps) {
   const isIdle = listenStatus === 'idle'
   const availableSet = useMemo(
@@ -39,6 +41,16 @@ export function ListenControls({
           Play
         </button>
       </Tooltip>
+      {onUseCustom ? (
+        <button
+          type="button"
+          className="listen-use-custom-chip"
+          onClick={onUseCustom}
+        >
+          <span className="listen-use-custom-chip-dot" aria-hidden="true" />
+          Use custom
+        </button>
+      ) : null}
       {!showShortcutHints ? (
         <div className="listen-keyboard" role="group" aria-label="Keyboard">
           {LISTEN_KEYBOARD_ROWS.map((row, rowIndex) => (

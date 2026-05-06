@@ -17,6 +17,8 @@ export function StageDisplay({
   listenStatusText,
   listenTtrText,
   listenWavePlayback,
+  customListenPlayback,
+  customListenClockSource,
   pips,
   practiceWord,
   practiceWordIndex,
@@ -48,37 +50,43 @@ export function StageDisplay({
           ) : null}
         </div>
       ) : isListen ? (
-        <>
+        customListenPlayback !== null ? (
           <div className="listen-visual">
-            <ListenSineWave
-              playback={listenWavePlayback}
-              tintStatus={listenStatus}
-            />
-            {!letterPlaceholder ? (
-              <div
-                key={letter}
-                className={`${listenDisplayClass} listen-overlay-letter`}
-                aria-live="polite"
-              >
-                {listenDisplay}
-              </div>
-            ) : null}
+            <ListenSineWave playback={customListenPlayback} clockSource={customListenClockSource} />
           </div>
-          <p
-            key={`listen-status-${listenStatus}-${listenStatusText}`}
-            className={`status-text listen-status-${listenStatus}`}
-            aria-live="polite"
-          >
-            {listenStatusText}
-          </p>
-          <p
-            key={`listen-ttr-${listenTtrText ?? 'empty'}`}
-            className="wpm-text listen-ttr"
-            aria-live="polite"
-          >
-            {listenTtrText ?? ' '}
-          </p>
-        </>
+        ) : (
+          <>
+            <div className="listen-visual">
+              <ListenSineWave
+                playback={listenWavePlayback}
+                tintStatus={listenStatus}
+              />
+              {!letterPlaceholder ? (
+                <div
+                  key={letter}
+                  className={`${listenDisplayClass} listen-overlay-letter`}
+                  aria-live="polite"
+                >
+                  {listenDisplay}
+                </div>
+              ) : null}
+            </div>
+            <p
+              key={`listen-status-${listenStatus}-${listenStatusText}`}
+              className={`status-text listen-status-${listenStatus}`}
+              aria-live="polite"
+            >
+              {listenStatusText}
+            </p>
+            <p
+              key={`listen-ttr-${listenTtrText ?? 'empty'}`}
+              className="wpm-text listen-ttr"
+              aria-live="polite"
+            >
+              {listenTtrText ?? ' '}
+            </p>
+          </>
+        )
       ) : (
         <>
           {practiceWordMode ? (

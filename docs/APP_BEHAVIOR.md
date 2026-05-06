@@ -147,6 +147,28 @@ The picker is rendered at the app root so it survives Settings unmounting.
 - Replay plays the current letter again (web binds this to the spacebar).
 - Both platforms display a sine wave visualization of the playback. iOS adds a time-to-respond indicator.
 
+#### Custom text (web)
+
+A sub-mode of Listen that plays a user-entered passage as Morse for head-copy practice. iOS adoption deferred.
+
+- Listen idle shows a small **Use custom** chip below the Play button. Tapping it opens a bottom sheet.
+- The sheet contains a textarea, a `chars / 2000` counter, an **Ignored** count for stripped characters, an estimated playback duration, a **Type along** toggle (default on), and **Discard** / **Save** actions.
+- Pasted text is normalized on input: A-Z and 0-9 are preserved (lowercase letters uppercase), whitespace runs collapse to single spaces, and any other character is stripped and counted in **Ignored**. Hard cap of 2000 characters; longer paste is trimmed.
+- Saving a non-empty passage enters custom mode. Saving an empty textarea exits custom mode and returns to normal Listen. **Discard** abandons in-flight edits; previously-saved text remains loaded if any.
+- Last-used text and workflow choice persist in `localStorage` (keys `dit-listen-custom-text-v1`, `dit-listen-custom-typealong-v1`, `dit-listen-custom-active-v1`). Pasted text is never synced to Firebase.
+- On reload the surface re-enters the Setup phase the next time the user lands on Listen, with the saved text and workflow.
+
+**Phases.** When custom text is loaded, the Listen surface holds in one of these phases:
+
+- **Setup** — source text is hidden behind a `chars · words ready` indicator. Type-along input (when on) is rendered but disabled. **Play** arms the audio; **Edit text** reopens the sheet; **Clear** drops custom mode.
+- **Playing** — the full passage plays as a continuous Morse stream at the user's `listenWpm` and `listenEffectiveWpm` (Farnsworth gaps between letters and words). The sine wave renders in the same StageDisplay slot regular Listen uses; the wave, progress bar, and audio share `AudioContext.currentTime` as their clock so they stay in sync across pause/resume. A progress bar shows elapsed / total time. Type-along (when on) accepts input live. Actions: **Pause** (primary) · **Restart** (start over from the beginning) · **End** (stop early and go to Reveal).
+- **Paused** — audio frozen via `AudioContext.suspend()`. Wave and progress bar freeze in place. Type-along is disabled. Actions: **Resume** (primary) · **Restart** · **End**.
+- **Reveal** — audio has finished or the user tapped End. Source text is shown. If type-along was on, an LCS-aligned char-level diff sits below it (`ok` matches in green, `miss` source chars red and underlined, `extra` typed chars red on a tinted background, `gap` `·` glyphs for trailing chars the user didn't type). A `matched / total · missed · extra` tally appears below the diff. Actions: **Replay** · **New text** · **Done**.
+
+**No tracking.** Custom-text playback does not increment `dailyActivity`, `letterAccuracy`, or `listenTtr`, and never writes to Firebase. The session is intentionally unscored.
+
+**Pause / resume.** Implemented via `AudioContext.suspend()` / `resume()`, which freezes scheduled audio in place. The progress bar and the sine wave both read from the same audio clock (`getPlaybackElapsedMs()` in `apps/web/src/utils/tone.ts`) so they cannot drift relative to the audio.
+
 ## Settings
 
 Toggles and controls available across both platforms unless noted.

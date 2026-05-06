@@ -18,6 +18,7 @@ let holdOscillator: OscillatorNode | null = null
 let holdGain: GainNode | null = null
 let morseNodes: { oscillator: OscillatorNode; gain: GainNode } | null = null
 let graphWarmed = false
+let playbackAudioStartTime: number | null = null
 
 // Bumped every time a play is requested or an external stop happens. A pending
 // playMorseTone that's still waiting on AudioContext.resume() (page-load
@@ -76,6 +77,13 @@ const warmAudioGraph = (context: AudioContext) => {
     gain.disconnect()
   }
 }
+
+/**
+ * Nominal playback-start offset in ms: the headroom added before the first
+ * scheduled envelope. Used by the custom-listen hook to align the RAF
+ * progress clock with audible audio rather than the scheduling call.
+ */
+export const PLAYBACK_START_OFFSET_MS = 150
 
 const getScheduleHeadroom = (context: AudioContext) => {
   const latency =
@@ -197,7 +205,9 @@ export const playMorseTone = async ({
   morseNodes = { oscillator, gain }
   const rampSeconds = 0.005
   const startOffset = getScheduleHeadroom(context)
-  let cursor = context.currentTime + startOffset
+  const audioStartTime = context.currentTime + startOffset
+  playbackAudioStartTime = audioStartTime
+  let cursor = audioStartTime
   const tokens = code
     .split(' ')
     .filter((token) => token === '/' || /[.-]/.test(token))
@@ -235,5 +245,34 @@ export const playMorseTone = async ({
 
 export const stopMorseTone = async () => {
   morsePlayToken += 1
+  playbackAudioStartTime = null
   cleanupMorseNodes()
+}
+
+/** Suspend the AudioContext clock, pausing all scheduled audio in place. */
+export const pauseAudioContext = async () => {
+  if (contextRef && contextRef.state === 'running') {
+    await contextRef.suspend()
+  }
+}
+
+/** Resume a suspended AudioContext, continuing scheduled audio from where it paused. */
+export const resumeAudioContext = async () => {
+  if (contextRef && contextRef.state === 'suspended') {
+    await contextRef.resume()
+  }
+}
+
+/** AudioContext.currentTime at the moment the most recent playback's first audible envelope was scheduled, or null if no playback in progress. */
+export const getPlaybackAudioStartTime = (): number | null => playbackAudioStartTime
+
+/** Returns the AudioContext.currentTime, or null if no context exists. */
+export const getAudioContextCurrentTime = (): number | null =>
+  contextRef ? contextRef.currentTime : null
+
+/** Elapsed ms since playback's first audible envelope, clamped to [0, ∞). Returns null if no playback active. */
+export const getPlaybackElapsedMs = (): number | null => {
+  if (playbackAudioStartTime === null || !contextRef) return null
+  const elapsed = (contextRef.currentTime - playbackAudioStartTime) * 1000
+  return elapsed < 0 ? 0 : elapsed
 }
