@@ -208,6 +208,21 @@ export {
 } from './utils/listenWave'
 export type { ListenWavePlayback } from './utils/listenWave'
 export {
+  normalizeCustomText,
+  textToMorseCode,
+} from './utils/customListenText'
+export type {
+  NormalizeOptions,
+  NormalizeResult,
+  TextToMorseResult,
+} from './utils/customListenText'
+export { customListenDiff } from './utils/customListenDiff'
+export type {
+  DiffResult,
+  DiffToken,
+  DiffTokenKind,
+} from './utils/customListenDiff'
+export {
   applyListenTtrSample,
   BACKGROUND_IDLE_TIMEOUT_MS,
   clearTimer,

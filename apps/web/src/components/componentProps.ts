@@ -20,6 +20,7 @@ export interface ListenControlsProps {
   onReplay: () => void
   onSubmitAnswer: (value: Letter) => void
   showShortcutHints: boolean
+  onUseCustom?: () => void
 }
 
 export interface MorseButtonProps {
@@ -51,6 +52,10 @@ export interface StageDisplayProps {
   listenStatusText: string
   listenTtrText: string | null
   listenWavePlayback: ListenWavePlayback | null
+  /** When set, renders this playback in the stage wave slot instead of the normal listen wave. Used by custom-listen mode. */
+  customListenPlayback: ListenWavePlayback | null
+  /** Optional AudioContext-driven clock for the custom-listen wave. Passed to ListenSineWave to keep the wave in sync with audio across pause/resume. */
+  customListenClockSource?: () => number | null
   pips: ReactNode
   practiceWord: string
   practiceWordIndex: number

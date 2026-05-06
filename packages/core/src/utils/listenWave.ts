@@ -35,28 +35,44 @@ export const getListenTiming = (
 
 const isMorseSymbol = (value: string) => value === '.' || value === '-'
 
+const tokenize = (code: string) =>
+  code
+    .split(' ')
+    .filter((token) => token === '/' || /^[.\-]+$/.test(token))
+
 export const getListenPlaybackDurationMs = (
   code: string,
   unitMs: number,
   interCharacterGapMs: number = unitMs * 3,
+  interWordGapMs: number = (interCharacterGapMs * 7) / 3,
 ) => {
   if (unitMs <= 0) {
     return 0
   }
 
-  const symbols = code.split('').filter(isMorseSymbol)
-  if (symbols.length === 0) {
+  const tokens = tokenize(code)
+  if (tokens.length === 0) {
     return 0
   }
 
   let elapsedMs = 0
-  for (let index = 0; index < symbols.length; index += 1) {
-    elapsedMs += symbols[index] === '.' ? unitMs : unitMs * 3
-    if (index < symbols.length - 1) {
-      elapsedMs += unitMs
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const token = tokens[tokenIndex]
+    if (token === '/') {
+      elapsedMs += interWordGapMs
+      continue
+    }
+    const symbols = token.split('').filter(isMorseSymbol)
+    for (let symbolIndex = 0; symbolIndex < symbols.length; symbolIndex += 1) {
+      elapsedMs += symbols[symbolIndex] === '.' ? unitMs : unitMs * 3
+      if (symbolIndex < symbols.length - 1) {
+        elapsedMs += unitMs
+      }
+    }
+    if (tokenIndex < tokens.length - 1 && tokens[tokenIndex + 1] !== '/') {
+      elapsedMs += interCharacterGapMs
     }
   }
-
   return elapsedMs + interCharacterGapMs
 }
 
@@ -65,31 +81,49 @@ export const getListenToneLevelAtElapsedMs = (
   unitMs: number,
   elapsedMs: number,
   interCharacterGapMs: number = unitMs * 3,
+  interWordGapMs: number = (interCharacterGapMs * 7) / 3,
 ) => {
   if (unitMs <= 0 || elapsedMs < 0) {
     return 0
   }
-
-  const symbols = code.split('').filter(isMorseSymbol)
-  if (symbols.length === 0) {
+  const tokens = tokenize(code)
+  if (tokens.length === 0) {
     return 0
   }
-
   let cursorMs = 0
-  for (let symbolIndex = 0; symbolIndex < symbols.length; symbolIndex += 1) {
-    const symbol = symbols[symbolIndex]
-    const toneMs = symbol === '.' ? unitMs : unitMs * 3
-    if (elapsedMs < cursorMs + toneMs) {
-      return symbol === '.' ? DOT_ENERGY : DASH_ENERGY
-    }
-    cursorMs += toneMs
-    if (symbolIndex < symbols.length - 1) {
-      if (elapsedMs < cursorMs + unitMs) {
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const token = tokens[tokenIndex]
+    if (token === '/') {
+      if (elapsedMs < cursorMs + interWordGapMs) {
         return 0
       }
-      cursorMs += unitMs
-    } else if (elapsedMs < cursorMs + interCharacterGapMs) {
-      return 0
+      cursorMs += interWordGapMs
+      continue
+    }
+    const symbols = token.split('').filter(isMorseSymbol)
+    for (let symbolIndex = 0; symbolIndex < symbols.length; symbolIndex += 1) {
+      const symbol = symbols[symbolIndex]
+      const toneMs = symbol === '.' ? unitMs : unitMs * 3
+      if (elapsedMs < cursorMs + toneMs) {
+        return symbol === '.' ? DOT_ENERGY : DASH_ENERGY
+      }
+      cursorMs += toneMs
+      if (symbolIndex < symbols.length - 1) {
+        if (elapsedMs < cursorMs + unitMs) {
+          return 0
+        }
+        cursorMs += unitMs
+      }
+    }
+    if (tokenIndex < tokens.length - 1 && tokens[tokenIndex + 1] !== '/') {
+      if (elapsedMs < cursorMs + interCharacterGapMs) {
+        return 0
+      }
+      cursorMs += interCharacterGapMs
+    } else if (tokenIndex === tokens.length - 1) {
+      if (elapsedMs < cursorMs + interCharacterGapMs) {
+        return 0
+      }
     }
   }
   return 0

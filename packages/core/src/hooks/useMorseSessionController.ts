@@ -2251,6 +2251,7 @@ export const useMorseSessionController = ({
       freestyleWordMode,
       toneFrequency,
       listenWpm,
+      listenEffectiveWpm,
       listenStatus,
       listenWavePlayback,
       scores,

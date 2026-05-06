@@ -12,6 +12,8 @@ import {
   SupportPage,
   TermsOfService,
 } from './components/LegalPage'
+import { CustomListenSurface } from './components/CustomListenSurface'
+import { CustomTextSheet } from './components/CustomTextSheet'
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
 import { NuxModal } from './components/NuxModal'
@@ -35,19 +37,25 @@ import {
   TONE_FREQUENCY_RANGE,
   computeHero,
   createGuidedLessonProgress,
+  getListenTiming,
   todayStreakContribution,
   useMorseSessionController,
   useOnboardingState,
   type Letter,
+  type ListenWavePlayback,
 } from '@dit/core'
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth'
 import { database } from './firebase'
 import { useAuth } from './hooks/useAuth'
+import { useCustomListenSession } from './hooks/useCustomListenSession'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
 import { isKeyboardModality } from './utils/inputModality'
 import {
+  getPlaybackElapsedMs,
+  pauseAudioContext,
   playMorseTone,
   prepareToneEngine,
+  resumeAudioContext,
   startTone,
   stopMorseTone,
   stopTone,
@@ -186,6 +194,36 @@ function MainApp() {
   useEffect(() => {
     isPressingRef.current = isPressing
   }, [isPressing])
+
+  const [showCustomTextSheet, setShowCustomTextSheet] = useState(false)
+  const customListen = useCustomListenSession({
+    isListenMode: session.state.mode === 'listen',
+    characterWpm: session.state.listenWpm,
+    effectiveWpm: session.state.listenEffectiveWpm ?? session.state.listenWpm,
+    toneFrequency: session.state.toneFrequency,
+    playMorseTone,
+    stopMorseTone,
+    pauseAudioContext,
+    resumeAudioContext,
+  })
+
+  // Build the wave playback descriptor used by StageDisplay when custom-listen is active.
+  // The sequence ID is derived from the encoded code length so it changes whenever the
+  // text changes, which is sufficient to restart the wave animation.
+  const customListenPlayback = useMemo<ListenWavePlayback | null>(() => {
+    if (customListen.phase !== 'playing' && customListen.phase !== 'paused') return null
+    const timing = getListenTiming(
+      state.listenWpm,
+      state.listenEffectiveWpm ?? state.listenWpm,
+      LISTEN_MIN_UNIT_MS,
+    )
+    return {
+      sequence: customListen.encoded.code.length,
+      code: customListen.encoded.code,
+      unitMs: timing.unitMs,
+      interCharacterGapMs: timing.interCharacterGapMs,
+    }
+  }, [customListen.phase, customListen.encoded.code, state.listenWpm, state.listenEffectiveWpm])
 
   useScreenTracker(session.state.mode)
 
@@ -683,6 +721,8 @@ function MainApp() {
         listenStatusText={listenStatusText}
         listenTtrText={listenTtrText}
         listenWavePlayback={state.listenWavePlayback}
+        customListenPlayback={customListenPlayback}
+        customListenClockSource={getPlaybackElapsedMs}
         pips={pipsNode}
         practiceWord={practiceWord}
         practiceWordIndex={practiceWordIndex}
@@ -728,13 +768,32 @@ function MainApp() {
             </Tooltip>
           </>
         ) : null}
-        {isListen ? (
+        {isListen && customListen.phase !== 'inactive' ? (
+          <CustomListenSurface
+            phase={customListen.phase}
+            workflow={customListen.workflow}
+            text={customListen.text}
+            typedCopy={customListen.typedCopy}
+            encodedCode={customListen.encoded.code}
+            playDurationMs={customListen.playDurationMs}
+            onPlay={() => void customListen.play()}
+            onPause={() => void customListen.pause()}
+            onResume={() => void customListen.resume()}
+            onReveal={() => void customListen.reveal()}
+            onRestart={() => void customListen.restart()}
+            onReplay={() => void customListen.replay()}
+            onTypedCopyChange={customListen.setTypedCopy}
+            onEditText={() => setShowCustomTextSheet(true)}
+            onClear={customListen.clear}
+          />
+        ) : isListen ? (
           <ListenControls
             availableLetters={derived.activeLetters}
             listenStatus={listenStatus}
             onReplay={handlers.handleListenReplay}
             onSubmitAnswer={handlers.submitListenAnswer}
             showShortcutHints={!useCustomKeyboard}
+            onUseCustom={() => setShowCustomTextSheet(true)}
           />
         ) : (
           <MorseButton
@@ -885,6 +944,19 @@ function MainApp() {
             </button>
           </div>
         </div>
+      ) : null}
+      {showCustomTextSheet ? (
+        <CustomTextSheet
+          initialText={customListen.text}
+          initialTypeAlong={customListen.workflow === 'typealong'}
+          characterWpm={state.listenWpm}
+          effectiveWpm={state.listenEffectiveWpm ?? state.listenWpm}
+          onClose={() => setShowCustomTextSheet(false)}
+          onSave={(input) => {
+            customListen.save(input)
+            setShowCustomTextSheet(false)
+          }}
+        />
       ) : null}
     </div>
   )

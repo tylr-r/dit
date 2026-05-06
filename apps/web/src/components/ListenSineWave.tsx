@@ -8,6 +8,13 @@ type ListenSineWaveProps = {
   playback: ListenWavePlayback | null
   tintStatus?: TintStatus
   liveActive?: boolean
+  /**
+   * Optional external elapsed-ms source (e.g. driven by AudioContext.currentTime).
+   * When provided AND `playback` is non-null, the wave reads from it instead of
+   * accumulating wall-clock RAF deltas. Lets the wave stay in sync with audio
+   * across pause/resume.
+   */
+  clockSource?: () => number | null
 }
 
 const SAMPLE_POINTS = 80
@@ -80,6 +87,7 @@ export function ListenSineWave({
   playback,
   tintStatus = 'idle',
   liveActive = false,
+  clockSource,
 }: ListenSineWaveProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const svgLowerRefs = useRef<(SVGPathElement | null)[]>([])
@@ -94,10 +102,15 @@ export function ListenSineWave({
   })
   const playbackRef = useRef<ListenWavePlayback | null>(null)
   const liveActiveRef = useRef(liveActive)
+  const clockSourceRef = useRef<typeof clockSource>(clockSource)
 
   useEffect(() => {
     liveActiveRef.current = liveActive
   }, [liveActive])
+
+  useEffect(() => {
+    clockSourceRef.current = clockSource
+  }, [clockSource])
 
   useEffect(() => {
     playbackRef.current = playback
@@ -127,7 +140,14 @@ export function ListenSineWave({
       const state = stateRef.current
       const deltaMs = state.lastFrameMs === 0 ? 16 : now - state.lastFrameMs
       state.lastFrameMs = now
-      state.elapsedMs += deltaMs
+
+      const externalClock = clockSourceRef.current
+      if (externalClock) {
+        const raw = externalClock()
+        state.elapsedMs = raw === null ? 0 : raw
+      } else {
+        state.elapsedMs += deltaMs
+      }
 
       const pb = playbackRef.current
       const toneLevel = pb

@@ -30,7 +30,6 @@ describe('listenWave utils', () => {
 
   it('computes playback duration including symbol and character gaps', () => {
     expect(getListenPlaybackDurationMs('.-', 100, 696)).toBe(1196)
-    expect(getListenPlaybackDurationMs(' . x - ', 100, 696)).toBe(1196)
     expect(getListenPlaybackDurationMs('', 100, 696)).toBe(0)
   })
 
@@ -68,11 +67,54 @@ describe('listenWave utils', () => {
     expect(tailGapLevel).toBe(0)
   })
 
-  it('ignores non-morse symbols when resolving tone levels', () => {
+  it('returns expected tone levels for dot-dash in single letter', () => {
     const unitMs = 100
-    expect(getListenToneLevelAtElapsedMs(' . x - ', unitMs, 20)).toBeCloseTo(
-      0.72,
-    )
-    expect(getListenToneLevelAtElapsedMs(' . x - ', unitMs, 250)).toBe(1)
+    expect(getListenToneLevelAtElapsedMs('.-', unitMs, 20)).toBeCloseTo(0.72)
+    expect(getListenToneLevelAtElapsedMs('.-', unitMs, 230)).toBe(1)
+  })
+
+  it('computes duration across multi-letter sequences with inter-character gaps', () => {
+    // 'AB' = '.- -...': dot 1u, gap 1u, dash 3u, ICG 3u, dash 3u, gap 1u, dot 1u, gap 1u, dot 1u, gap 1u, dot 1u
+    // = 1+1+3+3+3+1+1+1+1+1+1 = 17 units
+    // Plus trailing inter-character gap (3u) = 20 units total
+    // Note: this test uses unit==1ms for clarity.
+    const duration = getListenPlaybackDurationMs('.- -...', 1, 3)
+    expect(duration).toBe(20)
+  })
+
+  it('uses inter-word gap for / tokens', () => {
+    // '. / .' : dot 1u, IWG, dot 1u, trailing ICG
+    // 1 + 7 + 1 + 3 = 12
+    const duration = getListenPlaybackDurationMs('. / .', 1, 3, 7)
+    expect(duration).toBe(12)
+  })
+
+  it('returns dot energy mid-first-letter of a multi-letter sequence', () => {
+    const level = getListenToneLevelAtElapsedMs('.- -...', 100, 50, 300)
+    expect(level).toBeCloseTo(0.72)
+  })
+
+  it('returns 0 during the inter-character gap of a multi-letter sequence', () => {
+    // Char 1: '.': 0..100 dot, 100..200 intra-letter gap, '-': 200..500 dash
+    // ICG: 500..800
+    // Sample at 600 → ICG → 0
+    const level = getListenToneLevelAtElapsedMs('.- -...', 100, 600, 300)
+    expect(level).toBe(0)
+  })
+
+  it('returns dash energy mid-first-letter of the second word', () => {
+    // '. / -': dot 0..100, IWG 100..800, dash 800..1100
+    // Sample at 900 → dash → 1
+    const level = getListenToneLevelAtElapsedMs('. / -', 100, 900, 300, 700)
+    expect(level).toBe(1)
+  })
+
+  it('preserves single-letter behavior when no spaces or slashes are present', () => {
+    // Existing single-letter callers in the codebase pass strings like '.-'
+    // with no spaces. Both helpers must match prior outputs for those.
+    expect(getListenPlaybackDurationMs('.-', 100, 696)).toBe(1196)
+    expect(getListenToneLevelAtElapsedMs('.-', 100, 20, 696)).toBeCloseTo(0.72)
+    expect(getListenToneLevelAtElapsedMs('.-', 100, 230, 696)).toBe(1)
+    expect(getListenToneLevelAtElapsedMs('.-', 100, 900, 696)).toBe(0)
   })
 })
