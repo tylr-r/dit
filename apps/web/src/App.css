@@ -1446,18 +1446,31 @@
 
 .modal-overlay {
   position: fixed;
-  inset: 0;
+  /* Anchor to the top of the visual viewport (which can drift when iOS
+     pans the page for an input above the keyboard). Falls back to 0 when
+     the visualViewport API isn't available. */
+  top: var(--visible-offset-top, 0px);
+  left: 0;
+  width: 100%;
+  /* --visible-height tracks visualViewport.height (App.tsx). On iOS Safari
+     this shrinks when the on-screen keyboard appears, so the overlay fits
+     the keyboard-free area and the modal centers within the visible region
+     instead of being half-occluded. Falls back to dvh on platforms without
+     the JS hook. */
+  height: var(--visible-height, 100dvh);
   background: var(--color-surface-backdrop);
   display: grid;
   place-items: center;
   padding: clamp(16px, 4vw, 40px);
   z-index: 5;
   backdrop-filter: blur(6px);
+  /* Block scroll chaining to the page underneath. */
+  overscroll-behavior: contain;
 }
 
 .modal {
   width: min(720px, 100%);
-  max-height: min(82vh, 680px);
+  max-height: min(82dvh, 680px);
   background: var(--color-surface-panel-strong);
   border-radius: 20px;
   border: 1px solid var(--color-border-subtle);
@@ -4152,6 +4165,21 @@
   padding: 22px;
   max-width: 560px;
   width: calc(100% - 32px);
+  /* Inherits .modal's max-height (82dvh) so the sheet shrinks with the visible
+     viewport. Inner content is the scrollable body; action row sticks to the
+     bottom. */
+}
+.custom-text-body {
+  flex: 1 1 auto;
+  min-height: 0; /* allow flex children to shrink so overflow:auto works */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  /* Stop scroll chaining to the page when the user reaches the top/bottom
+     of the modal body on iOS. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .custom-text-grabber {
   width: 40px;
@@ -4179,11 +4207,15 @@
   border-radius: 14px;
   padding: 14px 16px;
   color: var(--color-text-primary, hsl(24, 29%, 97%));
-  font-size: 15px;
+  /* 16px is the iOS Safari auto-zoom threshold; anything smaller triggers
+     the page to zoom in when the input is focused. Keep at 16px. */
+  font-size: 16px;
   line-height: 1.5;
-  min-height: 180px;
+  min-height: 120px;
   resize: vertical;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  /* Keep internal scrolls from chaining to the page on iOS. */
+  overscroll-behavior: contain;
 }
 .custom-text-textarea:focus {
   background: var(--color-surface-input-pressed, hsla(0, 0%, 100%, 0.12));
@@ -4255,9 +4287,11 @@
   transform: translateX(18px);
 }
 .custom-text-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  padding-top: 4px;
 }
 .custom-text-action {
   height: 40px;
@@ -4320,16 +4354,6 @@
   border-radius: 14px;
   background: var(--color-surface-input, hsla(0, 0%, 100%, 0.06));
 }
-.custom-listen-lock {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: hsla(209, 34%, 12%, 0.45);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-primary70, hsla(24, 29%, 97%, 0.7));
-}
 .custom-listen-source-summary {
   font-size: 14px;
   font-weight: 600;
@@ -4354,11 +4378,13 @@
   border-radius: 14px;
   padding: 14px 16px;
   color: var(--color-text-primary, hsl(24, 29%, 97%));
-  font-size: 15px;
+  /* 16px to avoid iOS Safari's auto-zoom on focus. */
+  font-size: 16px;
   line-height: 1.5;
   min-height: 96px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   resize: vertical;
+  overscroll-behavior: contain;
 }
 .custom-listen-typealong:focus {
   background: var(--color-surface-input-pressed, hsla(0, 0%, 100%, 0.12));
@@ -4480,6 +4506,13 @@
   flex-direction: column;
   gap: 6px;
   margin-top: 4px;
+  /* Swipes within the keyboard region should never pan the page. */
+  touch-action: manipulation;
+}
+.custom-listen-keyboard .keyboard-key {
+  /* Each key is a tap target — disable iOS double-tap-to-zoom and any
+     accidental scroll/pan gestures originating from a keyboard press. */
+  touch-action: manipulation;
 }
 .custom-listen-keyboard .keyboard-row-fn {
   margin-top: 4px;

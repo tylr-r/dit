@@ -241,13 +241,34 @@ function MainApp() {
       return
     }
     const updateAppHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight
-      const heightValue = `${height}px`
-      document.documentElement.style.setProperty('--app-height', heightValue)
-      document.documentElement.style.height = heightValue
+      // --app-height drives the size of html / body / .app shell. Use
+      // window.innerHeight (the LAYOUT viewport): on iOS Safari this changes
+      // with the address bar but NOT with the on-screen keyboard, so the page
+      // doesn't truncate when the keyboard appears.
+      const layoutHeight = window.innerHeight
+      const layoutValue = `${layoutHeight}px`
+      document.documentElement.style.setProperty('--app-height', layoutValue)
+      document.documentElement.style.height = layoutValue
       if (document.body) {
-        document.body.style.height = heightValue
+        document.body.style.height = layoutValue
       }
+      // --visible-height tracks the VISUAL viewport (shrinks with the
+      // keyboard). Modal overlays use it so the modal centers in the visible
+      // area instead of being half-occluded by the keyboard.
+      const visibleHeight = window.visualViewport?.height ?? layoutHeight
+      document.documentElement.style.setProperty(
+        '--visible-height',
+        `${visibleHeight}px`,
+      )
+      // --visible-offset-top tracks visualViewport.offsetTop. iOS Safari
+      // sometimes pans the visual viewport when an input is focused (to keep
+      // it above the keyboard); without compensating for this, fixed-position
+      // overlays appear to "drift" relative to what the user is seeing.
+      const visibleOffsetTop = window.visualViewport?.offsetTop ?? 0
+      document.documentElement.style.setProperty(
+        '--visible-offset-top',
+        `${visibleOffsetTop}px`,
+      )
       if (window.scrollY) {
         window.scrollTo(0, 0)
       }
@@ -262,6 +283,45 @@ function MainApp() {
       window.visualViewport?.removeEventListener('scroll', updateAppHeight)
     }
   }, [])
+
+  // Scroll-lock the page while the custom-text sheet is open. We track the
+  // touchstart target — if the gesture began outside the sheet (on the
+  // modal backdrop), preventDefault on subsequent touchmoves so iOS can't
+  // pan/scroll the page underneath. Gestures that started inside the sheet
+  // (anywhere — body, textarea, even the action row) get native handling so
+  // overflow scrolling works without our handler interfering.
+  useEffect(() => {
+    if (typeof document === 'undefined' || !showCustomTextSheet) {
+      return
+    }
+    let gestureInsideSheet = false
+    const isInsideSheet = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false
+      return target.closest('.custom-text-sheet') !== null
+    }
+    const handleTouchStart = (event: TouchEvent) => {
+      gestureInsideSheet = isInsideSheet(event.target)
+    }
+    const handleTouchMove = (event: TouchEvent) => {
+      if (gestureInsideSheet) return
+      if (event.cancelable) {
+        event.preventDefault()
+      }
+    }
+    const handleTouchEnd = () => {
+      gestureInsideSheet = false
+    }
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [showCustomTextSheet])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
@@ -776,7 +836,11 @@ function MainApp() {
             typedCopy={customListen.typedCopy}
             encodedCode={customListen.encoded.code}
             playDurationMs={customListen.playDurationMs}
-            useCustomKeyboard={useCustomKeyboard}
+            // While the custom-text sheet is open, the surface's on-screen
+            // keyboard would otherwise show through behind the modal backdrop.
+            // Suppressing it removes the visual noise; the surface is occluded
+            // and not interactable while the sheet is up anyway.
+            useCustomKeyboard={useCustomKeyboard && !showCustomTextSheet}
             onPlay={() => void customListen.play()}
             onPause={() => void customListen.pause()}
             onResume={() => void customListen.resume()}
