@@ -157,9 +157,6 @@ export function CustomListenSurface({
 
       {phase === 'setup' ? (
         <div className="custom-listen-source-hidden">
-          <div className="custom-listen-lock" aria-hidden="true">
-            ⏷
-          </div>
           <div className="custom-listen-source-summary">
             {text.length} chars · {wordCount(text)} words ready
           </div>

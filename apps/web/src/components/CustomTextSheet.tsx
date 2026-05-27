@@ -75,44 +75,46 @@ export function CustomTextSheet({
         aria-label="Custom text"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="custom-text-grabber" aria-hidden="true" />
-        <h2 className="custom-text-title">Custom text</h2>
-        <p className="custom-text-help">
-          Paste or type a passage. Dit will play it as Morse so you can copy in
-          your head, or on paper. Letters, numbers, and spaces only. Leave
-          blank and Save to return to normal Listen.
-        </p>
-        <textarea
-          ref={textareaRef}
-          className="custom-text-textarea"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Paste text here…"
-          aria-label="Custom text passage"
-        />
-        <div className="custom-text-meta">
-          <span>
-            <strong>{encoded.normalized.length}</strong> / {MAX_CHARS} chars
-          </span>
-          <span>Ignored: {encoded.ignored}</span>
-          <span>~{formatDuration(duration)} at {characterWpm} WPM</span>
-        </div>
-        <div className="custom-text-toggle">
-          <div className="custom-text-toggle-text">
-            <span className="custom-text-toggle-title">Type along</span>
-            <span className="custom-text-toggle-help">
-              Show a textarea during playback. Off plays the audio only — for
-              paper or head copy.
-            </span>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={typeAlong}
-            aria-label="Type along"
-            className={`custom-text-switch${typeAlong ? ' custom-text-switch-on' : ''}`}
-            onClick={() => setTypeAlong((prev) => !prev)}
+        <div className="custom-text-body">
+          <div className="custom-text-grabber" aria-hidden="true" />
+          <h2 className="custom-text-title">Custom text</h2>
+          <p className="custom-text-help">
+            Paste or type a passage. Dit will play it as Morse so you can copy in
+            your head, or on paper. Letters, numbers, and spaces only. Leave
+            blank and Save to return to normal Listen.
+          </p>
+          <textarea
+            ref={textareaRef}
+            className="custom-text-textarea"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Paste text here…"
+            aria-label="Custom text passage"
           />
+          <div className="custom-text-meta">
+            <span>
+              <strong>{encoded.normalized.length}</strong> / {MAX_CHARS} chars
+            </span>
+            <span>Ignored: {encoded.ignored}</span>
+            <span>~{formatDuration(duration)} at {characterWpm} WPM</span>
+          </div>
+          <div className="custom-text-toggle">
+            <div className="custom-text-toggle-text">
+              <span className="custom-text-toggle-title">Type along</span>
+              <span className="custom-text-toggle-help">
+                Show a textarea during playback. Off plays the audio only — for
+                paper or head copy.
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={typeAlong}
+              aria-label="Type along"
+              className={`custom-text-switch${typeAlong ? ' custom-text-switch-on' : ''}`}
+              onClick={() => setTypeAlong((prev) => !prev)}
+            />
+          </div>
         </div>
         <div className="custom-text-actions">
           <button
