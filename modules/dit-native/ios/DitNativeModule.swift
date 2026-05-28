@@ -8,6 +8,90 @@ import GoogleSignIn
 import FirebaseCore
 import os.lock
 import Security
+import UIKit
+
+private let externalMorseKeyEventName = "onExternalMorseKey"
+
+private final class HardwareMorseKeyCaptureView: UIView {
+  private var activeKeyCodes = Set<UIKeyboardHIDUsage>()
+  var onExternalMorseKey: ((String, String) -> Void)?
+
+  override var canBecomeFirstResponder: Bool {
+    true
+  }
+
+  override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    var unhandled = Set<UIPress>()
+    for press in presses {
+      guard let key = press.key, let symbol = morseSymbol(for: key) else {
+        unhandled.insert(press)
+        continue
+      }
+      guard !activeKeyCodes.contains(key.keyCode) else {
+        continue
+      }
+      activeKeyCodes.insert(key.keyCode)
+      onExternalMorseKey?(symbol, "down")
+    }
+    if !unhandled.isEmpty {
+      super.pressesBegan(unhandled, with: event)
+    }
+  }
+
+  override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    var unhandled = Set<UIPress>()
+    for press in presses {
+      guard let key = press.key, let symbol = morseSymbol(for: key) else {
+        unhandled.insert(press)
+        continue
+      }
+      activeKeyCodes.remove(key.keyCode)
+      onExternalMorseKey?(symbol, "up")
+    }
+    if !unhandled.isEmpty {
+      super.pressesEnded(unhandled, with: event)
+    }
+  }
+
+  override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+    var unhandled = Set<UIPress>()
+    for press in presses {
+      guard let key = press.key, let symbol = morseSymbol(for: key) else {
+        unhandled.insert(press)
+        continue
+      }
+      activeKeyCodes.remove(key.keyCode)
+      onExternalMorseKey?(symbol, "up")
+    }
+    if !unhandled.isEmpty {
+      super.pressesCancelled(unhandled, with: event)
+    }
+  }
+
+  func resetPressedKeys() {
+    activeKeyCodes.removeAll()
+  }
+
+  private func morseSymbol(for key: UIKey) -> String? {
+    switch key.keyCode {
+    case .keyboardLeftControl:
+      return "."
+    case .keyboardRightControl:
+      return "-"
+    default:
+      break
+    }
+
+    switch key.charactersIgnoringModifiers {
+    case "[":
+      return "."
+    case "]":
+      return "-"
+    default:
+      return nil
+    }
+  }
+}
 
 private struct AppleAuthorizationFailure: LocalizedError {
   let code: String
@@ -467,6 +551,9 @@ public final class DitNativeModule: Module {
   private let hapticController = HapticController()
   private var appleAuthorizationCoordinator: AppleAuthorizationCoordinator?
   private var lowPowerModeObserver: NSObjectProtocol?
+  private var hardwareMorseKeyCaptureView: HardwareMorseKeyCaptureView?
+  private var hardwareMorseKeyCaptureEnabled = false
+  private var hardwareMorseKeyCaptureObservers: [NSObjectProtocol] = []
 
   private final class AppleAuthorizationCoordinator: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     private let promise: Promise
@@ -662,6 +749,109 @@ public final class DitNativeModule: Module {
         .first(where: \.isKeyWindow)
   }
 
+  private func setHardwareMorseKeyCaptureEnabled(_ enabled: Bool) -> Bool {
+    if Thread.isMainThread {
+      return updateHardwareMorseKeyCaptureEnabled(enabled)
+    }
+
+    return DispatchQueue.main.sync {
+      self.updateHardwareMorseKeyCaptureEnabled(enabled)
+    }
+  }
+
+  private func updateHardwareMorseKeyCaptureEnabled(_ enabled: Bool) -> Bool {
+    hardwareMorseKeyCaptureEnabled = enabled
+    if enabled {
+      startHardwareMorseKeyCaptureObservation()
+      return installHardwareMorseKeyCaptureView()
+    }
+
+    stopHardwareMorseKeyCaptureObservation()
+    removeHardwareMorseKeyCaptureView()
+    return true
+  }
+
+  private func installHardwareMorseKeyCaptureView() -> Bool {
+    guard let window = currentPresentationWindow() else {
+      return false
+    }
+
+    if let view = hardwareMorseKeyCaptureView, view.window === window {
+      return view.becomeFirstResponder()
+    }
+
+    removeHardwareMorseKeyCaptureView()
+
+    let view = HardwareMorseKeyCaptureView(frame: .zero)
+    view.backgroundColor = .clear
+    view.accessibilityElementsHidden = true
+    view.isAccessibilityElement = false
+    view.onExternalMorseKey = { [weak self] symbol, phase in
+      self?.sendEvent(externalMorseKeyEventName, [
+        "symbol": symbol,
+        "phase": phase
+      ])
+    }
+    window.addSubview(view)
+    hardwareMorseKeyCaptureView = view
+    return view.becomeFirstResponder()
+  }
+
+  private func removeHardwareMorseKeyCaptureView() {
+    guard let view = hardwareMorseKeyCaptureView else {
+      return
+    }
+
+    view.resetPressedKeys()
+    view.onExternalMorseKey = nil
+    if view.isFirstResponder {
+      view.resignFirstResponder()
+    }
+    view.removeFromSuperview()
+    hardwareMorseKeyCaptureView = nil
+  }
+
+  private func refreshHardwareMorseKeyCaptureFocus() {
+    guard hardwareMorseKeyCaptureEnabled else {
+      return
+    }
+
+    if let view = hardwareMorseKeyCaptureView, view.window != nil {
+      _ = view.becomeFirstResponder()
+      return
+    }
+
+    _ = installHardwareMorseKeyCaptureView()
+  }
+
+  private func startHardwareMorseKeyCaptureObservation() {
+    guard hardwareMorseKeyCaptureObservers.isEmpty else {
+      return
+    }
+
+    let notificationNames: [Notification.Name] = [
+      UIApplication.didBecomeActiveNotification,
+      UIScene.didActivateNotification,
+      UIWindow.didBecomeKeyNotification
+    ]
+    hardwareMorseKeyCaptureObservers = notificationNames.map { name in
+      NotificationCenter.default.addObserver(
+        forName: name,
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        self?.refreshHardwareMorseKeyCaptureFocus()
+      }
+    }
+  }
+
+  private func stopHardwareMorseKeyCaptureObservation() {
+    hardwareMorseKeyCaptureObservers.forEach { observer in
+      NotificationCenter.default.removeObserver(observer)
+    }
+    hardwareMorseKeyCaptureObservers.removeAll()
+  }
+
   private func appleAuthorizationResult(
     from credential: ASAuthorizationAppleIDCredential,
     rawNonce: String,
@@ -741,7 +931,7 @@ public final class DitNativeModule: Module {
   public func definition() -> ModuleDefinition {
     Name("DitNative")
 
-    Events("onLowPowerModeChanged")
+    Events("onLowPowerModeChanged", externalMorseKeyEventName)
 
     OnStartObserving {
       self.startLowPowerModeObservation()
@@ -781,6 +971,10 @@ public final class DitNativeModule: Module {
     AsyncFunction("setHapticsEnabled") { (enabled: Bool) -> Bool in
       self.hapticController.setEnabled(enabled)
       return true
+    }
+
+    AsyncFunction("setExternalMorseKeyCaptureEnabled") { (enabled: Bool) -> Bool in
+      return self.setHardwareMorseKeyCaptureEnabled(enabled)
     }
 
     AsyncFunction("startTone") { (frequency: Double, volume: Double) -> Bool in

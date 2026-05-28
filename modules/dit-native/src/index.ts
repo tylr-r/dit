@@ -8,11 +8,20 @@ type DitNativeEvents = {
   onLowPowerModeChanged: (event: {
     isLowPowerModeEnabled: boolean
   }) => void
+  onExternalMorseKey: (event: ExternalMorseKeyEvent) => void
+}
+
+export type ExternalMorseKeyEvent = {
+  symbol: '.' | '-'
+  phase: 'down' | 'up'
 }
 
 export type DitNativeModule = {
   getHello?: () => string
   getLowPowerModeEnabled?: () => boolean | Promise<boolean>
+  setExternalMorseKeyCaptureEnabled?: (
+    enabled: boolean
+  ) => boolean | Promise<boolean>
   startTone?: (frequency: number, volume: number) => boolean | Promise<boolean>
   stopTone?: () => boolean | Promise<boolean>
   signInWithApple?: () => Promise<{
@@ -51,6 +60,25 @@ export type DitNativeModule = {
 
 const DitNative = requireOptionalNativeModule<DitNativeModule>('DitNative')
 
+const noopSubscription: EventSubscription = {
+  remove() {},
+}
+
+const getEventEmitter = () => {
+  if (!DitNative) {
+    return null
+  }
+
+  return new EventEmitter<DitNativeEvents>(DitNative as never)
+}
+
+const isExternalMorseKeyEvent = (event: ExternalMorseKeyEvent) => {
+  return (
+    (event.symbol === '.' || event.symbol === '-') &&
+    (event.phase === 'down' || event.phase === 'up')
+  )
+}
+
 export const getHello = () => {
   return DitNative?.getHello?.() ?? 'Dit native module not available'
 }
@@ -66,16 +94,36 @@ export const getLowPowerModeEnabled = async () => {
 export const addLowPowerModeListener = (
   listener: (isLowPowerModeEnabled: boolean) => void
 ): EventSubscription => {
-  if (!DitNative) {
-    return {
-      remove() {},
-    }
+  const emitter = getEventEmitter()
+  if (!emitter) {
+    return noopSubscription
   }
-
-  const emitter = new EventEmitter<DitNativeEvents>(DitNative as never)
 
   return emitter.addListener('onLowPowerModeChanged', (event) => {
     listener(Boolean(event.isLowPowerModeEnabled))
+  })
+}
+
+export const setExternalMorseKeyCaptureEnabled = async (enabled: boolean) => {
+  if (!DitNative?.setExternalMorseKeyCaptureEnabled) {
+    return false
+  }
+
+  return Boolean(await DitNative.setExternalMorseKeyCaptureEnabled(enabled))
+}
+
+export const addExternalMorseKeyListener = (
+  listener: (event: ExternalMorseKeyEvent) => void
+): EventSubscription => {
+  const emitter = getEventEmitter()
+  if (!emitter) {
+    return noopSubscription
+  }
+
+  return emitter.addListener('onExternalMorseKey', (event) => {
+    if (isExternalMorseKeyEvent(event)) {
+      listener(event)
+    }
   })
 }
 
