@@ -43,7 +43,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Tap-to-input dit/dah | ✅ | ✅ | |
+| Tap-to-input dit/dah | ✅ | ✅ | Web also accepts VBand-compatible external paddle keys: left Control or `[` for dit, right Control or `]` for dah. |
 | Play current target tone | ✅ | ✅ | |
 | Hints toggle | ✅ | ✅ | |
 | Mnemonics toggle | ✅ | ✅ | |
@@ -72,7 +72,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Tap-and-pause to submit | ✅ | ✅ | |
+| Tap-and-pause to submit | ✅ | ✅ | Web also accepts VBand-compatible external paddle keys: left Control or `[` for dit, right Control or `]` for dah. |
 | Word mode (running word + auto-spaces) | ✅ | ✅ | |
 | Live waveform while keying | ✅ | ✅ | Both share [@dit/core](../packages/core) tone-level helpers; `ListenSineWave` accepts `liveActive` |
 | Suppress raw dits/dashes from big stage | ✅ | ✅ | Stage shows resolved letter / running word; mid-input pattern reads as the wave + status text |
@@ -189,7 +189,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, letter/digit keys to answer in Listen) — physical keyboard is web's affordance, not iOS's. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, letter/digit keys to answer in Listen, and VBand-style left/right paddle keys in Practice/Freestyle) — physical keyboard is web's affordance, not iOS's. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.
 - **Google popup auth flow** — different transport from iOS's native Google sign-in, same provider

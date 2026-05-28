@@ -14,7 +14,10 @@ import { useAccountActions } from './useAccountActions'
 import { useOnboardingActions } from './useOnboardingActions'
 import { useProgressSyncController, type Mode } from './useProgressSyncController'
 import { MORSE_DATA, type Letter } from '../data/morse'
-import { AUDIO_FREQUENCY, TONE_FREQUENCY_RANGE } from '../constants'
+import {
+  AUDIO_FREQUENCY,
+  TONE_FREQUENCY_RANGE,
+} from '../constants'
 import {
   applyListenTtrSample,
   clearTimer,
@@ -82,6 +85,7 @@ import {
 } from '../utils/morseUtils'
 import {
   getAutoEffectiveWpm,
+  getListenUnitMs,
   normalizeListenSpeeds,
 } from '../utils/listenSpeed'
 import {
@@ -406,6 +410,10 @@ export const useMorseSessionController = ({
   )
 
   const pressStartRef = useRef<number | null>(null)
+  const externalSymbolPressRef = useRef<'.' | '-' | null>(null)
+  const externalSymbolToneActiveRef = useRef<'.' | '-' | null>(null)
+  const externalSymbolTimerRef = useRef<TimeoutHandle | null>(null)
+  const runExternalSymbolCycleRef = useRef<(symbol: '.' | '-') => void>(() => {})
   const inputRef = useRef(input)
   const freestyleInputRef = useRef(freestyleInput)
   const letterRef = useRef(letter)
@@ -1658,6 +1666,105 @@ export const useMorseSessionController = ({
     ],
   )
 
+  const runExternalSymbolCycle = useCallback(
+    (symbol: '.' | '-') => {
+      if (externalSymbolPressRef.current !== symbol || isListen) {
+        return
+      }
+      const unitMs = getListenUnitMs(listenWpmRef.current, LISTEN_MIN_UNIT_MS)
+      const toneMs = symbol === '.' ? unitMs : unitMs * 3
+      externalSymbolToneActiveRef.current = symbol
+      setIsPressing(true)
+      clearTimer(letterTimeoutRef)
+      if (!isFreestyle) {
+        void stopMorseTone()
+      }
+      startTonePlayback()
+      externalSymbolTimerRef.current = setTimeout(() => {
+        externalSymbolTimerRef.current = null
+        if (externalSymbolToneActiveRef.current !== symbol) {
+          return
+        }
+        externalSymbolToneActiveRef.current = null
+        setIsPressing(false)
+        stopTonePlayback()
+        if (!isListen) {
+          void stopMorseTone()
+          registerSymbol(symbol)
+        }
+        const nextSymbol = externalSymbolPressRef.current
+        if (nextSymbol) {
+          externalSymbolTimerRef.current = setTimeout(() => {
+            externalSymbolTimerRef.current = null
+            runExternalSymbolCycleRef.current(nextSymbol)
+          }, unitMs)
+        }
+      }, toneMs)
+    },
+    [
+      isFreestyle,
+      isListen,
+      registerSymbol,
+      startTonePlayback,
+      stopMorseTone,
+      stopTonePlayback,
+    ],
+  )
+
+  useEffect(() => {
+    runExternalSymbolCycleRef.current = runExternalSymbolCycle
+  }, [runExternalSymbolCycle])
+
+  const handleMorseSymbolPressIn = useCallback(
+    (symbol: '.' | '-') => {
+      if (
+        isListen ||
+        pressStartRef.current !== null ||
+        (!isFreestyle && isErrorLocked())
+      ) {
+        return false
+      }
+      externalSymbolPressRef.current = symbol
+      if (!isNuxActive) {
+        dismissMorseHint()
+      }
+      if (externalSymbolToneActiveRef.current === null) {
+        clearTimer(externalSymbolTimerRef)
+        runExternalSymbolCycleRef.current(symbol)
+      }
+      return true
+    },
+    [
+      dismissMorseHint,
+      isErrorLocked,
+      isFreestyle,
+      isListen,
+      isNuxActive,
+    ],
+  )
+
+  const handleMorseSymbolPressOut = useCallback(
+    (symbol: '.' | '-') => {
+      if (
+        externalSymbolPressRef.current !== symbol &&
+        externalSymbolToneActiveRef.current !== symbol
+      ) {
+        return false
+      }
+      if (externalSymbolPressRef.current === symbol) {
+        externalSymbolPressRef.current = null
+      }
+      if (
+        externalSymbolToneActiveRef.current === null &&
+        externalSymbolPressRef.current === null
+      ) {
+        clearTimer(externalSymbolTimerRef)
+      }
+      return true
+    },
+    [],
+  )
+
   const handlePressIn = useCallback(() => {
     if (pressStartRef.current !== null || isListen || (!isFreestyle && isErrorLocked())) {
       return
@@ -2316,6 +2423,8 @@ export const useMorseSessionController = ({
       handleFreestyleClear,
       handlePracticeReplay,
       handleIntroPressIn,
+      handleMorseSymbolPressIn,
+      handleMorseSymbolPressOut,
       handlePressOut,
       handleMaxLevelChange,
       handleSetGuidedCourseActive,

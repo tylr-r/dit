@@ -115,6 +115,7 @@ The picker is rendered at the app root so it survives Settings unmounting.
 
 - A target character is shown with its Morse pattern.
 - Input must match the target exactly.
+- On web, Space keeps the same timed press behavior as the on-screen key. VBand-compatible external paddle input is also supported: left Control or `[` enters a dit, and right Control or `]` enters a dah.
 - Correct: score +1, brief success state, next target (or next letter in the current word).
 - Incorrect: score -1 and input clears. With IFR mode on, the app advances immediately and queues misses for delayed review. With IFR mode off, the same target stays.
 - The **Play** button replays the current target's Morse tone so the user can hear before answering.
@@ -133,6 +134,7 @@ The picker is rendered at the app root so it survives Settings unmounting.
 ### Freestyle
 
 - Tap a sequence and pause to submit.
+- On web, Space keeps the same timed press behavior as the on-screen key. VBand-compatible external paddle input is also supported: left Control or `[` enters a dit, and right Control or `]` enters a dah.
 - Result shows the decoded letter or "No match".
 - Word mode appends decoded letters into a running word and auto-inserts spaces after word gaps.
 - Both platforms display a live sine wave that pulses with the keyed tone; resolved letters and the running word overlay the wave instead of showing raw dits/dashes.
