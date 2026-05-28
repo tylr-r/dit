@@ -9,6 +9,7 @@ Three things that RN libraries can't do well:
 - **Morse audio.** Low-latency tone playback with tight dit/dah timing, paired with CoreHaptics so the user feels the same rhythm they hear. Done through `AVAudioEngine` + a `CHHapticEngine` pattern player in the same Swift class so timing stays in sync.
 - **Auth.** Google and Apple sign-in go through Firebase, but the credential handshake has to happen in native code (Apple's `ASAuthorizationController`, GoogleSignIn's presenting controller). We also do the Apple token revoke dance for account deletion here.
 - **Widget support.** The home-screen widget lives in a separate target and reads files from an App Group container. `copyAssetToAppGroup` copies bundle assets into the shared container so the widget can render them.
+- **External paddle input.** VBand-style hardware keys arrive through UIKit `pressesBegan` / `pressesEnded`, which React Native does not surface reliably for non-text controls.
 
 ## Surface
 
@@ -29,6 +30,7 @@ Auth:
 System:
 - `getLowPowerModeEnabled()` and the `onLowPowerModeChanged` event — used to gate animations/haptics when Low Power is on
 - `copyAssetToAppGroup(sourceUri, appGroup, filename)` — for widget assets
+- `setExternalMorseKeyCaptureEnabled(enabled)` and the `onExternalMorseKey` event — installs a zero-size first-responder view while enabled and emits `{ symbol: "." | "-", phase: "down" | "up" }` for VBand-compatible left Control / `[` and right Control / `]` paddle input. The JS app only enables this on the unobstructed Practice/Freestyle surface so sheets and text entry keep normal hardware-key behavior.
 
 Two call styles in the app:
 - Typed wrappers from `@dit/dit-native` (`startTone`, `getLowPowerModeEnabled`, `copyAssetToAppGroup`, etc.) — preferred

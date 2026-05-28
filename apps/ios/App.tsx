@@ -1,5 +1,6 @@
 import {
   BEGINNER_COURSE_PACKS,
+  BACKGROUND_IDLE_TIMEOUT_MS,
   computeHero,
   createGuidedLessonProgress,
   DEFAULT_CHARACTER_WPM,
@@ -15,6 +16,10 @@ import {
   useMorseSessionController,
   useOnboardingState,
 } from '@dit/core'
+import {
+  addExternalMorseKeyListener,
+  setExternalMorseKeyCaptureEnabled,
+} from '@dit/dit-native'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -99,7 +104,11 @@ function AppShell() {
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } = usePhaseModalState()
   const onboarding = useOnboardingState()
   const isSystemLowPowerModeEnabled = useSystemLowPowerMode()
-  const { isBackgroundIdle, handleRootTouchStart } = useBackgroundIdle()
+  const {
+    isBackgroundIdle,
+    handleRootTouchStart,
+    registerAppInteraction,
+  } = useBackgroundIdle()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -130,6 +139,79 @@ function AppShell() {
     active: isKnownTourStep,
     onFinish: handlers.handleFinishKnownTour,
   })
+  const externalMorseHandlersRef = useRef({
+    pressIn: handlers.handleMorseSymbolPressIn,
+    pressOut: handlers.handleMorseSymbolPressOut,
+  })
+  const externalMorseActiveSymbolsRef = useRef(new Set<'.' | '-'>())
+  const externalMorseInteractionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const stopExternalMorseInteractionLoop = useCallback(() => {
+    if (externalMorseInteractionIntervalRef.current === null) {
+      return
+    }
+
+    clearInterval(externalMorseInteractionIntervalRef.current)
+    externalMorseInteractionIntervalRef.current = null
+  }, [])
+  const updateExternalMorseInteractionLoop = useCallback(() => {
+    registerAppInteraction()
+    if (externalMorseActiveSymbolsRef.current.size > 0) {
+      if (externalMorseInteractionIntervalRef.current === null) {
+        externalMorseInteractionIntervalRef.current = setInterval(
+          registerAppInteraction,
+          BACKGROUND_IDLE_TIMEOUT_MS / 2,
+        )
+      }
+      return
+    }
+
+    stopExternalMorseInteractionLoop()
+  }, [registerAppInteraction, stopExternalMorseInteractionLoop])
+  useEffect(() => {
+    externalMorseHandlersRef.current = {
+      pressIn: handlers.handleMorseSymbolPressIn,
+      pressOut: handlers.handleMorseSymbolPressOut,
+    }
+  }, [handlers.handleMorseSymbolPressIn, handlers.handleMorseSymbolPressOut])
+  useEffect(() => {
+    const subscription = addExternalMorseKeyListener(({ symbol, phase }) => {
+      if (phase === 'down') {
+        externalMorseActiveSymbolsRef.current.add(symbol)
+        updateExternalMorseInteractionLoop()
+        externalMorseHandlersRef.current.pressIn(symbol)
+        return
+      }
+
+      externalMorseActiveSymbolsRef.current.delete(symbol)
+      updateExternalMorseInteractionLoop()
+      externalMorseHandlersRef.current.pressOut(symbol)
+    })
+
+    return () => {
+      subscription.remove()
+      externalMorseActiveSymbolsRef.current.clear()
+      stopExternalMorseInteractionLoop()
+    }
+  }, [stopExternalMorseInteractionLoop, updateExternalMorseInteractionLoop])
+  const externalMorseCaptureEnabled =
+    nuxReady &&
+    !derived.isListen &&
+    !isNuxActive &&
+    !isKnownTourStep &&
+    !showSettings &&
+    !showAbout &&
+    !showReference &&
+    !settingsSignInSheetVisible &&
+    !learningSheetVisible &&
+    !phaseModal
+  useEffect(() => {
+    void setExternalMorseKeyCaptureEnabled(externalMorseCaptureEnabled)
+    return () => {
+      externalMorseActiveSymbolsRef.current.clear()
+      stopExternalMorseInteractionLoop()
+      void setExternalMorseKeyCaptureEnabled(false)
+    }
+  }, [externalMorseCaptureEnabled, stopExternalMorseInteractionLoop])
 
   // Soften the NUX → tour handoff. While entering known_tour the home shell
   // and overlay are mounting underneath the exiting modal; without this mask
