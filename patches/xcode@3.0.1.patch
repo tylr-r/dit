@@ -1,0 +1,24 @@
+diff --git a/lib/pbxProject.js b/lib/pbxProject.js
+--- a/lib/pbxProject.js
++++ b/lib/pbxProject.js
+@@ -17,10 +17,10 @@
+  */
+ 
+ var util = require('util'),
+     f = util.format,
++    crypto = require('crypto'),
+     EventEmitter = require('events').EventEmitter,
+     path = require('path'),
+-    uuid = require('uuid'),
+     fork = require('child_process').fork,
+     pbxWriter = require('./pbxWriter'),
+     pbxFile = require('./pbxFile'),
+@@ -87,7 +87,7 @@ pbxProject.prototype.allUuids = function() {
+ }
+ 
+ pbxProject.prototype.generateUuid = function() {
+-    var id = uuid.v4()
++    var id = crypto.randomUUID()
+         .replace(/-/g, '')
+         .substr(0, 24)
+         .toUpperCase()
