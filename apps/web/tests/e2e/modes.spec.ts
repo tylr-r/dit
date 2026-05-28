@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { MORSE_CODE, type Letter } from '@dit/core'
+import { MORSE_DATA, type Letter } from '@dit/core'
 
 const DOT_PRESS_MS = 80
 const DASH_PRESS_MS = 360
@@ -25,8 +25,17 @@ const overrideCoarsePointer = () => {
   }
 }
 
-const clearLocalStorage = () => {
+type LocalStorageSeed = {
+  listenWpm?: number
+}
+
+const seedLocalStorage = ({ listenWpm }: LocalStorageSeed = {}) => {
   window.localStorage.clear()
+  window.localStorage.setItem('dit-nux-status', 'completed')
+  window.localStorage.setItem('dit-intro-hint-step', 'done')
+  if (listenWpm) {
+    window.localStorage.setItem('dit-progress', JSON.stringify({ listenWpm }))
+  }
 }
 
 const sendSymbol = async (page: Page, symbol: '.' | '-') => {
@@ -43,13 +52,29 @@ const sendMorse = async (page: Page, code: string) => {
   await page.waitForTimeout(LETTER_GAP_MS)
 }
 
-const gotoApp = async (page: Page, { coarsePointer = false } = {}) => {
-  await page.addInitScript(clearLocalStorage)
+const sendVbandSymbol = async (page: Page, code: 'ControlLeft' | 'ControlRight') => {
+  await page.keyboard.down(code)
+  await page.waitForTimeout(30)
+  await page.keyboard.up(code)
+  await page.waitForTimeout(code === 'ControlLeft' ? 130 : 330)
+}
+
+const gotoApp = async (
+  page: Page,
+  { coarsePointer = false, listenWpm }: { coarsePointer?: boolean; listenWpm?: number } = {},
+) => {
+  await page.addInitScript(seedLocalStorage, { listenWpm })
   if (coarsePointer) {
     await page.addInitScript(overrideCoarsePointer)
   }
   await page.goto('/')
-  await page.getByLabel('Mode').waitFor()
+  await page.getByLabel('Tap for dot, hold for dah').waitFor()
+}
+
+const selectMode = async (page: Page, mode: 'practice' | 'freestyle' | 'listen') => {
+  const shortcut = mode === 'practice' ? 'p' : mode === 'freestyle' ? 'f' : 'l'
+  await page.keyboard.press(shortcut)
+  await expect(page.locator('.app')).toHaveClass(new RegExp(`mode-${mode}`))
 }
 
 const focusMorseButton = async (page: Page) => {
@@ -69,7 +94,7 @@ test('practice mode accepts a correct answer', async ({ page }) => {
   await focusMorseButton(page)
 
   const letter = await readPracticeLetter(page)
-  const code = MORSE_CODE[letter].code
+  const code = MORSE_DATA[letter].code
 
   await sendMorse(page, code)
 
@@ -81,33 +106,88 @@ test('practice mode flags an incorrect answer', async ({ page }) => {
   await focusMorseButton(page)
 
   const letter = await readPracticeLetter(page)
-  const code = MORSE_CODE[letter].code
+  const code = MORSE_DATA[letter].code
   const wrongSymbol = code.startsWith('.') ? '-' : '.'
 
   await sendMorse(page, wrongSymbol)
 
-  await expect(page.locator('.status-text')).toHaveText('Missed. Start over.')
+  await expect(page.locator('.status-text')).toHaveText('Missed. Keep going.')
 })
 
 test('freestyle mode decodes morse input', async ({ page }) => {
   await gotoApp(page)
 
-  await page.getByLabel('Mode').selectOption('freestyle')
+  await selectMode(page, 'freestyle')
   await focusMorseButton(page)
 
-  await sendMorse(page, MORSE_CODE.A.code)
+  await sendMorse(page, MORSE_DATA.A.code)
 
-  await expect(page.locator('main.stage .letter')).toHaveText('A')
+  await expect(page.locator('.freestyle-overlay-letter')).toHaveText('A')
+})
+
+test('freestyle mode accepts VBand paddle keyboard input', async ({ page }) => {
+  await gotoApp(page)
+
+  await selectMode(page, 'freestyle')
+
+  await sendVbandSymbol(page, 'ControlLeft')
+  await sendVbandSymbol(page, 'ControlRight')
+  await page.waitForTimeout(LETTER_GAP_MS)
+
+  await expect(page.locator('.freestyle-overlay-letter')).toHaveText('A')
+})
+
+test('freestyle mode repeats a held VBand paddle', async ({ page }) => {
+  await gotoApp(page)
+
+  await selectMode(page, 'freestyle')
+
+  await page.keyboard.down('ControlLeft')
+  await page.waitForTimeout(260)
+  await page.keyboard.up('ControlLeft')
+  await page.waitForTimeout(LETTER_GAP_MS)
+
+  await expect(page.locator('.freestyle-overlay-letter')).toHaveText('I')
+})
+
+test('freestyle VBand paddle repeat follows playback speed', async ({ page }) => {
+  await gotoApp(page, { listenWpm: 30 })
+
+  await selectMode(page, 'freestyle')
+
+  await page.keyboard.down('ControlLeft')
+  await page.waitForTimeout(130)
+  await page.keyboard.up('ControlLeft')
+  await page.waitForTimeout(LETTER_GAP_MS)
+
+  await expect(page.locator('.freestyle-overlay-letter')).toHaveText('I')
+})
+
+test('freestyle mode switches quickly between VBand paddles', async ({ page }) => {
+  await gotoApp(page)
+
+  await selectMode(page, 'freestyle')
+
+  await page.keyboard.down('ControlLeft')
+  await page.waitForTimeout(30)
+  await page.keyboard.down('ControlRight')
+  await page.waitForTimeout(30)
+  await page.keyboard.up('ControlLeft')
+  await page.waitForTimeout(330)
+  await page.keyboard.up('ControlRight')
+  await page.waitForTimeout(LETTER_GAP_MS)
+
+  await expect(page.locator('.freestyle-overlay-letter')).toHaveText('A')
 })
 
 test('listen mode accepts keyboard answers', async ({ page }) => {
   await gotoApp(page, { coarsePointer: true })
 
-  await page.getByLabel('Mode').selectOption('listen')
+  await selectMode(page, 'listen')
   await page.getByLabel('Keyboard').waitFor()
 
-  await page.getByLabel('Type A').click()
+  await page.keyboard.press('A')
 
   await expect(page.locator('.status-text')).toHaveText(/Correct|Incorrect/)
-  await expect(page.locator('main.stage .letter')).not.toHaveText('?')
+  await expect(page.locator('.listen-overlay-letter')).not.toHaveText('?')
 })

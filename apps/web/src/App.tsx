@@ -51,6 +51,10 @@ import { useCustomListenSession } from './hooks/useCustomListenSession'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
 import { isKeyboardModality } from './utils/inputModality'
 import {
+  getKeyboardMorseSymbol,
+  isVbandControlKey,
+} from './utils/morseKeyboardInput'
+import {
   getPlaybackElapsedMs,
   pauseAudioContext,
   playMorseTone,
@@ -407,6 +411,19 @@ function MainApp() {
       if (showReference) {
         return
       }
+      if (!isListen && !isEditableTarget(event.target)) {
+        const keyboardMorseSymbol = getKeyboardMorseSymbol(event)
+        if (keyboardMorseSymbol) {
+          const isControlPaddle = isVbandControlKey(event)
+          const isPlainPaddleKey =
+            !event.ctrlKey && !event.metaKey && !event.altKey
+          if (!event.repeat && (isControlPaddle || isPlainPaddleKey)) {
+            event.preventDefault()
+            handlers.handleMorseSymbolPressIn(keyboardMorseSymbol)
+            return
+          }
+        }
+      }
       if (shouldIgnoreShortcutEvent(event)) {
         return
       }
@@ -457,6 +474,14 @@ function MainApp() {
       }
     }
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (!isListen && !isEditableTarget(event.target)) {
+        const keyboardMorseSymbol = getKeyboardMorseSymbol(event)
+        if (keyboardMorseSymbol) {
+          event.preventDefault()
+          handlers.handleMorseSymbolPressOut(keyboardMorseSymbol)
+          return
+        }
+      }
       if (isListen) {
         return
       }
