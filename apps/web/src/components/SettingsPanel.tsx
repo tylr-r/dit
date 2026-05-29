@@ -484,11 +484,16 @@ function buildRowRenderer(
           key={rowId}
           label="Immediate flow recovery"
           htmlFor="setting-practice-ifr-mode"
-          helper="On a miss, move on to the next target instead of repeating the same one."
+          helper={
+            props.guidedCourseActive
+              ? 'Unavailable while the guided beginner course is active.'
+              : 'On a miss, move on to the next target instead of repeating the same one.'
+          }
           control={
             <SettingsToggle
               id="setting-practice-ifr-mode"
               checked={props.practiceIfrMode}
+              disabled={props.guidedCourseActive}
               onChange={(next) => {
                 reportSettingChange('practice_ifr_mode', next)
                 props.onPracticeIfrModeChange(next)
@@ -505,7 +510,9 @@ function buildRowRenderer(
           label="Review misses later"
           htmlFor="setting-practice-review-misses"
           helper={
-            !props.practiceIfrMode
+            props.guidedCourseActive
+              ? 'Unavailable while the guided beginner course is active.'
+              : !props.practiceIfrMode
               ? 'Requires Immediate flow recovery.'
               : 'Brings missed targets back after a short delay.'
           }
@@ -513,7 +520,7 @@ function buildRowRenderer(
             <SettingsToggle
               id="setting-practice-review-misses"
               checked={props.practiceReviewMisses}
-              disabled={!props.practiceIfrMode}
+              disabled={props.guidedCourseActive || !props.practiceIfrMode}
               onChange={(next) => {
                 reportSettingChange('practice_review_misses', next)
                 props.onPracticeReviewMissesChange(next)
@@ -570,6 +577,12 @@ function buildRowRenderer(
         <SettingsButtonRow
           key={rowId}
           label="Use recommended settings"
+          helper={
+            props.guidedCourseActive
+              ? 'Unavailable while the guided beginner course is active.'
+              : undefined
+          }
+          disabled={props.guidedCourseActive}
           onClick={() => props.onUseRecommended()}
         />
       )

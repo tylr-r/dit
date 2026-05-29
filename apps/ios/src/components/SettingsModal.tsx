@@ -708,21 +708,25 @@ export function SettingsModal({
                       <ToggleRow
                         label="Immediate flow recovery"
                         value={practiceIfrMode}
+                        disabled={guidedCourseActive}
                         onValueChange={onPracticeIfrModeChange}
                       />
                       <Text style={styles.helperText}>
-                        On a miss, move on to the next target instead of
-                        repeating the same one.
+                        {guidedCourseActive
+                          ? 'Unavailable while the guided beginner course is active.'
+                          : 'On a miss, move on to the next target instead of repeating the same one.'}
                       </Text>
                       <View style={styles.separator} />
                       <ToggleRow
                         label="Review misses later"
                         value={practiceReviewMisses}
-                        disabled={!practiceIfrMode}
+                        disabled={guidedCourseActive || !practiceIfrMode}
                         onValueChange={onPracticeReviewMissesChange}
                       />
                       <Text style={styles.helperText}>
-                        {!practiceIfrMode
+                        {guidedCourseActive
+                          ? 'Unavailable while the guided beginner course is active.'
+                          : !practiceIfrMode
                           ? 'Requires Immediate flow recovery.'
                           : 'Brings missed targets back after a short delay.'}
                       </Text>
@@ -807,8 +811,18 @@ export function SettingsModal({
                     text="Use recommended settings"
                     onPress={onUseRecommended}
                     accessibilityLabel="Use recommended settings"
-                    accessibilityHint="Applies the default learning setup"
+                    accessibilityHint={
+                      guidedCourseActive
+                        ? 'Unavailable while the guided beginner course is active'
+                        : 'Applies the default learning setup'
+                    }
+                    disabled={guidedCourseActive}
                   />
+                  {guidedCourseActive ? (
+                    <Text style={styles.helperText}>
+                      Unavailable while the guided beginner course is active.
+                    </Text>
+                  ) : null}
                   <View style={styles.separator} />
                   <ActionRow
                     text="About Dit"
