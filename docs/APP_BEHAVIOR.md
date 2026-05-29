@@ -202,6 +202,8 @@ Availability rules:
 - Max level applies to Practice and Listen.
 - Freestyle word mode is Freestyle-only.
 - Practice-only options can be adjusted from other modes but stay grouped separately from the current mode's settings.
+- During the guided beginner course, controls that would change the fixed lesson flow are unavailable: Practice Words, Sequential order, Immediate flow recovery, and Review misses later.
+- **Use recommended settings** is also unavailable during the guided beginner course because it resets the fixed lesson flow's underlying practice and level settings.
 
 ## Keyboard shortcuts (web)
 
