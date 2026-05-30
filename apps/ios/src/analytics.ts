@@ -2,15 +2,20 @@ import {
   type AnalyticsClient,
   type AnalyticsEventName,
   type AnalyticsEventParams,
+  type Mode,
+  type ScreenName,
   noopAnalyticsClient,
 } from '@dit/core'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getApp } from '@react-native-firebase/app'
 import {
   getAnalytics,
   logEvent,
+  logScreenView,
   setUserId,
   setUserProperty,
 } from '@react-native-firebase/analytics'
+import { useEffect, useRef } from 'react'
 
 /**
  * iOS analytics client backed by Firebase Analytics via @react-native-firebase.
@@ -40,11 +45,99 @@ const createClient = (): AnalyticsClient => {
 
 export const analyticsClient: AnalyticsClient = createClient()
 
-export const logAnalyticsEvent = <N extends AnalyticsEventName>(
-  name: N,
-  ...params: AnalyticsEventParams<N> extends undefined | never
-    ? []
-    : [AnalyticsEventParams<N>]
+const MILESTONE_PREFIX = 'dit:milestone:'
+const firedMilestones = new Set<string>()
+
+const isMode = (value: unknown): value is Mode =>
+  value === 'practice' || value === 'freestyle' || value === 'listen'
+
+/** Run `fire` exactly once per `name`, persisted via AsyncStorage. */
+export const fireOnce = (name: string, fire: () => void) => {
+  const key = `${MILESTONE_PREFIX}${name}`
+  if (firedMilestones.has(key)) {
+    return
+  }
+  firedMilestones.add(key)
+  AsyncStorage.getItem(key)
+    .then((value) => {
+      if (value === '1') {
+        return
+      }
+      return AsyncStorage.setItem(key, '1').then(fire)
+    })
+    .catch(() => {
+      firedMilestones.delete(key)
+    })
+}
+
+export const resetAnalyticsMilestonesForTests = () => {
+  firedMilestones.clear()
+}
+
+const trackScreenView = (screen: ScreenName) => {
+  analyticsClient.logEvent('screen_view', { screen })
+  try {
+    const instance = getAnalytics(getApp())
+    logScreenView(instance, {
+      screen_name: screen,
+      screen_class: screen,
+    }).catch(() => {})
+  } catch {
+    // Firebase is unavailable in tests and Storybook; the custom event above
+    // still gives us a safe typed fallback through the no-op client.
+  }
+}
+
+type LogAnalyticsEvent = {
+  <N extends AnalyticsEventName>(
+    name: N,
+    ...params: AnalyticsEventParams<N> extends undefined | never
+      ? []
+      : [AnalyticsEventParams<N>]
+  ): void
+  (name: string, params?: Record<string, unknown>): void
+}
+
+export const logAnalyticsEvent: LogAnalyticsEvent = (
+  name: string,
+  params?: Record<string, unknown>,
 ) => {
-  analyticsClient.logEvent(name, ...params)
+  if (name === 'mode_correct_answer') {
+    if (params && isMode(params.mode)) {
+      const mode = params.mode
+      fireOnce(`first_correct_letter:${mode}`, () => {
+        analyticsClient.logEvent('first_correct_letter', { mode })
+      })
+    }
+    return
+  }
+
+  ;(analyticsClient.logEvent as (event: string, params?: Record<string, unknown>) => void)(
+    name,
+    params,
+  )
+
+  if (name === 'mode_start' && params && isMode(params.mode)) {
+    const mode = params.mode
+    fireOnce(`first_mode_session:${mode}`, () => {
+      analyticsClient.logEvent('first_mode_session', { mode })
+    })
+  }
+}
+
+/** Tracks native screen views/exits and sets Firebase screen name/class. */
+export const useAnalyticsScreenTracker = (screen: ScreenName) => {
+  const mountedAtRef = useRef(0)
+
+  useEffect(() => {
+    mountedAtRef.current = Date.now()
+    trackScreenView(screen)
+
+    return () => {
+      analyticsClient.logEvent('screen_exit', {
+        screen,
+        duration_ms: Date.now() - mountedAtRef.current,
+      })
+    }
+  }, [screen])
 }
