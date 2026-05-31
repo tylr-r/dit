@@ -3,8 +3,29 @@ import type { AnalyticsClient, ScreenName } from '@dit/core'
 
 const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID ?? ''
 
+let analyticsEnabledForTests: boolean | null = null
+
+const isFalsy = (value: string | undefined) =>
+  value === '0' || value === 'false' || value === 'no'
+
+export const isAnalyticsEnabled = () => {
+  if (analyticsEnabledForTests !== null) {
+    return analyticsEnabledForTests
+  }
+
+  if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+    return false
+  }
+
+  return !isFalsy(import.meta.env.VITE_ANALYTICS_ENABLED)
+}
+
+export const setAnalyticsEnabledForTests = (enabled: boolean | null) => {
+  analyticsEnabledForTests = enabled
+}
+
 const callGtag = (...args: unknown[]) => {
-  if (typeof window === 'undefined' || !window.gtag) {
+  if (!isAnalyticsEnabled() || typeof window === 'undefined' || !window.gtag) {
     return
   }
   window.gtag(...args)
@@ -26,7 +47,7 @@ const MILESTONE_PREFIX = 'dit:milestone:'
 
 /** Run `fire` exactly once per `name`, persisted via localStorage. */
 export const fireOnce = (name: string, fire: () => void) => {
-  if (typeof window === 'undefined') {
+  if (!isAnalyticsEnabled() || typeof window === 'undefined') {
     return
   }
   const key = `${MILESTONE_PREFIX}${name}`
