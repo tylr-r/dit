@@ -11,6 +11,10 @@ ARCHIVE_PATH="$BUILD_ROOT/Dit.xcarchive"
 EXPORT_PATH="$BUILD_ROOT/export"
 PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
 
+if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
 BUILD_NUMBER="${1:-}"
 VERSION="${VERSION:-}"
 
