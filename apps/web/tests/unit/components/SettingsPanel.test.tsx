@@ -34,6 +34,7 @@ const makeProps = (
   onSignOut: vi.fn(),
   onSoundCheck: vi.fn(),
   onToneFrequencyChange: vi.fn(),
+  onResetApp: vi.fn(),
   onUseRecommended: vi.fn(),
   onWordModeChange: vi.fn(),
   practiceAutoPlay: true,
@@ -95,5 +96,22 @@ describe('SettingsPanel', () => {
 
     await user.click(button)
     expect(onUseRecommended).not.toHaveBeenCalled()
+  })
+
+  it('shows Reset App when signed out', async () => {
+    const user = userEvent.setup()
+    const onResetApp = vi.fn()
+
+    render(
+      <SettingsPanel
+        {...makeProps({
+          onResetApp,
+          user: null,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /reset app/i }))
+    expect(onResetApp).toHaveBeenCalledTimes(1)
   })
 })

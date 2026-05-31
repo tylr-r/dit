@@ -493,6 +493,7 @@ function AppShell() {
               onRequestSignIn={handleRequestSignInFromSettings}
               onSignOut={signOut}
               onDeleteAccount={handlers.handleDeleteAccount}
+              onResetApp={handlers.handleResetApp}
               // __DEV__ is false in any release build (TestFlight, App Store),
               // true in Metro/dev-client builds. Dev Mode settings only exist
               // when this flag is set so production users never see them.

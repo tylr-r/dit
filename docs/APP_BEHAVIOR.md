@@ -192,6 +192,7 @@ Toggles and controls available across both platforms unless noted.
 - Daily reminder (iOS): picks a local notification time using the native date picker. Requires notification permission, which the app requests on first enable.
 - Use recommended settings (iOS): resets the Practice toggles to the defaults chosen for the current `learnerProfile`.
 - Replay NUX (iOS): runs the onboarding flow again.
+- Reset App: available whether signed in or signed out. After confirmation, clears local progress, settings, onboarding state, first-run hints, and saved app data so Dit returns to the first-run onboarding flow. If the user is signed in, synced progress is cleared and the user is signed out; the account itself is not deleted.
 - Cloud sync:
   - Web: Google sign-in (popup).
   - iOS: Sign in with Apple and Sign in with Google. Also exposes **Delete account**, which removes the Firebase user and their synced progress.

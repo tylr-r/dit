@@ -59,6 +59,7 @@ type SettingsModalProps = {
   onHapticsEnabledChange: (value: boolean) => void
   onReminderChange: (reminder: ReminderSettings | undefined) => void
   onUseRecommended: () => void
+  onResetApp: () => void
   onShowAbout: () => void
   /**
    * Fires when the user taps the "Learning ›" row. Parent dismisses
@@ -201,6 +202,7 @@ export function SettingsModal({
   onHapticsEnabledChange,
   onReminderChange,
   onUseRecommended,
+  onResetApp,
   onShowAbout,
   onRequestLearning,
   onRequestSignIn,
@@ -831,6 +833,15 @@ export function SettingsModal({
                     }}
                     accessibilityLabel="Open about"
                     accessibilityHint="Shows the about panel"
+                  />
+                  <View style={styles.separator} />
+                  <ActionRow
+                    text="Reset App"
+                    onPress={onResetApp}
+                    accessibilityLabel="Reset app"
+                    accessibilityHint="Clears local progress, settings, onboarding state, and saved app data"
+                    destructive
+                    disabled={isDeletingAccount}
                   />
                   <View style={styles.separator} />
                   {user ? (

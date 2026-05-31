@@ -169,6 +169,8 @@ export type UseMorseSessionControllerCallbacks = {
   stopMorseTone: () => void | Promise<unknown>
   /** Single-symbol tone playback used during the NUX sound check. */
   playOnboardingTone: (symbol: '.' | '-') => void
+  /** Platform-specific local data outside core progress storage, such as web custom Listen drafts. */
+  clearAdditionalLocalData?: () => void | Promise<void>
 }
 
 export type UseMorseSessionControllerOptions = {
@@ -1013,6 +1015,9 @@ export const useMorseSessionController = ({
     setShowSettings(false)
     setShowAbout(false)
     setShowReference(false)
+    persistIntroHintStep('morse')
+    persistNuxStatus('pending')
+    setNuxStep('welcome')
     setIsPressing(false)
     setMode('practice')
     setShowHint(false)
@@ -1102,9 +1107,12 @@ export const useMorseSessionController = ({
     setTutorialTapCount,
     setIsPressing,
     setLearnerProfile,
+    persistIntroHintStep,
+    persistNuxStatus,
     setShowAbout,
     setShowReference,
     setShowSettings,
+    setNuxStep,
     stopListenPlayback,
   ])
 
@@ -2221,6 +2229,7 @@ export const useMorseSessionController = ({
     setIsDeletingAccount,
     setShowSettings,
     clearLocalProgress,
+    clearAdditionalLocalData: callbacks.clearAdditionalLocalData,
     deleteRemoteProgress,
     resetProgressState,
   })

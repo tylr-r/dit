@@ -111,6 +111,7 @@ export interface SettingsPanelProps {
   authReady: boolean
   onShowSignIn: () => void
   onDeleteAccount: () => void
+  onResetApp: () => void
   isDeletingAccount: boolean
   onSignOut: () => void
 }
