@@ -1,6 +1,6 @@
 # Dit iOS Changelog
 
-## 2026.5.28 - Draft
+## 2026.5.31
 
 Compared against `2026.4.22`.
 
@@ -11,6 +11,7 @@ Compared against `2026.4.22`.
 - Added a welcome flow with sign-in and stay-signed-out options.
 - Added Apple, Google, and email sign-in from onboarding and Settings.
 - Added a haptics toggle in Settings.
+- Added Reset App in Settings so you can return Dit to a fresh first-run state without deleting your account.
 
 ### Changes
 
@@ -21,6 +22,7 @@ Compared against `2026.4.22`.
 - Learning options now live in the Learning method flow instead of Settings.
 - The Learning method sheet now matches the Settings sheet visual style.
 - Listen playback and haptic spacing now better match the timing shown on screen.
+- Settings now prevents course-specific options from changing while a guided course is active.
 
 ### Fixes
 
