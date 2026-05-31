@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { BEGINNER_COURSE_PACKS, type Letter } from '@dit/core'
-import { useScreenTracker } from '../lib/analytics'
+import { useEffect, useRef, useState } from 'react'
+import { BEGINNER_COURSE_PACKS, type LearningMethod, type Letter } from '@dit/core'
+import { analytics, useScreenTracker } from '../lib/analytics'
 import type { LearningSheetProps } from './componentProps'
 
 type View = 'course' | 'open' | 'custom'
@@ -42,6 +42,16 @@ export function LearningSheet({
 }: LearningSheetProps) {
   useScreenTracker('learning')
 
+  const openedMethodRef = useRef<LearningMethod>(
+    guidedCourseActive ? 'course' : 'open_practice',
+  )
+
+  useEffect(() => {
+    analytics.logEvent('learning_method_opened', {
+      active_method: openedMethodRef.current,
+    })
+  }, [])
+
   const [view, setView] = useState<View>(
     guidedCourseActive ? 'course' : 'open',
   )
@@ -50,6 +60,14 @@ export function LearningSheet({
 
   const handleSegmentChange = (next: 'course' | 'open') => {
     setView(next)
+    const method = next === 'course' ? 'course' : 'open_practice'
+    const previousMethod = guidedCourseActive ? 'course' : 'open_practice'
+    if (method !== previousMethod) {
+      analytics.logEvent('learning_method_selected', {
+        method,
+        previous_method: previousMethod,
+      })
+    }
     if (next === 'course' && !guidedCourseActive) {
       onSetGuidedCourseActive(true)
     } else if (next === 'open' && guidedCourseActive) {
@@ -113,6 +131,12 @@ export function LearningSheet({
                       type="button"
                       className={className}
                       onClick={() => {
+                        analytics.logEvent('learning_scope_selected', {
+                          method: 'course',
+                          scope: 'course_pack',
+                          pack_index: index,
+                          pack_number: index + 1,
+                        })
                         onSelectPack(index)
                         onClose()
                       }}
@@ -141,6 +165,11 @@ export function LearningSheet({
                       type="button"
                       className={`learning-row ${isSelected ? 'is-selected' : ''}`}
                       onClick={() => {
+                        analytics.logEvent('learning_scope_selected', {
+                          method: 'open_practice',
+                          scope: 'tier',
+                          level: tier.level,
+                        })
                         onSelectTier(tier.level)
                         onClose()
                       }}
@@ -221,6 +250,11 @@ export function LearningSheet({
                 className="panel-button learning-custom-apply"
                 disabled={draftSelection.length === 0}
                 onClick={() => {
+                  analytics.logEvent('learning_scope_selected', {
+                    method: 'open_practice',
+                    scope: 'custom_letters',
+                    character_count: draftSelection.length,
+                  })
                   onSelectCustomLetters([...draftSelection])
                   onClose()
                 }}

@@ -104,6 +104,12 @@ free practice.
 Settings closes before the picker opens so the two sheets never stack.
 The picker is rendered at the app root so it survives Settings unmounting.
 
+Analytics for this surface is deliberately bounded: opening the sheet emits
+`learning_method_opened`, changing **Course** / **Open practice** emits
+`learning_method_selected`, and choosing a course pack, tier preset, or custom
+character set emits `learning_scope_selected`. The custom event records only the
+selected count, not the actual characters.
+
 #### `nuxCompleted` flag
 
 - Stored at `users/{uid}/progress/nuxCompleted: boolean` in Firebase RTDB, inside the existing progress object.

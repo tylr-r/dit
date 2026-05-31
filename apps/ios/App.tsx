@@ -2,6 +2,7 @@ import {
   BEGINNER_COURSE_PACKS,
   BACKGROUND_IDLE_TIMEOUT_MS,
   computeHero,
+  createLooseAnalyticsLogger,
   createGuidedLessonProgress,
   DEFAULT_CHARACTER_WPM,
   LISTEN_MIN_UNIT_MS,
@@ -78,14 +79,22 @@ const playOnboardingTone = (symbol: '.' | '-') => {
   })
 }
 
-const logAnalyticsEventLoose = (event: string, params?: Record<string, unknown>) => {
-  // Core emits events through a loosely typed callback; we forward them to the
-  // strongly typed Firebase Analytics client without re-validating names here.
+const seenAnalyticsMilestones = new Set<string>()
+
+const fireAnalyticsOnce = (key: string, fire: () => void) => {
+  if (seenAnalyticsMilestones.has(key)) return
+  seenAnalyticsMilestones.add(key)
+  fire()
+}
+
+const logAnalyticsEventLoose = createLooseAnalyticsLogger((event, params) => {
+  // Core emits events through a loosely typed callback; the shared logger
+  // filters internal signals before this forwards public events to Firebase.
   ;(logAnalyticsEvent as unknown as (name: string, params?: Record<string, unknown>) => void)(
     event,
     params,
   )
-}
+}, fireAnalyticsOnce)
 
 const sessionCallbacks = {
   logAnalyticsEvent: logAnalyticsEventLoose,

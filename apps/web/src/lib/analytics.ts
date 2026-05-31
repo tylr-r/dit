@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react'
-import type { AnalyticsClient, ScreenName } from '@dit/core'
+import {
+  createLooseAnalyticsLogger,
+  withAnalyticsContext,
+  type AnalyticsClient,
+  type ScreenName,
+} from '@dit/core'
 
 const GA_ID = import.meta.env.VITE_GA_MEASUREMENT_ID ?? ''
+const APP_SURFACE = 'web'
 
 const callGtag = (...args: unknown[]) => {
   if (typeof window === 'undefined' || !window.gtag) {
@@ -10,9 +16,13 @@ const callGtag = (...args: unknown[]) => {
   window.gtag(...args)
 }
 
+const emitEvent = (event: string, params?: Record<string, unknown>) => {
+  callGtag('event', event, withAnalyticsContext(APP_SURFACE, params))
+}
+
 export const analytics: AnalyticsClient = {
   logEvent(name, ...params) {
-    callGtag('event', name, params[0] ?? {})
+    emitEvent(name, params[0])
   },
   setUserId(id) {
     callGtag('config', GA_ID, { user_id: id ?? undefined })
@@ -56,27 +66,7 @@ export const fireOnce = (name: string, fire: () => void) => {
  *   intentionally absent from the typed `AnalyticsEvent` union; it's a
  *   loose contract between the core controller and this adapter.
  */
-export const logEvent = (
-  event: string,
-  params?: Record<string, unknown>,
-) => {
-  if (event === 'mode_correct_answer') {
-    if (params && typeof params.mode === 'string') {
-      const mode = params.mode
-      fireOnce(`first_correct_letter:${mode}`, () => {
-        callGtag('event', 'first_correct_letter', { mode })
-      })
-    }
-    return
-  }
-  callGtag('event', event, params ?? {})
-  if (event === 'mode_start' && params && typeof params.mode === 'string') {
-    const mode = params.mode
-    fireOnce(`first_mode_session:${mode}`, () => {
-      callGtag('event', 'first_mode_session', { mode })
-    })
-  }
-}
+export const logEvent = createLooseAnalyticsLogger(emitEvent, fireOnce)
 
 /** Tracks screen view and exit events, including visibility-change awareness. */
 export const useScreenTracker = (screen: ScreenName) => {

@@ -19,12 +19,15 @@ describe('analytics adapter', () => {
     analytics.logEvent('mode_start', { mode: 'practice' })
     expect(gtag).toHaveBeenCalledWith('event', 'mode_start', {
       mode: 'practice',
+      app_surface: 'web',
     })
   })
 
   it('forwards parameterless events with empty params', () => {
     analytics.logEvent('onboarding_completed')
-    expect(gtag).toHaveBeenCalledWith('event', 'onboarding_completed', {})
+    expect(gtag).toHaveBeenCalledWith('event', 'onboarding_completed', {
+      app_surface: 'web',
+    })
   })
 
   it('sets and clears user_id via gtag config', () => {
@@ -74,7 +77,10 @@ describe('analytics adapter', () => {
         (call) => call[1] === 'first_mode_session',
       )
       expect(firstSessionCalls).toHaveLength(1)
-      expect(firstSessionCalls[0][2]).toEqual({ mode: 'practice' })
+      expect(firstSessionCalls[0][2]).toEqual({
+        mode: 'practice',
+        app_surface: 'web',
+      })
     })
 
     it('fires first_mode_session per distinct mode', () => {
@@ -125,6 +131,7 @@ describe('useScreenTracker', () => {
 
     expect(gtag).toHaveBeenCalledWith('event', 'screen_view', {
       screen: 'practice',
+      app_surface: 'web',
     })
 
     act(() => {
@@ -134,7 +141,10 @@ describe('useScreenTracker', () => {
 
     const exitCall = gtag.mock.calls.find((call) => call[1] === 'screen_exit')
     expect(exitCall).toBeDefined()
-    expect(exitCall![2]).toMatchObject({ screen: 'practice' })
+    expect(exitCall![2]).toMatchObject({
+      screen: 'practice',
+      app_surface: 'web',
+    })
     expect((exitCall![2] as { duration_ms: number }).duration_ms).toBeGreaterThanOrEqual(1500)
   })
 
@@ -166,6 +176,7 @@ describe('useScreenTracker', () => {
     })
     expect(gtag).toHaveBeenCalledWith('event', 'screen_view', {
       screen: 'listen',
+      app_surface: 'web',
     })
   })
 })

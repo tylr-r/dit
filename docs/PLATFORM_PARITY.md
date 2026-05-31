@@ -162,16 +162,18 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Typed `AnalyticsClient` in `@dit/core` | ✅ | ✅ | 15-event union covers funnels, screens, milestones, settings, identity |
+| Typed `AnalyticsClient` in `@dit/core` | ✅ | ✅ | 18-event union covers funnels, screens, milestones, settings, identity |
 | `mode_start` / `onboarding_completed` / `streak_day_reached` | ✅ | ✅ | Fired from controller / onboarding actions |
 | NUX step funnel (`nux_step_view` / `nux_step_complete` / `nux_step_skipped`) | 🟡 | ✅ | Web only via [useNuxStepTracker](../packages/core/src/hooks/useNuxStepTracker.ts); the hook lives in core and iOS can adopt it |
 | Per-screen dwell time (`screen_view` / `screen_exit`) | 🟡 | ✅ | Web only via `useScreenTracker` in modes and modals |
-| Activation milestones (`first_mode_session` / `first_correct_letter`) | 🟡 | ✅ | Web only; gated once per install via localStorage in the GA4 adapter |
+| Activation milestones (`first_mode_session` / `first_correct_letter`) | ✅ | ✅ | Shared loose-event logger suppresses internal `mode_correct_answer`; web gates once per install via localStorage, iOS gates once per JS runtime |
 | Guided phase progression (`guided_phase_advance` / `guided_phase_complete`) | ✅ | ✅ | Fired from `useMorseSessionController` to whichever client is wired |
+| Learning method funnel (`learning_method_opened` / `learning_method_selected` / `learning_scope_selected`) | ✅ | ✅ | Captures Course vs Open practice discovery and selected scope without logging individual custom characters |
 | Settings-changed events (debounced sliders) | 🟡 | ✅ | Web only in [SettingsPanel.tsx](../apps/web/src/components/SettingsPanel.tsx) |
 | Phase-modal-dismissed event | 🟡 | ✅ | Web only in [PhaseModal.tsx](../apps/web/src/components/PhaseModal.tsx) |
 | GA4 / Firebase `user_id` linkage on sign-in/out | 🟡 | ✅ | Web wires `analytics.setUserId(user?.uid ?? null)` |
-| Concrete adapter | ✅ | ✅ | Web: [apps/web/src/lib/analytics.ts](../apps/web/src/lib/analytics.ts) (GA4 via gtag). iOS: [apps/ios/src/analytics.ts](../apps/ios/src/analytics.ts) (Firebase Analytics, currently only forwards the legacy three events) |
+| Event surface context (`app_surface`) | ✅ | ✅ | Adapters attach `ios` or `web` to emitted event params so shared Firebase/GA4 reports can be segmented |
+| Concrete adapter | ✅ | ✅ | Web: [apps/web/src/lib/analytics.ts](../apps/web/src/lib/analytics.ts) (GA4 via gtag). iOS: [apps/ios/src/analytics.ts](../apps/ios/src/analytics.ts) (Firebase Analytics via RN Firebase) |
 
 ---
 

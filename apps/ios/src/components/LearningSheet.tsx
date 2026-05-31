@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { logAnalyticsEvent } from '../analytics'
 
 type LearningSheetProps = {
   visible: boolean
@@ -69,9 +70,19 @@ export function LearningSheet({
   const [draftCustom, setDraftCustom] = useState<Set<Letter>>(
     () => new Set(customLetters),
   )
+  const wasVisibleRef = useRef(false)
 
   // Sync the draft with persisted state whenever the sheet opens or the
   // persisted value changes from outside (e.g., remote progress load).
+  useEffect(() => {
+    if (visible && !wasVisibleRef.current) {
+      logAnalyticsEvent('learning_method_opened', {
+        active_method: guidedCourseActive ? 'course' : 'open_practice',
+      })
+    }
+    wasVisibleRef.current = visible
+  }, [visible, guidedCourseActive])
+
   useEffect(() => {
     if (visible) {
       setDraftCustom(new Set(customLetters))
@@ -86,11 +97,23 @@ export function LearningSheet({
   const customActive = !guidedCourseActive && customLetters.length > 0
 
   const handleSelectCourseSegment = useCallback(() => {
-    if (!guidedCourseActive) onSetGuidedCourseActive(true)
+    if (!guidedCourseActive) {
+      logAnalyticsEvent('learning_method_selected', {
+        method: 'course',
+        previous_method: 'open_practice',
+      })
+      onSetGuidedCourseActive(true)
+    }
   }, [guidedCourseActive, onSetGuidedCourseActive])
 
   const handleSelectOpenSegment = useCallback(() => {
-    if (guidedCourseActive) onSetGuidedCourseActive(false)
+    if (guidedCourseActive) {
+      logAnalyticsEvent('learning_method_selected', {
+        method: 'open_practice',
+        previous_method: 'course',
+      })
+      onSetGuidedCourseActive(false)
+    }
   }, [guidedCourseActive, onSetGuidedCourseActive])
 
   const handleOpenPickYourOwn = useCallback(() => {
@@ -118,6 +141,11 @@ export function LearningSheet({
     // Keep the canonical character order (MORSE_DATA insertion order) so the
     // saved list reads predictably in storage and tests.
     const ordered = ALL_CHARACTERS.filter((letter) => draftCustom.has(letter))
+    logAnalyticsEvent('learning_scope_selected', {
+      method: 'open_practice',
+      scope: 'custom_letters',
+      character_count: ordered.length,
+    })
     onSelectCustomLetters(ordered)
     onDismiss()
   }, [draftCustom, onDismiss, onSelectCustomLetters])
@@ -249,7 +277,15 @@ export function LearningSheet({
                   return (
                     <Pressable
                       key={`pack-${index}`}
-                      onPress={() => onSelectPack(index)}
+                      onPress={() => {
+                        logAnalyticsEvent('learning_scope_selected', {
+                          method: 'course',
+                          scope: 'course_pack',
+                          pack_index: index,
+                          pack_number: index + 1,
+                        })
+                        onSelectPack(index)
+                      }}
                       style={({ pressed }) => [
                         styles.row,
                         isCurrent && styles.rowCurrent,
@@ -296,7 +332,14 @@ export function LearningSheet({
                     return (
                       <Pressable
                         key={`tier-${tier.level}`}
-                        onPress={() => onSelectTier(tier.level)}
+                        onPress={() => {
+                          logAnalyticsEvent('learning_scope_selected', {
+                            method: 'open_practice',
+                            scope: 'tier',
+                            level: tier.level,
+                          })
+                          onSelectTier(tier.level)
+                        }}
                         style={({ pressed }) => [
                           styles.tierRow,
                           isCurrent && styles.rowCurrent,
