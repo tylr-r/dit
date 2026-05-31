@@ -2,7 +2,6 @@ import {
   BEGINNER_COURSE_PACKS,
   BACKGROUND_IDLE_TIMEOUT_MS,
   computeHero,
-  createLooseAnalyticsLogger,
   createGuidedLessonProgress,
   DEFAULT_CHARACTER_WPM,
   LISTEN_MIN_UNIT_MS,
@@ -51,7 +50,7 @@ import { StageDisplay } from './src/components/StageDisplay'
 import { TopBar } from './src/components/TopBar'
 import { TourOverlay } from './src/components/tour/TourOverlay'
 import { useKnownTour } from './src/hooks/useKnownTour'
-import { logAnalyticsEvent } from './src/analytics'
+import { logAnalyticsEvent, useAnalyticsScreenTracker } from './src/analytics'
 import { auth, database } from './src/firebase'
 import { useAuth } from './src/hooks/useAuth'
 import { useBackgroundIdle } from './src/hooks/useBackgroundIdle'
@@ -79,25 +78,8 @@ const playOnboardingTone = (symbol: '.' | '-') => {
   })
 }
 
-const seenAnalyticsMilestones = new Set<string>()
-
-const fireAnalyticsOnce = (key: string, fire: () => void) => {
-  if (seenAnalyticsMilestones.has(key)) return
-  seenAnalyticsMilestones.add(key)
-  fire()
-}
-
-const logAnalyticsEventLoose = createLooseAnalyticsLogger((event, params) => {
-  // Core emits events through a loosely typed callback; the shared logger
-  // filters internal signals before this forwards public events to Firebase.
-  ;(logAnalyticsEvent as unknown as (name: string, params?: Record<string, unknown>) => void)(
-    event,
-    params,
-  )
-}, fireAnalyticsOnce)
-
 const sessionCallbacks = {
-  logAnalyticsEvent: logAnalyticsEventLoose,
+  logAnalyticsEvent,
   ensureNotificationPermission,
   prepareToneEngine,
   startTone,
@@ -213,6 +195,41 @@ function AppShell() {
     !settingsSignInSheetVisible &&
     !learningSheetVisible &&
     !phaseModal
+  const analyticsScreen = useMemo(() => {
+    if (settingsSignInSheetVisible) {
+      return 'sign_in'
+    }
+    if (phaseModal) {
+      return 'phase_modal'
+    }
+    if (isKnownTourStep) {
+      return 'tour'
+    }
+    if (isNuxActive) {
+      return 'nux'
+    }
+    if (learningSheetVisible) {
+      return 'learning'
+    }
+    if (showReference) {
+      return 'reference'
+    }
+    if (showSettings || showAbout) {
+      return 'settings'
+    }
+    return state.mode
+  }, [
+    isKnownTourStep,
+    isNuxActive,
+    learningSheetVisible,
+    phaseModal,
+    settingsSignInSheetVisible,
+    showAbout,
+    showReference,
+    showSettings,
+    state.mode,
+  ])
+  useAnalyticsScreenTracker(analyticsScreen)
   useEffect(() => {
     void setExternalMorseKeyCaptureEnabled(externalMorseCaptureEnabled)
     return () => {

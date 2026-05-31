@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { analytics, fireOnce, logEvent, useScreenTracker } from '../../../src/lib/analytics'
+import {
+  analytics,
+  fireOnce,
+  logEvent,
+  setAnalyticsEnabledForTests,
+  useScreenTracker,
+} from '../../../src/lib/analytics'
 
 describe('analytics adapter', () => {
   let gtag: ReturnType<typeof vi.fn>
@@ -9,10 +15,12 @@ describe('analytics adapter', () => {
     gtag = vi.fn()
     window.gtag = gtag
     window.localStorage.clear()
+    setAnalyticsEnabledForTests(true)
   })
 
   afterEach(() => {
     delete window.gtag
+    setAnalyticsEnabledForTests(null)
   })
 
   it('forwards typed events through gtag', () => {
@@ -50,6 +58,28 @@ describe('analytics adapter', () => {
     expect(() =>
       analytics.logEvent('mode_start', { mode: 'practice' }),
     ).not.toThrow()
+  })
+
+  it('does not call gtag or persist milestones when analytics are disabled', () => {
+    const fire = vi.fn()
+
+    setAnalyticsEnabledForTests(false)
+    analytics.logEvent('mode_start', { mode: 'practice' })
+    logEvent('mode_start', { mode: 'practice' })
+    logEvent('mode_correct_answer', { mode: 'practice' })
+    fireOnce('test_milestone', fire)
+
+    expect(gtag).not.toHaveBeenCalled()
+    expect(fire).not.toHaveBeenCalled()
+    expect(window.localStorage.length).toBe(0)
+  })
+
+  it('does not call gtag by default under the test runner', () => {
+    setAnalyticsEnabledForTests(null)
+
+    analytics.logEvent('mode_start', { mode: 'practice' })
+
+    expect(gtag).not.toHaveBeenCalled()
   })
 
   describe('fireOnce', () => {
@@ -114,6 +144,7 @@ describe('useScreenTracker', () => {
   beforeEach(() => {
     gtag = vi.fn()
     window.gtag = gtag
+    setAnalyticsEnabledForTests(true)
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
       get: () => 'visible',
@@ -122,6 +153,7 @@ describe('useScreenTracker', () => {
 
   afterEach(() => {
     delete window.gtag
+    setAnalyticsEnabledForTests(null)
     vi.useRealTimers()
   })
 

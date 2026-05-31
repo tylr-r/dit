@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_GA_MEASUREMENT_ID?: string
+  readonly VITE_ANALYTICS_ENABLED?: string
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
