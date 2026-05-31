@@ -6,6 +6,7 @@ import {
   fireOnce,
   logAnalyticsEvent,
   resetAnalyticsMilestonesForTests,
+  setAnalyticsEnabledForTests,
   useAnalyticsScreenTracker,
 } from '../../src/analytics'
 
@@ -49,6 +50,7 @@ const flush = async () => {
 beforeEach(() => {
   storage.clear()
   vi.clearAllMocks()
+  setAnalyticsEnabledForTests(true)
   resetAnalyticsMilestonesForTests()
   mockedStorage.getItem.mockImplementation(async (key) => storage.get(key) ?? null)
   mockedStorage.setItem.mockImplementation(async (key, value) => {
@@ -57,6 +59,30 @@ beforeEach(() => {
 })
 
 describe('iOS analytics adapter', () => {
+  it('does not fire Firebase events or persist milestones when analytics are disabled', async () => {
+    setAnalyticsEnabledForTests(false)
+
+    logAnalyticsEvent('mode_start', { mode: 'practice' })
+    logAnalyticsEvent('mode_correct_answer', { mode: 'practice' })
+    const { unmount } = renderHook(() => useAnalyticsScreenTracker('practice'))
+    await flush()
+    unmount()
+    await flush()
+
+    expect(mocks.logEvent).not.toHaveBeenCalled()
+    expect(mocks.logScreenView).not.toHaveBeenCalled()
+    expect(mockedStorage.setItem).not.toHaveBeenCalled()
+  })
+
+  it('does not fire Firebase events by default under the test runner', async () => {
+    setAnalyticsEnabledForTests(null)
+
+    logAnalyticsEvent('mode_start', { mode: 'practice' })
+    await flush()
+
+    expect(mocks.logEvent).not.toHaveBeenCalled()
+  })
+
   it('persists fireOnce milestones through AsyncStorage', async () => {
     const fire = vi.fn()
 
