@@ -3,6 +3,7 @@ import {
   type AnalyticsEventName,
   type AnalyticsEventParams,
   noopAnalyticsClient,
+  withAnalyticsContext,
 } from '@dit/core'
 import { getApp } from '@react-native-firebase/app'
 import {
@@ -11,6 +12,8 @@ import {
   setUserId,
   setUserProperty,
 } from '@react-native-firebase/analytics'
+
+const APP_SURFACE = 'ios'
 
 /**
  * iOS analytics client backed by Firebase Analytics via @react-native-firebase.
@@ -24,7 +27,11 @@ const createClient = (): AnalyticsClient => {
       logEvent: (name, ...params) => {
         // Cast name to string to avoid Firebase's CustomEventName<T> constraint,
         // which rejects names that overlap with Firebase reserved event names.
-        logEvent(instance, name as string, params[0]).catch(() => {})
+        logEvent(
+          instance,
+          name as string,
+          withAnalyticsContext(APP_SURFACE, params[0]),
+        ).catch(() => {})
       },
       setUserId: (id) => {
         setUserId(instance, id).catch(() => {})

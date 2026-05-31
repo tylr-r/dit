@@ -24,11 +24,16 @@ export {
 } from './components/morseButton'
 export type { MorseButtonState } from './components/morseButton'
 export {
+  createLooseAnalyticsLogger,
   noopAnalyticsClient,
+  withAnalyticsContext,
   type AnalyticsClient,
   type AnalyticsEvent,
   type AnalyticsEventName,
   type AnalyticsEventParams,
+  type AppSurface,
+  type LearningMethod,
+  type LearningScopeSelectedParams,
   type ScreenName,
   type SettingChangeValue,
 } from './analytics'
