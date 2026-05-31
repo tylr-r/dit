@@ -6,7 +6,7 @@ Compared against `2026.4.22`.
 
 ### Highlights
 
-- Added VBand-compatible paddle support for iOS Practice and Freestyle.
+- Added support for external Morse paddles, including VBand-compatible adapters, in iOS Practice and Freestyle.
 - Added a Learning method sheet for choosing a course pack, open practice, or custom letters.
 - Added a welcome flow with sign-in and stay-signed-out options.
 - Added Apple, Google, and email sign-in from onboarding and Settings.
@@ -26,7 +26,7 @@ Compared against `2026.4.22`.
 
 ### Fixes
 
-- Kept the iOS background animation active while a VBand paddle is held.
+- Kept the iOS background animation active while an external paddle is held.
 - Improved Listen timing for Farnsworth-style playback.
 - Removed extra helper space in Practice when hints and mnemonics are turned off.
 - Hid development-only settings in production builds.
