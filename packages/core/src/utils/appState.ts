@@ -67,6 +67,12 @@ export const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
 export const NUX_STATUS_KEY = 'dit-nux-status'
 export const NUX_STATE_KEY = 'dit-nux-state'
 export const LOCAL_PROGRESS_KEY = 'dit-progress'
+export const RESET_APP_STORAGE_KEYS = [
+  INTRO_HINTS_KEY,
+  LEGACY_INTRO_HINTS_KEY,
+  NUX_STATUS_KEY,
+  NUX_STATE_KEY,
+] as const
 export const BACKGROUND_IDLE_TIMEOUT_MS = 10000
 export const DEFAULT_PRACTICE_IFR_MODE = true
 export const DEFAULT_PRACTICE_REVIEW_MISSES = true

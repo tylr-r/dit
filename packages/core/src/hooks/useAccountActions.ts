@@ -6,6 +6,7 @@ import {
   getEmailSignUpErrorMessage,
   getSignInErrorMessage,
   isErrorWithCode,
+  RESET_APP_STORAGE_KEYS,
 } from '../utils/appState'
 import { usePlatform } from '../platform'
 
@@ -17,6 +18,7 @@ type UseAccountActionsOptions = {
   setIsDeletingAccount: (value: boolean) => void
   setShowSettings: (value: boolean) => void
   clearLocalProgress: () => Promise<void>
+  clearAdditionalLocalData?: () => Promise<void> | void
   deleteRemoteProgress: (userId: string) => Promise<void>
   resetProgressState: () => void
 }
@@ -32,6 +34,7 @@ export const useAccountActions = ({
   setIsDeletingAccount,
   setShowSettings,
   clearLocalProgress,
+  clearAdditionalLocalData,
   deleteRemoteProgress,
   resetProgressState,
 }: UseAccountActionsOptions) => {
@@ -180,11 +183,75 @@ export const useAccountActions = ({
     )
   }, [dialog, isDeletingAccount, performAccountDeletion, user])
 
+  const performAppReset = useCallback(async () => {
+    if (isDeletingAccount) {
+      return
+    }
+
+    try {
+      setShowSettings(false)
+      await clearLocalProgress()
+      await Promise.all(RESET_APP_STORAGE_KEYS.map((key) => platform.storage.removeItem(key)))
+      await clearAdditionalLocalData?.()
+
+      if (user) {
+        await deleteRemoteProgress(user.uid)
+        await auth.signOut()
+      }
+
+      resetProgressState()
+    } catch (error) {
+      console.error('Failed to reset app', error)
+      dialog.alert(
+        'Could Not Reset App',
+        'Some local data could not be cleared. Relaunch Dit and try again.',
+      )
+    }
+  }, [
+    auth,
+    clearAdditionalLocalData,
+    clearLocalProgress,
+    deleteRemoteProgress,
+    dialog,
+    isDeletingAccount,
+    platform.storage,
+    resetProgressState,
+    setShowSettings,
+    user,
+  ])
+
+  const handleResetApp = useCallback(() => {
+    if (isDeletingAccount) {
+      return
+    }
+
+    dialog.confirm(
+      'Reset App?',
+      user
+        ? 'This clears progress, settings, onboarding state, and saved local data on this device. Your synced progress is cleared too, and you will be signed out. Your account is not deleted.'
+        : 'This clears progress, settings, onboarding state, and saved local data on this device.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset App',
+          style: 'destructive',
+          onPress: () => {
+            void performAppReset()
+          },
+        },
+      ],
+    )
+  }, [dialog, isDeletingAccount, performAppReset, user])
+
   return {
     handleSignInWithApple,
     handleSignInWithGoogle,
     handleSignInWithEmail,
     handleCreateAccountWithEmail,
     handleDeleteAccount,
+    handleResetApp,
   }
 }

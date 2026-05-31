@@ -49,6 +49,7 @@ import { database } from './firebase'
 import { useAuth } from './hooks/useAuth'
 import { useCustomListenSession } from './hooks/useCustomListenSession'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
+import { clearWebResetStorage } from './platform/resetStorage'
 import { isKeyboardModality } from './utils/inputModality'
 import {
   getKeyboardMorseSymbol,
@@ -99,6 +100,7 @@ const sessionCallbacks = {
   playMorseTone,
   stopMorseTone,
   playOnboardingTone,
+  clearAdditionalLocalData: clearWebResetStorage,
 }
 
 const isEditableTarget = (target: EventTarget | null) => {
@@ -579,6 +581,10 @@ function MainApp() {
     handlers.handleDeleteAccount()
   }, [handlers])
 
+  const handleResetApp = useCallback(() => {
+    handlers.handleResetApp()
+  }, [handlers])
+
   const handleSignOut = useCallback(() => {
     void firebaseSignOut(getAuth())
   }, [])
@@ -773,6 +779,7 @@ function MainApp() {
               authReady={authReady}
               onShowSignIn={handleShowSignIn}
               onDeleteAccount={handleDeleteAccount}
+              onResetApp={handleResetApp}
               isDeletingAccount={isDeletingAccount}
               onSignOut={handleSignOut}
               practiceAutoPlay={practiceAutoPlay}

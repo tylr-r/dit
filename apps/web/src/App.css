@@ -3801,6 +3801,10 @@
   color: var(--color-text-primary-70);
 }
 
+.settings-modal-button-row--destructive .settings-modal-button-row-label {
+  color: var(--color-feedback-error);
+}
+
 .settings-modal-button-row-trailing {
   display: inline-flex;
   align-items: center;

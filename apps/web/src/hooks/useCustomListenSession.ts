@@ -84,6 +84,17 @@ const writeStorage = (text: string, workflow: CustomListenWorkflow, active: bool
   localStorage.setItem(ACTIVE_KEY, active ? 'true' : 'false')
 }
 
+export const clearCustomListenStorage = () => {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.removeItem(TEXT_KEY)
+    localStorage.removeItem(TYPEALONG_KEY)
+    localStorage.removeItem(ACTIVE_KEY)
+  } catch {
+    // Storage may be blocked; reset continues with the core storage adapter.
+  }
+}
+
 /** Manages a custom-text Listen session: phase state machine, persistence, and playback control. */
 export const useCustomListenSession = (
   options: UseCustomListenSessionOptions,

@@ -201,7 +201,7 @@ type SettingsButtonRowProps = {
   label: string
   value?: string
   helper?: string
-  variant?: 'default' | 'quiet'
+  variant?: 'default' | 'quiet' | 'destructive'
   disabled?: boolean
   trailing?: React.ReactNode
   onClick: () => void
@@ -605,6 +605,17 @@ function buildRowRenderer(
           label="Replay onboarding"
           variant="quiet"
           onClick={() => props.onReplayNux!()}
+        />
+      )
+
+    case 'reset-app':
+      return (
+        <SettingsButtonRow
+          key={rowId}
+          label="Reset App"
+          helper="Clears local progress, settings, onboarding state, and saved app data."
+          variant="destructive"
+          onClick={() => props.onResetApp()}
         />
       )
 

@@ -135,6 +135,7 @@ export {
   UNIT_TIME_MS,
   WPM_RANGE,
 } from './constants'
+export { RESET_APP_STORAGE_KEYS } from './utils/appState'
 export type { Letter } from './data/morse'
 export type {
   ActivityMode,

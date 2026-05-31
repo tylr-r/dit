@@ -25,6 +25,7 @@ export type SettingsRowId =
   | 'use-recommended'
   | 'about'
   | 'replay-nux'
+  | 'reset-app'
   | 'account-identity'
   | 'account-signout'
   | 'account-delete'
@@ -86,7 +87,7 @@ export const SETTINGS_SCHEMA: readonly SettingsSection[] = [
     rows: ['helpers-hints', 'helpers-mnemonics'],
   },
   { id: 'reminder', rows: ['daily-reminder', 'daily-reminder-time'] },
-  { id: 'app-actions', rows: ['use-recommended', 'about', 'replay-nux'] },
+  { id: 'app-actions', rows: ['use-recommended', 'about', 'replay-nux', 'reset-app'] },
   {
     id: 'account',
     title: 'Account',
@@ -117,6 +118,7 @@ export const ROW_AVAILABILITY: Readonly<
   'use-recommended': BOTH,
   'about': BOTH,
   'replay-nux': BOTH,
+  'reset-app': BOTH,
   'account-identity': BOTH,
   'account-signout': BOTH,
   'account-delete': BOTH,
