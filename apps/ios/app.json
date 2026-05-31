@@ -2,7 +2,7 @@
   "expo": {
     "name": "Dit",
     "slug": "dit-ios",
-    "version": "2026.4.22",
+    "version": "2026.5.31",
     "platforms": [
       "ios"
     ],
@@ -103,7 +103,7 @@
           }
         ]
       },
-      "buildNumber": "7",
+      "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
