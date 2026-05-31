@@ -17,6 +17,31 @@ import {
 } from '@react-native-firebase/analytics'
 import { useEffect, useRef } from 'react'
 
+let analyticsEnabledForTests: boolean | null = null
+
+const isFalsy = (value: string | undefined) =>
+  value === '0' || value === 'false' || value === 'no'
+
+export const isAnalyticsEnabled = () => {
+  if (analyticsEnabledForTests !== null) {
+    return analyticsEnabledForTests
+  }
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return false
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    return false
+  }
+
+  return !isFalsy(process.env.EXPO_PUBLIC_ANALYTICS_ENABLED)
+}
+
+export const setAnalyticsEnabledForTests = (enabled: boolean | null) => {
+  analyticsEnabledForTests = enabled
+}
+
 /**
  * iOS analytics client backed by Firebase Analytics via @react-native-firebase.
  * Uses the modular v22 API. Falls back to a no-op when the native module
@@ -27,14 +52,23 @@ const createClient = (): AnalyticsClient => {
     const instance = getAnalytics(getApp())
     return {
       logEvent: (name, ...params) => {
+        if (!isAnalyticsEnabled()) {
+          return
+        }
         // Cast name to string to avoid Firebase's CustomEventName<T> constraint,
         // which rejects names that overlap with Firebase reserved event names.
         logEvent(instance, name as string, params[0]).catch(() => {})
       },
       setUserId: (id) => {
+        if (!isAnalyticsEnabled()) {
+          return
+        }
         setUserId(instance, id).catch(() => {})
       },
       setUserProperty: (name, value) => {
+        if (!isAnalyticsEnabled()) {
+          return
+        }
         setUserProperty(instance, name, value).catch(() => {})
       },
     }
@@ -53,6 +87,10 @@ const isMode = (value: unknown): value is Mode =>
 
 /** Run `fire` exactly once per `name`, persisted via AsyncStorage. */
 export const fireOnce = (name: string, fire: () => void) => {
+  if (!isAnalyticsEnabled()) {
+    return
+  }
+
   const key = `${MILESTONE_PREFIX}${name}`
   if (firedMilestones.has(key)) {
     return
@@ -75,6 +113,10 @@ export const resetAnalyticsMilestonesForTests = () => {
 }
 
 const trackScreenView = (screen: ScreenName) => {
+  if (!isAnalyticsEnabled()) {
+    return
+  }
+
   analyticsClient.logEvent('screen_view', { screen })
   try {
     const instance = getAnalytics(getApp())
@@ -102,6 +144,10 @@ export const logAnalyticsEvent: LogAnalyticsEvent = (
   name: string,
   params?: Record<string, unknown>,
 ) => {
+  if (!isAnalyticsEnabled()) {
+    return
+  }
+
   if (name === 'mode_correct_answer') {
     if (params && isMode(params.mode)) {
       const mode = params.mode
@@ -134,6 +180,9 @@ export const useAnalyticsScreenTracker = (screen: ScreenName) => {
     trackScreenView(screen)
 
     return () => {
+      if (!isAnalyticsEnabled()) {
+        return
+      }
       analyticsClient.logEvent('screen_exit', {
         screen,
         duration_ms: Date.now() - mountedAtRef.current,
