@@ -2370,6 +2370,7 @@ export const useMorseSessionController = ({
       listenEffectiveWpm,
       listenStatus,
       listenWavePlayback,
+      status,
       scores,
       isPressing,
       tutorialTapCount,
