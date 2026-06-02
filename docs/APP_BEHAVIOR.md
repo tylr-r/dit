@@ -122,8 +122,8 @@ selected count, not the actual characters.
 - A target character is shown with its Morse pattern.
 - Input must match the target exactly.
 - On web, Space keeps the same timed press behavior as the on-screen key. On web and iOS, VBand-compatible external paddle input is also supported in the main Practice surface: left Control or `[` enters a dit, and right Control or `]` enters a dah. On iOS, the capture is disabled while sheets, modals, tour, sign-in, or Listen UI is active.
-- Correct: score +1, brief success state, next target (or next letter in the current word).
-- Incorrect: score -1 and input clears. With IFR mode on, the app advances immediately and queues misses for delayed review. With IFR mode off, the same target stays.
+- Correct: score +1, brief success state, next target (or next letter in the current word). The brief success state tints the main Practice feedback green.
+- Incorrect: score -1 and input clears. The brief error state tints the main Practice feedback red. With IFR mode on, the app advances immediately and queues misses for delayed review. With IFR mode off, the same target stays.
 - The **Play** button replays the current target's Morse tone so the user can hear before answering.
 - **Auto-play sound** (on by default) plays the target tone automatically when it appears.
 - **Sequential order** (the "learn mode" toggle, on by default) makes Practice serve letters from the start of the active set rather than weighted-random. Turning it off switches to the weighted algorithm below.
@@ -226,7 +226,7 @@ Top-bar buttons, the morse key, the Play button in Listen, and the Clear button 
 
 ## Feedback
 
-- Visual: success/error states on the main display, plus the pip row that fills in as input matches the target.
+- Visual: success/error states on the main display, plus the pip row that fills in as input matches the target. In Practice, correct answers briefly tint the target/active word letter, status text, and pips green; missed answers briefly tint the same feedback surfaces red.
 - Audio: tone on press, and playback in Listen and for the Practice Play button.
 - Haptics (iOS): dit/dah pulses mirror tone playback while keying or during Morse playback. User-toggleable in Settings.
 - Background animation pauses when the device is in Low Power Mode or the user has been idle, so the app doesn't cook the battery while sitting on a desk.

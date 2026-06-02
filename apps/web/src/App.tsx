@@ -184,6 +184,7 @@ function MainApp() {
     practiceIfrMode,
     practiceReviewMisses,
     listenTtr,
+    status,
   } = state
   const {
     isFreestyle,
@@ -673,6 +674,7 @@ function MainApp() {
   const freestyleStatusText = isFreestyle ? statusText : ''
   const listenStatusText = isListen ? statusText : ''
   const practiceStatusText = !isFreestyle && !isListen ? statusText : ''
+  const appStatus = isFreestyle || isListen ? 'idle' : status
 
   const userLabel = user
     ? (user.displayName ?? user.email ?? 'Signed in')
@@ -698,7 +700,7 @@ function MainApp() {
 
   return (
     <div
-      className={`app status-idle mode-${mode}${
+      className={`app status-${appStatus} mode-${mode}${
         isListen ? ' listen-focused' : ''
       }${isNuxActive ? ' nux-active' : ''}${
         isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''

@@ -22,6 +22,7 @@
 - Component files use `PascalCase.tsx`; hooks follow the `useThing` naming convention.
 - Reference `docs/APP_BEHAVIOR.md` when changing app logic or flows to keep behavior consistent across platforms.
 - Reference `docs/PLATFORM_PARITY.md` for the current iOS vs web feature delta and intentional differences. Update it when you close (or open) a gap.
+- Reference `docs/DECISIONS.md` for durable product decisions that future agents should preserve.
 - Reference `DESIGN.md` before making UI, motion, or onboarding changes — it's the canonical source for visual/interaction direction and notes what we've tried and removed.
 
 ## Testing Guidelines
@@ -32,10 +33,11 @@
 
 ## Documentation
 
-- Keep `docs/APP_BEHAVIOR.md`, `docs/PLATFORM_PARITY.md`, and `DESIGN.md` up to date as you make changes. These are the canonical references for behavior, parity, and design decisions — outdated docs mislead future work.
+- Keep `docs/APP_BEHAVIOR.md`, `docs/PLATFORM_PARITY.md`, `docs/DECISIONS.md`, and `DESIGN.md` up to date as you make changes. These are the canonical references for behavior, parity, durable product decisions, and design direction — outdated docs mislead future work.
 - When closing or opening a platform parity gap, update `docs/PLATFORM_PARITY.md`.
 - When adding, changing, or removing a behavior or flow, update `docs/APP_BEHAVIOR.md`.
-- When making a product intention, UI or interaction decision (including things tried and removed), update `DESIGN.md`.
+- When making an explicit product decision that future work should preserve, add a concise entry to `docs/DECISIONS.md`. This is for product intent and rationale, not a copy of git history or every implementation change.
+- When making a UI, motion, or interaction design direction change (including things tried and removed), update `DESIGN.md`.
 
 ## Commit & Pull Request Guidelines
 

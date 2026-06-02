@@ -3,8 +3,9 @@
 <!-- TODO: remove arbritrary values unless platform/views are specified -->
 
 Canonical design reference for Dit. Covers visual, motion, and interaction
-decisions only — implementation, architecture, and app behavior live
-elsewhere (`CLAUDE.md`, `docs/APP_BEHAVIOR.md`, `docs/STYLE_GUIDE.md`).
+direction only — durable product decisions, implementation, architecture, and
+app behavior live elsewhere (`docs/DECISIONS.md`, `CLAUDE.md`,
+`docs/APP_BEHAVIOR.md`, `docs/STYLE_GUIDE.md`).
 
 Token source of truth:
 
