@@ -30,8 +30,16 @@
 - Unit test files use `*.test.ts` or `*.test.tsx` naming.
 - Playwright e2e tests live in `apps/web/tests/e2e` and use `*.spec.ts`.
 
+## Documentation
+
+- Keep `docs/APP_BEHAVIOR.md`, `docs/PLATFORM_PARITY.md`, and `DESIGN.md` up to date as you make changes. These are the canonical references for behavior, parity, and design decisions — outdated docs mislead future work.
+- When closing or opening a platform parity gap, update `docs/PLATFORM_PARITY.md`.
+- When adding, changing, or removing a behavior or flow, update `docs/APP_BEHAVIOR.md`.
+- When making a product intention, UI or interaction decision (including things tried and removed), update `DESIGN.md`.
+
 ## Commit & Pull Request Guidelines
 
-- Commit messages are short, imperative summaries (e.g., “Add iOS modes and reference grid”) with concise sub notes of important changes.
+- Commit messages are short, imperative summaries (e.g., “Add iOS modes and reference grid”) with concise sub notes of important changes. This should be human-readable and explain the “what” and “why” of the change, not the “how” (the code should show that).
+- Group related changes into a single commit rather than committing after every edit. Wait to commit until you have a logical chunk of work that represents a single change or feature.
 - PRs should include a clear description, testing notes, and linked issues.
 - Include screenshots or screen recordings for UI changes in web or iOS.
