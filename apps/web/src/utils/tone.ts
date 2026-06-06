@@ -19,6 +19,47 @@ let holdGain: GainNode | null = null
 let morseNodes: { oscillator: OscillatorNode; gain: GainNode } | null = null
 let graphWarmed = false
 let playbackAudioStartTime: number | null = null
+let userActivationWarmupRegistered = false
+let contextResumePromise: Promise<void> | null = null
+// A quick first tap can release before Chrome has finished waking Web Audio.
+// In that case, keep the hold tone alive briefly after resume so it is audible.
+let pendingSuspendedHoldStop = false
+let suspendedHoldStopTimeout: ReturnType<typeof globalThis.setTimeout> | null = null
+
+const hasUserActivatedPage = () =>
+  typeof navigator === 'undefined' ||
+  !('userActivation' in navigator) ||
+  navigator.userActivation.hasBeenActive
+
+const warmPreparedToneEngine = async () => {
+  const context = await ensureContext()
+  if (context) {
+    warmAudioGraph(context)
+  }
+}
+
+const registerUserActivationWarmup = () => {
+  if (userActivationWarmupRegistered || typeof window === 'undefined') {
+    return
+  }
+  userActivationWarmupRegistered = true
+  const options: AddEventListenerOptions = { capture: true, once: true, passive: true }
+  const removeListeners = () => {
+    window.removeEventListener('pointerdown', handleActivation, options)
+    window.removeEventListener('keydown', handleActivation, options)
+    window.removeEventListener('touchstart', handleActivation, options)
+  }
+  const handleActivation = () => {
+    userActivationWarmupRegistered = false
+    removeListeners()
+    if (hasUserActivatedPage()) {
+      void warmPreparedToneEngine()
+    }
+  }
+  window.addEventListener('pointerdown', handleActivation, options)
+  window.addEventListener('keydown', handleActivation, options)
+  window.addEventListener('touchstart', handleActivation, options)
+}
 
 // Bumped every time a play is requested or an external stop happens. A pending
 // playMorseTone that's still waiting on AudioContext.resume() (page-load
@@ -41,25 +82,60 @@ const cleanupMorseNodes = () => {
   nodes.gain.disconnect()
 }
 
-const ensureContext = async (): Promise<AudioContext | null> => {
+const cleanupHoldNodes = (oscillator: OscillatorNode, gain: GainNode) => {
+  try {
+    oscillator.stop()
+  } catch {
+    // Already stopped.
+  }
+  oscillator.disconnect()
+  gain.disconnect()
+}
+
+const clearSuspendedHoldStopTimeout = () => {
+  if (suspendedHoldStopTimeout === null) {
+    return
+  }
+  globalThis.clearTimeout(suspendedHoldStopTimeout)
+  suspendedHoldStopTimeout = null
+}
+
+const getOrCreateContext = (): AudioContext | null => {
   if (!contextRef) {
     contextRef = createAudioContext()
-  }
-  if (!contextRef) {
-    return null
-  }
-  if (contextRef.state === 'suspended') {
-    try {
-      await contextRef.resume()
-    } catch {
-      return null
-    }
   }
   return contextRef
 }
 
+const resumeContext = (context: AudioContext) => {
+  if (context.state !== 'suspended') {
+    return Promise.resolve()
+  }
+  if (!contextResumePromise) {
+    contextResumePromise = context
+      .resume()
+      .finally(() => {
+        contextResumePromise = null
+      })
+  }
+  return contextResumePromise
+}
+
+const ensureContext = async (): Promise<AudioContext | null> => {
+  const context = getOrCreateContext()
+  if (!context) {
+    return null
+  }
+  try {
+    await resumeContext(context)
+  } catch {
+    return null
+  }
+  return context
+}
+
 const warmAudioGraph = (context: AudioContext) => {
-  if (graphWarmed) {
+  if (graphWarmed || holdOscillator) {
     return
   }
   graphWarmed = true
@@ -122,29 +198,71 @@ const scheduleEnvelope = (
 }
 
 export const prepareToneEngine = async () => {
-  const context = await ensureContext()
-  if (context) {
-    warmAudioGraph(context)
+  if (!hasUserActivatedPage()) {
+    registerUserActivationWarmup()
+    return
   }
+  await warmPreparedToneEngine()
 }
 
 export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
-  const context = await ensureContext()
-  if (!context || holdOscillator) {
+  const context = getOrCreateContext()
+  if (!context) {
     return
   }
+  if (holdOscillator) {
+    const canReplaceHold =
+      pendingSuspendedHoldStop || suspendedHoldStopTimeout !== null
+    if (!canReplaceHold) {
+      return
+    }
+    const staleOscillator = holdOscillator
+    const staleGain = holdGain
+    clearSuspendedHoldStopTimeout()
+    pendingSuspendedHoldStop = false
+    holdOscillator = null
+    holdGain = null
+    if (staleGain) {
+      cleanupHoldNodes(staleOscillator, staleGain)
+    }
+  }
+  const wasSuspended = context.state === 'suspended'
+  const resumePromise = resumeContext(context)
   const resolvedFrequency = frequency ?? AUDIO_FREQUENCY
   const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   const startTime = context.currentTime
+  pendingSuspendedHoldStop = false
   gain.gain.setValueAtTime(0, startTime)
   gain.gain.linearRampToValueAtTime(resolvedVolume, startTime + 0.005)
   oscillator.start(startTime)
   holdOscillator = oscillator
   holdGain = gain
+  void resumePromise
+    .then(() => {
+      if (!wasSuspended || holdOscillator !== oscillator || !pendingSuspendedHoldStop) {
+        return
+      }
+      pendingSuspendedHoldStop = false
+      suspendedHoldStopTimeout = globalThis.setTimeout(() => {
+        suspendedHoldStopTimeout = null
+        if (holdOscillator === oscillator) {
+          void stopTone()
+        }
+      }, 60)
+    })
+    .catch(() => {
+      if (holdOscillator === oscillator) {
+        holdOscillator = null
+        holdGain = null
+        oscillator.disconnect()
+        gain.disconnect()
+      }
+    })
 }
 
 export const stopTone = async () => {
+  clearSuspendedHoldStopTimeout()
   const context = contextRef
   const oscillator = holdOscillator
   const gain = holdGain
@@ -153,6 +271,11 @@ export const stopTone = async () => {
     holdGain = null
     return
   }
+  if (context.state === 'suspended' || contextResumePromise) {
+    pendingSuspendedHoldStop = true
+    return
+  }
+  pendingSuspendedHoldStop = false
   const endTime = context.currentTime + 0.01
   gain.gain.cancelScheduledValues(context.currentTime)
   gain.gain.setValueAtTime(gain.gain.value, context.currentTime)
