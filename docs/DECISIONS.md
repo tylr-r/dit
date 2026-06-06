@@ -11,6 +11,12 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-04: Web key sidetone must survive cold audio wake-up.** The first
+  Morse key press after a refresh should feel as immediate as later presses.
+  Browser audio startup is not a reason to drop or truncate that first keyed
+  tone; preserve the first audible sidetone through Web Audio resume instead of
+  optimizing only the already-warm path.
+
 - **2026-06-02: Practice correctness feedback stays color-coded.** Correct
   answers briefly tint the Practice display with `feedback.success`; missed
   answers briefly tint it with `feedback.error`. This applies to the status

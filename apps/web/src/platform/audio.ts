@@ -24,5 +24,5 @@ export const createAudioContext = (): AudioContext | null => {
   if (!constructor) {
     return null
   }
-  return new constructor()
+  return new constructor({ latencyHint: 'interactive' })
 }

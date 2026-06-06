@@ -5,6 +5,11 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 ## Core input
 
 - Tap the big Morse button for dit, hold longer (dit threshold) for dah.
+- The keyed tone should start immediately on press, including the first press
+  after a page refresh or app launch. On web, the first post-refresh key press
+  may happen while Chrome is still resuming Web Audio; Dit preserves that first
+  sidetone long enough to be audible instead of letting a quick release cancel
+  it before the audio context wakes up.
 - Practice and Freestyle build input from dit/dah sequences.
 - A short pause submits the current Freestyle sequence or commits the current Practice attempt.
 
