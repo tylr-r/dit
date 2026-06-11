@@ -1,7 +1,11 @@
 import {
   classifyLetter,
+  computeReferenceScoreMaxDeviation,
+  computeReferenceScoreMedian,
   getAverageRecognitionMs,
   getRecognitionFillRatio,
+  getReferenceRelativeScoreTint,
+  REFERENCE_RELATIVE_TINT_MIN_DEVIATION,
   STREAK_DAILY_GOAL,
   type Letter,
 } from '@dit/core'
@@ -10,22 +14,9 @@ import { useScreenTracker } from '../lib/analytics'
 import type { ReferenceModalProps } from './componentProps'
 
 const LONG_PRESS_MS = 350
-const SCORE_TINT_MAX_ALPHA = 0.18
-// Need at least this much spread across mastered scores before showing
-// relative tints — small spreads make the "best vs worst" signal noisy.
-const RELATIVE_TINT_MIN_DEVIATION = 3
 // Mastered tiles always show at least this much bar fill, so a letter mastered
 // via Practice (no Listen TTR yet) doesn't read identically to "very slow."
 const MASTERED_MIN_FILL = 0.05
-
-const computeMedian = (values: number[]): number => {
-  if (values.length === 0) return 0
-  const sorted = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 1
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2
-}
 
 const getRelativeTintStyle = (
   scoreValue: number,
@@ -34,15 +25,11 @@ const getRelativeTintStyle = (
   maxDeviation: number,
 ): CSSProperties | undefined => {
   if (status !== 'mastered') return undefined
-  if (maxDeviation < RELATIVE_TINT_MIN_DEVIATION) return undefined
-  const relative = (scoreValue - medianScore) / maxDeviation
-  const intensity = Math.abs(relative)
-  if (intensity < 0.1) return undefined
-  const alpha = SCORE_TINT_MAX_ALPHA * intensity
-  const tint = relative > 0 ? '56, 242, 162' : '255, 90, 96'
+  const tint = getReferenceRelativeScoreTint(scoreValue, medianScore, maxDeviation)
+  if (!tint) return undefined
   return {
-    '--score-tint': tint,
-    '--score-alpha': String(alpha),
+    '--score-tint': `${tint.red}, ${tint.green}, ${tint.blue}`,
+    '--score-alpha': String(tint.alpha),
   } as CSSProperties
 }
 
@@ -95,10 +82,10 @@ export function ReferenceModal({
   const avgRecognitionMs = getAverageRecognitionMs(progressForClassify, listenTtr)
 
   const masteredScores = mastered.map((c) => scores[c] ?? 0)
-  const masteredScoreMedian = computeMedian(masteredScores)
-  const masteredScoreMaxDeviation = masteredScores.reduce(
-    (max, s) => Math.max(max, Math.abs(s - masteredScoreMedian)),
-    0,
+  const masteredScoreMedian = computeReferenceScoreMedian(masteredScores)
+  const masteredScoreMaxDeviation = computeReferenceScoreMaxDeviation(
+    masteredScores,
+    masteredScoreMedian,
   )
 
   const masteredCount = hero.kind === 'mastered' ? hero.count : mastered.length
@@ -215,7 +202,7 @@ export function ReferenceModal({
         : 0
     const showScore =
       status === 'mastered' &&
-      masteredScoreMaxDeviation >= RELATIVE_TINT_MIN_DEVIATION
+      masteredScoreMaxDeviation >= REFERENCE_RELATIVE_TINT_MIN_DEVIATION
     const inner = (
       <>
         {showScore ? (
