@@ -130,6 +130,7 @@ function MainApp() {
   const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const isPressingRef = useRef(false)
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [signInFromSettings, setSignInFromSettings] = useState(false)
 
   const session = useMorseSessionController({
     user,
@@ -186,6 +187,7 @@ function MainApp() {
     practiceWpmText,
     listenTtrText,
     guidedCurrentPack,
+    canRequestOneTimeHint,
   } = derived
 
   useEffect(() => {
@@ -232,6 +234,15 @@ function MainApp() {
   useEffect(() => {
     analytics.setUserId(user?.uid ?? null)
   }, [user])
+
+  useEffect(() => {
+    if (!showSignIn || !signInFromSettings || !user) {
+      return
+    }
+    setShowSignIn(false)
+    setSignInFromSettings(false)
+    setShowSettings(true)
+  }, [showSignIn, signInFromSettings, user])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -453,6 +464,16 @@ function MainApp() {
         handlers.handleModeChange('practice')
         return
       }
+      if (
+        !isFreestyle &&
+        !isListen &&
+        key === 'n' &&
+        canRequestOneTimeHint
+      ) {
+        event.preventDefault()
+        handlers.handleRequestOneTimeHint()
+        return
+      }
       if (isFreestyle && key === 'n') {
         event.preventDefault()
         handlers.handleFreestyleClear()
@@ -492,7 +513,7 @@ function MainApp() {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [handlers, isFreestyle, isListen, showReference])
+  }, [canRequestOneTimeHint, handlers, isFreestyle, isListen, showReference])
 
   const handleShowReference = useCallback(() => {
     setShowSettings(false)
@@ -543,8 +564,30 @@ function MainApp() {
   }, [listenEffectiveWpm, listenWpm, soundCheckStatus, toneFrequency])
 
   const handleShowSignIn = useCallback(() => {
+    setSignInFromSettings(false)
     setShowSignIn(true)
   }, [])
+
+  const handleRequestSignInFromSettings = useCallback(() => {
+    setters.flushPendingSave()
+    setShowSettings(false)
+    setSignInFromSettings(true)
+    requestAnimationFrame(() => setShowSignIn(true))
+  }, [setters])
+
+  const handleRequestLearningFromSettings = useCallback(() => {
+    setters.flushPendingSave()
+    setShowSettings(false)
+    requestAnimationFrame(() => setShowLearning(true))
+  }, [setters])
+
+  const handleCloseSignIn = useCallback(() => {
+    setShowSignIn(false)
+    if (signInFromSettings && user) {
+      setShowSettings(true)
+    }
+    setSignInFromSettings(false)
+  }, [signInFromSettings, user])
 
   const handleSignInWithApple = useCallback(async () => {
     await handlers.handleSignInWithApple()
@@ -725,7 +768,10 @@ function MainApp() {
             ref={settingsButtonRef}
             type="button"
             className="settings-button"
-            onClick={() => setShowSettings((prev) => !prev)}
+            onClick={() => {
+              onboarding.dismissSettingsHint()
+              setShowSettings((prev) => !prev)
+            }}
             aria-expanded={showSettings}
             aria-controls="settings-panel"
             aria-label="Settings"
@@ -748,7 +794,7 @@ function MainApp() {
               isFreestyle={isFreestyle}
               isListen={isListen}
               isPractice={mode === 'practice'}
-              onShowLearning={() => setShowLearning(true)}
+              onShowLearning={handleRequestLearningFromSettings}
               practiceWordMode={practiceWordMode}
               onPracticeWordModeChange={(next) => handlers.handlePracticeWordModeChange(next)}
               listenWpm={listenWpm}
@@ -769,7 +815,7 @@ function MainApp() {
               userLabel={userLabel}
               userInitial={userInitial}
               authReady={authReady}
-              onShowSignIn={handleShowSignIn}
+              onShowSignIn={handleRequestSignInFromSettings}
               onDeleteAccount={handleDeleteAccount}
               onResetApp={handleResetApp}
               isDeletingAccount={isDeletingAccount}
@@ -885,18 +931,35 @@ function MainApp() {
             onUseCustom={() => setShowCustomTextSheet(true)}
           />
         ) : (
-          <MorseButton
-            buttonRef={morseButtonRef}
-            isPressing={isPressing}
-            onPointerDown={handleButtonPointerDown}
-            onPointerUp={handleButtonPointerEnd}
-            onPointerCancel={handleButtonPointerEnd}
-            onPointerLeave={handleButtonPointerEnd}
-            onKeyDown={handleButtonKeyDown}
-            onKeyUp={handleButtonKeyUp}
-            onBlur={handleButtonPointerEnd}
-            showShortcutHint={!useCustomKeyboard}
-          />
+          <>
+            {canRequestOneTimeHint ? (
+              <Tooltip
+                label="Show pattern for this letter once"
+                shortcut={useCustomKeyboard ? undefined : 'N'}
+                placement="top"
+              >
+                <button
+                  type="button"
+                  className="hint-button submit-button"
+                  onClick={handlers.handleRequestOneTimeHint}
+                >
+                  Show this hint
+                </button>
+              </Tooltip>
+            ) : null}
+            <MorseButton
+              buttonRef={morseButtonRef}
+              isPressing={isPressing}
+              onPointerDown={handleButtonPointerDown}
+              onPointerUp={handleButtonPointerEnd}
+              onPointerCancel={handleButtonPointerEnd}
+              onPointerLeave={handleButtonPointerEnd}
+              onKeyDown={handleButtonKeyDown}
+              onKeyUp={handleButtonKeyUp}
+              onBlur={handleButtonPointerEnd}
+              showShortcutHint={!useCustomKeyboard}
+            />
+          </>
         )}
       </div>
       {showReference ? (
@@ -958,7 +1021,7 @@ function MainApp() {
       ) : null}
       {showSignIn ? (
         <SignInSheet
-          onClose={() => setShowSignIn(false)}
+          onClose={handleCloseSignIn}
           onSignInWithApple={handleSignInWithApple}
           onSignInWithGoogle={handleSignInWithGoogle}
           onSignInWithEmail={handleSignInWithEmail}
