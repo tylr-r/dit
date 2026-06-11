@@ -256,7 +256,7 @@ Top-bar buttons, the morse key, the Play button in Listen, and the Clear button 
 
 - The Reference modal shows letters, numbers, and their Morse patterns.
 - Scores tint each card to highlight strengths and weaknesses.
-- iOS also shows the hero metric, current streak, today's correct count, and, when the guided course is active, the current pack, phase, and pack letters. Tapping a card plays that character at the reference WPM.
+- iOS also shows the hero metric, current streak, today's correct count, and, when the guided course is active, the current pack, phase, and pack letters. Tapping a card plays that character at the current playback letter speed from Settings.
 
 ## Reminders and widget (iOS)
 

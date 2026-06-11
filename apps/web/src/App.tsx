@@ -33,7 +33,6 @@ import {
   MORSE_DATA,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
-  REFERENCE_WPM,
   TONE_FREQUENCY_RANGE,
   computeHero,
   createGuidedLessonProgress,
@@ -166,6 +165,7 @@ function MainApp() {
     practiceWordIndex,
     listenStatus,
     listenWpm,
+    listenEffectiveWpm,
     toneFrequency,
     scores,
     isPressing,
@@ -599,13 +599,13 @@ function MainApp() {
     (char: Letter) => {
       void playMorseTone({
         code: MORSE_DATA[char].code,
-        characterWpm: REFERENCE_WPM,
-        effectiveWpm: REFERENCE_WPM,
+        characterWpm: listenWpm,
+        effectiveWpm: listenEffectiveWpm ?? listenWpm,
         minUnitMs: LISTEN_MIN_UNIT_MS,
         frequency: toneFrequency,
       })
     },
-    [toneFrequency],
+    [listenEffectiveWpm, listenWpm, toneFrequency],
   )
 
   const pointerPressActiveRef = useRef(false)

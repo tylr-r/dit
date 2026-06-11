@@ -60,7 +60,6 @@ export const GUIDED_TEACH_SUCCESS_COPY = [
   'Nailed it 🎯',
 ] as const
 export const LISTEN_MAX_CONSECUTIVE_SAME = 3
-export const REFERENCE_WPM = 20
 export const PROGRESS_SAVE_DEBOUNCE_MS = DEBOUNCE_DELAY
 export const INTRO_HINTS_KEY = 'dit-intro-hint-step'
 export const LEGACY_INTRO_HINTS_KEY = 'dit-intro-hints-dismissed'
