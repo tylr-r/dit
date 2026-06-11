@@ -17,7 +17,6 @@ export type ExternalMorseKeyEvent = {
 }
 
 export type DitNativeModule = {
-  getHello?: () => string
   getLowPowerModeEnabled?: () => boolean | Promise<boolean>
   setExternalMorseKeyCaptureEnabled?: (
     enabled: boolean
@@ -77,10 +76,6 @@ const isExternalMorseKeyEvent = (event: ExternalMorseKeyEvent) => {
     (event.symbol === '.' || event.symbol === '-') &&
     (event.phase === 'down' || event.phase === 'up')
   )
-}
-
-export const getHello = () => {
-  return DitNative?.getHello?.() ?? 'Dit native module not available'
 }
 
 export const getLowPowerModeEnabled = async () => {

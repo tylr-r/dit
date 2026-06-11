@@ -7,19 +7,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
+import type { PhaseModalContent } from '@dit/core'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
 import { ModalShell } from './ModalShell'
 import { BEZIER, TIMING } from './nux/animationTokens'
 
 const EASE_OUT = Easing.bezier(...BEZIER.out)
-
-export type PhaseModalContent = {
-  title: string
-  subtitle?: string
-  letters?: readonly string[]
-  buttonText?: string
-}
 
 type PhaseModalProps = {
   content: PhaseModalContent
