@@ -1,5 +1,6 @@
 import {
   AUDIO_FREQUENCY,
+  DEFAULT_CHARACTER_WPM,
   getFarnsworthUnitMs,
   getListenUnitMs,
   resolveToneVolume,
@@ -37,7 +38,7 @@ export async function stopTone() {
 
 export async function playMorseTone({
   code,
-  characterWpm = 20,
+  characterWpm = DEFAULT_CHARACTER_WPM,
   effectiveWpm,
   minUnitMs = 40,
   frequency,

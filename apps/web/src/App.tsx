@@ -26,7 +26,7 @@ import { StageDisplay } from './components/StageDisplay'
 import { Tooltip } from './components/Tooltip'
 import {
   BEGINNER_COURSE_PACKS,
-  DEFAULT_CHARACTER_WPM,
+  buildPlaybackToneRequest,
   LISTEN_MIN_UNIT_MS,
   LISTEN_WPM_MAX,
   LISTEN_WPM_MIN,
@@ -67,15 +67,6 @@ import {
 import { analytics, logEvent as trackEvent, useScreenTracker } from './lib/analytics'
 import { useNuxStepTracker } from '@dit/core'
 
-const playOnboardingTone = (symbol: '.' | '-') => {
-  void playMorseTone({
-    code: symbol,
-    characterWpm: DEFAULT_CHARACTER_WPM,
-    effectiveWpm: DEFAULT_CHARACTER_WPM,
-    minUnitMs: LISTEN_MIN_UNIT_MS,
-  })
-}
-
 const ensureNotificationPermission = async () => {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return false
@@ -98,7 +89,6 @@ const sessionCallbacks = {
   stopTone,
   playMorseTone,
   stopMorseTone,
-  playOnboardingTone,
   clearAdditionalLocalData: clearWebResetStorage,
 }
 
@@ -540,17 +530,17 @@ function MainApp() {
     trackEvent('sound_check')
     setSoundCheckStatus('playing')
     try {
-      await playMorseTone({
-        code: '-',
-        characterWpm: DEFAULT_CHARACTER_WPM,
-        effectiveWpm: DEFAULT_CHARACTER_WPM,
-        minUnitMs: LISTEN_MIN_UNIT_MS,
-        frequency: toneFrequency,
-      })
+      await playMorseTone(
+        buildPlaybackToneRequest('-', {
+          listenWpm,
+          listenEffectiveWpm,
+          toneFrequency,
+        }),
+      )
     } finally {
       window.setTimeout(() => setSoundCheckStatus('idle'), 600)
     }
-  }, [soundCheckStatus, toneFrequency])
+  }, [listenEffectiveWpm, listenWpm, soundCheckStatus, toneFrequency])
 
   const handleShowSignIn = useCallback(() => {
     setShowSignIn(true)
@@ -597,13 +587,13 @@ function MainApp() {
 
   const handlePlayReferenceCharacter = useCallback(
     (char: Letter) => {
-      void playMorseTone({
-        code: MORSE_DATA[char].code,
-        characterWpm: listenWpm,
-        effectiveWpm: listenEffectiveWpm ?? listenWpm,
-        minUnitMs: LISTEN_MIN_UNIT_MS,
-        frequency: toneFrequency,
-      })
+      void playMorseTone(
+        buildPlaybackToneRequest(MORSE_DATA[char].code, {
+          listenWpm,
+          listenEffectiveWpm,
+          toneFrequency,
+        }),
+      )
     },
     [listenEffectiveWpm, listenWpm, toneFrequency],
   )

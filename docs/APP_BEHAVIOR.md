@@ -195,8 +195,8 @@ Toggles and controls available across both platforms unless noted.
 - Sequential order (Practice)
 - IFR mode, aka Immediate flow recovery
 - Review misses later
-- Listen speed (WPM). Dit length in ms = 1200 / WPM.
-- Tone frequency
+- Listen speed (WPM). Dit length in ms = 1200 / WPM. Applies to every Dit-initiated playback, including reference chart taps and the Settings sound check.
+- Tone frequency. Applies to the same Dit-initiated playback surfaces as listen speed.
 - Haptics (iOS): toggles the dit/dah CoreHaptics pulses that mirror tone playback. On by default.
 - Sound check
 - Reference chart modal

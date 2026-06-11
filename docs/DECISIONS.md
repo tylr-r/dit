@@ -11,6 +11,12 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-11: Global playback settings apply to every Dit-initiated tone.**
+  Playback letter speed and tone frequency from Settings are used for Listen, Practice
+  auto-play, reference chart taps, Settings sound check (web), and NUX sound check.
+  Use `buildPlaybackToneRequest` in `@dit/core` for ad-hoc playback outside the session
+  controller; do not hardcode WPM or frequency for these surfaces.
+
 - **2026-06-11: Morse tone volume lives in `@dit/core`.** Default playback amplitude is
   `AUDIO_VOLUME` (0.75), capped at `AUDIO_VOLUME_MAX` (0.9) via `resolveToneVolume`.
   Both web and iOS tone wrappers must use that helper — do not reintroduce per-platform
