@@ -1,5 +1,6 @@
 import { onAuthStateChanged, signOut, type User } from '@firebase/auth'
 import { useEffect, useState } from 'react'
+import { analyticsClient } from '../analytics'
 import { auth } from '../firebase'
 
 const DELETED_ACCOUNT_CODES = new Set([
@@ -25,6 +26,7 @@ export const useAuth = () => {
       auth,
       (user) => {
         setUser(user)
+        void analyticsClient.setUserId(user?.uid ?? null)
         if (initializing) setInitializing(false)
       },
       (error) => {
