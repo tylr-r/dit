@@ -119,6 +119,8 @@ private final class ToneGenerator {
   private let attackRampDurationSeconds: Double = 0.004
   private let releaseRampDurationSeconds: Double = 0.002
   private let preferredIOBufferDurationSeconds: TimeInterval = 0.0029
+  /// Keep in sync with AUDIO_VOLUME_MAX in @dit/core.
+  private let maxToneVolume: Float = 0.9
 
   private func withLock<T>(_ body: () -> T) -> T {
     os_unfair_lock_lock(&stateLock)
@@ -129,7 +131,9 @@ private final class ToneGenerator {
   private func configureSession() {
     let session = AVAudioSession.sharedInstance()
     do {
-      try session.setCategory(.playback, options: [.mixWithOthers])
+      // Exclusive playback so Morse tones stay audible at normal system volume.
+      // Volume amplitude is clamped in @dit/core before reaching native code.
+      try session.setCategory(.playback)
       // Keep realtime key-up/key-down sidetone control tighter by requesting a small I/O buffer.
       try session.setPreferredIOBufferDuration(preferredIOBufferDurationSeconds)
       try session.setActive(true)
@@ -237,7 +241,7 @@ private final class ToneGenerator {
       return false
     }
     configureSession()
-    let clampedVolume = Float(max(0, min(volume, 1)))
+    let clampedVolume = Float(max(0, min(volume, Double(maxToneVolume))))
     withLock {
       self.frequency = frequency
       self.targetAmplitude = clampedVolume
@@ -346,7 +350,7 @@ private final class ToneGenerator {
     guard let channelData = buffer.floatChannelData?[0] else {
       return false
     }
-    let clampedVolume = Float(max(0, min(volume, 1)))
+    let clampedVolume = Float(max(0, min(volume, Double(maxToneVolume))))
     let phaseIncrement = Float(2.0 * Double.pi * frequency / sampleRate)
     let fadeFrames = max(1, Int(sampleRate * 0.003))
     var frameIndex = 0

@@ -8,7 +8,10 @@ export const TONE_FREQUENCY_RANGE = {
   max: 800,
   step: 20,
 } as const
-export const AUDIO_VOLUME = 0.06
+/** Default Morse sidetone / Listen playback level (0–1 sine amplitude). */
+export const AUDIO_VOLUME = 0.75
+/** Upper cap keeps pure tones loud enough to practice with but below harsh clipping. */
+export const AUDIO_VOLUME_MAX = 0.9
 export const DEBOUNCE_DELAY = 800
 export const DEFAULT_CHARACTER_WPM = 12
 export const DEFAULT_EFFECTIVE_WPM = 8

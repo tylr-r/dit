@@ -1,8 +1,8 @@
 import {
   AUDIO_FREQUENCY,
-  AUDIO_VOLUME,
   getFarnsworthUnitMs,
   getListenUnitMs,
+  resolveToneVolume,
 } from '@dit/core'
 import { createAudioContext } from '../platform/audio'
 
@@ -10,8 +10,6 @@ type ToneDefaults = {
   frequency?: number
   volume?: number
 }
-
-const clampVolume = (value: number) => Math.min(1, Math.max(0.4, value))
 
 let contextRef: AudioContext | null = null
 let holdOscillator: OscillatorNode | null = null
@@ -229,7 +227,7 @@ export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
   const wasSuspended = context.state === 'suspended'
   const resumePromise = resumeContext(context)
   const resolvedFrequency = frequency ?? AUDIO_FREQUENCY
-  const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
+  const resolvedVolume = resolveToneVolume(volume)
   const { oscillator, gain } = createToneNodes(context, resolvedFrequency, 0)
   const startTime = context.currentTime
   pendingSuspendedHoldStop = false
@@ -311,7 +309,7 @@ export const playMorseTone = async ({
   }
   cleanupMorseNodes()
   const resolvedFrequency = frequency ?? AUDIO_FREQUENCY
-  const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
+  const resolvedVolume = resolveToneVolume(volume)
   const characterUnitMs = getListenUnitMs(characterWpm, minUnitMs)
   const resolvedEffectiveWpm = Math.min(characterWpm, effectiveWpm ?? characterWpm)
   const farnsworthUnitMs = getFarnsworthUnitMs(

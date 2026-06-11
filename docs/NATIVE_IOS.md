@@ -15,7 +15,7 @@ Three things that RN libraries can't do well:
 
 Everything is one Expo module named `DitNative` defined in [modules/dit-native/ios/DitNativeModule.swift](../modules/dit-native/ios/DitNativeModule.swift). Exported via [modules/dit-native/src/index.ts](../modules/dit-native/src/index.ts).
 
-Audio (Morse sequencing drives haptics on the same timeline; the haptic engine has its own gate so users can mute vibration without losing the tone):
+Audio (Morse sequencing drives haptics on the same timeline; the haptic engine has its own gate so users can mute vibration without losing the tone). Default tone amplitude is `AUDIO_VOLUME` in `@dit/core`, clamped by `resolveToneVolume` before native calls:
 - `prepareToneEngine()` — warm up `AVAudioEngine` before the first user tap
 - `startTone(frequency, volume)` / `stopTone()` — continuous tone for key-down input; key-down also starts a continuous CoreHaptics player
 - `playTone(frequency, durationMs, volume)` — one-shot for Listen mode

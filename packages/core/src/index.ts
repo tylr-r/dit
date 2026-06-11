@@ -130,6 +130,7 @@ export type {
 export {
   AUDIO_FREQUENCY,
   AUDIO_VOLUME,
+  AUDIO_VOLUME_MAX,
   DASH_THRESHOLD,
   DEBOUNCE_DELAY,
   DEFAULT_CHARACTER_WPM,
@@ -141,6 +142,7 @@ export {
   UNIT_TIME_MS,
   WPM_RANGE,
 } from './constants'
+export { resolveToneVolume } from './utils/audio'
 export { RESET_APP_STORAGE_KEYS } from './utils/appState'
 export type { Letter } from './data/morse'
 export type {

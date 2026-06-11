@@ -1,8 +1,8 @@
 import {
   AUDIO_FREQUENCY,
-  AUDIO_VOLUME,
   getFarnsworthUnitMs,
   getListenUnitMs,
+  resolveToneVolume,
 } from '@dit/core'
 import { requireNativeModule } from 'expo-modules-core'
 
@@ -12,8 +12,6 @@ type ToneDefaults = {
   frequency?: number
   volume?: number
 }
-
-const clampVolume = (value: number) => Math.min(1, Math.max(0.4, value))
 
 export async function prepareToneEngine() {
   return DitNative.prepareToneEngine()
@@ -27,8 +25,10 @@ export async function setHapticsEnabled(enabled: boolean) {
 }
 
 export async function startTone({ frequency, volume }: ToneDefaults = {}) {
-  const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
-  return DitNative.startTone(frequency ?? AUDIO_FREQUENCY, resolvedVolume)
+  return DitNative.startTone(
+    frequency ?? AUDIO_FREQUENCY,
+    resolveToneVolume(volume),
+  )
 }
 
 export async function stopTone() {
@@ -60,13 +60,12 @@ export async function playMorseTone({
     resolvedEffectiveWpm,
     minUnitMs,
   )
-  const resolvedVolume = clampVolume(volume ?? AUDIO_VOLUME)
   return DitNative.playMorseSequence(
     code,
     characterUnitMs,
     farnsworthUnitMs,
     frequency ?? AUDIO_FREQUENCY,
-    resolvedVolume,
+    resolveToneVolume(volume),
   )
 }
 
