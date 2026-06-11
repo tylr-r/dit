@@ -3,6 +3,7 @@ import {
   type AppLifecycleAdapter,
   type AuthAdapter,
   type DialogAdapter,
+  type NetworkAdapter,
   type Platform,
   type StorageAdapter,
 } from '@dit/core'
@@ -105,6 +106,10 @@ const isUserCancelledPopup = (error: unknown) =>
     error.code === 'auth/cancelled-popup-request' ||
     error.code === 'auth/user-cancelled')
 
+const network: NetworkAdapter = {
+  isAvailable: async () => typeof navigator !== 'undefined' && navigator.onLine,
+}
+
 const authAdapter: AuthAdapter = {
   signInWithGoogle: async () => {
     const auth = getAuth()
@@ -160,6 +165,7 @@ const webPlatform: Platform = {
   appLifecycle,
   dialog,
   auth: authAdapter,
+  network,
 }
 
 type WebPlatformProviderProps = {

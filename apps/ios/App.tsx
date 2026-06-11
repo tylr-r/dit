@@ -133,6 +133,7 @@ function AppShell() {
   const externalMorseHandlersRef = useRef({
     pressIn: handlers.handleMorseSymbolPressIn,
     pressOut: handlers.handleMorseSymbolPressOut,
+    cancel: handlers.cancelExternalMorseInput,
   })
   const externalMorseActiveSymbolsRef = useRef(new Set<'.' | '-'>())
   const externalMorseInteractionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -162,8 +163,13 @@ function AppShell() {
     externalMorseHandlersRef.current = {
       pressIn: handlers.handleMorseSymbolPressIn,
       pressOut: handlers.handleMorseSymbolPressOut,
+      cancel: handlers.cancelExternalMorseInput,
     }
-  }, [handlers.handleMorseSymbolPressIn, handlers.handleMorseSymbolPressOut])
+  }, [
+    handlers.cancelExternalMorseInput,
+    handlers.handleMorseSymbolPressIn,
+    handlers.handleMorseSymbolPressOut,
+  ])
   useEffect(() => {
     const subscription = addExternalMorseKeyListener(({ symbol, phase }) => {
       if (phase === 'down') {
@@ -231,8 +237,14 @@ function AppShell() {
   ])
   useAnalyticsScreenTracker(analyticsScreen)
   useEffect(() => {
+    if (!externalMorseCaptureEnabled) {
+      externalMorseHandlersRef.current.cancel()
+      externalMorseActiveSymbolsRef.current.clear()
+      stopExternalMorseInteractionLoop()
+    }
     void setExternalMorseKeyCaptureEnabled(externalMorseCaptureEnabled)
     return () => {
+      externalMorseHandlersRef.current.cancel()
       externalMorseActiveSymbolsRef.current.clear()
       stopExternalMorseInteractionLoop()
       void setExternalMorseKeyCaptureEnabled(false)

@@ -35,6 +35,17 @@ const autoConfirm = vi.fn(
   },
 )
 
+const confirmThroughOfflineWarning = vi.fn(
+  (title: string, message: string, actions: DialogAction[]) => {
+    if (title === 'No internet connection') {
+      expect(message).toMatch(/server will not be cleared/i)
+      actions.find((action) => action.text === 'Reset Device')?.onPress?.()
+      return
+    }
+    actions.find((action) => action.style === 'destructive')?.onPress?.()
+  },
+)
+
 describe('useAccountActions', () => {
   it('resets local app state and onboarding storage when signed out', async () => {
     const removeItem = vi.fn(async () => {})
@@ -87,6 +98,9 @@ describe('useAccountActions', () => {
         alert: vi.fn(),
         confirm: autoConfirm,
       },
+      network: {
+        isAvailable: async () => true,
+      },
     })
     const { result } = renderAccountActions(options, platform)
 
@@ -100,5 +114,40 @@ describe('useAccountActions', () => {
     expect(signOut).toHaveBeenCalledTimes(1)
     expect(options.clearLocalProgress).toHaveBeenCalledTimes(1)
     expect(options.resetProgressState).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows an offline server warning after the first confirmation', async () => {
+    const confirm = vi.fn(confirmThroughOfflineWarning)
+    const signOut = vi.fn(async () => {})
+    const options = makeOptions({
+      user: { uid: 'user-1', providerData: [] } as unknown as User,
+    })
+    const platform = makePlatform({
+      auth: {
+        ...makePlatform().auth,
+        signOut,
+      },
+      dialog: {
+        alert: vi.fn(),
+        confirm,
+      },
+      network: {
+        isAvailable: async () => false,
+      },
+    })
+    const { result } = renderAccountActions(options, platform)
+
+    await act(async () => {
+      result.current.handleResetApp()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(confirm).toHaveBeenCalledTimes(2)
+    expect(options.deleteRemoteProgress).not.toHaveBeenCalled()
+    expect(options.clearLocalProgress).toHaveBeenCalledTimes(1)
+    expect(options.resetProgressState).toHaveBeenCalledTimes(1)
+    expect(signOut).toHaveBeenCalledTimes(1)
   })
 })

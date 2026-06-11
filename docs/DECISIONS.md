@@ -11,6 +11,12 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-10: Reset App checks network after the first confirmation.**
+  Local reset must succeed even offline. After the user confirms Reset App, check
+  reachability before clearing anything. Signed-in offline users get a second
+  confirmation that server data will not be cleared unless they cancel, connect,
+  and try again, and that Reset Device still clears this device only.
+
 - **2026-06-06: Pre-iOS-26 glass action surfaces need a visible fallback.**
   Native Liquid Glass remains the preferred iOS material on iOS 26 and newer.
   On older iOS versions, custom action surfaces should use a restrained blur

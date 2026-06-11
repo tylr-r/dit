@@ -49,6 +49,7 @@ export type {
   DialogAction,
   DialogActionStyle,
   DialogAdapter,
+  NetworkAdapter,
   Platform,
   StorageAdapter,
 } from './platform'
