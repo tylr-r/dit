@@ -27,7 +27,16 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 - Beginner users enter the guided course, which introduces letters in small packs and advances automatically.
 - NUX status (`pending`, `completed`, `skipped`) is persisted so it only runs once unless replayed from Settings.
 
-#### Sign-in entry points (iOS)
+#### Post-onboarding intro hints
+
+After NUX completes, a short two-step hint sequence may run on first use of the main app (persisted in `dit-intro-hint-step`):
+
+1. **Morse key** — callout on the big key explaining dit vs dah. Dismisses on first key press.
+2. **Settings** — spotlight on the settings control. Dismisses when the user opens Settings.
+
+iOS renders both steps as on-screen overlays. Web does not render these overlays; it still advances the persisted step when the user keys or opens Settings so the sequence does not repeat. Listen mode suppresses both steps.
+
+#### Sign-in entry points
 
 Two surfaces open the same sign-in bottom sheet:
 
@@ -201,7 +210,9 @@ Toggles and controls available across both platforms unless noted.
 - Sound check (web Settings only; iOS covers this during NUX)
 - Reference chart modal
 - Daily reminder (iOS): picks a local notification time using the native date picker. Requires notification permission, which the app requests on first enable.
-- Use recommended settings: resets Practice toggles and level to the defaults for the current `learnerProfile` (beginner vs known).
+- Use recommended settings: resets Practice toggles, listen speed options, and max level to the preset for the current `learnerProfile` via `getRecommendedSettings` in `@dit/core`:
+  - **Beginner** (profile not `known`): hints and mnemonics on, max level 1, learn mode and auto-play on, IFR and review-misses off, default listen WPM / effective WPM / auto-tightening.
+  - **Known**: hints and mnemonics off, max level 3, learn mode and auto-play on, IFR and review-misses at their defaults, same listen defaults as beginner.
 - Replay NUX: runs the onboarding flow again (dev builds only).
 - Reset App: available whether signed in or signed out, including offline. The first confirmation explains the on-device reset. After the user confirms, Dit checks network reachability before changing anything. Signed-in users who are offline get a second confirmation explaining that server data will not be cleared unless they cancel, connect, and try again, and that they can still reset this device locally by choosing Reset Device.
 - Cloud sync:
@@ -222,7 +233,7 @@ Availability rules:
 - `F`: Freestyle
 - `L`: Listen
 - `P`: Practice
-- `N`: clear input (Freestyle)
+- `N`: one-time **Show this hint** in Practice when global hints are off; clear input in Freestyle
 - `Space`: hold to key (Practice/Freestyle), tap to replay current letter (Listen)
 - `Esc`: close the reference modal
 - Any letter or digit key while in Listen submits that character as the answer.

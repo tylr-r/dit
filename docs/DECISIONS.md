@@ -27,8 +27,8 @@ avoid undoing.
   Both web and iOS tone wrappers must use that helper — do not reintroduce per-platform
   floors or stale constants that fight the default.
 
-  Local reset must succeed even offline. After the user confirms Reset App, check
-  reachability before clearing anything. Signed-in offline users get a second
+- **2026-06-06: Local reset must succeed even offline.** After the user confirms Reset App,
+  check reachability before clearing anything. Signed-in offline users get a second
   confirmation that server data will not be cleared unless they cancel, connect,
   and try again, and that Reset Device still clears this device only.
 

@@ -22,7 +22,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Google sign-in | ✅ | ✅ | iOS uses native flow; web uses Firebase popup |
 | Apple sign-in | ✅ | ✅ | Web uses Firebase OAuthProvider('apple.com') with popup and redirect fallback |
 | Email + password | ✅ | ✅ | Sign in + create account with the collapsed bad-credential message |
-| Shared sign-in sheet | ✅ | ✅ | Web sheet wired in Settings; NUX welcome reuse comes in PR5 |
+| Shared sign-in sheet | ✅ | ✅ | Same sheet from Settings and NUX welcome on both platforms |
 | Delete account | ✅ | ✅ | Web has no native session to revoke; Firebase deleteUser handles it |
 | Sign out | ✅ | ✅ | |
 
@@ -32,11 +32,12 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Welcome screen | ✅ | ✅ | Both preserve the brand moment |
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
-| Sound check | ✅ | ✅ | |
+| Sound check | ✅ | ✅ | iOS: NUX step. Web: NUX step plus a Settings playback test row |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
-| Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the SignInSheet from PR3 |
+| Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the shared sign-in sheet |
 | Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped at [NuxModal.tsx:92-95](../apps/web/src/components/NuxModal.tsx#L92-L95) |
 | Known-user app tour | ✅ | ✅ | Web tour spotlights real header elements via getBoundingClientRect + portal |
+| Post-onboarding intro hints (Morse key → Settings) | ✅ | 🟡 | iOS renders overlays; web advances persisted steps without overlay UI |
 | `nuxCompleted` persisted to RTDB | ✅ | ✅ | |
 
 ## Practice mode
@@ -47,7 +48,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Play current target tone | ✅ | ✅ | |
 | Hints toggle | ✅ | ✅ | |
 | Mnemonics toggle | ✅ | ✅ | |
-| One-time "Show this hint" (`N` key) | 🚫 | ✅ | Web-only button + `N` when global hints are off |
+| One-time "Show this hint" | 🚫 | ✅ | Web-only button (+ `N` shortcut) when global hints are off |
 | Practice Words (word mode) | ✅ | ✅ | |
 | Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ |  |
 | Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ |  |
@@ -118,7 +119,7 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 
 ## Reference modal
 
-Web shipped a redesign that splits the grid into status-based sections (Known by ear / Now learning / Not yet) and replaces the score-tinted cards with per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. iOS still ships the legacy score-tinted grid; iOS adoption of the new layout is deferred. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core so iOS can consume them when it adopts.
+Web adds status-based sections (Known by ear / Now learning / Not yet) and per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. Both platforms tint mastered letters with the same relative score helpers in core. iOS adoption of the web section layout and recognition bars is deferred. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core for when iOS adopts.
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
@@ -171,7 +172,7 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 | Learning method funnel (`learning_method_opened` / `learning_method_selected` / `learning_scope_selected`) | ✅ | ✅ | Captures Course vs Open practice discovery and selected scope without logging individual custom characters |
 | Settings-changed events (debounced sliders) | 🟡 | ✅ | Web only in [SettingsPanel.tsx](../apps/web/src/components/SettingsPanel.tsx) |
 | Phase-modal-dismissed event | 🟡 | ✅ | Web only in [PhaseModal.tsx](../apps/web/src/components/PhaseModal.tsx) |
-| GA4 / Firebase `user_id` linkage on sign-in/out | 🟡 | ✅ | Web wires `analytics.setUserId(user?.uid ?? null)` |
+| GA4 / Firebase `user_id` linkage on sign-in/out | ✅ | ✅ | Both call `analyticsClient.setUserId` from auth state |
 | Event surface context (`app_surface`) | ✅ | ✅ | Adapters attach `ios` or `web` to emitted event params so shared Firebase/GA4 reports can be segmented |
 | Analytics dev/test guard | ✅ | ✅ | Adapters skip emission in dev and test by default; release-like testing builds can opt out with `EXPO_PUBLIC_ANALYTICS_ENABLED=false` or `VITE_ANALYTICS_ENABLED=false` |
 | Concrete adapter | ✅ | ✅ | Web: [apps/web/src/lib/analytics.ts](../apps/web/src/lib/analytics.ts) (GA4 via gtag). iOS: [apps/ios/src/analytics.ts](../apps/ios/src/analytics.ts) (Firebase Analytics with milestone translation and native screen reporting) |
@@ -192,7 +193,8 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Desktop keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` clear in Freestyle, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) — broad physical keyboard control is web's affordance. VBand-style left/right paddle keys in Practice/Freestyle are shared between web and iOS. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Desktop keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) — broad physical keyboard control is web's affordance. VBand-style left/right paddle keys in Practice/Freestyle are shared between web and iOS. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Post-onboarding intro hints** (Morse key callout, then Settings spotlight) — iOS renders overlay UI; web advances the persisted hint step without showing those overlays (opening Settings still dismisses the settings step).
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.
 - **Google popup auth flow** — different transport from iOS's native Google sign-in, same provider
