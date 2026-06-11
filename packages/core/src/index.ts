@@ -288,7 +288,6 @@ export {
   pullNextListenOverlearnLetter,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
-  REFERENCE_WPM,
   WORD_GAP_EXTRA_MS,
   WORD_GAP_MS,
 } from './utils/appState'

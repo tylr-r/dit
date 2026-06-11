@@ -10,7 +10,6 @@ import {
   MORSE_DATA,
   REFERENCE_LETTERS,
   REFERENCE_NUMBERS,
-  REFERENCE_WPM,
   todayStreakContribution,
   TONE_FREQUENCY_RANGE,
   useMorseSessionController,
@@ -573,8 +572,8 @@ function AppShell() {
               onPlaySound={(char) => {
                 void playMorseTone({
                   code: MORSE_DATA[char].code,
-                  characterWpm: REFERENCE_WPM,
-                  effectiveWpm: REFERENCE_WPM,
+                  characterWpm: state.listenWpm,
+                  effectiveWpm: state.listenEffectiveWpm ?? state.listenWpm,
                   minUnitMs: LISTEN_MIN_UNIT_MS,
                   frequency: state.toneFrequency,
                 })
