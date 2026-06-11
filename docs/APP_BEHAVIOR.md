@@ -32,7 +32,7 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 Two surfaces open the same sign-in bottom sheet:
 
 - **NUX welcome** — see the next subsection.
-- **Settings** — when signed out, the Account group shows a single **Sign in** row (the Apple / Google provider list was collapsed into the shared sheet). Tapping it closes the Settings modal first, then opens the shared sign-in sheet from the app root. The two surfaces never stack. On successful sign-in the sheet dismisses and Settings reopens so the user sees the signed-in state (email, Sign Out, Delete Account). On cancel the user returns to the main screen without Settings reopening.
+- **Settings** — when signed out, the Account group shows a single **Sign in** row (the Apple / Google provider list was collapsed into the shared sheet). Tapping it closes the Settings modal first, then opens the shared sign-in sheet from the app root. The Learning sheet follows the same anti-stack pattern on both platforms. The two surfaces never stack. On successful sign-in the sheet dismisses and Settings reopens so the user sees the signed-in state (email, Sign Out, Delete Account). On cancel the user returns to the main screen without Settings reopening.
 
 The shared sheet implementation lives at `apps/ios/src/components/SignInSheet.tsx`. `NuxModal.tsx` renders its own instance for the welcome-screen entry point; the Settings instance is rendered at the `App.tsx` root so it survives `SettingsModal` unmounting when Settings closes.
 
@@ -133,7 +133,7 @@ selected count, not the actual characters.
 - **Auto-play sound** (on by default) plays the target tone automatically when it appears.
 - **Sequential order** (the "learn mode" toggle, on by default) makes Practice serve letters from the start of the active set rather than weighted-random. Turning it off switches to the weighted algorithm below.
 - With sequential order off, character selection prioritizes less proficient characters ahead of well-known ones.
-- Hints and mnemonics can be toggled in Settings. Requesting a hint (including the one-time "Show this hint" button on web) disables scoring for that attempt.
+- Hints and mnemonics can be toggled in Settings. When **Show hints** is on, Practice does not accumulate scores, streak credit, or `letterAccuracy` updates (guided course practice is exempt). When hints are off, web also exposes a one-time **Show this hint** control (`N` shortcut) that reveals the pattern for the current letter only and disables scoring for that attempt.
 - **Word mode** (Practice Words) shows a full word, highlights progress letter by letter, and computes WPM on completion.
 - During the guided beginner course, Practice runs in fixed lesson phases:
   - Teach: repeat the new letters until each is answered correctly enough times.
@@ -158,7 +158,7 @@ selected count, not the actual characters.
 - Correct: score +1, next playback.
 - Incorrect: score -1, reveal the correct letter, then move on.
 - Replay plays the current letter again (web binds this to the spacebar).
-- Both platforms display a sine wave visualization of the playback. iOS adds a time-to-respond indicator.
+- Both platforms display a sine wave visualization of the playback.
 
 #### Custom text (web)
 
@@ -198,11 +198,11 @@ Toggles and controls available across both platforms unless noted.
 - Listen speed (WPM). Dit length in ms = 1200 / WPM. Applies to every Dit-initiated playback, including reference chart taps and the Settings sound check.
 - Tone frequency. Applies to the same Dit-initiated playback surfaces as listen speed.
 - Haptics (iOS): toggles the dit/dah CoreHaptics pulses that mirror tone playback. On by default.
-- Sound check
+- Sound check (web Settings only; iOS covers this during NUX)
 - Reference chart modal
 - Daily reminder (iOS): picks a local notification time using the native date picker. Requires notification permission, which the app requests on first enable.
-- Use recommended settings (iOS): resets the Practice toggles to the defaults chosen for the current `learnerProfile`.
-- Replay NUX (iOS): runs the onboarding flow again.
+- Use recommended settings: resets Practice toggles and level to the defaults for the current `learnerProfile` (beginner vs known).
+- Replay NUX: runs the onboarding flow again (dev builds only).
 - Reset App: available whether signed in or signed out, including offline. The first confirmation explains the on-device reset. After the user confirms, Dit checks network reachability before changing anything. Signed-in users who are offline get a second confirmation explaining that server data will not be cleared unless they cancel, connect, and try again, and that they can still reset this device locally by choosing Reset Device.
 - Cloud sync:
   - Web: Google sign-in (popup).
@@ -255,7 +255,7 @@ Top-bar buttons, the morse key, the Play button in Listen, and the Clear button 
 ## Reference
 
 - The Reference modal shows letters, numbers, and their Morse patterns.
-- Scores tint each card to highlight strengths and weaknesses.
+- Mastered letters use a shared relative score tint (green/red vs the section median). Web also groups tiles by mastery status and shows Listen recognition bars.
 - iOS also shows the hero metric, current streak, today's correct count, and, when the guided course is active, the current pack, phase, and pack letters. Tapping a card plays that character at the current playback letter speed from Settings.
 
 ## Reminders and widget (iOS)

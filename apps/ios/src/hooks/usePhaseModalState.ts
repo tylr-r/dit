@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import type { PhaseModalContent } from '../components/PhaseModal'
+import type { PhaseModalContent } from '@dit/core'
 
 /** Stores the current phase modal content and optional dismiss continuation. */
 export const usePhaseModalState = () => {

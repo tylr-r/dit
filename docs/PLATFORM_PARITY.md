@@ -47,7 +47,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Play current target tone | ✅ | ✅ | |
 | Hints toggle | ✅ | ✅ | |
 | Mnemonics toggle | ✅ | ✅ | |
-| One-time "Show this hint" (`N` key) | 🚫 | ✅ | Web-only keyboard affordance |
+| One-time "Show this hint" (`N` key) | 🚫 | ✅ | Web-only button + `N` when global hints are off |
 | Practice Words (word mode) | ✅ | ✅ | |
 | Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ |  |
 | Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ |  |
@@ -92,7 +92,7 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 | Freestyle Word mode | ✅ | ✅ | |
 | Listen speed (WPM) | ✅ | ✅ | |
 | Tone frequency | ✅ | ✅ | |
-| Sound check | ✅ | ✅ | |
+| Sound check | 🟡 | ✅ | iOS: NUX only. Web: Settings playback test row |
 | Reference chart entry point | ✅ | ✅ | |
 | Auto-play sound (Practice) | ✅ | ✅ | |
 | Sequential order (Practice) | ✅ | ✅ | |
@@ -123,7 +123,7 @@ Web shipped a redesign that splits the grid into status-based sections (Known by
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Letter/number cards with Morse patterns | ✅ | ✅ | Web shows pattern only on mastered tiles ("train the ear" for in-progress letters) |
-| Score-tinted cards | ✅ | 🚫 | Web replaced score tint with status sectioning + recognition bar |
+| Score-tinted cards | ✅ | ✅ | Both tint mastered letters via shared `@dit/core` relative score helpers; web adds status sections + recognition bars |
 | Sectioned by mastery status | 🚫 | ✅ | Web-only for now; iOS adoption deferred |
 | Per-letter recognition bar (Listen TTR fill) | 🚫 | ✅ | Web only; `getRecognitionFillRatio` lives in core |
 | Avg recognition (ms) summary | 🚫 | ✅ | Web only; `getAverageRecognitionMs` lives in core |

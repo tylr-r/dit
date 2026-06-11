@@ -1,3 +1,4 @@
+import { isAppleUser } from '@dit/core'
 import { requireNativeModule } from 'expo-modules-core'
 import {
   createUserWithEmailAndPassword,
@@ -60,9 +61,6 @@ const createAppleCredential = (result: NativeAppleSignInResult) => {
     rawNonce: result.rawNonce,
   })
 }
-
-const isAppleUser = (user: User) =>
-  (user.providerData ?? []).some((provider) => provider?.providerId === 'apple.com')
 
 export const signInWithGoogle = async () => {
   const result = await DitNative.signInWithGoogle()

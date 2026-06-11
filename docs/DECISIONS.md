@@ -11,6 +11,11 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-11: Show hints disables Practice scoring.** When the global **Show hints**
+  setting is on, Practice attempts do not update scores, streak credit, or
+  `letterAccuracy`. Guided course practice is exempt. Web's one-time **Show this hint**
+  is a separate, per-letter affordance when global hints are off.
+
 - **2026-06-11: Global playback settings apply to every Dit-initiated tone.**
   Playback letter speed and tone frequency from Settings are used for Listen, Practice
   auto-play, reference chart taps, Settings sound check (web), and NUX sound check.
