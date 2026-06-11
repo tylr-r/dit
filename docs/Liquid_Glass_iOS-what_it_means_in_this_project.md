@@ -1,6 +1,6 @@
 # Liquid Glass in Dit (for AI agents and contributors)
 
-Liquid Glass is Apple's current iOS design language — the translucent material treatment applied to navigation chrome, sheets, menus, toolbars, and standard controls from iOS 26 onward. Dit opts _into_ it on iOS rather than reimplementing it, and does its best to recreate the feel on every other platform.
+Liquid Glass is Apple's current iOS design language — the translucent material treatment applied to navigation chrome, sheets, menus, toolbars, and standard controls from iOS 26 onward. Dit opts _into_ it on iOS rather than reimplementing it, and does its best to recreate the feel on every other platform. On iOS versions before 26, Dit uses a modest `expo-blur` material fallback for its custom action surfaces so controls remain visible.
 
 ## On iOS: use the system, don't fake it
 
@@ -9,6 +9,7 @@ If Apple ships a native control for the job, use it. Liquid Glass is what you ge
 In practice:
 
 - **Use** `@expo/ui` components, UIKit-backed RN primitives, and [expo-glass-effect](https://docs.expo.dev/versions/latest/sdk/glass-effect/) for glass surfaces.
+- **Route custom glass action surfaces through** `apps/ios/src/components/GlassSurface.tsx` so native Liquid Glass is used only when Expo reports both Liquid Glass support and runtime API availability; all other runtimes get the blur fallback.
 - **Don't** recreate toggles, pickers, segmented controls, sheets, or menus with custom Views.
 - **Don't** paint fake glass (gradient backgrounds, specular highlights, manually stacked blurs) onto standard controls.
 - **Don't** force web spacing/radii/colors onto iOS chrome — system defaults are the point.

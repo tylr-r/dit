@@ -181,11 +181,13 @@ Body line-height: 20. Others: default.
 | Disabled | opacity 0.6, no press response                   |
 
 Both platforms use a glass surface. iOS renders via `expo-glass-effect`'s
-`GlassView` (`glassEffectStyle="clear"`). Web renders the same look via
-CSS `backdrop-filter: blur(24px) saturate(140%)` on a translucent
-`rgba(255,255,255,0.08)` surface with a 1px subtle border and a soft
-inset highlight, falling back to a flat `rgba(0,0,0,0.35)` where
-`backdrop-filter` is unsupported.
+`GlassView` (`glassEffectStyle="clear"`) when Liquid Glass is available. On
+iOS versions before 26, Dit falls back to `expo-blur` with a thin translucent
+tint so the action surface remains visible without pretending to be system
+Liquid Glass. Web renders the same look via CSS `backdrop-filter: blur(24px)
+saturate(140%)` on a translucent `rgba(255,255,255,0.08)` surface with a 1px
+subtle border and a soft inset highlight, falling back to a flat
+`rgba(0,0,0,0.35)` where `backdrop-filter` is unsupported.
 
 Optional `showTapHint` pulses a centered fingerprint icon (40px,
 `rgba(244,247,249,0.45)`) at `TAP_HINT_PULSE_MS` (1200ms each direction)
@@ -314,7 +316,7 @@ shadows.
 4. `surface.panel`
 5. `surface.card`
 6. `surface.panelStrong`
-7. Glass (`GlassView` on iOS) — pressable CTAs only
+7. Glass (`GlassView` on iOS 26+, blur fallback below iOS 26) — pressable CTAs only
 
 ### Rules
 

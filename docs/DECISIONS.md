@@ -11,6 +11,12 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-06: Pre-iOS-26 glass action surfaces need a visible fallback.**
+  Native Liquid Glass remains the preferred iOS material on iOS 26 and newer.
+  On older iOS versions, custom action surfaces should use a restrained blur
+  fallback instead of collapsing to Expo's plain `View` fallback, so primary
+  controls keep their intended presence without faking system Liquid Glass.
+
 - **2026-06-04: Web key sidetone must survive cold audio wake-up.** The first
   Morse key press after a refresh should feel as immediate as later presses.
   Browser audio startup is not a reason to drop or truncate that first keyed
