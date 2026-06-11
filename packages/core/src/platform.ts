@@ -72,11 +72,17 @@ export interface AuthAdapter {
   prepareAccountDeletion(userId: string, isAppleUser: boolean): Promise<void>
 }
 
+/** Best-effort device network reachability for sync-sensitive flows. */
+export interface NetworkAdapter {
+  isAvailable(): Promise<boolean>
+}
+
 export interface Platform {
   storage: StorageAdapter
   appLifecycle: AppLifecycleAdapter
   dialog: DialogAdapter
   auth: AuthAdapter
+  network: NetworkAdapter
 }
 
 const PlatformContext = createContext<Platform | null>(null)
@@ -114,6 +120,9 @@ export const createNoopPlatform = (overrides: Partial<Platform> = {}): Platform 
     signInWithGoogle: async () => {},
     signOut: async () => {},
     prepareAccountDeletion: async () => {},
+  },
+  network: {
+    isAvailable: async () => true,
   },
   ...overrides,
 })

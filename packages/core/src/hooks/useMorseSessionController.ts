@@ -1773,6 +1773,15 @@ export const useMorseSessionController = ({
     [],
   )
 
+  const cancelExternalMorseInput = useCallback(() => {
+    externalSymbolPressRef.current = null
+    externalSymbolToneActiveRef.current = null
+    clearTimer(externalSymbolTimerRef)
+    setIsPressing(false)
+    stopTonePlayback()
+    void stopMorseTone()
+  }, [stopMorseTone, stopTonePlayback])
+
   const handlePressIn = useCallback(() => {
     if (pressStartRef.current !== null || isListen || (!isFreestyle && isErrorLocked())) {
       return
@@ -2072,6 +2081,7 @@ export const useMorseSessionController = ({
     practiceIfrMode,
     practiceLearnMode,
     practiceReviewMisses,
+    cancelExternalMorseInput,
     resetListenState,
     setNextListenLetter,
     setNextLetterForLevel,
@@ -2083,6 +2093,7 @@ export const useMorseSessionController = ({
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
       logAnalyticsEvent('mode_start', { mode: nextMode })
+      cancelExternalMorseInput()
       stopListenPlayback()
       setMode(nextMode)
       setShowSettings(false)
@@ -2120,6 +2131,7 @@ export const useMorseSessionController = ({
     [
       activeLetters,
       availablePracticeWords,
+      cancelExternalMorseInput,
       logAnalyticsEvent,
       playListenSequence,
       resetListenState,
@@ -2435,6 +2447,7 @@ export const useMorseSessionController = ({
       handleIntroPressIn,
       handleMorseSymbolPressIn,
       handleMorseSymbolPressOut,
+      cancelExternalMorseInput,
       handlePressOut,
       handleMaxLevelChange,
       handleSetGuidedCourseActive,

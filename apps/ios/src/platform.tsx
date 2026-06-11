@@ -2,12 +2,14 @@ import {
   PlatformProvider as CorePlatformProvider,
   type AppLifecycleAdapter,
   type AuthAdapter,
+  type DialogAction,
   type DialogAdapter,
+  type NetworkAdapter,
   type Platform,
   type StorageAdapter,
 } from '@dit/core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Alert, AppState, type AppStateStatus } from 'react-native'
+import { Alert, AppState, InteractionManager, type AppStateStatus } from 'react-native'
 import type { ReactNode } from 'react'
 import { auth } from './firebase'
 import {
@@ -39,12 +41,20 @@ const appLifecycle: AppLifecycleAdapter = {
   },
 }
 
+const showAlert = (title: string, message: string | undefined, actions: DialogAction[]) => {
+  InteractionManager.runAfterInteractions(() => {
+    requestAnimationFrame(() => {
+      Alert.alert(title, message, actions)
+    })
+  })
+}
+
 const dialog: DialogAdapter = {
   alert: (title, message) => {
-    Alert.alert(title, message)
+    showAlert(title, message, [{ text: 'OK' }])
   },
   confirm: (title, message, actions) => {
-    Alert.alert(
+    showAlert(
       title,
       message,
       actions.map((action) => ({
@@ -53,6 +63,31 @@ const dialog: DialogAdapter = {
         onPress: action.onPress,
       })),
     )
+  },
+}
+
+const NETWORK_PROBE_URL = 'https://connectivitycheck.gstatic.com/generate_204'
+const NETWORK_PROBE_TIMEOUT_MS = 3000
+
+const network: NetworkAdapter = {
+  isAvailable: async () => {
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), NETWORK_PROBE_TIMEOUT_MS)
+      const response = await fetch(`${NETWORK_PROBE_URL}?t=${Date.now()}`, {
+        method: 'HEAD',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      return response.status === 204
+    } catch {
+      return false
+    }
   },
 }
 
@@ -89,6 +124,7 @@ export const iosPlatform: Platform = {
   appLifecycle,
   dialog,
   auth: authAdapter,
+  network,
 }
 
 type IosPlatformProviderProps = {

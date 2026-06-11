@@ -183,42 +183,87 @@ export const useAccountActions = ({
     )
   }, [dialog, isDeletingAccount, performAccountDeletion, user])
 
-  const performAppReset = useCallback(async () => {
-    if (isDeletingAccount) {
+  const performAppReset = useCallback(
+    async ({ skipCloudClear }: { skipCloudClear: boolean }) => {
+      if (isDeletingAccount) {
+        return
+      }
+
+      const signedInUserId = user?.uid ?? null
+
+      try {
+        setShowSettings(false)
+        await clearLocalProgress()
+        await Promise.all(RESET_APP_STORAGE_KEYS.map((key) => platform.storage.removeItem(key)))
+        await clearAdditionalLocalData?.()
+        resetProgressState()
+
+        if (signedInUserId) {
+          if (!skipCloudClear) {
+            try {
+              await deleteRemoteProgress(signedInUserId)
+            } catch (error) {
+              console.error('Failed to delete remote progress during reset', error)
+            }
+          }
+          try {
+            await auth.signOut()
+          } catch (error) {
+            console.error('Failed to sign out during reset', error)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to reset app', error)
+        dialog.alert(
+          'Could Not Reset App',
+          'Some local data could not be cleared. Relaunch Dit and try again.',
+        )
+      }
+    },
+    [
+      auth,
+      clearAdditionalLocalData,
+      clearLocalProgress,
+      deleteRemoteProgress,
+      dialog,
+      isDeletingAccount,
+      platform.storage,
+      resetProgressState,
+      setShowSettings,
+      user,
+    ],
+  )
+
+  const proceedAfterResetConfirmed = useCallback(async () => {
+    if (!user) {
+      await performAppReset({ skipCloudClear: false })
       return
     }
 
-    try {
-      setShowSettings(false)
-      await clearLocalProgress()
-      await Promise.all(RESET_APP_STORAGE_KEYS.map((key) => platform.storage.removeItem(key)))
-      await clearAdditionalLocalData?.()
-
-      if (user) {
-        await deleteRemoteProgress(user.uid)
-        await auth.signOut()
-      }
-
-      resetProgressState()
-    } catch (error) {
-      console.error('Failed to reset app', error)
-      dialog.alert(
-        'Could Not Reset App',
-        'Some local data could not be cleared. Relaunch Dit and try again.',
-      )
+    const networkAvailable = await platform.network.isAvailable()
+    if (networkAvailable) {
+      await performAppReset({ skipCloudClear: false })
+      return
     }
-  }, [
-    auth,
-    clearAdditionalLocalData,
-    clearLocalProgress,
-    deleteRemoteProgress,
-    dialog,
-    isDeletingAccount,
-    platform.storage,
-    resetProgressState,
-    setShowSettings,
-    user,
-  ])
+
+    dialog.confirm(
+      'No internet connection',
+      'Dit can reset this device now, but your synced progress on the server will not be cleared while you are offline. To clear server data too, tap Cancel, connect to the internet, and run Reset App again. Tap Reset Device to continue with a local reset only. You will be signed out. Your account is not deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset Device',
+          style: 'destructive',
+          onPress: () => {
+            void performAppReset({ skipCloudClear: true })
+          },
+        },
+      ],
+    )
+  }, [dialog, performAppReset, platform.network, user])
 
   const handleResetApp = useCallback(() => {
     if (isDeletingAccount) {
@@ -228,7 +273,7 @@ export const useAccountActions = ({
     dialog.confirm(
       'Reset App?',
       user
-        ? 'This clears progress, settings, onboarding state, and saved local data on this device. Your synced progress is cleared too, and you will be signed out. Your account is not deleted.'
+        ? 'This clears progress, settings, onboarding state, and saved local data on this device. If Dit can reach the server, your synced progress is cleared too, and you will be signed out. Your account is not deleted.'
         : 'This clears progress, settings, onboarding state, and saved local data on this device.',
       [
         {
@@ -239,12 +284,12 @@ export const useAccountActions = ({
           text: 'Reset App',
           style: 'destructive',
           onPress: () => {
-            void performAppReset()
+            void proceedAfterResetConfirmed()
           },
         },
       ],
     )
-  }, [dialog, isDeletingAccount, performAppReset, user])
+  }, [dialog, isDeletingAccount, proceedAfterResetConfirmed, user])
 
   return {
     handleSignInWithApple,
