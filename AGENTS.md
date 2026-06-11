@@ -38,6 +38,31 @@
 - When adding, changing, or removing a behavior or flow, update `docs/APP_BEHAVIOR.md`.
 - When making an explicit product decision that future work should preserve, add a concise entry to `docs/DECISIONS.md`. This is for product intent and rationale, not a copy of git history or every implementation change.
 - When making a UI, motion, or interaction design direction change (including things tried and removed), update `DESIGN.md`.
+- When landing user-visible work for the next release, add release notes to **Unreleased** in `docs/CHANGELOG.md`. Rename that section to the version number when you ship.
+
+### Changelog (`docs/CHANGELOG.md`)
+
+The changelog is **public-facing** release notes for people using Dit — not an engineering log. Read the shipped sections (`2026.5.31`, etc.) for voice before writing.
+
+**Include only what changed in this release**
+
+- Before adding a line, verify it against the prior release baseline (e.g. `git log` / `git show` on the last tagged or changelog version). Do not claim a feature is new if it already shipped in an earlier release.
+- Do not list behavior that was already true and you only documented in `APP_BEHAVIOR.md` or `DECISIONS.md`.
+- Do not list refactors, dead-code removal, analytics wiring, or other internal work unless a user would notice.
+
+**How to write entries**
+
+- Use **Highlights** (big additions), **Changes** (improvements users feel), and **Fixes** (bugs). No Cleanup, Product decisions, or links to internal docs.
+- Plain language only: no file paths, package names, symbols, commit hashes, or implementation detail.
+- Say **Web:** or **iOS:** only when the change is genuinely single-platform. Confirm with git — shared core fixes often land on **both** platforms even when you only touched one app's UI.
+- One user-visible outcome per bullet. Do not repeat the same fix under both Changes and Fixes.
+
+**Where other docs go**
+
+- Durable product intent → `docs/DECISIONS.md`
+- Cross-platform behavior spec → `docs/APP_BEHAVIOR.md`
+- iOS vs web delta → `docs/PLATFORM_PARITY.md`
+- Do not copy those into the changelog; users should not need them to understand an update.
 
 ## Commit & Pull Request Guidelines
 

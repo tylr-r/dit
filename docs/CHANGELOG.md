@@ -1,4 +1,22 @@
-# Dit iOS Changelog
+# Dit Changelog
+
+## Unreleased
+
+Compared against `2026.5.31`.
+
+### Highlights
+
+- Web: Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
+
+### Changes
+
+- Reference chart colors on iOS now use the same relative scoring style as web, and only on letters you've mastered.
+- Web: Settings, Learning, and sign-in no longer open on top of each other.
+
+### Fixes
+
+- Fixed the Reference chart playing letters at a speed that didn't match your Listen setting.
+- Fixed **Use recommended settings** always applying the returning-learner preset, even when you said you're new to Morse.
 
 ## 2026.5.31
 
