@@ -109,7 +109,6 @@ export {
   createProgressPayload,
   progressPathForUser,
 } from './firebase/progress'
-export { useFirebaseSync } from './hooks/useFirebaseSync'
 export { useFirebaseProgressSync } from './hooks/useFirebaseProgressSync'
 export { useAccountActions, isAppleUser } from './hooks/useAccountActions'
 export { useOnboardingActions } from './hooks/useOnboardingActions'
@@ -143,6 +142,17 @@ export {
   WPM_RANGE,
 } from './constants'
 export { buildPlaybackToneRequest, resolveToneVolume } from './utils/audio'
+export { getRecommendedSettings } from './utils/recommendedSettings'
+export type { RecommendedSettings } from './utils/recommendedSettings'
+export {
+  REFERENCE_RELATIVE_TINT_MIN_DEVIATION,
+  REFERENCE_SCORE_INTENSITY_MAX,
+  REFERENCE_SCORE_TINT_MAX_ALPHA,
+  computeReferenceScoreMaxDeviation,
+  computeReferenceScoreMedian,
+  getReferenceAbsoluteScoreTint,
+  getReferenceRelativeScoreTint,
+} from './utils/referenceTint'
 export { RESET_APP_STORAGE_KEYS } from './utils/appState'
 export type { Letter } from './data/morse'
 export type {

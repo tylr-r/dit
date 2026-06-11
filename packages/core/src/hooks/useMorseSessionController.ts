@@ -18,6 +18,7 @@ import {
   AUDIO_FREQUENCY,
   TONE_FREQUENCY_RANGE,
 } from '../constants'
+import { getRecommendedSettings } from '../utils/recommendedSettings'
 import {
   applyListenTtrSample,
   clearTimer,
@@ -260,6 +261,7 @@ export const useMorseSessionController = ({
   const [mode, setMode] = useState<Mode>('practice')
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
+  const [oneTimeHintActive, setOneTimeHintActive] = useState(false)
   const [hapticsEnabled, setHapticsEnabled] = useState(true)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
@@ -513,30 +515,38 @@ export const useMorseSessionController = ({
     setCustomLetters(letters)
   }, [])
 
+  const applyRecommendedSettings = useCallback(
+    (recommended: ReturnType<typeof getRecommendedSettings>) => {
+      setShowHint(recommended.showHint)
+      setShowMnemonic(recommended.showMnemonic)
+      setPracticeAutoPlay(recommended.practiceAutoPlay)
+      setPracticeLearnMode(recommended.practiceLearnMode)
+      practiceLearnModeRef.current = recommended.practiceLearnMode
+      setPracticeIfrMode(recommended.practiceIfrMode)
+      practiceIfrModeRef.current = recommended.practiceIfrMode
+      setPracticeReviewMisses(recommended.practiceReviewMisses)
+      practiceReviewMissesRef.current = recommended.practiceReviewMisses
+      practiceReviewQueueRef.current = []
+      setPracticeWordMode(false)
+      practiceWordModeRef.current = false
+      setListenWpm(recommended.listenWpm)
+      listenWpmRef.current = recommended.listenWpm
+      setListenEffectiveWpm(recommended.listenEffectiveWpm)
+      listenEffectiveWpmRef.current = recommended.listenEffectiveWpm
+      setListenAutoTightening(recommended.listenAutoTightening)
+      listenAutoTighteningRef.current = recommended.listenAutoTightening
+      setListenAutoTighteningCorrectCount(recommended.listenAutoTighteningCorrectCount)
+      listenAutoTighteningCorrectCountRef.current =
+        recommended.listenAutoTighteningCorrectCount
+      maxLevelRef.current = recommended.maxLevel as (typeof LEVELS)[number]
+      setMaxLevel(recommended.maxLevel as (typeof LEVELS)[number])
+    },
+    [],
+  )
+
   const applyKnownLearnerDefaults = useCallback(() => {
-    setShowHint(false)
-    setShowMnemonic(false)
-    setPracticeAutoPlay(true)
-    setPracticeLearnMode(true)
-    practiceLearnModeRef.current = true
-    setPracticeIfrMode(DEFAULT_PRACTICE_IFR_MODE)
-    practiceIfrModeRef.current = DEFAULT_PRACTICE_IFR_MODE
-    setPracticeReviewMisses(DEFAULT_PRACTICE_REVIEW_MISSES)
-    practiceReviewMissesRef.current = DEFAULT_PRACTICE_REVIEW_MISSES
-    practiceReviewQueueRef.current = []
-    setPracticeWordMode(false)
-    practiceWordModeRef.current = false
-    setListenWpm(DEFAULT_LISTEN_WPM)
-    listenWpmRef.current = DEFAULT_LISTEN_WPM
-    setListenEffectiveWpm(DEFAULT_LISTEN_EFFECTIVE_WPM)
-    listenEffectiveWpmRef.current = DEFAULT_LISTEN_EFFECTIVE_WPM
-    setListenAutoTightening(DEFAULT_LISTEN_AUTO_TIGHTENING)
-    listenAutoTighteningRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING
-    setListenAutoTighteningCorrectCount(DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT)
-    listenAutoTighteningCorrectCountRef.current = DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
-    maxLevelRef.current = DEFAULT_MAX_LEVEL
-    setMaxLevel(DEFAULT_MAX_LEVEL)
-  }, [])
+    applyRecommendedSettings(getRecommendedSettings('known'))
+  }, [applyRecommendedSettings])
 
   const setGuidedPhaseState = useCallback(
     (nextPhase: GuidedPhase, nextPackIndex: number, nextProgress: GuidedLessonProgress) => {
@@ -923,8 +933,18 @@ export const useMorseSessionController = ({
     setShowReference(false)
   }, [isNuxActive, setShowAbout, setShowReference, setShowSettings])
 
+  const oneTimeHintActiveRef = useRef(false)
+
+  useEffect(() => {
+    oneTimeHintActiveRef.current = false
+    setOneTimeHintActive(false)
+  }, [letter])
+
   const canScoreAttempt = useCallback(
-    () => !isNuxActive && (!showHint || isGuidedPracticeActive),
+    () =>
+      !isNuxActive &&
+      (!showHint || isGuidedPracticeActive) &&
+      !oneTimeHintActiveRef.current,
     [isGuidedPracticeActive, isNuxActive, showHint],
   )
 
@@ -2003,56 +2023,27 @@ export const useMorseSessionController = ({
     if (guidedCourseActiveRef.current) {
       return
     }
-    const preferredMaxLevel = DEFAULT_MAX_LEVEL
-    const preferredListenWpm = DEFAULT_LISTEN_WPM
-    const preferredListenEffectiveWpm = DEFAULT_LISTEN_EFFECTIVE_WPM
-    const preferredListenAutoTightening = DEFAULT_LISTEN_AUTO_TIGHTENING
-    const preferredListenAutoTighteningCorrectCount = DEFAULT_LISTEN_AUTO_TIGHTENING_CORRECT_COUNT
-    const preferredShowHint = false
-    const preferredShowMnemonic = false
-    const preferredPracticeLearnMode = true
-    const preferredPracticeAutoPlay = true
-    const preferredPracticeIfrMode = DEFAULT_PRACTICE_IFR_MODE
-    const preferredPracticeReviewMisses = DEFAULT_PRACTICE_REVIEW_MISSES
+    const preferred = getRecommendedSettings(learnerProfileRef.current)
 
     const isAlreadyRecommended =
-      showHint === preferredShowHint &&
-      showMnemonic === preferredShowMnemonic &&
-      practiceLearnMode === preferredPracticeLearnMode &&
-      practiceAutoPlay === preferredPracticeAutoPlay &&
-      practiceIfrMode === preferredPracticeIfrMode &&
-      practiceReviewMisses === preferredPracticeReviewMisses &&
-      listenWpm === preferredListenWpm &&
-      listenEffectiveWpm === preferredListenEffectiveWpm &&
-      listenAutoTightening === preferredListenAutoTightening &&
-      listenAutoTighteningCorrectCount === preferredListenAutoTighteningCorrectCount &&
-      maxLevel === preferredMaxLevel
+      showHint === preferred.showHint &&
+      showMnemonic === preferred.showMnemonic &&
+      practiceLearnMode === preferred.practiceLearnMode &&
+      practiceAutoPlay === preferred.practiceAutoPlay &&
+      practiceIfrMode === preferred.practiceIfrMode &&
+      practiceReviewMisses === preferred.practiceReviewMisses &&
+      listenWpm === preferred.listenWpm &&
+      listenEffectiveWpm === preferred.listenEffectiveWpm &&
+      listenAutoTightening === preferred.listenAutoTightening &&
+      listenAutoTighteningCorrectCount === preferred.listenAutoTighteningCorrectCount &&
+      maxLevel === preferred.maxLevel
 
     if (isAlreadyRecommended) {
       return
     }
 
-    const nextLetters = getLettersForLevel(preferredMaxLevel)
-    setShowHint(preferredShowHint)
-    setShowMnemonic(preferredShowMnemonic)
-    setPracticeAutoPlay(preferredPracticeAutoPlay)
-    setPracticeLearnMode(preferredPracticeLearnMode)
-    practiceLearnModeRef.current = preferredPracticeLearnMode
-    setPracticeIfrMode(preferredPracticeIfrMode)
-    practiceIfrModeRef.current = preferredPracticeIfrMode
-    setPracticeReviewMisses(preferredPracticeReviewMisses)
-    practiceReviewMissesRef.current = preferredPracticeReviewMisses
-    practiceReviewQueueRef.current = []
-    setListenWpm(preferredListenWpm)
-    listenWpmRef.current = preferredListenWpm
-    setListenEffectiveWpm(preferredListenEffectiveWpm)
-    listenEffectiveWpmRef.current = preferredListenEffectiveWpm
-    setListenAutoTightening(preferredListenAutoTightening)
-    listenAutoTighteningRef.current = preferredListenAutoTightening
-    setListenAutoTighteningCorrectCount(preferredListenAutoTighteningCorrectCount)
-    listenAutoTighteningCorrectCountRef.current = preferredListenAutoTighteningCorrectCount
-    setMaxLevel(preferredMaxLevel)
-    maxLevelRef.current = preferredMaxLevel as (typeof LEVELS)[number]
+    const nextLetters = getLettersForLevel(preferred.maxLevel)
+    applyRecommendedSettings(preferred)
     setPracticeWpm(null)
     practiceWordStartRef.current = null
     clearTimer(wordSpaceTimeoutRef)
@@ -2069,8 +2060,8 @@ export const useMorseSessionController = ({
       resetListenState()
       const nextLetter = setNextListenLetter(nextLetters)
       playListenSequence(MORSE_DATA[nextLetter].code, {
-        characterWpm: preferredListenWpm,
-        effectiveWpm: preferredListenEffectiveWpm,
+        characterWpm: preferred.listenWpm,
+        effectiveWpm: preferred.listenEffectiveWpm,
       })
       return
     }
@@ -2082,6 +2073,7 @@ export const useMorseSessionController = ({
 
     setNextLetterForLevel(nextLetters)
   }, [
+    applyRecommendedSettings,
     listenAutoTightening,
     listenAutoTighteningCorrectCount,
     listenEffectiveWpm,
@@ -2091,7 +2083,7 @@ export const useMorseSessionController = ({
     practiceIfrMode,
     practiceLearnMode,
     practiceReviewMisses,
-    cancelExternalMorseInput,
+    playListenSequence,
     resetListenState,
     setNextListenLetter,
     setNextLetterForLevel,
@@ -2099,6 +2091,14 @@ export const useMorseSessionController = ({
     showHint,
     showMnemonic,
   ])
+
+  const handleRequestOneTimeHint = useCallback(() => {
+    if (showHint || isFreestyle || isListen || isNuxActive || guidedCourseActive) {
+      return
+    }
+    oneTimeHintActiveRef.current = true
+    setOneTimeHintActive(true)
+  }, [guidedCourseActive, isFreestyle, isListen, isNuxActive, showHint])
 
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
@@ -2258,7 +2258,14 @@ export const useMorseSessionController = ({
 
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
-  const hintVisible = !isFreestyle && !isListen && showHint
+  const hintVisible =
+    !isFreestyle && !isListen && (showHint || oneTimeHintActive)
+  const canRequestOneTimeHint =
+    !isFreestyle &&
+    !isListen &&
+    !showHint &&
+    !isNuxActive &&
+    !guidedCourseActive
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
   const ifrActive =
     !isFreestyle && !isListen && !isNuxActive && !guidedCourseActive && practiceIfrMode
@@ -2438,6 +2445,7 @@ export const useMorseSessionController = ({
       showMorseHint: introHintStep === 'morse' && !isListen && !isNuxActive,
       showSettingsHint: introHintStep === 'settings' && !isListen && !isNuxActive,
       isMorseDisabled,
+      canRequestOneTimeHint,
     },
     handlers: {
       handleResetScores,
@@ -2454,6 +2462,7 @@ export const useMorseSessionController = ({
       submitListenAnswer,
       handleFreestyleClear,
       handlePracticeReplay,
+      handleRequestOneTimeHint,
       handleIntroPressIn,
       handleMorseSymbolPressIn,
       handleMorseSymbolPressOut,
