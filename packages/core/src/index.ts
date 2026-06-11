@@ -142,7 +142,7 @@ export {
   UNIT_TIME_MS,
   WPM_RANGE,
 } from './constants'
-export { resolveToneVolume } from './utils/audio'
+export { buildPlaybackToneRequest, resolveToneVolume } from './utils/audio'
 export { RESET_APP_STORAGE_KEYS } from './utils/appState'
 export type { Letter } from './data/morse'
 export type {

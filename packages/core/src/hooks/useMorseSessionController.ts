@@ -167,8 +167,6 @@ export type UseMorseSessionControllerCallbacks = {
   stopTone: () => void | Promise<unknown>
   playMorseTone: (options: PlayMorseToneOptions) => void | Promise<unknown>
   stopMorseTone: () => void | Promise<unknown>
-  /** Single-symbol tone playback used during the NUX sound check. */
-  playOnboardingTone: (symbol: '.' | '-') => void
   /** Platform-specific local data outside core progress storage, such as web custom Listen drafts. */
   clearAdditionalLocalData?: () => void | Promise<void>
 }
@@ -254,7 +252,6 @@ export const useMorseSessionController = ({
     stopTone,
     playMorseTone,
     stopMorseTone,
-    playOnboardingTone,
   } = callbacks
 
   const platform = usePlatform()
@@ -1182,6 +1179,19 @@ export const useMorseSessionController = ({
       },
     )
   }, [moveIntoGuidedLesson, showPhaseModal])
+
+  const playOnboardingTone = useCallback(
+    (symbol: '.' | '-') => {
+      void playMorseTone({
+        code: symbol,
+        characterWpm: listenWpmRef.current,
+        effectiveWpm: listenEffectiveWpmRef.current,
+        minUnitMs: LISTEN_MIN_UNIT_MS,
+        frequency: toneFrequency,
+      })
+    },
+    [playMorseTone, toneFrequency],
+  )
 
   const onboardingActions = useOnboardingActions({
     didCompleteSoundCheck,

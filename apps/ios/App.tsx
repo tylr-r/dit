@@ -3,8 +3,7 @@ import {
   BACKGROUND_IDLE_TIMEOUT_MS,
   computeHero,
   createGuidedLessonProgress,
-  DEFAULT_CHARACTER_WPM,
-  LISTEN_MIN_UNIT_MS,
+  buildPlaybackToneRequest,
   LISTEN_WPM_MAX,
   LISTEN_WPM_MIN,
   MORSE_DATA,
@@ -68,15 +67,6 @@ import {
   stopTone,
 } from './src/utils/tone'
 
-const playOnboardingTone = (symbol: '.' | '-') => {
-  void playMorseTone({
-    code: symbol,
-    characterWpm: DEFAULT_CHARACTER_WPM,
-    effectiveWpm: DEFAULT_CHARACTER_WPM,
-    minUnitMs: LISTEN_MIN_UNIT_MS,
-  })
-}
-
 const sessionCallbacks = {
   logAnalyticsEvent,
   ensureNotificationPermission,
@@ -85,7 +75,6 @@ const sessionCallbacks = {
   stopTone,
   playMorseTone,
   stopMorseTone,
-  playOnboardingTone,
 }
 
 /** Inner app shell mounted under IosPlatformProvider so core hooks can resolve usePlatform(). */
@@ -570,13 +559,13 @@ function AppShell() {
               onClose={() => setShowReference(false)}
               onResetScores={handlers.handleResetScores}
               onPlaySound={(char) => {
-                void playMorseTone({
-                  code: MORSE_DATA[char].code,
-                  characterWpm: state.listenWpm,
-                  effectiveWpm: state.listenEffectiveWpm ?? state.listenWpm,
-                  minUnitMs: LISTEN_MIN_UNIT_MS,
-                  frequency: state.toneFrequency,
-                })
+                void playMorseTone(
+                  buildPlaybackToneRequest(MORSE_DATA[char].code, {
+                    listenWpm: state.listenWpm,
+                    listenEffectiveWpm: state.listenEffectiveWpm,
+                    toneFrequency: state.toneFrequency,
+                  }),
+                )
               }}
             />
           ) : null}
