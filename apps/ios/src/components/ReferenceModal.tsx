@@ -8,6 +8,9 @@ import type {
 import {
   MORSE_DATA,
   STREAK_DAILY_GOAL,
+  computeReferenceScoreMaxDeviation,
+  computeReferenceScoreMedian,
+  getReferenceRelativeScoreTint,
   isMastered,
 } from '@dit/core'
 import { BlurView } from 'expo-blur'
@@ -48,7 +51,6 @@ type ReferenceModalProps = {
   paddingVertical?: number
 }
 
-const SCORE_INTENSITY_MAX = 15
 const CARD_VERTICAL_PADDING = 10
 
 const formatScore = (value: number) => (value > 0 ? `+${value}` : `${value}`)
@@ -77,18 +79,24 @@ const getScoreAccessibilityText = (scoreValue: number) => {
   return 'score zero'
 }
 
-const getScoreTint = (scoreValue: number) => {
-  if (scoreValue === 0) {
+const getMasteredScoreTint = (
+  scoreValue: number,
+  mastered: boolean,
+  medianScore: number,
+  maxDeviation: number,
+) => {
+  if (!mastered) {
     return null
   }
-  const normalized = Math.abs(scoreValue) / SCORE_INTENSITY_MAX
-  const intensity = Math.min(Math.max(normalized, 0.2), 1)
-  const alpha = 0.35 * intensity
-  const tint =
-    scoreValue > 0
-      ? hslaFromHsl(colors.feedback.successHsl, alpha)
-      : hslaFromHsl(colors.feedback.errorHsl, alpha)
-  return { borderColor: tint }
+  const tint = getReferenceRelativeScoreTint(scoreValue, medianScore, maxDeviation)
+  if (!tint) {
+    return null
+  }
+  const hsl =
+    tint.red === 56
+      ? colors.feedback.successHsl
+      : colors.feedback.errorHsl
+  return { borderColor: hslaFromHsl(hsl, tint.alpha) }
 }
 
 const formatLetterTargets = (letters: readonly string[]) =>
@@ -208,10 +216,34 @@ export function ReferenceModal({
       { translateY: 16 * (1 - panelVisible.value) },
     ],
   }))
+  const masteredScoreMedian = React.useMemo(() => {
+    const masteredLetters = [...letters, ...numbers].filter((char) =>
+      isMastered(masteryProgress, char),
+    )
+    return computeReferenceScoreMedian(
+      masteredLetters.map((char) => scores[char] ?? 0),
+    )
+  }, [letters, masteryProgress, numbers, scores])
+
+  const masteredScoreMaxDeviation = React.useMemo(() => {
+    const masteredLetters = [...letters, ...numbers].filter((char) =>
+      isMastered(masteryProgress, char),
+    )
+    return computeReferenceScoreMaxDeviation(
+      masteredLetters.map((char) => scores[char] ?? 0),
+      masteredScoreMedian,
+    )
+  }, [letters, masteryProgress, masteredScoreMedian, numbers, scores])
+
   function ReferenceCard({ char }: { char: Letter }) {
     const scoreValue = scores[char] ?? 0
-    const scoreTint = getScoreTint(scoreValue)
     const mastered = isMastered(masteryProgress, char)
+    const scoreTint = getMasteredScoreTint(
+      scoreValue,
+      mastered,
+      masteredScoreMedian,
+      masteredScoreMaxDeviation,
+    )
     const code = morseData[char].code
     const canPlaySound = typeof onPlaySound === 'function'
     const scoreStyle =
