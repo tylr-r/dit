@@ -1,8 +1,8 @@
 import type { Letter } from '@dit/core'
-import { GlassContainer } from 'expo-glass-effect'
 import { StyleSheet, View } from 'react-native'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
+import { GlassContainer } from './GlassSurface'
 
 const LISTEN_KEYBOARD_ROWS: readonly Letter[][] = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],

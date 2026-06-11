@@ -6,10 +6,10 @@ import {
   pickerStyle,
   tag,
 } from '@expo/ui/swift-ui/modifiers'
-import { GlassView } from 'expo-glass-effect'
 import { StyleSheet, View } from 'react-native'
 import { normalizeColorForNative } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
+import { GlassView } from './GlassSurface'
 
 export type Mode = 'practice' | 'freestyle' | 'listen';
 

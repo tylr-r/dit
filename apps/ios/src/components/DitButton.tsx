@@ -1,5 +1,4 @@
 import { MaterialIcons } from '@expo/vector-icons'
-import { GlassStyle, GlassView } from 'expo-glass-effect'
 import { SymbolView } from 'expo-symbols'
 import React from 'react'
 import {
@@ -13,6 +12,7 @@ import {
 } from 'react-native'
 import { normalizeColorForNative } from '../design/color'
 import { colors, radii } from '../design/tokens'
+import { GlassView, type GlassStyle } from './GlassSurface'
 
 export type ButtonProps = {
   /** Optional button label text */

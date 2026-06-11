@@ -11,7 +11,6 @@ import {
   isMastered,
 } from '@dit/core'
 import { BlurView } from 'expo-blur'
-import { GlassContainer } from 'expo-glass-effect'
 import React from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, {
@@ -24,6 +23,7 @@ import { scheduleOnRN } from 'react-native-worklets'
 import { hslaFromHsl } from '../design/color'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'
+import { GlassContainer } from './GlassSurface'
 
 type CourseProgress = {
   packIndex: number
