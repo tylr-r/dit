@@ -1,3 +1,4 @@
+import { addOutputVolumeListener, getOutputVolume } from '@dit/dit-native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { datePickerStyle } from '@expo/ui/swift-ui/modifiers'
@@ -40,6 +41,8 @@ import {
   TIMING,
 } from './nux/animationTokens'
 import { useReduceMotion } from './nux/useReduceMotion'
+import { playMorseTone } from '../utils/tone'
+import { isOutputVolumeSufficient } from '../utils/soundCheck'
 
 type NuxStep =
   | 'welcome'
@@ -782,11 +785,50 @@ export function NuxModal({
   // feel like the rings are tracking the sound, short enough to stop soon
   // after it ends.
   const [soundRippleActive, setSoundRippleActive] = useState(false)
+  const [volumeTooLow, setVolumeTooLow] = useState(false)
   const prevSoundChecked = useRef(soundChecked)
+
+  useEffect(() => {
+    if (displayedStep !== 'sound_check') {
+      setVolumeTooLow(false)
+      return
+    }
+
+    let active = true
+    const syncVolume = (volume?: number) => {
+      void (async () => {
+        const resolved = volume ?? (await getOutputVolume())
+        if (!active) {
+          return
+        }
+        setVolumeTooLow(!isOutputVolumeSufficient(resolved))
+      })()
+    }
+
+    syncVolume()
+    const subscription = addOutputVolumeListener((volume) => {
+      syncVolume(volume)
+    })
+
+    return () => {
+      active = false
+      subscription.remove()
+    }
+  }, [displayedStep])
 
   const handlePlaySoundCheck = useCallback(() => {
     setSoundRippleActive(true)
-    onPlaySoundCheck()
+    void (async () => {
+      const volume = await getOutputVolume()
+      if (!isOutputVolumeSufficient(volume)) {
+        setVolumeTooLow(true)
+        void playMorseTone({ code: '.' })
+        return
+      }
+
+      setVolumeTooLow(false)
+      onPlaySoundCheck()
+    })()
   }, [onPlaySoundCheck])
 
   useEffect(() => {
@@ -1014,7 +1056,9 @@ export function NuxModal({
                 <Animated.View style={[styles.copyBlock, stagger[0]]}>
                   <Text style={styles.headline}>Check your sound</Text>
                   <Text style={styles.subtext}>
-                    Turn your volume up, then tap below to confirm you can hear the tones.
+                    {volumeTooLow
+                      ? 'Your volume looks low. Raise it with the side buttons, then test the sound.'
+                      : 'Tap below to confirm you can hear the tones.'}
                   </Text>
                 </Animated.View>
                 <View style={styles.stepFill}>
@@ -1042,6 +1086,17 @@ export function NuxModal({
                       </Text>
                     </ScalePressable>
                   </Animated.View>
+                  {volumeTooLow && !soundChecked ? (
+                    <Animated.View style={[styles.soundHelp, stagger[2]]}>
+                      <Text style={styles.soundHelpTitle}>Try this</Text>
+                      <Text style={styles.soundHelpItem}>
+                        Raise the volume with the side buttons.
+                      </Text>
+                      <Text style={styles.soundHelpItem}>
+                        Check Silent Mode in Control Center if you still hear nothing.
+                      </Text>
+                    </Animated.View>
+                  ) : null}
                 </View>
               </>
             ) : null}
@@ -1423,6 +1478,23 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: colors.text.primary,
+  },
+  soundHelp: {
+    marginTop: spacing.xl,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  soundHelpTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary90,
+    textAlign: 'center',
+  },
+  soundHelpItem: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text.primary60,
+    textAlign: 'center',
   },
   card: {
     borderRadius: radii.lg,

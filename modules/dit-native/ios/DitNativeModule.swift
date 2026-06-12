@@ -555,6 +555,7 @@ public final class DitNativeModule: Module {
   private let hapticController = HapticController()
   private var appleAuthorizationCoordinator: AppleAuthorizationCoordinator?
   private var lowPowerModeObserver: NSObjectProtocol?
+  private var outputVolumeObservation: NSKeyValueObservation?
   private var hardwareMorseKeyCaptureView: HardwareMorseKeyCaptureView?
   private var hardwareMorseKeyCaptureEnabled = false
   private var hardwareMorseKeyCaptureObservers: [NSObjectProtocol] = []
@@ -932,17 +933,58 @@ public final class DitNativeModule: Module {
     self.lowPowerModeObserver = nil
   }
 
+  private func activatePlaybackSession() {
+    let session = AVAudioSession.sharedInstance()
+    do {
+      try session.setCategory(.playback)
+      try session.setActive(true)
+    } catch {
+      // Fall back to whatever session state the system already has.
+    }
+  }
+
+  private func readOutputVolume() -> Double {
+    activatePlaybackSession()
+    return Double(AVAudioSession.sharedInstance().outputVolume)
+  }
+
+  private func startOutputVolumeObservation() {
+    guard outputVolumeObservation == nil else {
+      return
+    }
+
+    activatePlaybackSession()
+    let session = AVAudioSession.sharedInstance()
+    outputVolumeObservation = session.observe(\.outputVolume, options: [.new, .initial]) {
+      [weak self] observedSession, _ in
+      guard let self else {
+        return
+      }
+      self.sendEvent(
+        "onOutputVolumeChanged",
+        ["outputVolume": Double(observedSession.outputVolume)]
+      )
+    }
+  }
+
+  private func stopOutputVolumeObservation() {
+    outputVolumeObservation?.invalidate()
+    outputVolumeObservation = nil
+  }
+
   public func definition() -> ModuleDefinition {
     Name("DitNative")
 
-    Events("onLowPowerModeChanged", externalMorseKeyEventName)
+    Events("onLowPowerModeChanged", "onOutputVolumeChanged", externalMorseKeyEventName)
 
     OnStartObserving {
       self.startLowPowerModeObservation()
+      self.startOutputVolumeObservation()
     }
 
     OnStopObserving {
       self.stopLowPowerModeObservation()
+      self.stopOutputVolumeObservation()
     }
 
     Function("getHello") {
@@ -970,6 +1012,10 @@ public final class DitNativeModule: Module {
 
     AsyncFunction("getLowPowerModeEnabled") { () -> Bool in
       ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
+    AsyncFunction("getOutputVolume") { () -> Double in
+      self.readOutputVolume()
     }
 
     AsyncFunction("setHapticsEnabled") { (enabled: Bool) -> Bool in

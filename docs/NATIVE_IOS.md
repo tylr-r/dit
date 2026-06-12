@@ -29,6 +29,7 @@ Auth:
 
 System:
 - `getLowPowerModeEnabled()` and the `onLowPowerModeChanged` event — used to gate animations/haptics when Low Power is on
+- `getOutputVolume()` and the `onOutputVolumeChanged` event — reads `AVAudioSession.outputVolume` (0–1) for NUX sound check when system volume looks too low
 - `copyAssetToAppGroup(sourceUri, appGroup, filename)` — for widget assets
 - `setExternalMorseKeyCaptureEnabled(enabled)` and the `onExternalMorseKey` event — installs a zero-size first-responder view while enabled and emits `{ symbol: "." | "-", phase: "down" | "up" }` for VBand-compatible left Control / `[` and right Control / `]` paddle input. The JS app only enables this on the unobstructed Practice/Freestyle surface so sheets and text entry keep normal hardware-key behavior.
 

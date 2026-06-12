@@ -32,7 +32,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Welcome screen | ✅ | ✅ | Both preserve the brand moment |
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
-| Sound check | ✅ | ✅ | iOS: NUX step. Web: NUX step plus a Settings playback test row |
+| Sound check | ✅ | ✅ | iOS: NUX step reads system volume when it looks low. Web: NUX step plus a Settings playback test row |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
 | Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the shared sign-in sheet |
 | Swipe left to go back | ✅ | ✅ | Backing up clears sound-check or Morse-key tutorial completion where needed |
