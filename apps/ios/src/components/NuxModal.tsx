@@ -3,7 +3,16 @@ import { DatePicker, Host } from '@expo/ui/swift-ui'
 import { datePickerStyle } from '@expo/ui/swift-ui/modifiers'
 import { SymbolView } from 'expo-symbols'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import Reanimated, {
   Easing as REasing,
   cancelAnimation,
@@ -51,7 +60,9 @@ type NuxModalProps = {
   currentPack: string[]
   /** Current Firebase user, if any. When null the welcome screen shows sign-in options. */
   user: { uid: string } | null
+  hapticsEnabled: boolean
   onWelcomeDone: () => void
+  onBack: (step: NuxStep) => void
   onChooseProfile: (profile: 'beginner' | 'known') => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
@@ -72,6 +83,7 @@ type NuxModalProps = {
   ) => Promise<{ ok: true } | { ok: false; error: string }>
   /** Fires when the user taps "Stay signed out" from the welcome options. */
   onStaySignedOut: () => void
+  onHapticsEnabledChange: (value: boolean) => void
 }
 
 // ─── Step body transition ─────────────────────────────────────────────────────
@@ -303,12 +315,14 @@ const WELCOME_OPTIONS_FADE_MS = 600
 
 function WelcomeScreen({
   onWelcomeDone,
+  onBack,
   reduceMotion,
   user,
   onRequestSignIn,
   onStaySignedOut,
 }: {
   onWelcomeDone: () => void
+  onBack: () => void
   reduceMotion: boolean
   user: { uid: string } | null
   onRequestSignIn: () => void
@@ -361,8 +375,23 @@ function WelcomeScreen({
     opacity: optionsOpacity.value,
   }))
 
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          gestureState.dx < -48 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.4,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < -48) {
+            onBack()
+          }
+        },
+      }),
+    [onBack],
+  )
+
   return (
     <Pressable
+      {...panResponder.panHandlers}
       style={styles.welcomeScreen}
       onPress={showOptions ? undefined : onWelcomeDone}
       accessibilityLabel="Welcome to Dit"
@@ -655,7 +684,9 @@ export function NuxModal({
   tutorialHoldCount,
   currentPack,
   user,
+  hapticsEnabled,
   onWelcomeDone,
+  onBack,
   onChooseProfile,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
@@ -669,6 +700,7 @@ export function NuxModal({
   onSignInWithEmail,
   onCreateAccountWithEmail,
   onStaySignedOut,
+  onHapticsEnabledChange,
 }: NuxModalProps) {
   const insets = useSafeAreaInsets()
   const { width: windowWidth, height: windowHeight } = useWindowDimensions()
@@ -692,6 +724,33 @@ export function NuxModal({
     setSignInSheetVisible(false)
     onSignInWithGoogle()
   }, [onSignInWithGoogle])
+
+  useEffect(() => {
+    if (step !== 'welcome' || signInSheetVisible || user === null) {
+      return
+    }
+    const timer = setTimeout(onWelcomeDone, reduceMotion ? 0 : 350)
+    return () => clearTimeout(timer)
+  }, [step, signInSheetVisible, user, onWelcomeDone, reduceMotion])
+
+  const handleBack = useCallback(() => {
+    if (displayedStep === 'welcome') return
+    onBack(displayedStep)
+  }, [displayedStep, onBack])
+
+  const contentPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          gestureState.dx < -48 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.4,
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < -48) {
+            handleBack()
+          }
+        },
+      }),
+    [handleBack],
+  )
   const [reminderTime, setReminderTime] = useState('19:00')
   const reminderInitialDate = useMemo(() => {
     const now = new Date()
@@ -884,6 +943,7 @@ export function NuxModal({
       {displayedStep === 'welcome' ? (
         <WelcomeScreen
           onWelcomeDone={onWelcomeDone}
+          onBack={() => onBack('welcome')}
           reduceMotion={reduceMotion}
           user={user}
           onRequestSignIn={handleRequestSignIn}
@@ -891,6 +951,7 @@ export function NuxModal({
         />
       ) : displayedStep === 'known_tour' ? null : (
         <View
+          {...contentPanResponder.panHandlers}
           style={[styles.content, { paddingTop, paddingBottom }]}
           pointerEvents={isTutorial ? 'box-none' : undefined}
         >
@@ -994,7 +1055,10 @@ export function NuxModal({
                   </Text>
                 </Animated.View>
                 <View style={styles.stepFill}>
-                  <Animated.View style={[styles.tutorialBlock, stagger[1]]}>
+                  <Animated.View
+                    {...contentPanResponder.panHandlers}
+                    style={[styles.tutorialBlock, stagger[1]]}
+                  >
                     <TutorialInstruction
                       phase={tutorialTapCount < TUTORIAL_REQUIRED ? 'tap' : 'hold'}
                       reduceMotion={reduceMotion}
@@ -1010,6 +1074,20 @@ export function NuxModal({
                         Hold <Text style={styles.tutorialPipHint}>(dah)</Text>
                       </Text>
                       <TutorialProgress count={tutorialHoldCount} required={TUTORIAL_REQUIRED} />
+                    </View>
+                    <View style={styles.hapticsRow}>
+                      <Text style={styles.hapticsLabel}>Haptics</Text>
+                      <Switch
+                        value={hapticsEnabled}
+                        onValueChange={onHapticsEnabledChange}
+                        accessibilityLabel="Haptics"
+                        accessibilityHint="Turns Morse key vibration on or off"
+                        trackColor={{
+                          false: normalizeColorForNative(colors.surface.inputPressed),
+                          true: normalizeColorForNative(colors.accent.wave),
+                        }}
+                        thumbColor={normalizeColorForNative(colors.text.primary)}
+                      />
                     </View>
                   </Animated.View>
                 </View>
@@ -1407,6 +1485,27 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: 0.4,
     color: colors.text.primary40,
+  },
+  hapticsRow: {
+    marginTop: spacing.sm,
+    minWidth: 180,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    backgroundColor: colors.surface.input,
+  },
+  hapticsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.text.primary60,
   },
   ctaSlot: {
     height: CTA_SLOT_HEIGHT,

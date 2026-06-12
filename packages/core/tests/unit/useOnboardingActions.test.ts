@@ -155,6 +155,51 @@ describe('useOnboardingActions', () => {
     expect(options.setNuxStep).toHaveBeenCalledWith('welcome')
   })
 
+  it('moves back through onboarding steps and clears step-local progress', () => {
+    const soundCheck = buildOptions({ didCompleteSoundCheck: true })
+    const { result: soundCheckResult } = renderOnboardingHook(soundCheck)
+
+    act(() => {
+      soundCheckResult.current.handleNuxBack('sound_check')
+    })
+
+    expect(soundCheck.setDidCompleteSoundCheck).toHaveBeenCalledWith(false)
+    expect(soundCheck.setNuxStep).toHaveBeenCalledWith('profile')
+
+    const buttonTutorial = buildOptions({ tutorialTapCount: 2, tutorialHoldCount: 1 })
+    const { result: buttonResult } = renderOnboardingHook(buttonTutorial)
+
+    act(() => {
+      buttonResult.current.handleNuxBack('button_tutorial')
+    })
+
+    expect(buttonTutorial.setTutorialTapCount).toHaveBeenCalledWith(0)
+    expect(buttonTutorial.setTutorialHoldCount).toHaveBeenCalledWith(0)
+    expect(buttonTutorial.setNuxStep).toHaveBeenCalledWith('sound_check')
+  })
+
+  it('moves back from the reminder step using the selected learner path', () => {
+    const beginner = buildOptions()
+    beginner.learnerProfileRef.current = 'beginner'
+    const { result: beginnerResult } = renderOnboardingHook(beginner)
+
+    act(() => {
+      beginnerResult.current.handleNuxBack('reminder')
+    })
+
+    expect(beginner.setNuxStep).toHaveBeenCalledWith('beginner_intro')
+
+    const known = buildOptions()
+    known.learnerProfileRef.current = 'known'
+    const { result: knownResult } = renderOnboardingHook(known)
+
+    act(() => {
+      knownResult.current.handleNuxBack('reminder')
+    })
+
+    expect(known.setNuxStep).toHaveBeenCalledWith('button_tutorial')
+  })
+
   it('persists the pending NUX status via platform storage on replay', async () => {
     const setItem = vi.fn(async () => {})
     const platform = createNoopPlatform({

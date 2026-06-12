@@ -35,7 +35,9 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Sound check | ✅ | ✅ | iOS: NUX step. Web: NUX step plus a Settings playback test row |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
 | Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the shared sign-in sheet |
-| Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped at [NuxModal.tsx:92-95](../apps/web/src/components/NuxModal.tsx#L92-L95) |
+| Swipe left to go back | ✅ | ✅ | Backing up clears sound-check or Morse-key tutorial completion where needed |
+| Tutorial haptics toggle | ✅ | 🚫 | iOS-only since web has no haptic surface |
+| Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped in [NuxModal.tsx](../apps/web/src/components/NuxModal.tsx) |
 | Known-user app tour | ✅ | ✅ | Web tour spotlights real header elements via getBoundingClientRect + portal |
 | Post-onboarding intro hints (Morse key → Settings) | ✅ | 🟡 | iOS renders overlays; web advances persisted steps without overlay UI |
 | `nuxCompleted` persisted to RTDB | ✅ | ✅ | |

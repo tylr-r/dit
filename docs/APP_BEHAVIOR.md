@@ -21,6 +21,8 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 - The app asks whether the user is new to Morse or already knows it. The answer is stored as `learnerProfile` and changes what the Reference modal emphasizes later (mastered count vs. best WPM).
 - Both paths begin with a sound check and a short input tutorial that explicitly teaches the big Morse key.
 - The button tutorial requires one short tap (dit) and one long press (dah) before continuing.
+- Users can swipe left during onboarding to return to the previous step. Moving back from sound check clears its completion; moving back from the Morse key tutorial clears its tap/hold counts so stale progress does not auto-advance the user.
+- On iOS, the Morse key tutorial exposes a **Haptics** toggle that controls the same persisted haptics setting as Settings.
 - iOS also asks the user to set a daily practice reminder during NUX. The user can skip this and turn it on later in Settings.
 - Known users see the daily reminder screen, then a short app tour, then enter
   the normal app flow.
@@ -45,16 +47,16 @@ Two surfaces open the same sign-in bottom sheet:
 
 The shared sheet implementation lives at `apps/ios/src/components/SignInSheet.tsx`. `NuxModal.tsx` renders its own instance for the welcome-screen entry point; the Settings instance is rendered at the `App.tsx` root so it survives `SettingsModal` unmounting when Settings closes.
 
-#### Welcome-screen sign-in (iOS)
+#### Welcome-screen sign-in
 
-- The welcome screen does not auto-advance. Signed-out users see two options fade in ~2 seconds after paint: **Sign in** (primary) and **Stay signed out** (secondary).
-- **Sign in** opens a bottom sheet with three provider rows: **Continue with Apple**, **Continue with Google**, and **Continue with Email**. Each row renders its provider logo (Apple's SF Symbol `applelogo`, the Google "G", and a mail icon) plus a Cancel row. On successful sign-in, remote progress loads via `useFirebaseProgressSync`. If the loaded snapshot has `nuxCompleted === true` or any meaningful progress (learner profile, guided course active, or non-zero scores), NUX is marked `'skipped'` and the user lands in the main app with their progress restored. Otherwise NUX continues at profile selection.
+- Signed-out users see two options fade in ~2 seconds after paint: **Sign in** (primary) and **Stay signed out** (secondary).
+- **Sign in** opens a bottom sheet with three provider rows: **Continue with Apple**, **Continue with Google**, and **Continue with Email**. Each row renders its provider logo (Apple's SF Symbol `applelogo`, the Google "G", and a mail icon) plus a Cancel row. On successful sign-in, remote progress loads via `useFirebaseProgressSync`. If the loaded snapshot has `nuxCompleted === true` or any meaningful progress (learner profile, guided course active, or non-zero scores), NUX is marked `'skipped'` and the user lands in the main app with their progress restored. Otherwise the welcome screen advances automatically to profile selection once auth state updates.
 - **Continue with Email** swaps the sheet content in-place to an email form: email field, password field, primary "Sign in", secondary "Create account", and a back chevron to the provider picker. Errors render inline above the primary button (see below). Form state resets whenever the sheet dismisses. No password-reset or email-verification flow in v1.
   - **Sign in** calls `signInWithEmailAndPassword`; bad-credential errors (`auth/invalid-credential`, `auth/user-not-found`, `auth/wrong-password`) all show the same message, `"Email or password is incorrect."` — Firebase v11+ collapses these codes for enumeration resistance and we mirror that.
   - **Create account** calls `createUserWithEmailAndPassword`; it creates the user and signs them in immediately. No confirm-password field.
 - **Stay signed out** advances to the next NUX step (profile selection), identical to the prior tap-anywhere behavior.
 - Cancel or error on the sign-in sheet returns to the welcome screen with both options still visible.
-- When a user is already signed in (e.g., replaying NUX from Settings), the two options are not rendered; the welcome screen keeps its single tap-anywhere advance so replay does not prompt for re-auth.
+- When a user is already signed in (e.g., replaying NUX from Settings), the two options are not rendered; the welcome screen advances automatically so replay does not prompt for re-auth.
 
 #### Learning sheet (iOS)
 

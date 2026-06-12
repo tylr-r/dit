@@ -695,7 +695,9 @@ function AppShell() {
             tutorialHoldCount={state.tutorialHoldCount}
             currentPack={BEGINNER_COURSE_PACKS[0] ?? []}
             user={user}
+            hapticsEnabled={state.hapticsEnabled}
             onWelcomeDone={handlers.handleNuxWelcomeDone}
+            onBack={handlers.handleNuxBack}
             onChooseProfile={handlers.handleNuxChooseProfile}
             onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
             onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}
@@ -711,6 +713,7 @@ function AppShell() {
             onSignInWithEmail={handlers.handleSignInWithEmail}
             onCreateAccountWithEmail={handlers.handleCreateAccountWithEmail}
             onStaySignedOut={handlers.handleNuxWelcomeDone}
+            onHapticsEnabledChange={setters.setHapticsEnabled}
           />
         ) : null}
         {tourEntryMaskMounted ? (
