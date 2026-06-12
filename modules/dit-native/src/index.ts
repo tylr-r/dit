@@ -8,6 +8,9 @@ type DitNativeEvents = {
   onLowPowerModeChanged: (event: {
     isLowPowerModeEnabled: boolean
   }) => void
+  onOutputVolumeChanged: (event: {
+    outputVolume: number
+  }) => void
   onExternalMorseKey: (event: ExternalMorseKeyEvent) => void
 }
 
@@ -18,6 +21,7 @@ export type ExternalMorseKeyEvent = {
 
 export type DitNativeModule = {
   getLowPowerModeEnabled?: () => boolean | Promise<boolean>
+  getOutputVolume?: () => number | Promise<number>
   setExternalMorseKeyCaptureEnabled?: (
     enabled: boolean
   ) => boolean | Promise<boolean>
@@ -86,6 +90,19 @@ export const getLowPowerModeEnabled = async () => {
   return Boolean(await DitNative.getLowPowerModeEnabled())
 }
 
+export const getOutputVolume = async () => {
+  if (!DitNative?.getOutputVolume) {
+    return 1
+  }
+
+  const volume = await DitNative.getOutputVolume()
+  if (!Number.isFinite(volume)) {
+    return 1
+  }
+
+  return Math.max(0, Math.min(volume, 1))
+}
+
 export const addLowPowerModeListener = (
   listener: (isLowPowerModeEnabled: boolean) => void
 ): EventSubscription => {
@@ -96,6 +113,20 @@ export const addLowPowerModeListener = (
 
   return emitter.addListener('onLowPowerModeChanged', (event) => {
     listener(Boolean(event.isLowPowerModeEnabled))
+  })
+}
+
+export const addOutputVolumeListener = (
+  listener: (outputVolume: number) => void
+): EventSubscription => {
+  const emitter = getEventEmitter()
+  if (!emitter) {
+    return noopSubscription
+  }
+
+  return emitter.addListener('onOutputVolumeChanged', (event) => {
+    const volume = Number(event.outputVolume)
+    listener(Number.isFinite(volume) ? Math.max(0, Math.min(volume, 1)) : 1)
   })
 }
 

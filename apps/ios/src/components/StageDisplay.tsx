@@ -12,6 +12,10 @@ import Animated, {
 import { colors, radii, spacing } from '../design/tokens'
 import type { ListenWavePlayback } from '@dit/core'
 import { ListenSineWave } from './ListenSineWave'
+import {
+  resolvePracticeFeedbackColor,
+  type PracticeFeedbackStatus,
+} from './stageFeedback'
 
 export type StagePip = {
   type: 'dot' | 'dah'
@@ -28,6 +32,7 @@ type StageDisplayProps = {
   letterPlaceholder?: boolean
   isListen?: boolean
   listenStatus?: 'idle' | 'success' | 'error'
+  practiceStatus?: PracticeFeedbackStatus
   listenWavePlayback?: ListenWavePlayback | null
   freestyleToneActive?: boolean
   practiceWpmText?: string | null
@@ -69,6 +74,7 @@ export function StageDisplay({
   letterPlaceholder = false,
   isListen = false,
   listenStatus = 'idle',
+  practiceStatus = 'idle',
   listenWavePlayback = null,
   freestyleToneActive = false,
   practiceWpmText = null,
@@ -170,6 +176,11 @@ export function StageDisplay({
   }
 
   const wordCharacters = practiceWord ? practiceWord.split('') : ['?']
+  const practiceFeedbackColor =
+    !isListen && !isFreestyle ? resolvePracticeFeedbackColor(practiceStatus) : null
+  const practiceFeedbackStyle = practiceFeedbackColor
+    ? { color: practiceFeedbackColor }
+    : null
 
   return (
     <View style={styles.stage}>
@@ -188,6 +199,7 @@ export function StageDisplay({
                   styles.wordLetter,
                   isDone && styles.wordLetterDone,
                   isActive && styles.wordLetterActive,
+                  isActive && practiceFeedbackStyle,
                 ]}
               >
                 {char}
@@ -217,7 +229,11 @@ export function StageDisplay({
         </View>
       ) : (
         <Text
-          style={[styles.letter, letterPlaceholder && styles.letterPlaceholder]}
+          style={[
+            styles.letter,
+            practiceFeedbackStyle,
+            letterPlaceholder && styles.letterPlaceholder,
+          ]}
           accessibilityRole="header"
         >
           {letter}
@@ -232,6 +248,8 @@ export function StageDisplay({
                 styles.pip,
                 pip.type === 'dot' ? styles.pipDot : styles.pipDah,
                 pip.state === 'hit' ? styles.pipHit : styles.pipExpected,
+                practiceStatus === 'success' && styles.pipSuccess,
+                practiceStatus === 'error' && styles.pipError,
               ]}
             />
           ))}
@@ -276,7 +294,7 @@ export function StageDisplay({
           </>
         ) : (
           <>
-            <Text style={styles.statusText}>{statusText}</Text>
+            <Text style={[styles.statusText, practiceFeedbackStyle]}>{statusText}</Text>
             {statusDetailText ? (
               <Text style={styles.statusMetaText}>{statusDetailText}</Text>
             ) : null}
@@ -399,6 +417,14 @@ const styles = StyleSheet.create({
   },
   pipHit: {
     opacity: 1,
+  },
+  pipSuccess: {
+    backgroundColor: colors.feedback.success,
+    shadowColor: colors.feedback.success,
+  },
+  pipError: {
+    backgroundColor: colors.feedback.error,
+    shadowColor: colors.feedback.error,
   },
   statusTextWrap: {
     minHeight: 64,

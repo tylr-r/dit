@@ -580,6 +580,7 @@ function AppShell() {
               letterPlaceholder={derived.letterPlaceholder}
               isListen={derived.isListen}
               listenStatus={state.listenStatus}
+              practiceStatus={state.status}
               listenWavePlayback={state.listenWavePlayback}
               freestyleToneActive={state.isPressing}
               practiceWpmText={derived.practiceWpmText}
