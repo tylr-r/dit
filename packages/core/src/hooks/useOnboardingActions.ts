@@ -169,6 +169,45 @@ export const useOnboardingActions = ({
     setNuxStep('beginner_intro')
   }, [setNuxStep])
 
+  const handleNuxBack = useCallback(
+    (step: NuxStep) => {
+      switch (step) {
+        case 'welcome':
+          return
+        case 'profile':
+          setNuxStep('welcome')
+          return
+        case 'sound_check':
+          setDidCompleteSoundCheck(false)
+          setNuxStep('profile')
+          return
+        case 'button_tutorial':
+          setTutorialTapCount(0)
+          setTutorialHoldCount(0)
+          setNuxStep('sound_check')
+          return
+        case 'beginner_stages':
+          setNuxStep('button_tutorial')
+          return
+        case 'beginner_intro':
+          setNuxStep('beginner_stages')
+          return
+        case 'reminder':
+          setNuxStep(learnerProfileRef.current === 'known' ? 'button_tutorial' : 'beginner_intro')
+          return
+        case 'known_tour':
+          setNuxStep('reminder')
+      }
+    },
+    [
+      learnerProfileRef,
+      setDidCompleteSoundCheck,
+      setNuxStep,
+      setTutorialHoldCount,
+      setTutorialTapCount,
+    ],
+  )
+
   const finishOnboarding = useCallback(() => {
     logAnalyticsEvent('onboarding_completed')
     persistNuxStatus('completed')
@@ -282,6 +321,7 @@ export const useOnboardingActions = ({
     handleNuxContinueFromSoundCheck,
     handleNuxCompleteButtonTutorial,
     handleNuxContinueFromStages,
+    handleNuxBack,
     handleFinishKnownTour,
     handleStartBeginnerCourse,
     handleNuxSetReminder,

@@ -116,10 +116,18 @@ shader is the single, expected exception, layered behind everything.
 - **Welcome auto-advance removed (2026-04-23).** The 2.2s `setTimeout` that
   advanced welcome into profile selection was removed in favor of explicit
   user choice. Signed-out users see two centered options (Sign in / Stay
-  signed out) fade in ~2000ms after paint. Signed-in users (NUX replay)
-  keep the single tap-anywhere advance. Do not re-add the timer — the
-  explicit choice exists so returning users can sign in and skip NUX on a
-  fresh install.
+  signed out) fade in ~2000ms after paint. Do not re-add a timer that skips
+  this choice before the user acts.
+- **Post-auth advance.** Once a signed-out welcome user successfully signs in,
+  the welcome screen advances quickly to the next onboarding step unless
+  remote progress skips NUX entirely. This prevents the options from
+  disappearing while the user stays on the same page.
+- **Swipe-back gesture.** Onboarding supports a left swipe to return to the
+  previous step. Keep the gesture quiet and non-visual; do not add a visible
+  back button unless the flow grows beyond these short stages.
+- **Tutorial haptics control.** The Morse key tutorial can show a compact
+  haptics toggle on iOS. It uses the same setting as Settings so the user's
+  choice persists after onboarding.
 
 ---
 

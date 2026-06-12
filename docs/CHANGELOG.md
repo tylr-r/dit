@@ -11,10 +11,13 @@ Compared against `2026.5.31`.
 ### Changes
 
 - Reference chart colors on iOS now use the same relative scoring style as web, and only on letters you've mastered.
+- Onboarding now lets you swipe left to go back to the previous step.
+- iOS: The Morse key tutorial now lets you turn haptics on or off before practicing taps and holds.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
 
+- Onboarding now moves forward automatically after a successful sign-in instead of leaving you on the welcome screen without sign-in choices.
 - Fixed the Reference chart playing letters at a speed that didn't match your Listen setting.
 - Fixed **Use recommended settings** always applying the returning-learner preset, even when you said you're new to Morse.
 

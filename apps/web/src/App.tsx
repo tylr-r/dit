@@ -1048,6 +1048,7 @@ function MainApp() {
           morseButton={nuxMorseButton}
           user={user}
           onWelcomeDone={handlers.handleNuxWelcomeDone}
+          onBack={handlers.handleNuxBack}
           onChooseProfile={handlers.handleNuxChooseProfile}
           onPlaySoundCheck={handlers.handleNuxPlaySoundCheck}
           onContinueFromSoundCheck={handlers.handleNuxContinueFromSoundCheck}

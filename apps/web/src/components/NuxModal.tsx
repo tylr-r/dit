@@ -1,5 +1,5 @@
 import type { LearnerProfile, NuxStep } from '@dit/core'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isIOS } from '../platform/device'
 import { useScreenTracker } from '../lib/analytics'
 
@@ -27,6 +27,7 @@ type NuxModalProps = {
   morseButton: React.ReactNode
   user: AuthUser | null
   onWelcomeDone: () => void
+  onBack: (step: NuxStep) => void
   onChooseProfile: (profile: LearnerProfile) => void
   onPlaySoundCheck: () => void
   onContinueFromSoundCheck: () => void
@@ -37,6 +38,10 @@ type NuxModalProps = {
   onSkipReminder: () => void
   onRequestSignIn: () => void
 }
+
+const SIGNED_IN_WELCOME_ADVANCE_MS = 350
+const WELCOME_OPTIONS_DELAY_MS = 2000
+const SWIPE_BACK_THRESHOLD_PX = 48
 
 const ProgressDots = ({ step }: { step: NuxStep }) => {
   const activeIndex = STEP_ORDER.indexOf(step)
@@ -63,6 +68,7 @@ export function NuxModal({
   morseButton,
   user,
   onWelcomeDone,
+  onBack,
   onChooseProfile,
   onPlaySoundCheck,
   onContinueFromSoundCheck,
@@ -74,20 +80,39 @@ export function NuxModal({
   onRequestSignIn,
 }: NuxModalProps) {
   const [optionsVisible, setOptionsVisible] = useState(false)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     if (step !== 'welcome') {
       return
     }
     if (user) {
-      // Already signed in (replay scenario): auto-advance after a short delay
-      const timer = window.setTimeout(onWelcomeDone, 2200)
+      const timer = window.setTimeout(onWelcomeDone, SIGNED_IN_WELCOME_ADVANCE_MS)
       return () => window.clearTimeout(timer)
     }
     // Signed-out: show sign-in options after 2s instead of auto-advancing
-    const t = window.setTimeout(() => setOptionsVisible(true), 2000)
+    const t = window.setTimeout(() => setOptionsVisible(true), WELCOME_OPTIONS_DELAY_MS)
     return () => window.clearTimeout(t)
   }, [step, user, onWelcomeDone])
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    const touch = event.touches[0]
+    if (!touch) return
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLElement>, currentStep: NuxStep) => {
+    const start = touchStartRef.current
+    touchStartRef.current = null
+    const touch = event.changedTouches[0]
+    if (!start || !touch) return
+
+    const dx = touch.clientX - start.x
+    const dy = touch.clientY - start.y
+    if (dx < -SWIPE_BACK_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      onBack(currentStep)
+    }
+  }
 
   useEffect(() => {
     if (step !== 'button_tutorial') {
@@ -141,6 +166,8 @@ export function NuxModal({
         role="dialog"
         aria-modal="true"
         onClick={user ? onWelcomeDone : undefined}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={(event) => handleTouchEnd(event, 'welcome')}
       >
         <div className="nux-welcome">
           <img src="/Dit-logo.svg" alt="Dit" className="nux-welcome-logo" />
@@ -170,7 +197,13 @@ export function NuxModal({
   }
 
   return (
-    <div className="nux-overlay" role="dialog" aria-modal="true">
+    <div
+      className="nux-overlay"
+      role="dialog"
+      aria-modal="true"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={(event) => handleTouchEnd(event, displayedStep)}
+    >
       <div className="nux-content">
         <ProgressDots step={step} />
         <div
@@ -436,4 +469,3 @@ const StageRow = ({
     </div>
   </div>
 )
-
