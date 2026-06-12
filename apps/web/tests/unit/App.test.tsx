@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../src/App'
 
@@ -11,6 +11,7 @@ vi.mock('@dit/core', async () => {
     useMorseSessionController: mockUseMorseSessionController,
     useNuxStepTracker: vi.fn(),
     useOnboardingState: () => ({
+      dismissSettingsHint: vi.fn(),
       nuxReady: true,
       nuxStatus: 'skipped',
       nuxStep: 'welcome',
@@ -23,7 +24,7 @@ vi.mock('../../src/firebase', () => ({
 }))
 
 vi.mock('../../src/hooks/useAuth', () => ({
-  useAuth: () => ({ user: null }),
+  useAuth: () => ({ authReady: true, user: null }),
 }))
 
 vi.mock('../../src/hooks/useCustomListenSession', () => ({
@@ -89,6 +90,7 @@ const makeSession = (status: 'idle' | 'success' | 'error') => ({
     tutorialTapCount: 0,
   },
   setters: {
+    flushPendingSave: vi.fn(),
     setHapticsEnabled: vi.fn(),
     setPracticeAutoPlay: vi.fn(),
     setShowHint: vi.fn(),
@@ -170,5 +172,25 @@ describe('App', () => {
     render(<App />)
 
     expect(document.querySelector('.app')).toHaveClass('status-success')
+  })
+
+  it('applies missed practice status to the app shell', () => {
+    mockUseMorseSessionController.mockReturnValue(makeSession('error'))
+
+    render(<App />)
+
+    expect(document.querySelector('.app')).toHaveClass('status-error')
+  })
+
+  it('reopens settings after a successful settings sign-in', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue with Google' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    })
   })
 })

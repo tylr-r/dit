@@ -236,15 +236,6 @@ function MainApp() {
   }, [user])
 
   useEffect(() => {
-    if (!showSignIn || !signInFromSettings || !user) {
-      return
-    }
-    setShowSignIn(false)
-    setSignInFromSettings(false)
-    setShowSettings(true)
-  }, [showSignIn, signInFromSettings, user])
-
-  useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
@@ -589,26 +580,43 @@ function MainApp() {
     setSignInFromSettings(false)
   }, [signInFromSettings, user])
 
+  const reopenSettingsAfterSignIn = useCallback(() => {
+    if (!signInFromSettings) {
+      return
+    }
+    setShowSettings(true)
+  }, [signInFromSettings])
+
   const handleSignInWithApple = useCallback(async () => {
     await handlers.handleSignInWithApple()
-  }, [handlers])
+    reopenSettingsAfterSignIn()
+  }, [handlers, reopenSettingsAfterSignIn])
 
   const handleSignInWithGoogle = useCallback(async () => {
     await handlers.handleSignInWithGoogle()
-  }, [handlers])
+    reopenSettingsAfterSignIn()
+  }, [handlers, reopenSettingsAfterSignIn])
 
   const handleSignInWithEmail = useCallback(
     async (email: string, password: string) => {
-      return handlers.handleSignInWithEmail(email, password)
+      const result = await handlers.handleSignInWithEmail(email, password)
+      if (result.ok) {
+        reopenSettingsAfterSignIn()
+      }
+      return result
     },
-    [handlers],
+    [handlers, reopenSettingsAfterSignIn],
   )
 
   const handleCreateAccountWithEmail = useCallback(
     async (email: string, password: string) => {
-      return handlers.handleCreateAccountWithEmail(email, password)
+      const result = await handlers.handleCreateAccountWithEmail(email, password)
+      if (result.ok) {
+        reopenSettingsAfterSignIn()
+      }
+      return result
     },
-    [handlers],
+    [handlers, reopenSettingsAfterSignIn],
   )
 
   const handleDeleteAccount = useCallback(() => {
