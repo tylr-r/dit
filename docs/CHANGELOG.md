@@ -6,6 +6,7 @@ Compared against `2026.5.31`.
 
 ### Highlights
 
+- Web: practicedit.com now opens with a homepage that introduces Dit, complete with a live Morse key you can try right on the page. The practice app itself now lives at practicedit.com/app.
 - Web: Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
 
 ### Changes

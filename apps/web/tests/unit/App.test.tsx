@@ -165,7 +165,18 @@ const makeSession = (status: 'idle' | 'success' | 'error') => ({
 
 describe('App', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/app')
     mockUseMorseSessionController.mockReturnValue(makeSession('success'))
+  })
+
+  it('renders the public homepage at the root path', () => {
+    window.history.replaceState(null, '', '/')
+
+    render(<App />)
+
+    expect(
+      screen.getByRole('heading', { name: 'Learn Morse code by\u00a0ear.' }),
+    ).toBeInTheDocument()
   })
 
   it('applies the practice answer status to the app shell', () => {

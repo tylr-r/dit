@@ -13,6 +13,7 @@ import {
   TermsOfService,
 } from './components/LegalPage'
 import { CustomListenSurface } from './components/CustomListenSurface'
+import { HomePage } from './components/HomePage'
 import { CustomTextSheet } from './components/CustomTextSheet'
 import { ListenControls } from './components/ListenControls'
 import { MorseButton } from './components/MorseButton'
@@ -1123,7 +1124,7 @@ function MainApp() {
   )
 }
 
-/** Routes between the main app and legal pages. */
+/** Routes between the public homepage, the main app, and legal pages. */
 function App() {
   if (typeof window === 'undefined') {
     return <MainApp />
@@ -1140,6 +1141,9 @@ function App() {
     return <SupportPage />
   }
   if (path === '/') {
+    return <HomePage />
+  }
+  if (path === '/app') {
     return <MainApp />
   }
   return <Page404 />

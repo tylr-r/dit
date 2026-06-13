@@ -11,6 +11,26 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-06-12: The web root is a public homepage, not the app.** practicedit.com/
+  introduces Dit to first-time visitors; the practice app lives at /app until it
+  moves to a dedicated app subdomain. The homepage links to the app through the
+  `WEB_APP_URL` constant in `HomePage.tsx`; update that constant (and add a /app
+  redirect) when the subdomain goes live. Do not route the app back to the root.
+
+- **2026-06-13: Homepage CTA hierarchy is web-first.** Visitors are already on the
+  web, so the primary call to action everywhere is "Start practicing" (the web app);
+  the App Store is the secondary link. A dedicated "On iPhone" section carries iOS
+  conversion (copy, App Store badge, QR). Do not flip the App Store to primary just
+  because the native app is the bigger product — the visitor's context wins.
+
+- **2026-06-13: The homepage sells the method honestly — no invented claims.** The
+  page exists to convince a skeptical learner that Dit is a serious way to learn
+  Morse by ear, so every factual claim (Koch real-speed, Farnsworth spacing, TTR /
+  adaptive review, frequency-ordered letters, paddle support, no account) must trace
+  to `docs/Pedagogical_philosophy.md` or `docs/PLATFORM_PARITY.md`. Do not add
+  marketing copy that overstates or invents capability; the credibility is the
+  product.
+
 - **2026-06-11: Show hints disables Practice scoring.** When the global **Show hints**
   setting is on, Practice attempts do not update scores, streak credit, or
   `letterAccuracy`. Guided course practice is exempt. Web's one-time **Show this hint**

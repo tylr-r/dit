@@ -565,3 +565,119 @@ Scroll-driven progress, hero+section page-load stagger, and a
 sequence-pulse on the Morse mark on hover. Everything else respects
 `@media (prefers-reduced-motion: reduce)` — opacity stays, transforms
 strip out.
+
+## 12. Homepage (`/`)
+
+The public homepage ([apps/web/src/components/HomePage.tsx](apps/web/src/components/HomePage.tsx),
+styles in `HomePage.css`) is **the app's front door and must feel like the
+app**, not an editorial document. It reuses the product's real surfaces
+instead of describing them:
+
+- **Backdrop is the app stack**: `MorseLiquidSurface` (liquid shader) +
+  `BackgroundGlow` (black dim + glows) in a fixed full-viewport layer,
+  exactly as the main app composes them. Do not swap this for static
+  gradients; the blue liquid is the brand.
+- **The hero demo is the real glass Morse key** (`MorseButton`) wired to
+  the shared tone engine. Tap/hold classify with `DASH_THRESHOLD`, commit
+  with `DEBOUNCE_DELAY`, and decode against `MORSE_DATA`, exactly like
+  Freestyle. The fingerprint tap hint shows until first press. Keep this
+  honest: real key, real sidetone, real decode. No canned audio or video.
+- **Copy budget is deliberately tiny.** One headline, one supporting line,
+  three mode cards at one line each, one closing line, one meta line.
+  An earlier all-text editorial version was replaced for feeling flat and
+  off-brand (2026-06-12); do not grow the page back into paragraphs.
+- **Brand row uses the real `DitLogo`** (36px, rotating rings) next to a
+  "Dit" wordmark at 1.125rem/600. The dah-dit-dit glyph mark is a
+  legal-page eyebrow device, not the logo; do not use it as the homepage
+  brand. An earlier 26px tracked-uppercase version read as unidentifiable.
+- **Key hints follow the app's pointer rules**: fingerprint tap hint only
+  on coarse pointers (until first key), "Space" shortcut pill only on fine
+  pointers, with Space keying the demo globally like in the app.
+- **CTA hierarchy: web first.** Visitors are already on the web, so
+  "Start practicing" (the web app) is the glass primary everywhere and
+  the App Store link is the tertiary. The dedicated "On iPhone" section
+  carries iOS conversion as a **full-bleed band**: a `surface.panelStrong`
+  band that breaks out of the page padding (`align-self: stretch` +
+  negative `margin-inline`, same pattern as the why band) with `border-block`
+  hairlines and `flex-shrink: 0` so the page's fixed-height flex column
+  cannot crush it. A full-bleed grid centers an 1100px content zone via side
+  gutters so the copy's left edge aligns with the why band above; the copy
+  (the only padded region) takes the left half, and the atmospheric "scene"
+  panel spans the right half through the right gutter, bleeding to the
+  viewport's right edge (and to the band's top/bottom; on mobile it stacks
+  full-width below the copy, flush left/right/bottom). The scene paints
+  Dit's own audio-wave render
+  (`public/home/app-scene.webp`, from `dit-cover-3`) under a ~45% navy
+  scrim, and the full app screen (`ios-screenshot-2.webp`, Freestyle, so
+  the iconic key reads) floats over it in a solid-backdrop bezel, tilted
+  6° (4° on mobile) with a soft drop shadow, fully visible. The phone is
+  NOT cropped — the whole screen must be legible. The get cluster is a
+  white QR card + "Scan to download" + the **official Apple "Download on
+  the App Store" badge** (`public/home/app-store-badge.svg`, the real
+  outlined-path asset — do not recolor, restretch, or hand-redraw it; it
+  has brand rules). On coarse pointers the QR and its caption hide
+  (scanning the device you hold is pointless); the badge carries it alone.
+
+  This is the **Venmo-direction** treatment: the phone is a hero object
+  with depth (tilt + shadow) floating over a contextual scene, rather than
+  a flat screenshot. Earlier attempts and why they were dropped — keep this
+  history so they don't return: two overlapping bezel frames floated
+  directly on the shader (2026-06-12, illegible: app screens share the
+  page's liquid look); a screen-cropped autoplay video (the demo is a
+  composed promo, not a flat capture — if video returns, use it uncropped
+  as its own block); a single phone bleeding off a flat card bottom
+  (2026-06-13, the mobile read was poor). Source assets live in the
+  untracked `temp/` folder; re-derive web copies with ffmpeg/sips and
+  re-export the badge from the Figma `Dit` file if they change.
+- **The "why" band is a full-bleed editorial ledger**: `surface.panel`
+  background with `border.subtle` hairlines top and bottom, escaping the
+  page padding via negative `margin-inline` (not 100vw, which fights the
+  scrollbar). Inside `min(1100px, 100%)`: an asymmetric split with a
+  sticky headline column (accent "Why Dit" label, headline, subline) and
+  a numbered list of six selling points. Numerals are oversized ghost
+  tabular figures (`text.primary20`, weight 400) echoing the legal pages'
+  side-rail numbers; they tint to `accent.wave` on row hover (pointer
+  devices). Rows divide with hairlines and rise on scroll where
+  `animation-timeline: view()` is supported. Symmetric card grids with
+  accent left-rules were tried here and replaced for reading as template
+  design (2026-06-12). Claims must stay verifiable against
+  `docs/Pedagogical_philosophy.md` and `docs/PLATFORM_PARITY.md`
+  (Koch/Farnsworth, TTR review, VBand paddle support, no account,
+  self-paced). Do not invent marketing claims.
+- **Section cadence alternates contained ↔ full-bleed.** Two full-bleed
+  bands must not sit adjacent (the why band + the iPhone band read as one
+  heavy slab). A contained, over-shader section goes between them so the
+  rhythm is hero (contained) → why (band) → method (contained) → iPhone
+  (band) → closing (contained). The shader showing through the contained
+  sections is the breather.
+- **Lean far more generous on whitespace than feels normal.** This page
+  wants a lot of air: section gaps run `clamp(120px, 17vw, 248px)`, band
+  vertical padding `clamp(104px, 13vw, 208px)`, ledger rows
+  `clamp(36px, 4.5vw, 56px)` apart, body line-heights ~1.6. Tighter,
+  app-like spacing was tried twice and read as cramped and text-heavy
+  (2026-06-13); the generous version is the intended look. Keep copy in
+  scannable points (short clauses, not full sentences) in the ledger so
+  whitespace, not density, carries it. The page is ~5,600px tall almost
+  entirely from spacing — that is on purpose. Don't "tighten it up."
+- **The "method" section** (`.home-method`) is that breather: contained
+  `min(900px)`, centered, transparent over the shader. It carries the
+  actual pedagogy, not filler — an auditory-reflex lead, then three
+  principles (Koch / Farnsworth / adaptive review) explained plainly on a
+  hairline rail with `accent.wave` numbered markers (the app's
+  stage-connector motif, distinct from the ledger and the app card). This
+  section exists to earn a skeptical CW learner's trust, so the copy must
+  stay real and trace to `docs/Pedagogical_philosophy.md`; an earlier
+  empty "Hear it / Answer / It sticks" loop was rejected as filler
+  (2026-06-13).
+- **CTAs** are the §4 glass pill in CSS (48px, pill radius, blur(24px)
+  saturate(140%) over `rgba(255,255,255,0.08)`), one primary plus one
+  tertiary text link per cluster.
+- **Closing brand moment** reuses the rotating `DitLogo` above "Start by
+  listening." with repeated CTAs and a quiet meta line (no account needed,
+  Koch, Farnsworth).
+- **Motion budget:** hero page-load stagger only; the shader is the
+  documented ambient exception (§2). Reduced motion freezes the shader
+  (built in) and drops the stagger.
+- **Voice:** sentence case, no exclamation points, no dot/dash charts or
+  Morse novelty graphics. The brand mark and the live key's own symbols are
+  the only Morse glyphs on the page.

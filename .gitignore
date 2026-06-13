@@ -64,3 +64,6 @@ AuthKey_*.p8
 *.apk
 *.aab
 coverage/
+
+# Local working assets (homepage source media, not for version control)
+temp/

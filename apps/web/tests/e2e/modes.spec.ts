@@ -67,7 +67,7 @@ const gotoApp = async (
   if (coarsePointer) {
     await page.addInitScript(overrideCoarsePointer)
   }
-  await page.goto('/')
+  await page.goto('/app')
   await page.getByLabel('Tap for dot, hold for dah').waitFor()
 }
 
