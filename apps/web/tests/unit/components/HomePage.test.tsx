@@ -76,4 +76,43 @@ describe('HomePage', () => {
 
     expect(screen.getByText('A')).toBeInTheDocument()
   })
+
+  it('sells the method with three story bands, a citation, and a pill strip', () => {
+    render(<HomePage />)
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Fluent operators never count. Neither will you.',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: 'The same method serious operators have trusted for 90 years.',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: "It can tell which letters you're still working out in your head.",
+      }),
+    ).toBeInTheDocument()
+
+    // The three bands render as labelled region landmarks.
+    expect(screen.getAllByRole('region').length).toBeGreaterThanOrEqual(3)
+
+    // The proven method is cited, not just asserted.
+    expect(
+      screen.getByText('Koch, 1935 · ARRL Farnsworth timing standard'),
+    ).toBeInTheDocument()
+
+    // Conveniences collapse into a pill strip.
+    expect(screen.getByText('No sign-up to start')).toBeInTheDocument()
+    expect(screen.getByText('Works with a paddle')).toBeInTheDocument()
+
+    // The old six-row ledger content is gone.
+    expect(
+      screen.queryByText(
+        'No charts. You build the reflex, not a translation habit.',
+      ),
+    ).not.toBeInTheDocument()
+  })
 })

@@ -21,47 +21,106 @@ const CODE_TO_CHAR = Object.fromEntries(
 
 const MAX_DECODED_LENGTH = 10
 
-const SELLING_POINTS = [
+type WhyBand = {
+  eyebrow: string
+  headline: string
+  body: string
+  visual: 'reflex' | 'speed' | 'ttr'
+  cite?: string
+}
+
+const WHY_BANDS: WhyBand[] = [
   {
-    title: 'Sound first',
-    body: 'No charts. You build the reflex, not a translation habit.',
+    eyebrow: 'Recognition, not translation',
+    headline: 'Fluent operators never count. Neither will you.',
+    body: "Learn Morse off a chart and you build a step you can't undo: hear it, count the beats, look it up. That step is the ceiling on your speed. Dit skips it. Every letter is a sound you come to know on contact, the way you know your own name the moment someone says it.",
+    visual: 'reflex',
   },
   {
-    title: 'Proven method',
-    body: 'Koch speed and Farnsworth spacing, the way CW is really taught.',
+    eyebrow: 'The method',
+    headline: 'The same method serious operators have trusted for 90 years.',
+    body: "In 1935 Ludwig Koch showed that letters have to be learned at full speed from the start. Slow them down and the muscle memory falls apart the moment real traffic speeds up. So Dit plays every letter at real speed and stretches only the silence between them, the way the ARRL's Farnsworth standard sets out. Those gaps close as you get faster.",
+    cite: 'Koch, 1935 · ARRL Farnsworth timing standard',
+    visual: 'speed',
   },
   {
-    title: 'Tracks the reflex',
-    body: 'Review by recognition speed per letter, not just accuracy.',
-  },
-  {
-    title: 'Your pace',
-    body: 'Small packs, no fixed lessons, no streak shame.',
-  },
-  {
-    title: 'Paddle ready',
-    body: 'VBand paddles work in Practice and Freestyle, iPhone and web.',
-  },
-  {
-    title: 'No account needed',
-    body: 'Open it and start. Sign in only to sync.',
+    eyebrow: 'It tracks your speed',
+    headline:
+      "It can tell which letters you're still working out in your head.",
+    body: 'You can answer every prompt right and still be slow, solving each one a half-second behind. Dit times how long a letter takes you to recognize and brings the slow ones around more often. The hesitation is what fades.',
+    visual: 'ttr',
   },
 ]
 
-const METHOD_PRINCIPLES = [
-  {
-    term: 'Koch method',
-    body: 'Characters play at full target speed from the first lesson. Slowing them down builds a crutch that never transfers, so the sound you learn is the sound you copy.',
-  },
-  {
-    term: 'Farnsworth spacing',
-    body: 'Only the silence between characters is stretched, giving you time to think. It narrows as you get faster, so you never relearn the letters at speed.',
-  },
-  {
-    term: 'Adaptive review',
-    body: 'Miss a character and it comes back later instead of stalling you. Dit tracks how fast you recognize each one and drills the slowest first, because speed is the real goal.',
-  },
+const CONVENIENCES = [
+  'No sign-up to start',
+  'Your own pace, no streaks to keep',
+  'Works with a paddle',
 ]
+
+/**
+ * Placeholder band visuals. Each is sized to its slot so a real asset (looping
+ * clip, archival image, stats screenshot) can replace it later without layout
+ * churn — see docs/specs/2026-06-13-why-dit-story-bands-design.md. Never renders
+ * dot/dash marks: showing the pattern trains the wrong skill.
+ */
+function BandVisual({ kind }: { kind: WhyBand['visual'] }) {
+  if (kind === 'reflex') {
+    return (
+      <div className="home-band-vis" aria-hidden="true">
+        <span className="home-band-glyph">R</span>
+        <svg className="home-band-wave" viewBox="0 0 120 22" fill="none">
+          <path
+            d="M2 11 Q 12 1, 22 11 T 42 11 T 62 11 T 82 11 T 102 11 T 118 11"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+        <p className="home-band-caption">a sound you recognize on contact</p>
+      </div>
+    )
+  }
+
+  if (kind === 'speed') {
+    return (
+      <div className="home-band-vis" aria-hidden="true">
+        <span className="home-band-speed">12 WPM</span>
+        <p className="home-band-caption">
+          full speed from the first letter, wider gaps to think
+        </p>
+      </div>
+    )
+  }
+
+  if (kind === 'ttr') {
+    const bars = [
+      { letter: 'T', height: 30 },
+      { letter: 'E', height: 80 },
+      { letter: 'N', height: 45 },
+      { letter: 'R', height: 95 },
+      { letter: 'I', height: 55 },
+    ]
+    return (
+      <div className="home-band-vis" aria-hidden="true">
+        <div className="home-band-bars">
+          {bars.map((bar) => (
+            <span className="home-band-bar-col" key={bar.letter}>
+              <span
+                className="home-band-bar"
+                style={{ height: `${bar.height}%` }}
+              />
+              <span className="home-band-bar-label">{bar.letter}</span>
+            </span>
+          ))}
+        </div>
+        <p className="home-band-caption">time to recognize, per letter</p>
+      </div>
+    )
+  }
+
+  return null
+}
 
 /**
  * Live Morse key demo: the app's real glass key wired to the shared tone
@@ -261,52 +320,32 @@ export function HomePage() {
         <HomeKeyDemo />
       </header>
 
-      <section className="home-why" aria-labelledby="home-why-title">
-        <div className="home-why-inner">
-          <header className="home-why-head">
-            <p className="home-why-label">Why Dit</p>
-            <h2 className="home-why-title" id="home-why-title">
-              Built the way operators actually&nbsp;learn.
+      {WHY_BANDS.map((band, index) => (
+        <section
+          className={index % 2 === 1 ? 'home-band home-band-flip' : 'home-band'}
+          key={band.eyebrow}
+          aria-labelledby={`home-band-${index}`}
+        >
+          <div className="home-band-copy">
+            <p className="home-band-eyebrow">{band.eyebrow}</p>
+            <h2 className="home-band-h" id={`home-band-${index}`}>
+              {band.headline}
             </h2>
-            <p className="home-why-sub">
-              Practice, Freestyle, and Listen: three angles on one reflex.
-            </p>
-          </header>
-          <ol className="home-why-list">
-            {SELLING_POINTS.map((point, index) => (
-              <li className="home-why-row" key={point.title}>
-                <span className="home-why-index" aria-hidden="true">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <div className="home-why-copy">
-                  <p className="home-why-point-title">{point.title}</p>
-                  <p className="home-why-point-body">{point.body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+            <p className="home-band-b">{band.body}</p>
+            {band.cite ? <p className="home-band-cite">{band.cite}</p> : null}
+          </div>
+          <BandVisual kind={band.visual} />
+        </section>
+      ))}
 
-      <section className="home-method" aria-labelledby="home-method-title">
-        <p className="home-method-label">The method</p>
-        <h2 className="home-method-title" id="home-method-title">
-          Why learning by ear&nbsp;works.
-        </h2>
-        <p className="home-method-lead">
-          Skilled operators hear a character as one shape, the way you hear
-          your name, not a string of dots to decode. Dit trains that reflex
-          directly, on the fundamentals serious CW training is built on.
-        </p>
-        <ol className="home-method-steps">
-          {METHOD_PRINCIPLES.map((principle, index) => (
-            <li className="home-method-step" key={principle.term}>
-              <span className="home-method-num">{index + 1}</span>
-              <p className="home-method-step-title">{principle.term}</p>
-              <p className="home-method-step-body">{principle.body}</p>
+      <section className="home-conveniences" aria-label="A few more things">
+        <ul className="home-conveniences-list">
+          {CONVENIENCES.map((item) => (
+            <li className="home-pill" key={item}>
+              {item}
             </li>
           ))}
-        </ol>
+        </ul>
       </section>
 
       <section className="home-app" aria-labelledby="home-app-title">
