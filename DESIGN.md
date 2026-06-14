@@ -598,10 +598,10 @@ instead of describing them:
   the App Store link is the tertiary. The dedicated "On iPhone" section
   carries iOS conversion as a **full-bleed band**: a `surface.panelStrong`
   band that breaks out of the page padding (`align-self: stretch` +
-  negative `margin-inline`, same pattern as the why band) with `border-block`
+  negative `margin-inline`, same pattern as the why bands) with `border-block`
   hairlines and `flex-shrink: 0` so the page's fixed-height flex column
   cannot crush it. A full-bleed grid centers an 1100px content zone via side
-  gutters so the copy's left edge aligns with the why band above; the copy
+  gutters so the copy's left edge aligns with the why bands above; the copy
   (the only padded region) takes the left half, and the atmospheric "scene"
   panel spans the right half through the right gutter, bleeding to the
   viewport's right edge (and to the band's top/bottom; on mobile it stacks
@@ -629,55 +629,64 @@ instead of describing them:
   (2026-06-13, the mobile read was poor). Source assets live in the
   untracked `temp/` folder; re-derive web copies with ffmpeg/sips and
   re-export the badge from the Figma `Dit` file if they change.
-- **The "why" band is a full-bleed editorial ledger**: `surface.panel`
-  background with `border.subtle` hairlines top and bottom, escaping the
-  page padding via negative `margin-inline` (not 100vw, which fights the
-  scrollbar). Inside `min(1100px, 100%)`: an asymmetric split with a
-  sticky headline column (accent "Why Dit" label, headline, subline) and
-  a numbered list of six selling points. Numerals are oversized ghost
-  tabular figures (`text.primary20`, weight 400) echoing the legal pages'
-  side-rail numbers; they tint to `accent.wave` on row hover (pointer
-  devices). Rows divide with hairlines and rise on scroll where
-  `animation-timeline: view()` is supported. Symmetric card grids with
-  accent left-rules were tried here and replaced for reading as template
-  design (2026-06-12). Claims must stay verifiable against
-  `docs/Pedagogical_philosophy.md` and `docs/PLATFORM_PARITY.md`
-  (Koch/Farnsworth, TTR review, VBand paddle support, no account,
-  self-paced). Do not invent marketing claims.
-- **Section cadence alternates contained ↔ full-bleed.** Two full-bleed
-  bands must not sit adjacent (the why band + the iPhone band read as one
-  heavy slab). A contained, over-shader section goes between them so the
-  rhythm is hero (contained) → why (band) → method (contained) → iPhone
-  (band) → closing (contained). The shader showing through the contained
-  sections is the breather.
+- **The "why" section is three alternating full-bleed story bands.** It
+  replaced a single full-bleed editorial ledger of six numbered selling
+  points (2026-06-13: the ledger read as one long undifferentiated wall,
+  weighted core differentiators and conveniences equally, and restated the
+  method section that followed it). Each band escapes the page padding via
+  negative `margin-inline` (not 100vw, which fights the scrollbar), carries
+  a `surface.panel` background with `border.subtle` top/bottom hairlines,
+  and pairs one claim (accent eyebrow label, headline, body, optional
+  citation line) with one visual on a four-column grid (gutter, content,
+  content, gutter), alternating copy-left / copy-right / copy-left via a
+  `.home-band-flip` modifier. The three claims, in order: the auditory
+  reflex (counting dits and dahs is the habit that caps your speed), the
+  proven method (Koch 1935 plus the ARRL Farnsworth standard, with a
+  visible citation), and recognition-speed tracking (TTR). The conveniences
+  that used to be ledger rows (no account, self-paced, paddle support)
+  collapse into one contained pill strip after the third band. Bands rise
+  on scroll where `animation-timeline: view()` is supported; they carry an
+  explicit `opacity: 0` base so the reveal is real, not inert. Symmetric
+  card grids were tried for this content and dropped for reading as
+  template design (2026-06-12). Claims must stay verifiable against
+  `docs/Pedagogical_philosophy.md` and `docs/PLATFORM_PARITY.md`. Do not
+  invent marketing claims, and never render dot/dash marks in a band
+  visual.
+- **Section cadence: contained and full-bleed alternate, and full-bleed
+  bands never butt together.** The three why bands are full-bleed but each
+  sits a full `clamp(120px, 17vw, 248px)` section gap from the next, so the
+  shader shows through between them as the breather (they never stack into
+  one slab). The contained pill strip sits between the last why band and
+  the full-bleed iPhone band, so no two full-bleed bands touch. Rhythm:
+  hero (contained) → why band → why band → why band → conveniences
+  (contained) → iPhone (band) → closing (contained). An earlier rhythm put
+  a single contained "method" section between one why band and the iPhone
+  band; it folded into the bands (2026-06-13, see below).
 - **Lean far more generous on whitespace than feels normal.** This page
   wants a lot of air: section gaps run `clamp(120px, 17vw, 248px)`, band
-  vertical padding `clamp(104px, 13vw, 208px)`, ledger rows
-  `clamp(36px, 4.5vw, 56px)` apart, body line-heights ~1.6. Tighter,
-  app-like spacing was tried twice and read as cramped and text-heavy
-  (2026-06-13); the generous version is the intended look. Keep copy in
-  scannable points (short clauses, not full sentences) in the ledger so
-  whitespace, not density, carries it. The page is ~5,600px tall almost
-  entirely from spacing — that is on purpose. Don't "tighten it up."
-- **The "method" section** (`.home-method`) is that breather: contained
-  `min(900px)`, centered, transparent over the shader. It carries the
-  actual pedagogy, not filler — an auditory-reflex lead, then three
-  principles (Koch / Farnsworth / adaptive review) explained plainly on a
-  hairline rail with `accent.wave` numbered markers (the app's
-  stage-connector motif, distinct from the ledger and the app card). This
-  section exists to earn a skeptical CW learner's trust, so the copy must
-  stay real and trace to `docs/Pedagogical_philosophy.md`; an earlier
-  empty "Hear it / Answer / It sticks" loop was rejected as filler
-  (2026-06-13).
+  vertical padding `clamp(80px, 11vw, 168px)`, body line-heights ~1.6.
+  Tighter, app-like spacing was tried twice and read as cramped and
+  text-heavy (2026-06-13); the generous version is the intended look.
+  Whitespace, not density, carries the page. Don't "tighten it up."
+- **The "method" breather section was removed (2026-06-13).** It was a
+  contained `min(900px)` centered section over the shader carrying the
+  pedagogy: an auditory-reflex lead, then three principles (Koch /
+  Farnsworth / adaptive review) on a hairline rail with `accent.wave`
+  numbered markers. It said what the why bands now say, so its content
+  folded into why band 02 (the method) and band 03 (TTR). Do not re-add a
+  separate method section; if the pedagogy needs more room, extend the
+  bands. An earlier empty "Hear it / Answer / It sticks" loop in this slot
+  was rejected as filler (2026-06-13).
 - **CTAs** are the §4 glass pill in CSS (48px, pill radius, blur(24px)
   saturate(140%) over `rgba(255,255,255,0.08)`), one primary plus one
   tertiary text link per cluster.
 - **Closing brand moment** reuses the rotating `DitLogo` above "Start by
   listening." with repeated CTAs and a quiet meta line (no account needed,
   Koch, Farnsworth).
-- **Motion budget:** hero page-load stagger only; the shader is the
-  documented ambient exception (§2). Reduced motion freezes the shader
-  (built in) and drops the stagger.
+- **Motion budget:** hero page-load stagger, plus a one-time rise on
+  scroll per why band where `animation-timeline: view()` is supported; the
+  shader is the documented ambient exception (§2). Reduced motion freezes
+  the shader (built in), drops the stagger, and renders the bands static.
 - **Voice:** sentence case, no exclamation points, no dot/dash charts or
   Morse novelty graphics. The brand mark and the live key's own symbols are
   the only Morse glyphs on the page.
