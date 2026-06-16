@@ -279,6 +279,7 @@
 
 .home-band-copy {
   grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -334,74 +335,201 @@
   color: var(--color-text-primary-40);
 }
 
-/* --- Placeholder visuals (swap for real assets later) --- */
+/* --- Band visual: the app shown on a tilted device ---
+   The phone floats with a drop shadow (its own depth, no backing card) and
+   tilts toward its copy via the band's flip state. Screens are crisp CSS
+   rebuilds of real app surfaces, never a dot/dash chart. */
 
 .home-band-vis {
   grid-column: 3;
+  grid-row: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  min-height: 240px;
-  padding: clamp(28px, 4vw, 48px);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-card);
-  color: var(--color-accent-wave);
-  text-align: center;
+  min-height: 420px;
 }
 
-.home-band-glyph {
-  font-size: clamp(2.6rem, 5vw, 3.4rem);
+.home-phone {
+  width: clamp(196px, 20vw, 236px);
+  aspect-ratio: 9 / 19.5;
+  padding: 9px;
+  border-radius: 38px;
+  background: var(--color-surface-solid-backdrop);
+  border: 1px solid var(--color-border-hover);
+  box-shadow:
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.12),
+    0 44px 80px hsla(207, 60%, 2%, 0.6),
+    0 14px 30px hsla(0, 0%, 0%, 0.4);
+  transform: rotate(-5deg);
+  transition: transform var(--timing-snap) var(--ease-out);
+}
+
+.home-band-flip .home-phone {
+  transform: rotate(5deg);
+}
+
+/* Lift and straighten on hover (pointer devices only). */
+@media (hover: hover) {
+  .home-band-vis:hover .home-phone {
+    transform: rotate(-3deg) translateY(-6px);
+  }
+
+  .home-band-flip .home-band-vis:hover .home-phone {
+    transform: rotate(3deg) translateY(-6px);
+  }
+}
+
+.home-phone-screen {
+  height: 100%;
+  border-radius: 30px;
+  overflow: hidden;
+  background: radial-gradient(
+    130% 90% at 50% 0%,
+    hsl(207, 42%, 12%),
+    hsl(207, 42%, 5%) 72%
+  );
+}
+
+.home-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 15px;
+}
+
+/* Practice: mode pill, prompted letter, glass key. */
+.home-screen-practice {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding-block: 20px 24px;
+}
+
+.home-screen-pill {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-primary-60);
+  border: 1px solid var(--color-border-subtle);
+  padding: 5px 13px;
+  border-radius: var(--radius-pill);
+}
+
+.home-screen-glyph {
+  align-self: center;
+  font-size: 58px;
   font-weight: 600;
   line-height: 1;
   color: var(--color-text-primary);
 }
 
-.home-band-wave {
-  width: 120px;
-  height: 22px;
+.home-screen-key {
+  width: 82%;
+  height: 42px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
+  background: hsla(0, 0%, 100%, 0.05);
+  box-shadow: inset 0 1px 0 hsla(0, 0%, 100%, 0.1);
 }
 
-.home-band-speed {
-  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
-  font-weight: 600;
-  line-height: 1;
+/* Settings: real character-speed and tone controls. */
+.home-screen-settings {
+  gap: 20px;
+  justify-content: center;
 }
 
-.home-band-caption {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
+.home-screen-label {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--color-text-primary-40);
-  max-width: 28ch;
 }
 
-.home-band-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: clamp(10px, 1.4vw, 16px);
-  height: 64px;
-}
-
-.home-band-bar-col {
+.home-screen-control {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 9px;
 }
 
-.home-band-bar {
-  width: 14px;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+.home-screen-control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.home-screen-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-screen-slider {
+  position: relative;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: hsla(0, 0%, 100%, 0.12);
+}
+
+.home-screen-slider-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: var(--radius-pill);
   background: var(--color-accent-wave);
-  opacity: 0.85;
 }
 
-.home-band-bar-label {
-  font-size: 0.75rem;
+.home-screen-knob {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.5);
+}
+
+/* Stats: per-letter recognition latency. */
+.home-screen-stats {
+  gap: 13px;
+  justify-content: center;
+}
+
+.home-screen-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-screen-stat-letter {
+  width: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.home-screen-stat-track {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: hsla(0, 0%, 100%, 0.1);
+  overflow: hidden;
+}
+
+.home-screen-stat-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-wave);
+}
+
+.home-screen-stat-time {
+  width: 26px;
+  text-align: right;
+  font-size: 10px;
   color: var(--color-text-primary-40);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Scroll-driven reveal where supported; static elsewhere. */
@@ -455,6 +583,7 @@
   .home-band-flip .home-band-copy,
   .home-band-flip .home-band-vis {
     grid-column: 1;
+    grid-row: auto;
   }
 }
 
@@ -758,8 +887,17 @@
 
   .home-nav a,
   .home-cta,
-  .home-cta-quiet {
+  .home-cta-quiet,
+  .home-phone {
     transition: none;
     animation: none;
+  }
+
+  .home-band-vis:hover .home-phone {
+    transform: rotate(-5deg);
+  }
+
+  .home-band-flip .home-band-vis:hover .home-phone {
+    transform: rotate(5deg);
   }
 }

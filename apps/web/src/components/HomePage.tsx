@@ -58,68 +58,98 @@ const CONVENIENCES = [
   'Works with a paddle',
 ]
 
+/** Recognition-speed rows for the stats screen: faster letters fill more. */
+const RECOGNITION_ROWS = [
+  { letter: 'E', pct: 94, time: '0.3s' },
+  { letter: 'T', pct: 78, time: '0.5s' },
+  { letter: 'I', pct: 60, time: '0.7s' },
+  { letter: 'N', pct: 44, time: '1.0s' },
+  { letter: 'R', pct: 28, time: '1.4s' },
+]
+
+/** The app's Practice screen: a prompted letter over the glass key. */
+function PracticeScreen() {
+  return (
+    <div className="home-screen home-screen-practice">
+      <span className="home-screen-pill">Practice</span>
+      <span className="home-screen-glyph">R</span>
+      <span className="home-screen-key" />
+    </div>
+  )
+}
+
+/** The app's playback settings: real character speed and tone controls. */
+function SpeedScreen() {
+  return (
+    <div className="home-screen home-screen-settings">
+      <span className="home-screen-label">Playback</span>
+      <div className="home-screen-control">
+        <div className="home-screen-control-head">
+          <span>Letter speed</span>
+          <span className="home-screen-value">12 WPM</span>
+        </div>
+        <div className="home-screen-slider">
+          <span className="home-screen-slider-fill" style={{ width: '24%' }} />
+          <span className="home-screen-knob" style={{ left: '24%' }} />
+        </div>
+      </div>
+      <div className="home-screen-control">
+        <div className="home-screen-control-head">
+          <span>Tone pitch</span>
+          <span className="home-screen-value">600 Hz</span>
+        </div>
+        <div className="home-screen-slider">
+          <span className="home-screen-slider-fill" style={{ width: '58%' }} />
+          <span className="home-screen-knob" style={{ left: '58%' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Per-letter recognition speed: the latency the app tracks per character. */
+function RecognitionScreen() {
+  return (
+    <div className="home-screen home-screen-stats">
+      <span className="home-screen-label">Recognition speed</span>
+      {RECOGNITION_ROWS.map((row) => (
+        <div className="home-screen-stat" key={row.letter}>
+          <span className="home-screen-stat-letter">{row.letter}</span>
+          <span className="home-screen-stat-track">
+            <span
+              className="home-screen-stat-fill"
+              style={{ width: `${row.pct}%` }}
+            />
+          </span>
+          <span className="home-screen-stat-time">{row.time}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /**
- * Placeholder band visuals. Each is sized to its slot so a real asset (looping
- * clip, archival image, stats screenshot) can replace it later without layout
- * churn — see docs/specs/2026-06-13-why-dit-story-bands-design.md. Never renders
- * dot/dash marks: showing the pattern trains the wrong skill.
+ * Band visuals: the real app shown on a tilted device, one screen per claim.
+ * Built as crisp CSS rather than screenshots so they stay sharp on any display
+ * and so no dot/dash chart can leak in (seeing the pattern trains the wrong
+ * skill). The phone tilts toward its copy via the band's flip state.
  */
 function BandVisual({ kind }: { kind: WhyBand['visual'] }) {
-  if (kind === 'reflex') {
-    return (
-      <div className="home-band-vis" aria-hidden="true">
-        <span className="home-band-glyph">R</span>
-        <svg className="home-band-wave" viewBox="0 0 120 22" fill="none">
-          <path
-            d="M2 11 Q 12 1, 22 11 T 42 11 T 62 11 T 82 11 T 102 11 T 118 11"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-        <p className="home-band-caption">a sound you recognize on contact</p>
-      </div>
-    )
-  }
-
-  if (kind === 'speed') {
-    return (
-      <div className="home-band-vis" aria-hidden="true">
-        <span className="home-band-speed">12 WPM</span>
-        <p className="home-band-caption">
-          full speed from the first letter, wider gaps to think
-        </p>
-      </div>
-    )
-  }
-
-  if (kind === 'ttr') {
-    const bars = [
-      { letter: 'T', height: 30 },
-      { letter: 'E', height: 80 },
-      { letter: 'N', height: 45 },
-      { letter: 'R', height: 95 },
-      { letter: 'I', height: 55 },
-    ]
-    return (
-      <div className="home-band-vis" aria-hidden="true">
-        <div className="home-band-bars">
-          {bars.map((bar) => (
-            <span className="home-band-bar-col" key={bar.letter}>
-              <span
-                className="home-band-bar"
-                style={{ height: `${bar.height}%` }}
-              />
-              <span className="home-band-bar-label">{bar.letter}</span>
-            </span>
-          ))}
+  return (
+    <div className="home-band-vis" aria-hidden="true">
+      <div className="home-phone">
+        <div className="home-phone-screen">
+          {kind === 'reflex' ? (
+            <PracticeScreen />
+          ) : kind === 'speed' ? (
+            <SpeedScreen />
+          ) : (
+            <RecognitionScreen />
+          )}
         </div>
-        <p className="home-band-caption">time to recognize, per letter</p>
       </div>
-    )
-  }
-
-  return null
+    </div>
+  )
 }
 
 /**
