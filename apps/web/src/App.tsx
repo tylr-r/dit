@@ -12,6 +12,7 @@ import {
   SupportPage,
   TermsOfService,
 } from './components/LegalPage'
+import { HomePage } from './components/HomePage'
 import { CustomListenSurface } from './components/CustomListenSurface'
 import { CustomTextSheet } from './components/CustomTextSheet'
 import { ListenControls } from './components/ListenControls'
@@ -1138,6 +1139,11 @@ function App() {
   }
   if (path === '/support') {
     return <SupportPage />
+  }
+  // Public homepage. Lives at /home until the app moves to the app.
+  // subdomain, then this becomes the root route.
+  if (path === '/home') {
+    return <HomePage />
   }
   if (path === '/') {
     return <MainApp />

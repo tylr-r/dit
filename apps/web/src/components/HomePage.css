@@ -1,0 +1,530 @@
+/*
+ * Public homepage — editorial page in the legal-page family (DESIGN.md §11).
+ * Shares the atmospheric-background exception, scroll progress bar, and
+ * page-load stagger with the legal pages; namespaced .home-* so the two
+ * surfaces can evolve independently.
+ */
+
+.home-page {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(56px, 10vw, 112px);
+  padding: clamp(40px, 7vw, 80px) clamp(18px, 6vw, 80px)
+    clamp(64px, 10vw, 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  scroll-timeline-name: --home-scroll;
+  scroll-timeline-axis: block;
+}
+
+/* Atmospheric background — documented editorial exception to DESIGN.md §9. */
+.home-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 32% at 50% -4%,
+      hsla(24, 100%, 60%, 0.12),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 100% 0%,
+      hsla(207, 60%, 30%, 0.18),
+      transparent 60%
+    );
+}
+
+.home-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent-wave);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.9;
+  animation-name: homeScrollProgress;
+  animation-duration: auto;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --home-scroll;
+}
+
+@keyframes homeScrollProgress {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Top row */
+
+.home-top {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-eyebrow {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  color: var(--color-text-primary-60);
+}
+
+.home-eyebrow-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-accent-wave);
+}
+
+.home-eyebrow-mark span {
+  display: inline-block;
+  background: currentColor;
+  border-radius: var(--radius-pill);
+  height: 3px;
+}
+
+.home-eyebrow-mark .dit {
+  width: 3px;
+}
+
+.home-eyebrow-mark .dah {
+  width: 12px;
+}
+
+.home-nav {
+  display: flex;
+  gap: 16px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.home-nav a {
+  color: var(--color-text-primary-60);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color var(--timing-snap) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out);
+}
+
+.home-nav a:hover {
+  color: var(--color-text-primary-90);
+  border-color: var(--color-border-hover);
+}
+
+.home-nav a:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 4px;
+}
+
+/* Hero */
+
+.home-hero {
+  width: min(720px, 100%);
+  display: grid;
+  gap: 20px;
+  justify-items: start;
+}
+
+.home-title {
+  margin: 0;
+  font-family: inherit;
+  font-size: clamp(2.8rem, 7vw, 5.4rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  color: var(--color-text-primary);
+}
+
+.home-intro {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--color-text-primary-80);
+  font-size: clamp(1.05rem, 1.4vw, 1.2rem);
+  line-height: 1.55;
+}
+
+.home-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xl);
+  margin-top: var(--space-sm);
+}
+
+/* Primary CTA — DitButton spec: pill, 48px, 17/600, press scale 0.97. */
+.home-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 28px;
+  border-radius: var(--radius-pill);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  transition:
+    transform var(--timing-press) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out);
+}
+
+@supports not (backdrop-filter: blur(24px)) {
+  .home-cta {
+    background: rgba(0, 0, 0, 0.35);
+  }
+}
+
+.home-cta:hover {
+  border-color: var(--color-border-hover);
+}
+
+.home-cta:active {
+  transform: scale(0.97);
+}
+
+.home-cta:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 4px;
+}
+
+.home-cta-secondary {
+  color: var(--color-text-primary-60);
+  font-size: 15px;
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-text-primary-20);
+  transition:
+    color var(--timing-snap) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out);
+}
+
+.home-cta-secondary:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-primary-80);
+}
+
+.home-cta-secondary:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 4px;
+}
+
+/* Name sounder — the one interactive moment on the page. */
+
+.home-sounder {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  justify-items: start;
+}
+
+.home-sounder-key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: 64px;
+  padding: var(--space-lg) var(--space-xl);
+  border-radius: 32px;
+  border: 1px solid var(--color-border-subtle);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  cursor: pointer;
+  color: var(--color-text-primary);
+  transition:
+    transform var(--timing-press) var(--ease-out),
+    border-color var(--timing-snap) var(--ease-out);
+}
+
+@supports not (backdrop-filter: blur(24px)) {
+  .home-sounder-key {
+    background: rgba(0, 0, 0, 0.35);
+  }
+}
+
+.home-sounder-key:hover {
+  border-color: var(--color-border-hover);
+}
+
+.home-sounder-key:active {
+  transform: scale(0.97);
+}
+
+.home-sounder-key:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 4px;
+}
+
+.home-sounder-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-pip {
+  display: inline-block;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-primary-40);
+  transition: background-color 60ms linear;
+}
+
+.home-pip.dit {
+  width: 8px;
+}
+
+.home-pip.dah {
+  width: 24px;
+}
+
+/* Extra air where a new character begins, mirroring the audio gap. */
+.home-pip.char-start {
+  margin-left: 10px;
+}
+
+/* Accent = progress (DESIGN.md §2): a sounding pip is playback progress. */
+.home-pip.active {
+  background: var(--color-accent-wave);
+}
+
+.home-sounder-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary-80);
+}
+
+.home-sounder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.home-sounder-caption {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-primary-60);
+}
+
+.home-sounder-toggle {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-input);
+  padding: 3px;
+  gap: 2px;
+}
+
+.home-sounder-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary-60);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    background-color var(--timing-snap) var(--ease-out),
+    color var(--timing-snap) var(--ease-out);
+}
+
+.home-sounder-toggle button.selected {
+  background: var(--color-surface-input-pressed);
+  color: var(--color-text-primary);
+}
+
+.home-sounder-toggle button:focus-visible {
+  outline: 2px solid var(--color-text-primary-70);
+  outline-offset: 2px;
+}
+
+/* Method */
+
+.home-method {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 4vw, 48px);
+}
+
+.home-method-item h2 {
+  margin: 0 0 var(--space-sm);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.home-method-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--color-text-primary-60);
+}
+
+/* Maker's note */
+
+.home-note {
+  width: min(720px, 100%);
+  display: grid;
+  gap: var(--space-md);
+  padding: 36px 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.home-note p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-primary-70);
+}
+
+.home-note-name {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--color-text-primary-40);
+}
+
+.home-note .home-note-name {
+  font-size: 0.7rem;
+}
+
+/* Feature strip */
+
+.home-features {
+  width: min(720px, 100%);
+}
+
+.home-features ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-xl);
+}
+
+.home-features li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--color-text-primary-60);
+}
+
+.home-features li::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-wave);
+}
+
+/* Page-load stagger — same rare-moment budget as the legal pages. */
+
+.home-hero > *,
+.home-method-item,
+.home-note,
+.home-features {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: homeRise 520ms var(--ease-out) both;
+}
+
+.home-hero > *:nth-child(1) { animation-delay: 80ms; }
+.home-hero > *:nth-child(2) { animation-delay: 150ms; }
+.home-hero > *:nth-child(3) { animation-delay: 220ms; }
+.home-hero > *:nth-child(4) { animation-delay: 290ms; }
+
+.home-method-item:nth-child(1) { animation-delay: 360ms; }
+.home-method-item:nth-child(2) { animation-delay: 410ms; }
+.home-method-item:nth-child(3) { animation-delay: 460ms; }
+
+.home-note { animation-delay: 510ms; }
+.home-features { animation-delay: 560ms; }
+
+@keyframes homeRise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+
+@media (max-width: 720px) {
+  .home-method {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-sounder-key {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-cta {
+    width: 100%;
+  }
+}
+
+/* Reduced motion: keep functional state changes, strip transforms. */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero > *,
+  .home-method-item,
+  .home-note,
+  .home-features {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .home-cta:active,
+  .home-sounder-key:active {
+    transform: none;
+  }
+
+  .home-progress {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+}
