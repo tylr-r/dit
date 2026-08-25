@@ -197,15 +197,6 @@
   margin-top: clamp(36px, 6vh, 72px);
 }
 
-.home-key-stage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-height: 56px;
-}
-
 .home-key-decoded {
   margin: 0;
   min-height: 28px;
@@ -214,29 +205,6 @@
   letter-spacing: 0.18em;
   color: var(--color-text-primary);
   text-shadow: 0 1px 12px var(--color-shadow-text);
-}
-
-.home-key-symbols {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 6px;
-}
-
-.home-key-dit,
-.home-key-dah {
-  display: inline-block;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent-wave);
-}
-
-.home-key-dit {
-  width: 6px;
-}
-
-.home-key-dah {
-  width: 18px;
 }
 
 .home-key-hint {

@@ -688,5 +688,8 @@ instead of describing them:
   shader is the documented ambient exception (§2). Reduced motion freezes
   the shader (built in), drops the stagger, and renders the bands static.
 - **Voice:** sentence case, no exclamation points, no dot/dash charts or
-  Morse novelty graphics. The brand mark and the live key's own symbols are
-  the only Morse glyphs on the page.
+  Morse novelty graphics — including the live key demo, which shows no live
+  feedback while held (the key's own `pressing` state is the only cue) and
+  reveals just the resolved letter once decoded, never raw dit/dah marks or
+  a wave (see `docs/Pedagogical_philosophy.md`: seeing the pattern trains
+  the wrong skill). The brand mark is the only Morse glyph on the page.

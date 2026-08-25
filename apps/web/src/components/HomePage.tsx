@@ -283,17 +283,9 @@ function HomeKeyDemo() {
 
   return (
     <div className="home-key">
-      <div className="home-key-stage" aria-live="polite">
-        <p className="home-key-decoded">{decoded}</p>
-        <div className="home-key-symbols" aria-hidden="true">
-          {symbols.split('').map((symbol, index) => (
-            <span
-              key={index}
-              className={symbol === '.' ? 'home-key-dit' : 'home-key-dah'}
-            />
-          ))}
-        </div>
-      </div>
+      <p className="home-key-decoded" aria-live="polite">
+        {decoded}
+      </p>
       <MorseButton
         buttonRef={buttonRef}
         isPressing={isPressing}
