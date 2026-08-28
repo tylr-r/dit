@@ -82,6 +82,16 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Clear button | ✅ | ✅ | |
 | Keyboard `N` to clear | 🚫 | ✅ | Web-only; tooltip on the Clear button surfaces the chip |
 
+## Conversation mode
+
+| Feature | iOS | Web | Notes |
+|---|---|---|---|
+| Practice a CW QSO against an LLM | ❌ | ✅ | Web-only new mode — see [APP_BEHAVIOR.md](APP_BEHAVIOR.md#conversation-web). iOS adoption deferred. |
+| Keyed replies decode into a running draft | ❌ | ✅ | Reuses the same dit/dah reverse-lookup Freestyle uses (`decodeMorseCode` in `@dit/core`) |
+| Optional copy grading alongside keying | ❌ | ✅ | Playback hands control back immediately. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
+| In-QSO prosign reference | ❌ | ✅ | Side reference on desktop, bottom sheet on narrow screens. |
+| Pause / Resume / Replay / Retry | ❌ | ✅ | Same playback-control semantics as custom Listen text |
+
 ## Settings
 
 Information architecture (section order, grouping, headers, collapse behavior, per-row platform availability) is shared via [`packages/core/src/settings/schema.ts`](../packages/core/src/settings/schema.ts). Web drives its render directly from the schema; iOS keeps its existing render code and asserts at dev time that its hardcoded section order matches the schema (so any drift is caught immediately). Control idioms (sliders vs steppers, RN Switch vs HTML toggle), modal chrome, and section card layout stay per-platform.
@@ -195,7 +205,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Desktop keyboard shortcuts** (`F`/`L`/`P` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) — broad physical keyboard control is web's affordance. VBand-style left/right paddle keys in Practice/Freestyle are shared between web and iOS. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice and Freestyle on iOS. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
 - **Post-onboarding intro hints** (Morse key callout, then Settings spotlight) — iOS renders overlay UI; web advances the persisted hint step without showing those overlays (opening Settings still dismisses the settings step).
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.

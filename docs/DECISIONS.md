@@ -11,6 +11,47 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-08-27: Conversation uses on-air CW shorthand and local-time greetings.** Perfect RST reports are
+  transmitted as `5NN`, not `599`. Time-of-day greetings use the learner's browser-local hour to choose
+  `GM`, `GA`, `GE`, or `GN`. Keep both behaviors deterministic rather than relying only on model judgment.
+
+- **2026-08-27: Conversation transcript text never gives away a reception exercise.** A received message stays
+  concealed while its audio plays. Without live letters, it remains concealed until the operator explicitly
+  reveals it, checks copy, or begins responding. With live letters enabled, the completed message may appear
+  when playback finishes. Keep plaintext out of the DOM until one of those reveal conditions is met.
+
+- **2026-08-26: Conversation copy is optional and never blocks keying.** The operator regains the Morse key as
+  soon as the other station finishes, and keying stays visually primary. Empty copy is collapsed below the key;
+  copy typed during playback remains expanded for grading. Checking or dismissing it is not a workflow gate.
+  Keep reception practice and on-air turn-taking independent.
+
+- **2026-08-26: Entering Conversation is silent until the operator acts.** Directly loading `/app/qso` must not
+  allow hidden Practice auto-play to schedule a tone. Sound begins only from an explicit Conversation action
+  such as choosing Send first or Receive first, replaying, or keying.
+
+- **2026-08-26: Conversation exchanges progress one unit per turn.** A response to CQ contains only the
+  callsign exchange and a handoff. Reports, names, locations, and station details belong in later turns and
+  should not be front-loaded into one generated transmission. Preserve this pacing when changing models or
+  prompts because realistic sequencing matters more than maximizing information per response.
+
+- **2026-08-25: Conversation mode's vocabulary is not gated by the user's unlocked letter set.** Practice and
+  Listen restrict content to `activeLetters` so learners never see unlearned characters, but a realistic CW QSO
+  needs callsigns, RST reports, and other numbers to be authentic. Conversation is an optional, supplementary
+  mode outside the guided beginner course — like the Reference modal, it always uses the full alphabet and
+  digits. Do not thread `activeLetters`/`maxLevel` into the LLM prompt to "fix" this; that would defeat the
+  point of the mode.
+
+- **2026-08-25: Conversation mode is unscored and its content never syncs to Firebase.** Same precedent as
+  custom Listen text: it doesn't touch `dailyActivity`, `letterAccuracy`, `listenTtr`, or streak, and neither
+  the user's replies nor the LLM's turns are written to RTDB. Keep it that way — this is meant as unscored,
+  private practice, not a tracked drill.
+
+- **2026-08-25: LLM calls for Conversation mode go client-side through Firebase AI Logic, not a hand-rolled
+  backend.** Dit has no server beyond Firebase hosting/RTDB; adding a custom backend just to proxy an API key
+  would be disproportionate. Firebase AI Logic (Gemini Developer API backend) lets the web client call Gemini
+  directly, protected by Firebase App Check (reCAPTCHA v3) instead of a bespoke key-management layer. If a
+  second AI-backed feature needs this later, reuse this pattern rather than standing up a separate backend.
+
 - **2026-06-12: The web root is a public homepage, not the app.** practicedit.com/
   introduces Dit to first-time visitors; the practice app lives at /app until it
   moves to a dedicated app subdomain. The homepage links to the app through the

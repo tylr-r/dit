@@ -8,9 +8,12 @@ Compared against `2026.5.31`.
 
 - Web: practicedit.com now opens with a homepage that introduces Dit, complete with a live Morse key you can try right on the page. The practice app itself now lives at practicedit.com/app.
 - Web: Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
+- Web: Added a new **Conversation** mode — practice a realistic CW conversation with an AI operator. Key your replies on the Morse key and hear the other station's replies played back as Morse, just like an on-air QSO.
 
 ### Changes
 
+- Web: Conversation now sends perfect RST reports as `5NN` and chooses `GM`, `GA`, `GE`, or `GN` from the learner's local time.
+- Web: Conversation replies now follow a natural CW exchange, keying is visually primary, optional copy collapses when empty, and a compact prosign reference is available during a QSO.
 - iOS: Onboarding sound check now notices when your volume is all the way down and asks you to turn it up before continuing.
 - Reference chart colors on iOS now use the same relative scoring style as web, and only on letters you've mastered.
 - Onboarding now lets you swipe left to go back to the previous step.
@@ -18,6 +21,9 @@ Compared against `2026.5.31`.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
+
+- Web: Conversation no longer exposes an incoming message in the transcript before the operator is ready to reveal it.
+- Web: Loading `/app/qso` no longer starts hidden Practice audio before the operator chooses what to do.
 
 - Onboarding now moves forward automatically after a successful sign-in instead of leaving you on the welcome screen without sign-in choices.
 - iOS: Practice now shows green or red feedback again when an answer is correct or missed.

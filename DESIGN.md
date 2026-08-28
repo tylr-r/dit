@@ -264,6 +264,55 @@ background, no border.
 and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
 `BEZIER.inOut`.
 
+### Conversation surface (web)
+
+New pattern for the Conversation mode (`ConversationSurface.tsx`), added
+2026-08-25. Deliberately reuses existing visual language rather than
+inventing new components:
+
+- Playback controls, action button styling (`hint-button`/`submit-button`),
+  and the setup/idle "hidden until revealed" card treatment borrow directly
+  from the custom-Listen surface (`custom-listen-*` classes).
+- The Morse key and draft display reuse Freestyle's key + running-word
+  pattern rather than a new input widget.
+- Playback can optionally reveal completed characters in a quiet monospaced
+  card. The reveal follows the audio clock and freezes on pause.
+- The transcript owns the flexible vertical space below the top bar. The
+  current exchange sits in a stable bottom workbench, so longer contacts use
+  the viewport before the transcript becomes scrollable.
+- The idle state asks whether the operator wants to send or receive first,
+  with two equal-weight actions. Either click unlocks Web Audio. Receive first
+  requests and plays the other station's opener; Send first opens directly on
+  the existing keying workbench. There is no repeated mode introduction, card,
+  illustration, display face, or decorative animation.
+- Each new contact gets a locally generated US-style practice callsign for
+  the other station. The prompt pins that callsign for the full QSO, and the
+  generator prevents an immediate repeat on the next contact.
+- Received QSO traffic uses the global playback WPM for both character timing
+  and standard Morse spacing. Conversation does not inherit Listen's adaptive
+  Farnsworth effective speed because the selected QSO speed should describe
+  the complete transmission rate.
+- Playback completion returns directly to the keying workbench. The optional
+  copy field and Morse key coexist so grading never blocks the reply. Copy can
+  be checked, hidden, replayed, or ignored. Missed characters remain visible
+  as their expected letters rather than anonymous placeholders.
+- A quiet vertical **Prosigns** tab sits flush against the viewport's right
+  edge and stays attached to the open reference rail. The rail becomes a
+  bottom sheet on narrow screens and remains non-modal so the operator can
+  keep it visible while keying. It explains meanings without visual Morse
+  patterns and uses existing panel, border, type, and spacing tokens without
+  illustration or decorative effects.
+- Transcript lines render as simple left/right-aligned bubbles (their turn
+  vs. yours) using the existing `surface.input` / `surface.panelStrong`
+  tokens — no new color roles.
+- **Scoped down for v1:** instead of the full sine-wave visualization
+  Listen/custom-Listen use during playback, "their turn" playing/paused
+  states show a small pulsing dot + status text (`conversation-pulse-dot`).
+  Wiring the real sine wave would mean pulling in the session controller's
+  `listenWavePlayback` machinery, which Conversation intentionally stays
+  decoupled from (see `docs/DECISIONS.md`). Revisit if the plain pulse reads
+  as a downgrade in practice.
+
 ### Icons
 
 <!-- TODO: see if expo-symbols are available on Android and web -->
