@@ -42,10 +42,13 @@ type FakeContext = {
   createGain: () => FakeGain
 }
 
-const setUserActivation = (hasBeenActive: boolean) => {
+const setUserActivation = (
+  hasBeenActive: boolean,
+  isActive = hasBeenActive,
+) => {
   Object.defineProperty(navigator, 'userActivation', {
     configurable: true,
-    value: { hasBeenActive },
+    value: { hasBeenActive, isActive },
   })
 }
 
@@ -166,6 +169,35 @@ describe('playMorseTone', () => {
 
     expect(ctx.constructorCalls).toHaveLength(1)
     expect(ctx.oscillators).toHaveLength(1)
+  })
+
+  it('retries a stale pending resume during a new user gesture', async () => {
+    const ctx = installFakeAudioContext()
+    ctx.state = 'suspended'
+    let resolveFirstResume: (() => void) | null = null
+    ctx.resume = vi.fn(() => {
+      if (!resolveFirstResume) {
+        return new Promise<void>((resolve) => {
+          resolveFirstResume = resolve
+        })
+      }
+      ctx.state = 'running'
+      return Promise.resolve()
+    })
+    const { prepareToneEngine } = await import('../../../src/utils/tone')
+
+    setUserActivation(true, false)
+    const stalePreparation = prepareToneEngine()
+    await Promise.resolve()
+
+    setUserActivation(true, true)
+    const retryPreparation = prepareToneEngine()
+    await Promise.resolve()
+
+    expect(ctx.resume).toHaveBeenCalledTimes(2)
+    await retryPreparation
+    resolveFirstResume!()
+    await stalePreparation
   })
 
   it('schedules the hold tone immediately while AudioContext resume is pending', async () => {

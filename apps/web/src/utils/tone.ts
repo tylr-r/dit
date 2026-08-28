@@ -30,8 +30,13 @@ const hasUserActivatedPage = () =>
   !('userActivation' in navigator) ||
   navigator.userActivation.hasBeenActive
 
-const warmPreparedToneEngine = async () => {
-  const context = await ensureContext()
+const hasTransientUserActivation = () =>
+  typeof navigator === 'undefined' ||
+  !('userActivation' in navigator) ||
+  navigator.userActivation.isActive
+
+const warmPreparedToneEngine = async (retryPendingResume = false) => {
+  const context = await ensureContext(retryPendingResume)
   if (context) {
     warmAudioGraph(context)
   }
@@ -106,27 +111,28 @@ const getOrCreateContext = (): AudioContext | null => {
   return contextRef
 }
 
-const resumeContext = (context: AudioContext) => {
+const resumeContext = (context: AudioContext, retryPendingResume = false) => {
   if (context.state !== 'suspended') {
     return Promise.resolve()
   }
-  if (!contextResumePromise) {
-    contextResumePromise = context
-      .resume()
-      .finally(() => {
+  if (!contextResumePromise || retryPendingResume) {
+    const trackedResume = context.resume().finally(() => {
+      if (contextResumePromise === trackedResume) {
         contextResumePromise = null
-      })
+      }
+    })
+    contextResumePromise = trackedResume
   }
   return contextResumePromise
 }
 
-const ensureContext = async (): Promise<AudioContext | null> => {
+const ensureContext = async (retryPendingResume = false): Promise<AudioContext | null> => {
   const context = getOrCreateContext()
   if (!context) {
     return null
   }
   try {
-    await resumeContext(context)
+    await resumeContext(context, retryPendingResume)
   } catch {
     return null
   }
@@ -201,7 +207,7 @@ export const prepareToneEngine = async () => {
     registerUserActivationWarmup()
     return
   }
-  await warmPreparedToneEngine()
+  await warmPreparedToneEngine(hasTransientUserActivation())
 }
 
 export const startTone = async ({ frequency, volume }: ToneDefaults = {}) => {
