@@ -12,6 +12,7 @@ import {
   SupportPage,
   TermsOfService,
 } from './components/LegalPage'
+import { ConversationSurface } from './components/ConversationSurface'
 import { CustomListenSurface } from './components/CustomListenSurface'
 import { HomePage } from './components/HomePage'
 import { CustomTextSheet } from './components/CustomTextSheet'
@@ -47,6 +48,7 @@ import {
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth'
 import { database } from './firebase'
 import { useAuth } from './hooks/useAuth'
+import { useConversationSession } from './hooks/useConversationSession'
 import { useCustomListenSession } from './hooks/useCustomListenSession'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
 import { clearWebResetStorage } from './platform/resetStorage'
@@ -113,7 +115,16 @@ const shouldIgnoreShortcutEvent = (event: KeyboardEvent) =>
   event.altKey ||
   isEditableTarget(event.target)
 
-function MainApp() {
+const updateAppPath = (path: '/app' | '/app/qso') => {
+  if (typeof window === 'undefined' || window.location.pathname === path) {
+    return
+  }
+  window.history.pushState(null, '', path)
+}
+
+function MainApp({ initialConversationActive = false }: {
+  initialConversationActive?: boolean
+}) {
   const { user } = useAuth()
   const onboarding = useOnboardingState()
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } =
@@ -130,8 +141,22 @@ function MainApp() {
   )
   const morseButtonRef = useRef<HTMLButtonElement | null>(null)
   const isPressingRef = useRef(false)
+  const conversationPressingRef = useRef(false)
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null)
   const [signInFromSettings, setSignInFromSettings] = useState(false)
+  const [conversationActive, setConversationActive] = useState(
+    initialConversationActive,
+  )
+  const sharedSessionCallbacks = useMemo(
+    () => ({
+      ...sessionCallbacks,
+      playMorseTone: async (...args: Parameters<typeof playMorseTone>) => {
+        if (conversationActive) return
+        await playMorseTone(...args)
+      },
+    }),
+    [conversationActive],
+  )
 
   const session = useMorseSessionController({
     user,
@@ -144,7 +169,7 @@ function MainApp() {
     setShowReference,
     showPhaseModal,
     onboarding,
-    callbacks: sessionCallbacks,
+    callbacks: sharedSessionCallbacks,
   })
   const { state, derived, handlers, setters } = session
   const {
@@ -206,6 +231,50 @@ function MainApp() {
     pauseAudioContext,
     resumeAudioContext,
   })
+
+  // Conversation is a separate top-level surface rather than a value the
+  // shared session controller's `mode` can hold: it doesn't score, doesn't
+  // sync, and its content comes from the LLM rather than the practice/
+  // freestyle/listen state machine, so it's simplest kept fully independent.
+  const conversation = useConversationSession({
+    toneFrequency: session.state.toneFrequency,
+    characterWpm: session.state.listenWpm,
+    prepareToneEngine,
+    playMorseTone,
+    stopMorseTone,
+    pauseAudioContext,
+    resumeAudioContext,
+    getPlaybackElapsedMs,
+    startTone,
+    stopTone,
+  })
+  const handleModeSwitcherChange = useCallback(
+    (next: 'practice' | 'freestyle' | 'listen' | 'conversation') => {
+      if (next === 'conversation') {
+        if (!conversationActive) {
+          // Entering from practice/freestyle/listen: the underlying session
+          // mode doesn't change (Conversation stays independent of it), so
+          // any tone it had scheduled — including custom-Listen mid-playback,
+          // which would otherwise desync from its own phase state — needs
+          // stopping explicitly here.
+          void stopMorseTone()
+          if (customListen.phase === 'playing') {
+            void customListen.pause()
+          }
+        }
+        setConversationActive(true)
+        updateAppPath('/app/qso')
+        return
+      }
+      if (conversationActive) {
+        conversation.end()
+      }
+      setConversationActive(false)
+      updateAppPath('/app')
+      handlers.handleModeChange(next)
+    },
+    [conversation, conversationActive, customListen, handlers],
+  )
 
   // Build the wave playback descriptor used by StageDisplay when custom-listen is active.
   // The sequence ID is derived from the encoded code length so it changes whenever the
@@ -407,7 +476,8 @@ function MainApp() {
       if (showReference) {
         return
       }
-      if (!isListen && !isEditableTarget(event.target)) {
+      const paddleInput = conversationActive ? conversation : handlers
+      if ((conversationActive || !isListen) && !isEditableTarget(event.target)) {
         const keyboardMorseSymbol = getKeyboardMorseSymbol(event)
         if (keyboardMorseSymbol) {
           const isControlPaddle = isVbandControlKey(event)
@@ -415,10 +485,32 @@ function MainApp() {
             !event.ctrlKey && !event.metaKey && !event.altKey
           if (!event.repeat && (isControlPaddle || isPlainPaddleKey)) {
             event.preventDefault()
-            handlers.handleMorseSymbolPressIn(keyboardMorseSymbol)
+            paddleInput.handleMorseSymbolPressIn(keyboardMorseSymbol)
             return
           }
         }
+      }
+      if (conversationActive) {
+        if (shouldIgnoreShortcutEvent(event)) {
+          return
+        }
+        const conversationKey = event.key.toLowerCase()
+        if (conversationKey === 'f' || conversationKey === 'l' || conversationKey === 'p') {
+          event.preventDefault()
+          handleModeSwitcherChange(
+            conversationKey === 'f' ? 'freestyle' : conversationKey === 'l' ? 'listen' : 'practice',
+          )
+          return
+        }
+        if (event.code === 'Space' || event.key === ' ') {
+          if (conversationPressingRef.current) {
+            return
+          }
+          event.preventDefault()
+          conversationPressingRef.current = true
+          conversation.handleKeyPressIn()
+        }
+        return
       }
       if (shouldIgnoreShortcutEvent(event)) {
         return
@@ -456,6 +548,11 @@ function MainApp() {
         handlers.handleModeChange('practice')
         return
       }
+      if (key === 'c') {
+        event.preventDefault()
+        handleModeSwitcherChange('conversation')
+        return
+      }
       if (
         !isFreestyle &&
         !isListen &&
@@ -480,13 +577,22 @@ function MainApp() {
       }
     }
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (!isListen && !isEditableTarget(event.target)) {
+      const paddleInput = conversationActive ? conversation : handlers
+      if ((conversationActive || !isListen) && !isEditableTarget(event.target)) {
         const keyboardMorseSymbol = getKeyboardMorseSymbol(event)
         if (keyboardMorseSymbol) {
           event.preventDefault()
-          handlers.handleMorseSymbolPressOut(keyboardMorseSymbol)
+          paddleInput.handleMorseSymbolPressOut(keyboardMorseSymbol)
           return
         }
+      }
+      if (conversationActive) {
+        if (event.code === 'Space' || event.key === ' ') {
+          event.preventDefault()
+          conversationPressingRef.current = false
+          conversation.handleKeyPressOut()
+        }
+        return
       }
       if (isListen) {
         return
@@ -505,7 +611,16 @@ function MainApp() {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [canRequestOneTimeHint, handlers, isFreestyle, isListen, showReference])
+  }, [
+    canRequestOneTimeHint,
+    conversation,
+    conversationActive,
+    handleModeSwitcherChange,
+    handlers,
+    isFreestyle,
+    isListen,
+    showReference,
+  ])
 
   const handleShowReference = useCallback(() => {
     setShowSettings(false)
@@ -767,8 +882,8 @@ function MainApp() {
           </Tooltip>
         </div>
         <ModeSwitcher
-          mode={mode as 'practice' | 'freestyle' | 'listen'}
-          onChange={(next) => handlers.handleModeChange(next)}
+          mode={conversationActive ? 'conversation' : (mode as 'practice' | 'freestyle' | 'listen')}
+          onChange={handleModeSwitcherChange}
           showShortcutHints={!useCustomKeyboard}
         />
         <div className="settings">
@@ -845,132 +960,169 @@ function MainApp() {
           ) : null}
         </div>
       </header>
-      <StageDisplay
-        freestyleDisplay={freestyleDisplay}
-        hasFreestyleDisplay={hasFreestyleDisplay}
-        freestyleToneActive={isFreestyle && isPressing}
-        hintVisible={hintVisible}
-        isFreestyle={isFreestyle}
-        isListen={isListen}
-        letter={practiceLetter}
-        letterPlaceholder={letterPlaceholder}
-        listenDisplay={listenDisplay}
-        listenDisplayClass={listenDisplayClass}
-        listenStatus={listenStatus}
-        listenStatusText={listenStatusText}
-        listenTtrText={listenTtrText}
-        listenWavePlayback={state.listenWavePlayback}
-        customListenPlayback={customListenPlayback}
-        customListenClockSource={getPlaybackElapsedMs}
-        pips={pipsNode}
-        practiceWord={practiceWord}
-        practiceWordIndex={practiceWordIndex}
-        practiceWordMode={practiceWordMode}
-        practiceWpmText={practiceWpmText}
-        statusText={practiceStatusText}
-        target={stageTarget}
-      />
-      <div className="controls">
-        {derived.isGuidedLessonModeMismatch ? (
-          <button
-            type="button"
-            className="return-to-lesson-button"
-            onClick={() =>
-              handlers.moveIntoGuidedLesson(
-                state.guidedPhase,
-                state.guidedPackIndex,
-                state.guidedProgress,
-              )
-            }
-            aria-label="Return to guided lesson"
-          >
-            Return to lesson
-          </button>
-        ) : null}
-        {isFreestyle ? (
-          <>
-            <div className="freestyle-status" aria-live="polite">
-              {freestyleStatusText}
-            </div>
-            <Tooltip
-              label="Clear input"
-              shortcut={useCustomKeyboard ? undefined : 'N'}
-              placement="top"
-            >
+      {conversationActive ? (
+        <ConversationSurface
+          phase={conversation.phase}
+          turns={conversation.turns}
+          incomingText={conversation.incomingText}
+          incomingCode={conversation.incomingCode}
+          playUnitMs={conversation.playUnitMs}
+          playInterCharacterGapMs={conversation.playInterCharacterGapMs}
+          typedCopy={conversation.typedCopy}
+          copyWasChecked={conversation.copyWasChecked}
+          draft={conversation.draft}
+          isKeying={conversation.isKeying}
+          replyStarted={conversation.replyStarted}
+          errorMessage={conversation.errorMessage}
+          playDurationMs={conversation.playDurationMs}
+          getPlaybackElapsedMs={getPlaybackElapsedMs}
+          showShortcutHints={!useCustomKeyboard}
+          onStart={(direction) => void conversation.start(direction)}
+          onSendReply={() => void conversation.sendReply()}
+          onPause={() => void conversation.pause()}
+          onResume={() => void conversation.resume()}
+          onReplay={() => void conversation.replay()}
+          onEnd={conversation.end}
+          onNewQso={conversation.reset}
+          onRetry={() => void conversation.retry()}
+          onCheckCopy={conversation.checkCopy}
+          onSkipCopy={conversation.skipCopy}
+          onTypedCopyChange={conversation.setTypedCopy}
+          onKeyPressIn={conversation.handleKeyPressIn}
+          onKeyPressOut={conversation.handleKeyPressOut}
+          onDraftBackspace={conversation.handleDraftBackspace}
+          onDraftClear={conversation.handleDraftClear}
+        />
+      ) : (
+        <>
+          <StageDisplay
+            freestyleDisplay={freestyleDisplay}
+            hasFreestyleDisplay={hasFreestyleDisplay}
+            freestyleToneActive={isFreestyle && isPressing}
+            hintVisible={hintVisible}
+            isFreestyle={isFreestyle}
+            isListen={isListen}
+            letter={practiceLetter}
+            letterPlaceholder={letterPlaceholder}
+            listenDisplay={listenDisplay}
+            listenDisplayClass={listenDisplayClass}
+            listenStatus={listenStatus}
+            listenStatusText={listenStatusText}
+            listenTtrText={listenTtrText}
+            listenWavePlayback={state.listenWavePlayback}
+            customListenPlayback={customListenPlayback}
+            customListenClockSource={getPlaybackElapsedMs}
+            pips={pipsNode}
+            practiceWord={practiceWord}
+            practiceWordIndex={practiceWordIndex}
+            practiceWordMode={practiceWordMode}
+            practiceWpmText={practiceWpmText}
+            statusText={practiceStatusText}
+            target={stageTarget}
+          />
+          <div className="controls">
+            {derived.isGuidedLessonModeMismatch ? (
               <button
                 type="button"
-                className="hint-button submit-button"
-                onClick={handlers.handleFreestyleClear}
+                className="return-to-lesson-button"
+                onClick={() =>
+                  handlers.moveIntoGuidedLesson(
+                    state.guidedPhase,
+                    state.guidedPackIndex,
+                    state.guidedProgress,
+                  )
+                }
+                aria-label="Return to guided lesson"
               >
-                Clear
+                Return to lesson
               </button>
-            </Tooltip>
-          </>
-        ) : null}
-        {isListen && customListen.phase !== 'inactive' ? (
-          <CustomListenSurface
-            phase={customListen.phase}
-            workflow={customListen.workflow}
-            text={customListen.text}
-            typedCopy={customListen.typedCopy}
-            encodedCode={customListen.encoded.code}
-            playDurationMs={customListen.playDurationMs}
-            // While the custom-text sheet is open, the surface's on-screen
-            // keyboard would otherwise show through behind the modal backdrop.
-            // Suppressing it removes the visual noise; the surface is occluded
-            // and not interactable while the sheet is up anyway.
-            useCustomKeyboard={useCustomKeyboard && !showCustomTextSheet}
-            onPlay={() => void customListen.play()}
-            onPause={() => void customListen.pause()}
-            onResume={() => void customListen.resume()}
-            onReveal={() => void customListen.reveal()}
-            onRestart={() => void customListen.restart()}
-            onReplay={() => void customListen.replay()}
-            onTypedCopyChange={customListen.setTypedCopy}
-            onEditText={() => setShowCustomTextSheet(true)}
-            onClear={customListen.clear}
-          />
-        ) : isListen ? (
-          <ListenControls
-            availableLetters={derived.activeLetters}
-            listenStatus={listenStatus}
-            onReplay={handlers.handleListenReplay}
-            onSubmitAnswer={handlers.submitListenAnswer}
-            showShortcutHints={!useCustomKeyboard}
-            onUseCustom={() => setShowCustomTextSheet(true)}
-          />
-        ) : (
-          <>
-            {canRequestOneTimeHint ? (
-              <Tooltip
-                label="Show pattern for this letter once"
-                shortcut={useCustomKeyboard ? undefined : 'N'}
-                placement="top"
-              >
-                <button
-                  type="button"
-                  className="hint-button submit-button"
-                  onClick={handlers.handleRequestOneTimeHint}
-                >
-                  Show this hint
-                </button>
-              </Tooltip>
             ) : null}
-            <MorseButton
-              buttonRef={morseButtonRef}
-              isPressing={isPressing}
-              onPointerDown={handleButtonPointerDown}
-              onPointerUp={handleButtonPointerEnd}
-              onPointerCancel={handleButtonPointerEnd}
-              onPointerLeave={handleButtonPointerEnd}
-              onKeyDown={handleButtonKeyDown}
-              onKeyUp={handleButtonKeyUp}
-              onBlur={handleButtonPointerEnd}
-              showShortcutHint={!useCustomKeyboard}
-            />
-          </>
-        )}
-      </div>
+            {isFreestyle ? (
+              <>
+                <div className="freestyle-status" aria-live="polite">
+                  {freestyleStatusText}
+                </div>
+                <Tooltip
+                  label="Clear input"
+                  shortcut={useCustomKeyboard ? undefined : 'N'}
+                  placement="top"
+                >
+                  <button
+                    type="button"
+                    className="hint-button submit-button"
+                    onClick={handlers.handleFreestyleClear}
+                  >
+                    Clear
+                  </button>
+                </Tooltip>
+              </>
+            ) : null}
+            {isListen && customListen.phase !== 'inactive' ? (
+              <CustomListenSurface
+                phase={customListen.phase}
+                workflow={customListen.workflow}
+                text={customListen.text}
+                typedCopy={customListen.typedCopy}
+                encodedCode={customListen.encoded.code}
+                playDurationMs={customListen.playDurationMs}
+                // While the custom-text sheet is open, the surface's on-screen
+                // keyboard would otherwise show through behind the modal backdrop.
+                // Suppressing it removes the visual noise; the surface is occluded
+                // and not interactable while the sheet is up anyway.
+                useCustomKeyboard={useCustomKeyboard && !showCustomTextSheet}
+                onPlay={() => void customListen.play()}
+                onPause={() => void customListen.pause()}
+                onResume={() => void customListen.resume()}
+                onReveal={() => void customListen.reveal()}
+                onRestart={() => void customListen.restart()}
+                onReplay={() => void customListen.replay()}
+                onTypedCopyChange={customListen.setTypedCopy}
+                onEditText={() => setShowCustomTextSheet(true)}
+                onClear={customListen.clear}
+              />
+            ) : isListen ? (
+              <ListenControls
+                availableLetters={derived.activeLetters}
+                listenStatus={listenStatus}
+                onReplay={handlers.handleListenReplay}
+                onSubmitAnswer={handlers.submitListenAnswer}
+                showShortcutHints={!useCustomKeyboard}
+                onUseCustom={() => setShowCustomTextSheet(true)}
+              />
+            ) : (
+              <>
+                {canRequestOneTimeHint ? (
+                  <Tooltip
+                    label="Show pattern for this letter once"
+                    shortcut={useCustomKeyboard ? undefined : 'N'}
+                    placement="top"
+                  >
+                    <button
+                      type="button"
+                      className="hint-button submit-button"
+                      onClick={handlers.handleRequestOneTimeHint}
+                    >
+                      Show this hint
+                    </button>
+                  </Tooltip>
+                ) : null}
+                <MorseButton
+                  buttonRef={morseButtonRef}
+                  isPressing={isPressing}
+                  onPointerDown={handleButtonPointerDown}
+                  onPointerUp={handleButtonPointerEnd}
+                  onPointerCancel={handleButtonPointerEnd}
+                  onPointerLeave={handleButtonPointerEnd}
+                  onKeyDown={handleButtonKeyDown}
+                  onKeyUp={handleButtonKeyUp}
+                  onBlur={handleButtonPointerEnd}
+                  showShortcutHint={!useCustomKeyboard}
+                />
+              </>
+            )}
+          </div>
+        </>
+      )}
       {showReference ? (
         <ReferenceModal
           letters={[...REFERENCE_LETTERS]}
@@ -1145,6 +1297,9 @@ function App() {
   }
   if (path === '/app') {
     return <MainApp />
+  }
+  if (path === '/app/qso') {
+    return <MainApp initialConversationActive />
   }
   return <Page404 />
 }

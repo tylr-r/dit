@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../src/App'
 
 const mockUseMorseSessionController = vi.hoisted(() => vi.fn())
+const playMorseToneMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@dit/core', async () => {
   const actual = await vi.importActual<typeof import('@dit/core')>('@dit/core')
@@ -22,6 +23,16 @@ vi.mock('@dit/core', async () => {
 vi.mock('../../src/firebase', () => ({
   database: {},
 }))
+
+vi.mock('../../src/utils/tone', async () => {
+  const actual = await vi.importActual<typeof import('../../src/utils/tone')>(
+    '../../src/utils/tone',
+  )
+  return {
+    ...actual,
+    playMorseTone: playMorseToneMock,
+  }
+})
 
 vi.mock('../../src/hooks/useAuth', () => ({
   useAuth: () => ({ authReady: true, user: null }),
@@ -166,6 +177,8 @@ const makeSession = (status: 'idle' | 'success' | 'error') => ({
 describe('App', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/app')
+    playMorseToneMock.mockReset()
+    mockUseMorseSessionController.mockReset()
     mockUseMorseSessionController.mockReturnValue(makeSession('success'))
   })
 
@@ -183,6 +196,50 @@ describe('App', () => {
     render(<App />)
 
     expect(document.querySelector('.app')).toHaveClass('status-success')
+  })
+
+  it('opens Conversation directly at the QSO route', () => {
+    window.history.replaceState(null, '', '/app/qso')
+
+    render(<App />)
+
+    expect(
+      screen.getByRole('group', {
+        name: 'Do you want to send or receive first?',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send first' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Receive first' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mode', exact: true })).toHaveTextContent(
+      'Conversation',
+    )
+  })
+
+  it('keeps shared practice audio silent when Conversation loads directly', () => {
+    window.history.replaceState(null, '', '/app/qso')
+
+    render(<App />)
+
+    const options = mockUseMorseSessionController.mock.calls[0][0]
+    options.callbacks.playMorseTone({ code: '.', unitMs: 60 })
+    expect(playMorseToneMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps shared playback enabled outside Conversation', () => {
+    render(<App />)
+
+    const options = mockUseMorseSessionController.mock.calls[0][0]
+    options.callbacks.playMorseTone({ code: '.', unitMs: 60 })
+    expect(playMorseToneMock).toHaveBeenCalledOnce()
+  })
+
+  it('updates the URL when Conversation is selected', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mode', exact: true }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Conversation/ }))
+
+    expect(window.location.pathname).toBe('/app/qso')
   })
 
   it('applies missed practice status to the app shell', () => {

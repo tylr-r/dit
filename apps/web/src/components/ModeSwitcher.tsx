@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { isKeyboardModality } from '../utils/inputModality'
 
-export type ModeSwitcherMode = 'practice' | 'freestyle' | 'listen'
+export type ModeSwitcherMode = 'practice' | 'freestyle' | 'listen' | 'conversation'
 
 const MODES: ReadonlyArray<{
   value: ModeSwitcherMode
@@ -13,10 +13,11 @@ const MODES: ReadonlyArray<{
   { value: 'practice', label: 'Practice', shortcut: 'P' },
   { value: 'freestyle', label: 'Freestyle', shortcut: 'F' },
   { value: 'listen', label: 'Listen', shortcut: 'L' },
+  { value: 'conversation', label: 'Conversation', shortcut: 'C' },
 ]
 
 const SHORTCUT_TOOLTIP =
-  'Switch mode — shortcuts: P Practice, F Freestyle, L Listen'
+  'Switch mode — shortcuts: P Practice, F Freestyle, L Listen, C Conversation'
 
 type ModeSwitcherProps = {
   mode: ModeSwitcherMode
