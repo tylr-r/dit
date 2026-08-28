@@ -1,10 +1,9 @@
-export type DiffTokenKind = 'ok' | 'miss' | 'extra' | 'gap'
+export type DiffTokenKind = 'ok' | 'miss' | 'extra'
 
 export type DiffToken = {
   kind: DiffTokenKind
   /**
-   * For 'ok' / 'miss' / 'extra' this is the matched/source/typed substring.
-   * For 'gap' this is a run of `·` glyphs sized to the missing run length.
+   * The matched, expected, or typed substring represented by this token.
    */
   text: string
 }
@@ -25,8 +24,8 @@ type Op =
 
 /**
  * LCS-aligned character diff between a Morse-source passage and the user's
- * typed copy. Adjacent source-only and user-only ops form a substitution; a
- * trailing source-only run with no user chars after it renders as a gap.
+ * typed copy. Source-only runs preserve the expected characters so omissions
+ * remain explicit, including at the end of the user's copy.
  *
  * Uses a suffix-LCS DP table with a forward greedy traversal so matches are
  * anchored to the earliest (leftmost) position in the source.
@@ -49,7 +48,7 @@ export const customListenDiff = (source: string, typed: string): DiffResult => {
   }
   if (n === 0) {
     return {
-      tokens: [{ kind: 'gap', text: '·'.repeat(m) }],
+      tokens: [{ kind: 'miss', text: source }],
       matched: 0,
       missed: m,
       extra: 0,
@@ -116,26 +115,13 @@ export const customListenDiff = (source: string, typed: string): DiffResult => {
       continue
     }
     if (op.kind === 'src') {
-      const start = k
       let run = ''
       while (k < ops.length && ops[k].kind === 'src') {
         run += (ops[k] as { ch: string }).ch
         missed += 1
         k += 1
       }
-      // A src run is a gap when the user stopped typing: no more typed ops
-      // (tgt or eq) remain, and this run isn't part of a substitution (i.e.
-      // it was not immediately preceded by a tgt run).
-      const remaining = ops.slice(k)
-      const hasTgtAfter = remaining.some((o) => o.kind === 'tgt')
-      const hasEqAfter = remaining.some((o) => o.kind === 'eq')
-      const prevIsTgt = start > 0 && ops[start - 1].kind === 'tgt'
-      const isGap = !hasTgtAfter && !hasEqAfter && !prevIsTgt
-      tokens.push(
-        isGap
-          ? { kind: 'gap', text: '·'.repeat(run.length) }
-          : { kind: 'miss', text: run },
-      )
+      tokens.push({ kind: 'miss', text: run })
       continue
     }
     // tgt run

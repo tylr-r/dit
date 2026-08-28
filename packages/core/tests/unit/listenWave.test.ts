@@ -5,6 +5,7 @@ import {
   getListenToneLevelAtElapsedMs,
   getListenUnitMs,
 } from '../../src/utils/listenWave'
+import * as listenWave from '../../src/utils/listenWave'
 
 describe('listenWave utils', () => {
   it('clamps listen unit time by minUnitMs', () => {
@@ -116,5 +117,43 @@ describe('listenWave utils', () => {
     expect(getListenToneLevelAtElapsedMs('.-', 100, 20, 696)).toBeCloseTo(0.72)
     expect(getListenToneLevelAtElapsedMs('.-', 100, 230, 696)).toBe(1)
     expect(getListenToneLevelAtElapsedMs('.-', 100, 900, 696)).toBe(0)
+  })
+
+  it('reveals only characters whose Morse tones have completed', () => {
+    const getReceivedTextAtElapsedMs = (
+      listenWave as typeof listenWave & {
+        getReceivedTextAtElapsedMs: (
+          text: string,
+          code: string,
+          unitMs: number,
+          elapsedMs: number,
+          interCharacterGapMs: number,
+        ) => string
+      }
+    ).getReceivedTextAtElapsedMs
+
+    expect(getReceivedTextAtElapsedMs('ET', '. -', 100, 99, 300)).toBe('')
+    expect(getReceivedTextAtElapsedMs('ET', '. -', 100, 100, 300)).toBe('E')
+    expect(getReceivedTextAtElapsedMs('ET', '. -', 100, 699, 300)).toBe('E')
+    expect(getReceivedTextAtElapsedMs('ET', '. -', 100, 700, 300)).toBe('ET')
+  })
+
+  it('reveals a word space after its Morse gap completes', () => {
+    const getReceivedTextAtElapsedMs = (
+      listenWave as typeof listenWave & {
+        getReceivedTextAtElapsedMs: (
+          text: string,
+          code: string,
+          unitMs: number,
+          elapsedMs: number,
+          interCharacterGapMs: number,
+          interWordGapMs?: number,
+        ) => string
+      }
+    ).getReceivedTextAtElapsedMs
+
+    expect(getReceivedTextAtElapsedMs('E T', '. / -', 100, 799, 300, 700)).toBe('E')
+    expect(getReceivedTextAtElapsedMs('E T', '. / -', 100, 800, 300, 700)).toBe('E ')
+    expect(getReceivedTextAtElapsedMs('E T', '. / -', 100, 1100, 300, 700)).toBe('E T')
   })
 })

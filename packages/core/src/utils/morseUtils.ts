@@ -29,6 +29,12 @@ export const formatWpm = (value: number) => {
 export const getLettersForLevel = (maxLevel: number) =>
   LETTERS.filter((letter) => MORSE_DATA[letter].level <= maxLevel)
 
+/** Reverse-looks-up a dit/dah code (e.g. `'-...'`) to the letter it encodes, or null if no match. */
+export const decodeMorseCode = (code: string): Letter | null => {
+  const match = Object.entries(MORSE_DATA).find(([, data]) => data.code === code)
+  return match ? (match[0] as Letter) : null
+}
+
 export const getRandomLetter = (
   letters: Letter[],
   previous?: Letter,

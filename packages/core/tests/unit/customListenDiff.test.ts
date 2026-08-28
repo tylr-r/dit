@@ -11,9 +11,9 @@ describe('customListenDiff', () => {
     expect(result.total).toBe(5)
   })
 
-  it('renders an empty user copy as one gap token', () => {
+  it('shows expected characters when the entire copy is missing', () => {
     const result = customListenDiff('HI', '')
-    expect(result.tokens).toEqual([{ kind: 'gap', text: '··' }])
+    expect(result.tokens).toEqual([{ kind: 'miss', text: 'HI' }])
     expect(result.missed).toBe(2)
     expect(result.matched).toBe(0)
   })
@@ -31,11 +31,11 @@ describe('customListenDiff', () => {
     expect(result.total).toBe(3)
   })
 
-  it('renders trailing source-only chars as a gap', () => {
+  it('preserves trailing missed characters in the diff', () => {
     const result = customListenDiff('HELLO', 'HEL')
     expect(result.tokens).toEqual([
       { kind: 'ok', text: 'HEL' },
-      { kind: 'gap', text: '··' },
+      { kind: 'miss', text: 'LO' },
     ])
     expect(result.matched).toBe(3)
     expect(result.missed).toBe(2)
@@ -79,6 +79,6 @@ describe('customListenDiff', () => {
     expect(result.tokens[0]).toEqual({ kind: 'ok', text: 'LISTEN' })
     expect(result.matched).toBe(6)
     expect(result.missed).toBe(7)
-    expect(result.tokens[1].kind).toBe('gap')
+    expect(result.tokens[1]).toEqual({ kind: 'miss', text: ' LISTEN' })
   })
 })

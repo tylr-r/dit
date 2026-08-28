@@ -4,6 +4,7 @@ import {
   type Letter,
   applyScoreDelta,
   clamp,
+  decodeMorseCode,
   formatWpm,
   getLettersForLevel,
   getRandomLatencyAwareLetter,
@@ -32,6 +33,16 @@ describe('morse utils', () => {
     expect(formatWpm(20)).toBe('20')
     expect(formatWpm(18.25)).toBe('18.3')
     expect(formatWpm(18.2)).toBe('18.2')
+  })
+
+  it('decodes a dit/dah code to its letter', () => {
+    expect(decodeMorseCode('.-')).toBe('A')
+    expect(decodeMorseCode('-...')).toBe('B')
+  })
+
+  it('returns null for a code with no matching letter', () => {
+    expect(decodeMorseCode('......')).toBeNull()
+    expect(decodeMorseCode('')).toBeNull()
   })
 
   it('returns letters only at or below the requested level', () => {

@@ -76,6 +76,62 @@ export const getListenPlaybackDurationMs = (
   return elapsedMs + interCharacterGapMs
 }
 
+/** Returns the portion of normalized text whose Morse tones have completed. */
+export const getReceivedTextAtElapsedMs = (
+  text: string,
+  code: string,
+  unitMs: number,
+  elapsedMs: number,
+  interCharacterGapMs: number = unitMs * 3,
+  interWordGapMs: number = (interCharacterGapMs * 7) / 3,
+) => {
+  if (unitMs <= 0 || elapsedMs < 0 || text.length === 0) {
+    return ''
+  }
+
+  const tokens = tokenize(code)
+  let cursorMs = 0
+  let textIndex = 0
+  let received = ''
+
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const token = tokens[tokenIndex]
+    if (token === '/') {
+      cursorMs += interWordGapMs
+      if (elapsedMs < cursorMs) {
+        return received
+      }
+      if (text[textIndex] === ' ') {
+        received += ' '
+        textIndex += 1
+      }
+      continue
+    }
+
+    const symbols = token.split('').filter(isMorseSymbol)
+    for (let symbolIndex = 0; symbolIndex < symbols.length; symbolIndex += 1) {
+      cursorMs += symbols[symbolIndex] === '.' ? unitMs : unitMs * 3
+      if (symbolIndex < symbols.length - 1) {
+        cursorMs += unitMs
+      }
+    }
+    if (elapsedMs < cursorMs) {
+      return received
+    }
+
+    if (textIndex < text.length && text[textIndex] !== ' ') {
+      received += text[textIndex]
+      textIndex += 1
+    }
+
+    if (tokenIndex < tokens.length - 1 && tokens[tokenIndex + 1] !== '/') {
+      cursorMs += interCharacterGapMs
+    }
+  }
+
+  return received
+}
+
 export const getListenToneLevelAtElapsedMs = (
   code: string,
   unitMs: number,

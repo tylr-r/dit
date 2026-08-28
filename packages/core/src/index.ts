@@ -92,6 +92,7 @@ export {
 export {
   applyScoreDelta,
   clamp,
+  decodeMorseCode,
   formatWpm,
   getLettersForLevel,
   getRandomLetter,
@@ -118,6 +119,11 @@ export { useProgressSyncController } from './hooks/useProgressSyncController'
 export type { Mode } from './hooks/useProgressSyncController'
 export { useNuxStepTracker } from './hooks/useNuxStepTracker'
 export { useMorseSessionController } from './hooks/useMorseSessionController'
+export { useMorsePaddleInput } from './hooks/useMorsePaddleInput'
+export type {
+  MorsePaddleSymbol,
+  UseMorsePaddleInputOptions,
+} from './hooks/useMorsePaddleInput'
 export type {
   PhaseModalContent,
   PlayMorseToneOptions,
@@ -222,6 +228,7 @@ export {
 } from './utils/listenSpeed'
 export {
   getListenPlaybackDurationMs,
+  getReceivedTextAtElapsedMs,
   getListenTiming,
   getListenToneLevelAtElapsedMs,
 } from './utils/listenWave'
