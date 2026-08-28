@@ -1,5 +1,9 @@
 import { initializeApp } from 'firebase/app'
 import {
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from 'firebase/app-check'
+import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
@@ -20,10 +24,27 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app = initializeApp(firebaseConfig)
-const auth = getAuth(app)
-export const database = getDatabase(app)
+export const firebaseApp = initializeApp(firebaseConfig)
+const auth = getAuth(firebaseApp)
+export const database = getDatabase(firebaseApp)
 const googleProvider = new GoogleAuthProvider()
+
+// Localhost cannot pass production reCAPTCHA attestation. Development uses a
+// browser-local token that must also be registered in Firebase App Check.
+if (import.meta.env.DEV) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
+}
+
+// Protects the Gemini API quota (used by Conversation mode) from being called
+// directly by non-Dit clients. Only initialized when a site key is
+// configured, so local dev/CI without one can still start.
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
+if (recaptchaSiteKey) {
+  initializeAppCheck(firebaseApp, {
+    provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  })
+}
 
 const isPopupFallbackError = (error: unknown) =>
   typeof error === 'object' &&
