@@ -19,6 +19,7 @@ export function StageDisplay({
   listenWavePlayback,
   customListenPlayback,
   customListenClockSource,
+  hideListenAnswer = false,
   pips,
   practiceWord,
   practiceWordIndex,
@@ -50,7 +51,7 @@ export function StageDisplay({
           ) : null}
         </div>
       ) : isListen ? (
-        customListenPlayback !== null ? (
+        customListenPlayback !== null || hideListenAnswer ? (
           <div className="listen-visual">
             <ListenSineWave playback={customListenPlayback} clockSource={customListenClockSource} />
           </div>

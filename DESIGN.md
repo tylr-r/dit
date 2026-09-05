@@ -264,6 +264,40 @@ background, no border.
 and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
 `BEZIER.inOut`.
 
+### Listen Words surface (web)
+
+- A compact **Characters / Words** segmented control sits between the top
+  bar and Listen waveform. Selection uses stronger surface and text contrast,
+  never success green or accent orange.
+- Entering Words stays quiet. A centered **Ready when you are** state gives
+  the learner a deliberate **Start listening** action before the first prompt.
+- A secondary **Common words / Q codes** text selector sits above the exercise,
+  using a quiet underline rather than another filled segmented control. It stays
+  available during playback and feedback. Switching stops audio and returns to
+  ready; unavailable vocabularies explain which character requirement is missing.
+- The waveform stays visually primary. Single-token CW word answers sit below it in a 2×2
+  grid on wider screens and one column on narrow screens.
+- Answer cards use `surface.input`, `border.subtle`, and restrained press
+  scale. Each includes a quiet 1-through-4 shortcut label. They remain neutral
+  until checked.
+- While audio plays, the cards keep their positions but show identical soft
+  marks instead of words or shortcuts. All four answers fade in together over
+  160ms only when audio finishes. No stagger, shimmer, or extra waiting period.
+  Conceal immediately on replay, including feedback, without shifting the layout.
+  Hidden choices are unavailable to keyboard and screen-reader users. Reduced
+  motion reveals the choices without a transition.
+- After an answer, the correct card receives a thin success border and check.
+  A selected wrong card receives a thin error border. Avoid filled reward
+  colors, glow, confetti, badges, or celebratory motion.
+- The explanation uses one `surface.panelStrong` card: Q-code meaning
+  first, then compact code-to-meaning pairs. English rounds simply reveal the
+  correct word, without artificial definitions. **Replay** and **Next** remain
+  separate so the learner controls when the explanation leaves the screen.
+- Multiword phrases and joined prosigns are intentionally outside this first
+  vocabulary.
+- Feedback enters with the standard short opacity and vertical-position
+  transition. Reduced-motion behavior follows the existing global rules.
+
 ### Conversation surface (web)
 
 New pattern for the Conversation mode (`ConversationSurface.tsx`), added

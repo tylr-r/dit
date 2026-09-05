@@ -68,6 +68,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys. iOS always shows the on-screen keyboard (unavailable letters dimmed); web only shows it on coarse-pointer devices and hides it when a hardware keyboard is detected. |
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
 | Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
+| Listen word recognition | ❌ | ✅ | Web offers separate Common words (Practice English bank) and Q codes vocabularies. Four choices stay concealed during playback; Q-code answers also teach the meaning. Word results are session-only and do not affect per-letter stats. |
 | Time-to-respond indicator | ❓ | ❌ | Spec says iOS-only; not located in either codebase. Confirm whether spec is aspirational or feature exists under another name. |
 | Custom text playback (head copy) | ❌ | ✅ | Web-only sub-mode of Listen — paste a passage, hear it as Morse, optionally type along with a char-level diff after. iOS adoption deferred. |
 

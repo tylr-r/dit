@@ -11,6 +11,12 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-09-04: Listen Words separates English words from Q codes.** Common words reuses the Practice English bank, excluding radio shorthand. Q codes is a separate curated set with meanings after answering. Do not mix the banks within a round or label CW abbreviations as English words. Switching sets is silent until Start listening is pressed again.
+
+- **2026-09-04: Listen Words is listen-first, then choose.** Conceal every option while the audio plays, including on replay. Reveal them together when it finishes. Keep the card positions stable and show identical placeholders rather than blurred text that still hints at word length. The exercise should train recognition from sound, not matching sounds against visible candidates.
+
+- **2026-09-04: Listen Words teaches one token at a time.** Entering the mode stays silent until the learner chooses **Start listening**. The learner then hears one English word or Q code and chooses its written form from four options. Only after answering does Dit reveal a Q code's plain-English meaning. Exclude multiword phrases and joined prosigns from this first vocabulary. Keep word results separate from per-letter proficiency and recognition-time data because a missed word cannot be attributed honestly to one character.
+
 - **2026-08-27: Conversation uses on-air CW shorthand and local-time greetings.** Perfect RST reports are
   transmitted as `5NN`, not `599`. Time-of-day greetings use the learner's browser-local hour to choose
   `GM`, `GA`, `GE`, or `GN`. Keep both behaviors deterministic rather than relying only on model judgment.

@@ -171,6 +171,22 @@ selected count, not the actual characters.
 - Replay plays the current letter again (web binds this to the spacebar).
 - Both platforms display a sine wave visualization of the playback.
 
+#### Words (web)
+
+A recognition exercise inside Listen for English words or Q codes. iOS adoption is deferred.
+
+- Standard Listen shows a **Characters / Words** selector. Characters remains the fallback during the guided beginner course and whenever neither vocabulary has four choices available from the learner's active character set.
+- Entering Words is silent and shows a ready state. **Start listening** chooses one eligible single-token CW word, plays it with the user's Listen character speed, effective speed, and tone frequency, then presents four written CW words as answers.
+- Inside Words, **Common words / Q codes** chooses the vocabulary. Common words defaults to the existing Practice English bank, excluding its radio signals (`CQ`, `DE`, `QSO`, `QTH`, `QSL`, `RST`, `SOS`). Q codes uses only the curated three-letter Q signals and retains their teaching definitions. Targets and distractors always come from the same bank. Multiword phrases and joined prosigns are excluded.
+- Changing vocabulary stops audio and returns to the quiet ready state without resetting session counts. If the selected bank has fewer than four eligible choices, Start is disabled with an explanation; the vocabulary selector remains usable so the learner can switch banks.
+- Distractors prefer the same difficulty tier as the target. A new round does not immediately repeat the previous target.
+- Selecting an answer stops playback and locks the choices. The correct word is identified; Q codes also reveal their plain-English meaning. English answers have no extra definition card content. Incorrect selections are also marked so the learner can compare them with the correct word.
+- Choices and their shortcuts stay concealed and disabled until audio finishes, including Farnsworth spacing. The reveal follows audio completion, not the call that schedules playback.
+- **Replay** repeats the same target, temporarily concealing choices and any explanation again. The selected answer and feedback return unchanged when playback finishes. After an answer, **Next** explicitly begins another round so the learner has time to read the explanation.
+- Number keys 1 through 4 select the corresponding answer only after playback finishes. Space starts from the ready state or replays the current word. Other letter and digit keys do not feed the single-character Listen answer handler while Words is active.
+- Correct and attempted counts last for the current browser session. Word answers do not change per-letter score, retention, recognition-time, streak, or daily-activity data and are not synced to Firebase.
+- The selected Listen content persists locally under `dit-listen-content-v1`; vocabulary persists under `dit-listen-vocabulary-v1`, defaulting to Common words.
+
 #### Custom text (web)
 
 A sub-mode of Listen that plays a user-entered passage as Morse for head-copy practice. iOS adoption deferred.
@@ -254,9 +270,10 @@ Availability rules:
 - `L`: Listen
 - `P`: Practice
 - `N`: one-time **Show this hint** in Practice when global hints are off; clear input in Freestyle
-- `Space`: hold to key (Practice/Freestyle), tap to replay current letter (Listen)
+- `Space`: hold to key (Practice/Freestyle), tap to replay the current Listen character, or start/replay the current Listen word
+- `1` through `4`: choose an answer in Listen Words
 - `Esc`: close the reference modal
-- Any letter or digit key while in Listen submits that character as the answer.
+- Any letter or digit key while in Listen Characters submits that character as the answer.
 
 Top-bar buttons, the morse key, the Play button in Listen, and the Clear button in Freestyle all surface their action label and (where applicable) the shortcut chip on hover or focus.
 

@@ -122,6 +122,23 @@ const installFakeAudioContext = (): FakeContext & { constructorCalls: unknown[] 
 }
 
 describe('playMorseTone', () => {
+  it('reports natural audio completion, not scheduling or cancellation', async () => {
+    const ctx = installFakeAudioContext()
+    const { playMorseTone, stopMorseTone } = await import('../../../src/utils/tone')
+    const onComplete = vi.fn()
+    await playMorseTone({ code: '.-', onComplete })
+    expect(onComplete).not.toHaveBeenCalled()
+    ctx.oscillators.at(-1)!.onended!()
+    expect(onComplete).toHaveBeenCalledOnce()
+
+    onComplete.mockClear()
+    await playMorseTone({ code: '.-', onComplete })
+    const cancelledOscillator = ctx.oscillators.at(-1)!
+    await stopMorseTone()
+    cancelledOscillator.onended!()
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
     vi.resetModules()
   })

@@ -54,6 +54,8 @@ export interface StageDisplayProps {
   listenWavePlayback: ListenWavePlayback | null
   /** When set, renders this playback in the stage wave slot instead of the normal listen wave. Used by custom-listen mode. */
   customListenPlayback: ListenWavePlayback | null
+  /** Hides the single-character reveal while another Listen exercise owns the stage. */
+  hideListenAnswer?: boolean
   /** Optional AudioContext-driven clock for the custom-listen wave. Passed to ListenSineWave to keep the wave in sync with audio across pause/resume. */
   customListenClockSource?: () => number | null
   pips: ReactNode

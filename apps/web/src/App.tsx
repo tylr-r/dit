@@ -16,7 +16,13 @@ import { ConversationSurface } from './components/ConversationSurface'
 import { CustomListenSurface } from './components/CustomListenSurface'
 import { HomePage } from './components/HomePage'
 import { CustomTextSheet } from './components/CustomTextSheet'
+import {
+  ListenContentSwitcher,
+  type ListenContent,
+} from './components/ListenContentSwitcher'
 import { ListenControls } from './components/ListenControls'
+import { ListenPhraseControls } from './components/ListenPhraseControls'
+import { ListenVocabularySwitcher } from './components/ListenVocabularySwitcher'
 import { MorseButton } from './components/MorseButton'
 import { NuxModal } from './components/NuxModal'
 import { TourOverlay } from './components/TourOverlay'
@@ -30,6 +36,7 @@ import {
   BEGINNER_COURSE_PACKS,
   buildPlaybackToneRequest,
   LISTEN_MIN_UNIT_MS,
+  LISTEN_WORD_BANKS,
   LISTEN_WPM_MAX,
   LISTEN_WPM_MIN,
   MORSE_DATA,
@@ -39,17 +46,20 @@ import {
   computeHero,
   createGuidedLessonProgress,
   getListenTiming,
+  getEligibleListenPhrases,
   todayStreakContribution,
   useMorseSessionController,
   useOnboardingState,
   type Letter,
   type ListenWavePlayback,
+  type ListenVocabulary,
 } from '@dit/core'
 import { getAuth, signOut as firebaseSignOut } from 'firebase/auth'
 import { database } from './firebase'
 import { useAuth } from './hooks/useAuth'
 import { useConversationSession } from './hooks/useConversationSession'
 import { useCustomListenSession } from './hooks/useCustomListenSession'
+import { useListenPhraseSession } from './hooks/useListenPhraseSession'
 import { usePhaseModalState } from './hooks/usePhaseModalState'
 import { clearWebResetStorage } from './platform/resetStorage'
 import { isKeyboardModality } from './utils/inputModality'
@@ -122,6 +132,41 @@ const updateAppPath = (path: '/app' | '/app/qso') => {
   window.history.pushState(null, '', path)
 }
 
+const LISTEN_CONTENT_KEY = 'dit-listen-content-v1'
+const LISTEN_VOCABULARY_KEY = 'dit-listen-vocabulary-v1'
+
+const readListenVocabulary = (): ListenVocabulary => {
+  try {
+    return localStorage.getItem(LISTEN_VOCABULARY_KEY) === 'q-codes' ? 'q-codes' : 'common'
+  } catch {
+    return 'common'
+  }
+}
+
+const readListenContent = (): ListenContent => {
+  if (typeof localStorage === 'undefined') {
+    return 'characters'
+  }
+  try {
+    return localStorage.getItem(LISTEN_CONTENT_KEY) === 'phrases'
+      ? 'phrases'
+      : 'characters'
+  } catch {
+    return 'characters'
+  }
+}
+
+const writeListenContent = (content: ListenContent) => {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  try {
+    localStorage.setItem(LISTEN_CONTENT_KEY, content)
+  } catch {
+    // Storage can be unavailable in privacy modes. The session still works.
+  }
+}
+
 function MainApp({ initialConversationActive = false }: {
   initialConversationActive?: boolean
 }) {
@@ -136,6 +181,10 @@ function MainApp({ initialConversationActive = false }: {
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [useCustomKeyboard, setUseCustomKeyboard] = useState(false)
+  const [listenContent, setListenContent] = useState<ListenContent>(readListenContent)
+  const [listenVocabulary, setListenVocabulary] = useState<ListenVocabulary>(readListenVocabulary)
+  const phraseListenWasActiveRef = useRef(false)
+  const phraseTransitionSequenceRef = useRef(0)
   const [soundCheckStatus, setSoundCheckStatus] = useState<'idle' | 'playing'>(
     'idle',
   )
@@ -231,6 +280,108 @@ function MainApp({ initialConversationActive = false }: {
     pauseAudioContext,
     resumeAudioContext,
   })
+  const phraseListenRequested =
+    isListen &&
+    !conversationActive &&
+    listenContent === 'phrases' &&
+    !guidedCourseActive &&
+    customListen.phase === 'inactive'
+  const phraseListen = useListenPhraseSession({
+    phrases: LISTEN_WORD_BANKS[listenVocabulary],
+    isActive: phraseListenRequested,
+    availableLetters: derived.activeLetters,
+    characterWpm: state.listenWpm,
+    effectiveWpm: state.listenEffectiveWpm ?? state.listenWpm,
+    toneFrequency: state.toneFrequency,
+    playMorseTone,
+    stopMorseTone,
+  })
+  const stopPhraseListen = phraseListen.stop
+  const releasePhraseListen = phraseListen.release
+  const setCharacterListenSuspended = handlers.setCharacterListenSuspended
+  const replayCharacterListen = handlers.handleListenReplay
+  const hasAvailableWordBank = useMemo(
+    () => Object.values(LISTEN_WORD_BANKS).some(
+      (bank) => getEligibleListenPhrases(bank, derived.activeLetters).length >= 4,
+    ),
+    [derived.activeLetters],
+  )
+  const phrasesDisabled = guidedCourseActive || !hasAvailableWordBank
+  const resolvedListenContent: ListenContent =
+    listenContent === 'phrases' && !phrasesDisabled ? 'phrases' : 'characters'
+  const isPhraseListen =
+    phraseListenRequested && resolvedListenContent === 'phrases'
+
+  useEffect(() => {
+    phraseTransitionSequenceRef.current += 1
+    const transitionSequence = phraseTransitionSequenceRef.current
+    const wasActive = phraseListenWasActiveRef.current
+    const becameActive = isPhraseListen && !phraseListenWasActiveRef.current
+    phraseListenWasActiveRef.current = isPhraseListen
+    if (becameActive) {
+      setCharacterListenSuspended(true)
+      return
+    }
+    if (!wasActive) {
+      return
+    }
+    if (!isListen || conversationActive) {
+      releasePhraseListen()
+      setCharacterListenSuspended(false)
+      return
+    }
+    void (async () => {
+      await stopPhraseListen()
+      if (transitionSequence !== phraseTransitionSequenceRef.current) {
+        return
+      }
+      const shouldRestoreCharacters =
+        isListen &&
+        resolvedListenContent === 'characters' &&
+        customListen.phase === 'inactive'
+      setCharacterListenSuspended(false)
+      if (shouldRestoreCharacters) {
+        replayCharacterListen()
+      }
+    })()
+  }, [
+    customListen.phase,
+    conversationActive,
+    isListen,
+    isPhraseListen,
+    releasePhraseListen,
+    replayCharacterListen,
+    resolvedListenContent,
+    setCharacterListenSuspended,
+    stopPhraseListen,
+  ])
+
+  const handleListenContentChange = useCallback(
+    (next: ListenContent) => {
+      if (next === 'phrases' && phrasesDisabled) {
+        return
+      }
+      setListenContent(next)
+      writeListenContent(next)
+      if (next === 'phrases') {
+        setCharacterListenSuspended(true)
+      }
+    },
+    [phrasesDisabled, setCharacterListenSuspended],
+  )
+
+  const handleListenVocabularyChange = useCallback((next: ListenVocabulary) => {
+    if (next === listenVocabulary) return
+    // Clear the old round before replacing the bank so it cannot auto-start.
+    releasePhraseListen()
+    void stopMorseTone()
+    setListenVocabulary(next)
+    try {
+      localStorage.setItem(LISTEN_VOCABULARY_KEY, next)
+    } catch {
+      // Keep the choice usable even when browser storage is unavailable.
+    }
+  }, [listenVocabulary, releasePhraseListen])
 
   // Conversation is a separate top-level surface rather than a value the
   // shared session controller's `mode` can hold: it doesn't score, doesn't
@@ -269,11 +420,24 @@ function MainApp({ initialConversationActive = false }: {
       if (conversationActive) {
         conversation.end()
       }
+      if (next === 'listen') {
+        setCharacterListenSuspended(
+          listenContent === 'phrases' && !phrasesDisabled,
+        )
+      }
       setConversationActive(false)
       updateAppPath('/app')
       handlers.handleModeChange(next)
     },
-    [conversation, conversationActive, customListen, handlers],
+    [
+      conversation,
+      conversationActive,
+      customListen,
+      handlers,
+      listenContent,
+      phrasesDisabled,
+      setCharacterListenSuspended,
+    ],
   )
 
   // Build the wave playback descriptor used by StageDisplay when custom-listen is active.
@@ -516,6 +680,24 @@ function MainApp({ initialConversationActive = false }: {
         return
       }
       if (isListen) {
+        if (isPhraseListen) {
+          if (event.code === 'Space' || event.key === ' ') {
+            event.preventDefault()
+            if (phraseListen.round) {
+              void phraseListen.replay()
+            } else {
+              void phraseListen.start()
+            }
+            return
+          }
+          const optionIndex = Number(event.key) - 1
+          const option = phraseListen.round?.options[optionIndex]
+          if (option && !phraseListen.isPlaying && phraseListen.status === 'idle') {
+            event.preventDefault()
+            void phraseListen.submitAnswer(option.id)
+          }
+          return
+        }
         if (event.code === 'Space' || event.key === ' ') {
           event.preventDefault()
           handlers.handleListenReplay()
@@ -619,6 +801,8 @@ function MainApp({ initialConversationActive = false }: {
     handlers,
     isFreestyle,
     isListen,
+    isPhraseListen,
+    phraseListen,
     showReference,
   ])
 
@@ -831,7 +1015,11 @@ function MainApp({ initialConversationActive = false }: {
   const freestyleStatusText = isFreestyle ? statusText : ''
   const listenStatusText = isListen ? statusText : ''
   const practiceStatusText = !isFreestyle && !isListen ? statusText : ''
-  const appStatus = isFreestyle || isListen ? 'idle' : status
+  const appStatus = isPhraseListen
+    ? phraseListen.status
+    : isFreestyle || isListen
+      ? 'idle'
+      : status
 
   const userLabel = user
     ? (user.displayName ?? user.email ?? 'Signed in')
@@ -859,6 +1047,7 @@ function MainApp({ initialConversationActive = false }: {
     <div
       className={`app status-${appStatus} mode-${mode}${
         isListen ? ' listen-focused' : ''
+      }${isPhraseListen ? ' listen-phrases-active' : ''
       }${isNuxActive ? ' nux-active' : ''}${
         isNuxActive && onboarding.nuxStep === 'known_tour' ? ' nux-tour-active' : ''
       }`}
@@ -995,6 +1184,13 @@ function MainApp({ initialConversationActive = false }: {
         />
       ) : (
         <>
+          {isListen && customListen.phase === 'inactive' ? (
+            <ListenContentSwitcher
+              value={resolvedListenContent}
+              phrasesDisabled={phrasesDisabled}
+              onChange={handleListenContentChange}
+            />
+          ) : null}
           <StageDisplay
             freestyleDisplay={freestyleDisplay}
             hasFreestyleDisplay={hasFreestyleDisplay}
@@ -1010,8 +1206,15 @@ function MainApp({ initialConversationActive = false }: {
             listenStatusText={listenStatusText}
             listenTtrText={listenTtrText}
             listenWavePlayback={state.listenWavePlayback}
-            customListenPlayback={customListenPlayback}
+            customListenPlayback={
+              customListen.phase !== 'inactive'
+                ? customListenPlayback
+                : isPhraseListen
+                  ? phraseListen.playback
+                  : null
+            }
             customListenClockSource={getPlaybackElapsedMs}
+            hideListenAnswer={isPhraseListen}
             pips={pipsNode}
             practiceWord={practiceWord}
             practiceWordIndex={practiceWordIndex}
@@ -1080,6 +1283,27 @@ function MainApp({ initialConversationActive = false }: {
                 onEditText={() => setShowCustomTextSheet(true)}
                 onClear={customListen.clear}
               />
+            ) : isPhraseListen ? (
+              <div className="listen-words-surface">
+                <ListenVocabularySwitcher
+                  value={listenVocabulary}
+                  onChange={handleListenVocabularyChange}
+                />
+                <ListenPhraseControls
+                  vocabulary={listenVocabulary}
+                  isAvailable={phraseListen.isAvailable}
+                  round={phraseListen.round}
+                  status={phraseListen.status}
+                  isPlaying={phraseListen.isPlaying}
+                  selectedPhraseId={phraseListen.selectedPhraseId}
+                  attemptCount={phraseListen.attemptCount}
+                  correctCount={phraseListen.correctCount}
+                  onStart={() => void phraseListen.start()}
+                  onSubmitAnswer={(phraseId) => void phraseListen.submitAnswer(phraseId)}
+                  onReplay={() => void phraseListen.replay()}
+                  onNext={() => void phraseListen.next()}
+                />
+              </div>
             ) : isListen ? (
               <ListenControls
                 availableLetters={derived.activeLetters}

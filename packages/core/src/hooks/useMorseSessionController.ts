@@ -441,6 +441,7 @@ export const useMorseSessionController = ({
   const listenConsecutiveLetterRef = useRef<Letter | null>(letter)
   const listenConsecutiveCountRef = useRef(1)
   const listenWaveSequenceRef = useRef(0)
+  const characterListenSuspendedRef = useRef(false)
   const errorLockoutUntilRef = useRef(0)
   const letterTimeoutRef = useRef<TimeoutHandle | null>(null)
   const successTimeoutRef = useRef<TimeoutHandle | null>(null)
@@ -827,6 +828,9 @@ export const useMorseSessionController = ({
         effectiveWpm?: number
       },
     ) => {
+      if (characterListenSuspendedRef.current) {
+        return
+      }
       stopListenPlayback()
       const normalizedListenSpeeds = normalizeListenSpeeds(
         overrides?.characterWpm ?? listenWpmRef.current,
@@ -880,6 +884,19 @@ export const useMorseSessionController = ({
     setListenStatus('idle')
     setListenReveal(null)
   }, [])
+
+  const setCharacterListenSuspended = useCallback(
+    (suspended: boolean) => {
+      characterListenSuspendedRef.current = suspended
+      if (!suspended) {
+        return
+      }
+      resetListenState()
+      setListenWavePlayback(null)
+      stopListenPlayback()
+    },
+    [resetListenState, stopListenPlayback],
+  )
 
   useEffect(() => {
     return () => {
@@ -2398,6 +2415,7 @@ export const useMorseSessionController = ({
       handleReminderChange,
       handleUseRecommended,
       handleListenReplay,
+      setCharacterListenSuspended,
       submitListenAnswer,
       handleFreestyleClear,
       handlePracticeReplay,

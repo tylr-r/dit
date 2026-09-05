@@ -69,6 +69,7 @@ export type {
   SettingsSection,
 } from './settings/schema'
 export { PRACTICE_WORDS } from './data/practiceWords'
+export { LISTEN_PHRASES, LISTEN_WORD_BANKS, type ListenVocabulary } from './data/listenPhrases'
 export {
   BEGINNER_COURSE_PACKS,
   BEGINNER_LISTEN_ATTEMPTS,
@@ -233,6 +234,16 @@ export {
   getListenToneLevelAtElapsedMs,
 } from './utils/listenWave'
 export type { ListenWavePlayback } from './utils/listenWave'
+export {
+  createListenPhraseRound,
+  getEligibleListenPhrases,
+} from './utils/listenPhrases'
+export type {
+  ListenPhrase,
+  ListenPhraseDifficulty,
+  ListenPhrasePart,
+  ListenPhraseRound,
+} from './utils/listenPhrases'
 export {
   normalizeCustomText,
   textToMorseCode,

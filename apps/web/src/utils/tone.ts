@@ -301,6 +301,7 @@ export const playMorseTone = async ({
   minUnitMs = 40,
   frequency,
   volume,
+  onComplete,
 }: {
   code: string
   characterWpm?: number
@@ -308,10 +309,16 @@ export const playMorseTone = async ({
   minUnitMs?: number
   frequency?: number
   volume?: number
+  /** Runs after natural playback completion, or when audio is unavailable. Never on cancellation. */
+  onComplete?: () => void
 }) => {
   const myToken = ++morsePlayToken
   const context = await ensureContext()
-  if (!context || myToken !== morsePlayToken) {
+  if (myToken !== morsePlayToken) {
+    return
+  }
+  if (!context) {
+    onComplete?.()
     return
   }
   cleanupMorseNodes()
@@ -367,6 +374,9 @@ export const playMorseTone = async ({
     gain.disconnect()
     if (morseNodes?.oscillator === oscillator) {
       morseNodes = null
+    }
+    if (myToken === morsePlayToken) {
+      onComplete?.()
     }
   }
 }
