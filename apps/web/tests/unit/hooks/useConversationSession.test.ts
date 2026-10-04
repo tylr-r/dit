@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { INTER_CHAR_GAP_MS, WORD_GAP_EXTRA_MS } from '@dit/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   useConversationSession,
@@ -49,6 +50,39 @@ afterEach(() => {
 })
 
 describe('useConversationSession', () => {
+  it.each([false, true])('only skips a freshly automatic space when backspacing: %s', async (withSpace) => {
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useConversationSession(baseOptions()))
+    await act(async () => result.current.start('send'))
+
+    const keyLetter = (gapMs: number) => {
+      act(() => {
+        result.current.handleKeyPressIn()
+        result.current.handleKeyPressOut()
+        vi.advanceTimersByTime(gapMs)
+      })
+    }
+    keyLetter(INTER_CHAR_GAP_MS + WORD_GAP_EXTRA_MS)
+    keyLetter(INTER_CHAR_GAP_MS + (withSpace ? WORD_GAP_EXTRA_MS : 0))
+    expect(result.current.draft).toBe(withSpace ? 'E E ' : 'E E')
+
+    act(() => result.current.handleDraftBackspace())
+    expect(result.current.draft).toBe('E ')
+    act(() => result.current.handleDraftBackspace())
+    expect(result.current.draft).toBe('E')
+    act(() => vi.advanceTimersByTime(WORD_GAP_EXTRA_MS))
+    expect(result.current.draft).toBe('E')
+    act(() => result.current.handleDraftBackspace())
+    expect(result.current.draft).toBe('')
+    act(() => result.current.handleDraftBackspace())
+    expect(result.current.draft).toBe('')
+
+    keyLetter(INTER_CHAR_GAP_MS + WORD_GAP_EXTRA_MS)
+    expect(result.current.draft).toBe('E ')
+    act(() => result.current.handleDraftBackspace())
+    expect(result.current.draft).toBe('')
+  })
+
   it('starts idle', () => {
     const { result } = renderHook(() => useConversationSession(baseOptions()))
     expect(result.current.phase).toBe('idle')
@@ -108,7 +142,9 @@ describe('useConversationSession', () => {
     })
     expect(opts.prepareToneEngine).toHaveBeenCalledOnce()
     expect(opts.playMorseTone).toHaveBeenCalled()
-    expect(result.current.phase).toBe('your-turn')
+    expect(result.current.phase).toBe('finishing-copy')
+    expect(result.current.turns).toEqual([])
+    act(() => result.current.beginReply())
     expect(result.current.turns).toEqual([
       { speaker: 'them', text: 'CQ CQ DE W1AW W1AW K' },
     ])
@@ -120,7 +156,7 @@ describe('useConversationSession', () => {
     expect(result.current.copyWasChecked).toBe(true)
   })
 
-  it('opens keying as soon as playback ends without requiring a copy check', async () => {
+  it('waits for the operator to start their turn after playback', async () => {
     sendTurnMock.mockResolvedValueOnce('KM7DFG DE K7JWA K')
     vi.useFakeTimers()
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
@@ -134,6 +170,17 @@ describe('useConversationSession', () => {
       await Promise.resolve()
     })
 
+    expect(result.current.phase).toBe('finishing-copy')
+    act(() => {
+      result.current.handleKeyPressIn()
+      result.current.handleKeyPressOut()
+      result.current.setTypedCopy('KM7DFG')
+      vi.advanceTimersByTime(10000)
+    })
+    expect(result.current.phase).toBe('finishing-copy')
+    expect(result.current.draft).toBe('')
+    expect(result.current.typedCopy).toBe('KM7DFG')
+    act(() => result.current.beginReply())
     expect(result.current.phase).toBe('your-turn')
 
     act(() => result.current.handleKeyPressIn())
@@ -191,6 +238,7 @@ describe('useConversationSession', () => {
       await result.current.start()
       await Promise.resolve()
     })
+    act(() => result.current.beginReply())
     act(() => result.current.checkCopy())
     expect(result.current.phase).toBe('your-turn')
 
@@ -218,6 +266,7 @@ describe('useConversationSession', () => {
       await result.current.start()
       await Promise.resolve()
     })
+    act(() => result.current.beginReply())
     act(() => result.current.checkCopy())
 
     act(() => result.current.handleMorseSymbolPressIn('-'))
@@ -248,6 +297,7 @@ describe('useConversationSession', () => {
       await result.current.start()
       await Promise.resolve()
     })
+    act(() => result.current.beginReply())
     act(() => result.current.checkCopy())
 
     act(() => {
@@ -265,12 +315,25 @@ describe('useConversationSession', () => {
     })
 
     expect(sendTurnMock).toHaveBeenLastCalledWith({}, 'E')
+    expect(result.current.turns).toHaveLength(2)
+    act(() => result.current.beginReply())
     expect(result.current.turns).toEqual([
       { speaker: 'them', text: 'K' },
       { speaker: 'you', text: 'E' },
       { speaker: 'them', text: 'R FB 73' },
     ])
     expect(opts.playMorseTone).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the completed reception in the transcript when ending before replying', async () => {
+    sendTurnMock.mockResolvedValueOnce('CQ TEST K')
+    const { result } = renderHook(() => useConversationSession(baseOptions()))
+    await act(async () => result.current.start('receive'))
+    expect(result.current.phase).toBe('finishing-copy')
+    expect(result.current.turns).toEqual([])
+    act(() => result.current.end())
+    expect(result.current.turns).toEqual([{ speaker: 'them', text: 'CQ TEST K' }])
+    expect(result.current.phase).toBe('ended')
   })
 
   it('clears typed copy before each incoming transmission', async () => {
@@ -281,6 +344,7 @@ describe('useConversationSession', () => {
       await result.current.start()
       await Promise.resolve()
     })
+    act(() => result.current.beginReply())
     act(() => result.current.checkCopy())
 
     vi.useFakeTimers()

@@ -26,6 +26,7 @@ export type ConversationPhase =
   | 'connecting'
   | 'their-turn-playing'
   | 'their-turn-paused'
+  | 'finishing-copy'
   | 'your-turn'
   | 'sending'
   | 'ended'
@@ -69,6 +70,7 @@ export type UseConversationSessionResult = {
   errorMessage: string | null
   playDurationMs: number
   start: (direction?: ConversationStartDirection) => Promise<void>
+  beginReply: () => void
   sendReply: () => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
@@ -125,6 +127,7 @@ export const useConversationSession = (
   const playDurationRef = useRef(0)
 
   const draftRef = useRef('')
+  const hasAutomaticTrailingSpaceRef = useRef(false)
   const symbolBufferRef = useRef('')
   const pressStartRef = useRef<number | null>(null)
   const symbolTimeoutRef = useRef<TimeoutHandle | null>(null)
@@ -141,6 +144,7 @@ export const useConversationSession = (
       if (symbolBufferRef.current) return
       if (!draftRef.current || draftRef.current.endsWith(' ')) return
       draftRef.current = `${draftRef.current} `
+      hasAutomaticTrailingSpaceRef.current = true
       setDraft(draftRef.current)
     }, WORD_GAP_EXTRA_MS)
   }, [])
@@ -154,6 +158,7 @@ export const useConversationSession = (
         const letter = decodeMorseCode(code)
         if (letter) {
           draftRef.current += letter
+          hasAutomaticTrailingSpaceRef.current = false
           setDraft(draftRef.current)
         }
       }
@@ -220,8 +225,12 @@ export const useConversationSession = (
   })
 
   const handleDraftBackspace = useCallback(() => {
+    clearTimer(wordTimeoutRef)
     if (draftRef.current.length === 0) return
-    draftRef.current = draftRef.current.slice(0, -1)
+    // Skip only the fresh word-gap space, not spaces exposed by earlier edits.
+    const deleteCount = hasAutomaticTrailingSpaceRef.current ? 2 : 1
+    draftRef.current = draftRef.current.slice(0, -deleteCount)
+    hasAutomaticTrailingSpaceRef.current = false
     setDraft(draftRef.current)
   }, [])
 
@@ -229,23 +238,18 @@ export const useConversationSession = (
     clearDraftTimers()
     symbolBufferRef.current = ''
     draftRef.current = ''
+    hasAutomaticTrailingSpaceRef.current = false
     setDraft('')
   }, [])
 
-  // Audio completion hands control back immediately. Copy remains available
-  // as an optional parallel activity rather than gating the Morse key.
+  // Keep reception in place until the operator explicitly starts their reply.
   useEffect(() => {
     if (phase !== 'their-turn-playing') return
     let frame = 0
     const tick = () => {
       const elapsed = optionsRef.current.getPlaybackElapsedMs() ?? 0
       if (playDurationRef.current > 0 && elapsed >= playDurationRef.current) {
-        const text = pendingTheirTextRef.current
-        pendingTheirTextRef.current = ''
-        if (text) {
-          setTurns((prev) => [...prev, { speaker: 'them', text }])
-        }
-        setPhase('your-turn')
+        setPhase('finishing-copy')
         return
       }
       frame = requestAnimationFrame(tick)
@@ -282,6 +286,7 @@ export const useConversationSession = (
       clearDraftTimers()
       symbolBufferRef.current = ''
       draftRef.current = ''
+      hasAutomaticTrailingSpaceRef.current = false
       setDraft('')
       setTypedCopy('')
       setReplyStarted(false)
@@ -311,6 +316,18 @@ export const useConversationSession = (
     },
     [playTheirTurn],
   )
+
+  const commitReceivedTurn = useCallback(() => {
+    const text = pendingTheirTextRef.current
+    pendingTheirTextRef.current = ''
+    if (text) setTurns((prev) => [...prev, { speaker: 'them', text }])
+  }, [])
+
+  const beginReply = useCallback(() => {
+    if (phaseRef.current !== 'finishing-copy') return
+    commitReceivedTurn()
+    setPhase('your-turn')
+  }, [commitReceivedTurn])
 
   const sendReply = useCallback(async () => {
     const text = draftRef.current.trim()
@@ -386,6 +403,7 @@ export const useConversationSession = (
   }, [playTheirTurn, turns])
 
   const end = useCallback(() => {
+    if (phaseRef.current === 'finishing-copy') commitReceivedTurn()
     clearDraftTimers()
     pressStartRef.current = null
     paddleInput.cancel()
@@ -394,7 +412,7 @@ export const useConversationSession = (
     void optionsRef.current.stopMorseTone()
     void optionsRef.current.resumeAudioContext()
     setPhase('ended')
-  }, [paddleInput])
+  }, [commitReceivedTurn, paddleInput])
 
   const reset = useCallback(() => {
     clearDraftTimers()
@@ -404,6 +422,7 @@ export const useConversationSession = (
     paddleInput.cancel()
     symbolBufferRef.current = ''
     draftRef.current = ''
+    hasAutomaticTrailingSpaceRef.current = false
     setDraft('')
     setIncomingText('')
     setIncomingCode('')
@@ -440,6 +459,7 @@ export const useConversationSession = (
     errorMessage,
     playDurationMs,
     start,
+    beginReply,
     sendReply,
     pause,
     resume,

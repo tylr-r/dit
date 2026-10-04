@@ -28,6 +28,7 @@ export type ConversationSurfaceProps = {
   getPlaybackElapsedMs: () => number | null
   showShortcutHints: boolean
   onStart: (direction: ConversationStartDirection) => void
+  onBeginReply: () => void
   onSendReply: () => void
   onPause: () => void
   onResume: () => void
@@ -183,6 +184,7 @@ export function ConversationSurface({
   getPlaybackElapsedMs,
   showShortcutHints,
   onStart,
+  onBeginReply,
   onSendReply,
   onPause,
   onResume,
@@ -246,7 +248,7 @@ export function ConversationSurface({
     const visible = new Set(revealedTheirTurns)
     if (
       lastTheirTurn &&
-      ((phase === 'your-turn' && (showLiveLetters || replyStarted)) ||
+      (((phase === 'your-turn' || phase === 'finishing-copy') && (showLiveLetters || replyStarted)) ||
         copyWasChecked)
     ) {
       visible.add(lastTheirTurn)
@@ -270,7 +272,7 @@ export function ConversationSurface({
   useEffect(() => {
     const playbackActive =
       phase === 'their-turn-playing' || phase === 'their-turn-paused'
-    if (!playbackActive) return
+    if (!playbackActive && phase !== 'finishing-copy') return
 
     let frame = 0
     let firstFrameTime: number | null = null
@@ -278,7 +280,7 @@ export function ConversationSurface({
     const tick = (frameTime: number) => {
       firstFrameTime ??= frameTime
       const elapsed = Math.min(
-        getPlaybackElapsedMs() ?? 0,
+        phase === 'finishing-copy' ? playDurationMs : getPlaybackElapsedMs() ?? 0,
         playDurationMs,
       )
       if (elapsed > lastElapsed + 20) {
@@ -311,7 +313,7 @@ export function ConversationSurface({
         'aria-valuenow',
         String(Math.round(elapsed)),
       )
-      frame = requestAnimationFrame(tick)
+      if (playbackActive) frame = requestAnimationFrame(tick)
     }
 
     frame = requestAnimationFrame(tick)
@@ -406,7 +408,11 @@ export function ConversationSurface({
 
       {phase !== 'idle' ? (
         <div
-          className="conversation-workbench"
+          className={`conversation-workbench${
+            phase === 'their-turn-playing' || phase === 'their-turn-paused' || phase === 'finishing-copy'
+              ? ' conversation-workbench-reception'
+              : ''
+          }`}
           role="region"
           aria-label="Current exchange"
         >
@@ -421,12 +427,12 @@ export function ConversationSurface({
           ) : null}
 
           {phase === 'their-turn-playing' ||
-          phase === 'their-turn-paused' ? (
+          phase === 'their-turn-paused' || phase === 'finishing-copy' ? (
         <>
           <div className="conversation-status-row">
             <span
               className={`conversation-pulse-dot${
-                phase === 'their-turn-paused'
+                phase !== 'their-turn-playing'
                   ? ' conversation-pulse-dot-paused'
                   : ''
               }`}
@@ -434,14 +440,18 @@ export function ConversationSurface({
             />
             <span className="conversation-status-copy">
               <strong>
-                {phase === 'their-turn-paused'
+                {phase === 'finishing-copy'
+                  ? 'Transmission complete'
+                  : phase === 'their-turn-paused'
                   ? 'Morse audio paused'
                   : playbackStalled
                     ? 'Audio did not start'
                     : 'Morse audio playing'}
               </strong>
               <span>
-                {phase === 'their-turn-paused'
+                {phase === 'finishing-copy'
+                  ? 'Finish your copy, then start your turn'
+                  : phase === 'their-turn-paused'
                   ? 'Playback is stopped'
                   : playbackStalled
                     ? 'Click Play audio to retry'
@@ -499,7 +509,11 @@ export function ConversationSurface({
             spellCheck={false}
           />
           <div className="conversation-actions">
-            {playbackStalled ? (
+            {phase === 'finishing-copy' ? (
+              <button type="button" className="hint-button submit-button" onClick={onBeginReply}>
+                Start my turn
+              </button>
+            ) : playbackStalled ? (
               <button
                 type="button"
                 className="hint-button submit-button"
@@ -551,14 +565,19 @@ export function ConversationSurface({
             onPointerCancel={handlePointerEnd}
             onPointerLeave={handlePointerEnd}
             onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                // The app handles Enter as Send, even while the Morse key has focus.
+                event.preventDefault()
+                return
+              }
               if (event.repeat) return
-              if (event.key === 'Enter' || event.key === ' ') {
+              if (event.key === ' ') {
                 event.preventDefault()
                 handlePointerDown()
               }
             }}
             onKeyUp={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
+              if (event.key === ' ') {
                 event.preventDefault()
                 handlePointerEnd()
               }

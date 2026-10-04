@@ -349,7 +349,12 @@ inventing new components:
   and the setup/idle "hidden until revealed" card treatment borrow directly
   from the custom-Listen surface (`custom-listen-*` classes).
 - The Morse key and draft display reuse Freestyle's key + running-word
-  pattern rather than a new input widget.
+  pattern rather than a new input widget. Keyboard Backspace edits the outgoing
+  draft during your turn, matching the visible Backspace action. Both skip a
+  freshly auto-inserted trailing space with the preceding character. Spaces
+  exposed by deleting letters are removed separately, one press at a time. Focused text
+  fields retain their own editing behavior. Enter sends the outgoing draft;
+  Space remains the straight-key input.
 - Playback can optionally reveal completed characters in a quiet monospaced
   card. The reveal follows the audio clock and freezes on pause.
 - The transcript owns the flexible vertical space below the top bar. The
@@ -367,8 +372,13 @@ inventing new components:
   and standard Morse spacing. Conversation does not inherit Listen's adaptive
   Farnsworth effective speed because the selected QSO speed should describe
   the complete transmission rate.
-- Playback completion returns directly to the keying workbench. The optional
-  copy field and Morse key coexist so grading never blocks the reply. Copy can
+- Playback completion preserves the reception layout and the focused copy
+  field. The status changes to **Transmission complete** and **Start my turn**
+  replaces Pause. Only that explicit action opens the keying workbench; there
+  is no timed handoff. Defer the received transcript entry until that action
+  or End QSO. Reception status and action slots retain their dimensions so
+  completion does not move the copy field or surrounding controls. Optional
+  copy and the Morse key then coexist so grading never blocks the reply. Copy can
   be checked, hidden, replayed, or ignored. Missed characters remain visible
   as their expected letters rather than anonymous placeholders.
 - A quiet vertical **Prosigns** tab sits flush against the viewport's right
@@ -808,3 +818,8 @@ instead of describing them:
   reveals just the resolved letter once decoded, never raw dit/dah marks or
   a wave (see `docs/Pedagogical_philosophy.md`: seeing the pattern trains
   the wrong skill). The brand mark is the only Morse glyph on the page.
+
+### Keyboard progression
+
+- In Listen Words and Q codes, number keys choose an answer and Enter advances
+  after feedback. Enter does not skip an unanswered round or interrupt playback.

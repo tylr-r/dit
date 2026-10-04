@@ -5,6 +5,7 @@ import App from '../../src/App'
 const mockUseMorseSessionController = vi.hoisted(() => vi.fn())
 const mockUseListenPhraseSession = vi.hoisted(() => vi.fn())
 const playMorseToneMock = vi.hoisted(() => vi.fn())
+const sendMessageMock = vi.hoisted(() => vi.fn())
 
 vi.stubGlobal(
   'ResizeObserver',
@@ -31,6 +32,13 @@ vi.mock('@dit/core', async () => {
 
 vi.mock('../../src/firebase', () => ({
   database: {},
+  firebaseApp: {},
+}))
+
+vi.mock('firebase/ai', () => ({
+  getAI: vi.fn(),
+  GoogleAIBackend: class {},
+  getGenerativeModel: () => ({ startChat: () => ({ sendMessage: sendMessageMock }) }),
 }))
 
 vi.mock('../../src/utils/tone', async () => {
@@ -40,6 +48,9 @@ vi.mock('../../src/utils/tone', async () => {
   return {
     ...actual,
     playMorseTone: playMorseToneMock,
+    prepareToneEngine: vi.fn(),
+    startTone: vi.fn(),
+    stopTone: vi.fn(),
   }
 })
 
@@ -252,6 +263,7 @@ describe('App', () => {
     window.history.replaceState(null, '', '/app')
     localStorage.clear()
     playMorseToneMock.mockReset()
+    sendMessageMock.mockReset().mockReturnValue(new Promise(() => {}))
     mockUseMorseSessionController.mockReset()
     mockUseMorseSessionController.mockReturnValue(makeSession('success'))
     mockUseListenPhraseSession.mockReset()
@@ -289,6 +301,69 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Mode', exact: true })).toHaveTextContent(
       'Conversation',
     )
+  })
+
+  it('deletes keyed QSO draft characters with keyboard Backspace', async () => {
+    window.history.replaceState(null, '', '/app/qso')
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Send first' }))
+    fireEvent.keyDown(window, { key: ' ', code: 'Space' })
+    fireEvent.keyUp(window, { key: ' ', code: 'Space' })
+
+    const draft = screen.getByLabelText('Current Morse draft')
+    await waitFor(() => expect(draft).toHaveTextContent('E'))
+
+    const copyField = document.createElement('textarea')
+    document.body.append(copyField)
+    fireEvent.keyDown(copyField, { key: 'Backspace' })
+    expect(draft).toHaveTextContent('E')
+    copyField.remove()
+
+    const key = screen.getByRole('button', { name: 'Tap for dot, hold for dah' })
+    fireEvent.keyDown(key, { key: 'Backspace', ctrlKey: true })
+    expect(draft).toHaveTextContent('E')
+    fireEvent.keyDown(key, { key: 'Backspace' })
+    expect(draft).not.toHaveTextContent('E')
+
+    fireEvent.keyDown(window, { key: ' ', code: 'Space' })
+    fireEvent.keyUp(window, { key: ' ', code: 'Space' })
+    await waitFor(() => expect(draft).toHaveTextContent('E'))
+    fireEvent.keyDown(key, { key: 'Backspace', repeat: true })
+    expect(draft).not.toHaveTextContent('E')
+  })
+
+  it('sends the QSO draft once with Enter while the Morse key is focused', async () => {
+    window.history.replaceState(null, '', '/app/qso')
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Send first' }))
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(sendMessageMock).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: ' ', code: 'Space' })
+    fireEvent.keyUp(window, { key: ' ', code: 'Space' })
+    await waitFor(() => expect(screen.getByLabelText('Current Morse draft')).toHaveTextContent('E'))
+    const copyField = document.createElement('textarea')
+    document.body.append(copyField)
+    fireEvent.keyDown(copyField, { key: 'Enter' })
+    copyField.remove()
+    fireEvent.keyDown(window, { key: 'Enter', ctrlKey: true })
+    expect(sendMessageMock).not.toHaveBeenCalled()
+    const key = screen.getByRole('button', { name: 'Tap for dot, hold for dah' })
+    fireEvent.keyDown(key, { key: 'Enter' })
+    fireEvent.keyUp(key, { key: 'Enter' })
+    fireEvent.keyDown(window, { key: 'Enter', repeat: true })
+    expect(sendMessageMock).toHaveBeenCalledExactlyOnceWith('E')
+  })
+
+  it.each(['success', 'error', 'idle'] as const)('Enter advances Listen Words only after an answer: %s', (status) => {
+    const phraseSession = { ...makePhraseSession(), status }
+    mockUseMorseSessionController.mockReturnValue(makeListenSession())
+    mockUseListenPhraseSession.mockReturnValue(phraseSession)
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Words' }))
+    fireEvent.keyDown(window, { key: 'Enter', repeat: true })
+    expect(phraseSession.next).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(phraseSession.next).toHaveBeenCalledTimes(status === 'idle' ? 0 : 1)
   })
 
   it('keeps shared practice audio silent when Conversation loads directly', () => {

@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-04: The operator initiates the QSO handoff.** The last tone can finish before the learner has typed the last word. Preserve the reception layout and copy focus indefinitely after playback, deferring transcript insertion until the operator starts their turn or ends the QSO; **Start my turn** opens keying. Do not add a timed switch or require copy grading. This supersedes the immediate handoff in the August 26 copy decision.
+
 - **2026-10-04: Web onboarding owns `/app`.** Pending onboarding supersedes a requested Conversation route. Replace `/app/qso` with `/app` and leave Conversation when onboarding starts or is replayed. Do not run onboarding over another active mode or add route-specific exceptions for its audio. Completed and skipped users retain direct Conversation access.
 
 - **2026-10-03: Product identity governs every visual proposal.** Dit teaches auditory recognition of whole Morse character sounds and fluent keying. Onboarding and marketing must not teach or decorate with character-to-dot/dash mappings, encoded bars, or static countable character waveforms. This applies to generated mockups as well as shipped UI. Preserve the bounded Reference/hint and tap/hold tutorial behaviors; they do not justify visual decoding elsewhere. Read `docs/Pedagogical_philosophy.md` and apply the product fidelity gate in `DESIGN.md` before proposing or approving visuals.
@@ -30,8 +32,7 @@ avoid undoing.
   reveals it, checks copy, or begins responding. With live letters enabled, the completed message may appear
   when playback finishes. Keep plaintext out of the DOM until one of those reveal conditions is met.
 
-- **2026-08-26: Conversation copy is optional and never blocks keying.** The operator regains the Morse key as
-  soon as the other station finishes, and keying stays visually primary. Empty copy is collapsed below the key;
+- **2026-08-26: Conversation copy is optional and never blocks keying.** After the operator chooses to start their turn, keying stays visually primary. Empty copy is collapsed below the key;
   copy typed during playback remains expanded for grading. Checking or dismissing it is not a workflow gate.
   Keep reception practice and on-air turn-taking independent.
 

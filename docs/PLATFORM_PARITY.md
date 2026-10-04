@@ -92,7 +92,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Practice a CW QSO against an LLM | ❌ | ✅ | Web-only new mode — see [APP_BEHAVIOR.md](APP_BEHAVIOR.md#conversation-web). iOS adoption deferred. |
 | Keyed replies decode into a running draft | ❌ | ✅ | Reuses the same dit/dah reverse-lookup Freestyle uses (`decodeMorseCode` in `@dit/core`) |
-| Optional copy grading alongside keying | ❌ | ✅ | Playback hands control back immediately. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
+| Optional copy grading alongside keying | ❌ | ✅ | After playback, reception stays editable until **Start my turn**. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
 | In-QSO prosign reference | ❌ | ✅ | Side reference on desktop, bottom sheet on narrow screens. |
 | Pause / Resume / Replay / Retry | ❌ | ✅ | Same playback-control semantics as custom Listen text |
 
@@ -209,7 +209,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice and Freestyle on iOS. The `H`/`W`/`Backspace` bindings referenced in older specs are not implemented.
+- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice and Freestyle on iOS. `Enter` sends a Conversation draft or advances an answered Listen Words/Q codes round. Keyboard `Backspace` edits the outgoing Conversation draft during your turn. The `H`/`W` bindings referenced in older specs are not implemented.
 - **Post-onboarding intro hints** (Morse key callout, then Settings spotlight) — iOS renders overlay UI; web advances the persisted hint step without showing those overlays (opening Settings still dismisses the settings step).
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.

@@ -667,7 +667,25 @@ function MainApp({ initialConversationActive = false }: {
         }
       }
       if (conversationActive) {
+        if (
+          event.key === 'Backspace' &&
+          conversation.phase === 'your-turn' &&
+          !showSettings &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          !isEditableTarget(event.target)
+        ) {
+          event.preventDefault()
+          conversation.handleDraftBackspace()
+          return
+        }
         if (shouldIgnoreShortcutEvent(event)) {
+          return
+        }
+        if (event.key === 'Enter' && conversation.phase === 'your-turn' && !showSettings) {
+          event.preventDefault()
+          void conversation.sendReply()
           return
         }
         const conversationKey = event.key.toLowerCase()
@@ -693,6 +711,11 @@ function MainApp({ initialConversationActive = false }: {
       }
       if (isListen) {
         if (isPhraseListen) {
+          if (event.key === 'Enter' && !showSettings && !phraseListen.isPlaying && phraseListen.status !== 'idle') {
+            event.preventDefault()
+            void phraseListen.next()
+            return
+          }
           if (event.code === 'Space' || event.key === ' ') {
             event.preventDefault()
             if (phraseListen.round) {
@@ -816,6 +839,7 @@ function MainApp({ initialConversationActive = false }: {
     isPhraseListen,
     phraseListen,
     showReference,
+    showSettings,
   ])
 
   const handleShowReference = useCallback(() => {
@@ -1179,6 +1203,7 @@ function MainApp({ initialConversationActive = false }: {
           getPlaybackElapsedMs={getPlaybackElapsedMs}
           showShortcutHints={!useCustomKeyboard}
           onStart={(direction) => void conversation.start(direction)}
+          onBeginReply={conversation.beginReply}
           onSendReply={() => void conversation.sendReply()}
           onPause={() => void conversation.pause()}
           onResume={() => void conversation.resume()}

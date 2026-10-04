@@ -13,6 +13,11 @@ Compared against `2026.5.31`.
 
 ### Changes
 
+- Web: Press Enter to send your Conversation reply.
+- Web: After choosing an answer in Listen Words or Q codes, press Enter for the next question.
+
+- Web: Conversation now waits for you to choose **Start my turn** after a transmission, giving you time to finish copying the last word.
+
 - Web: Added a Back button throughout onboarding and the app tour. Desktop onboarding places navigation at the screen edges, leaving the exercise centered.
 
 - Web: Onboarding has a lighter layout over the liquid background, with fewer panels, larger listening and recognition illustrations with subtle animations, clearer playback controls, and clearer lesson previews.
@@ -28,6 +33,8 @@ Compared against `2026.5.31`.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
+
+- Web: The Backspace key now deletes characters from your outgoing Conversation reply. A fresh automatic space is skipped with the first letter deletion; spaces reached while editing can still be deleted on their own.
 
 - Web: Onboarding now opens on the main app page instead of running over Conversation.
 

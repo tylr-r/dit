@@ -23,6 +23,7 @@ const baseProps: ConversationSurfaceProps = {
   getPlaybackElapsedMs: vi.fn(() => 1_000),
   showShortcutHints: false,
   onStart: vi.fn(),
+  onBeginReply: vi.fn(),
   onSendReply: vi.fn(),
   onPause: vi.fn(),
   onResume: vi.fn(),
@@ -40,6 +41,47 @@ const baseProps: ConversationSurfaceProps = {
 }
 
 describe('ConversationSurface playback status', () => {
+  it('does not key a tone when Enter is used on the QSO Morse key', () => {
+    const onKeyPressIn = vi.fn()
+    const onKeyPressOut = vi.fn()
+    render(<ConversationSurface {...baseProps} phase="your-turn" onKeyPressIn={onKeyPressIn} onKeyPressOut={onKeyPressOut} />)
+    const key = screen.getByRole('button', { name: 'Tap for dot, hold for dah' })
+    fireEvent.keyDown(key, { key: 'Enter' })
+    fireEvent.keyUp(key, { key: 'Enter' })
+    expect(onKeyPressIn).not.toHaveBeenCalled()
+    expect(onKeyPressOut).not.toHaveBeenCalled()
+  })
+
+  it('keeps the copy field focused after playback until Start my turn is clicked', async () => {
+    const onBeginReply = vi.fn()
+    const onTypedCopyChange = vi.fn()
+    const props = { ...baseProps, typedCopy: 'CQ', onBeginReply, onTypedCopyChange }
+    const { rerender } = render(
+      <ConversationSurface {...props} phase="their-turn-playing" />,
+    )
+    const copyField = screen.getByRole('textbox', { name: 'Copy what you hear' })
+    expect(copyField).toHaveFocus()
+
+    rerender(
+      <ConversationSurface
+        {...props}
+        phase="finishing-copy"
+        turns={[{ speaker: 'them', text: 'CQ TEST K' }]}
+      />,
+    )
+    expect(screen.getByRole('textbox', { name: 'Copy what you hear' })).toBe(copyField)
+    expect(copyField).toHaveFocus()
+    expect(copyField).toBeEnabled()
+    expect(screen.queryByText('Your turn')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tap for dot, hold for dah' })).toBeNull()
+    expect(screen.getByRole('region', { name: 'Conversation history' })).not.toHaveTextContent('CQ TEST K')
+    fireEvent.change(copyField, { target: { value: 'CQ TEST' } })
+    expect(onTypedCopyChange).toHaveBeenCalledWith('CQ TEST')
+    expect(onBeginReply).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Start my turn' }))
+    expect(onBeginReply).toHaveBeenCalledOnce()
+  })
+
   it('keeps the newest transcript turn in view', () => {
     const firstTurns = [{ speaker: 'them' as const, text: 'CQ CQ' }]
     const { rerender } = render(
