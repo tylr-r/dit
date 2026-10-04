@@ -313,7 +313,9 @@ export const playMorseTone = async ({
   onComplete?: () => void
 }) => {
   const myToken = ++morsePlayToken
-  const context = await ensureContext()
+  // A pre-gesture resume can remain pending. Retry inside the playback click
+  // rather than waiting forever on that earlier autoplay request.
+  const context = await ensureContext(hasTransientUserActivation())
   if (myToken !== morsePlayToken) {
     return
   }
