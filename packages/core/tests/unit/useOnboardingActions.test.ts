@@ -164,7 +164,7 @@ describe('useOnboardingActions', () => {
     })
 
     expect(soundCheck.setDidCompleteSoundCheck).toHaveBeenCalledWith(false)
-    expect(soundCheck.setNuxStep).toHaveBeenCalledWith('profile')
+    expect(soundCheck.setNuxStep).toHaveBeenCalledWith('intro_speed')
 
     const buttonTutorial = buildOptions({ tutorialTapCount: 2, tutorialHoldCount: 1 })
     const { result: buttonResult } = renderOnboardingHook(buttonTutorial)
@@ -176,6 +176,21 @@ describe('useOnboardingActions', () => {
     expect(buttonTutorial.setTutorialTapCount).toHaveBeenCalledWith(0)
     expect(buttonTutorial.setTutorialHoldCount).toHaveBeenCalledWith(0)
     expect(buttonTutorial.setNuxStep).toHaveBeenCalledWith('sound_check')
+  })
+
+  it.each([
+    ['intro_fluency', 'profile'],
+    ['intro_listen', 'intro_fluency'],
+    ['intro_speed', 'intro_listen'],
+  ] as const)('moves back from %s to %s', (step, previousStep) => {
+    const options = buildOptions()
+    const { result } = renderOnboardingHook(options)
+
+    act(() => {
+      result.current.handleNuxBack(step)
+    })
+
+    expect(options.setNuxStep).toHaveBeenCalledWith(previousStep)
   })
 
   it('moves back from the reminder step using the selected learner path', () => {

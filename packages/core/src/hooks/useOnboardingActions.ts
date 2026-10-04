@@ -189,9 +189,18 @@ export const useOnboardingActions = ({
         case 'profile':
           setNuxStep('welcome')
           return
+        case 'intro_fluency':
+          setNuxStep('profile')
+          return
+        case 'intro_listen':
+          setNuxStep('intro_fluency')
+          return
+        case 'intro_speed':
+          setNuxStep('intro_listen')
+          return
         case 'sound_check':
           setDidCompleteSoundCheck(false)
-          setNuxStep('profile')
+          setNuxStep('intro_speed')
           return
         case 'button_tutorial':
           setTutorialTapCount(0)
