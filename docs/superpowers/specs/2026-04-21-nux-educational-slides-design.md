@@ -1,5 +1,8 @@
 # NUX educational slides — design
 
+> **Illustration direction superseded on 2026-10-03.** This historical spec conflicts with Dit's auditory-learning model where it calls for dot/dash charts, character pattern bars, and a square-wave trace encoding a letter. Do not implement or reuse those instructions. Read [Pedagogical philosophy](../../Pedagogical_philosophy.md) and the [Product fidelity gate](../../../DESIGN.md#product-fidelity-gate). Existing prototype illustrations do not establish approval. This document is historical context, not a ready-to-implement design brief.
+
+
 ## Goal
 
 Add three short educational slides to the first-run flow, right after profile selection, to frame Dit's approach before the user touches the key. These slides are the app's one chance to explain *why* it teaches the way it does, and to set expectations about what "real Morse fluency" means here.
@@ -217,4 +220,4 @@ No new reusable subcomponent needed — each slide is five lines of JSX. If a fo
 
 ## Open questions
 
-None. Ready to plan.
+Illustration direction is superseded. A compliant visual revision is required before this design can be treated as approved.

@@ -32,6 +32,7 @@ const CALLOUT_WIDTH = 320
 const VIEWPORT_MARGIN = 16
 
 type TourOverlayProps = {
+  onBack: () => void
   onFinish: () => void
 }
 
@@ -65,7 +66,7 @@ const computeCalloutPosition = (rect: NonNullable<Rect>) => {
  * Spotlight overlay for the known-user app tour. Highlights real header
  * elements in turn (Modes, Settings, Progress) and advances on tap.
  */
-export function TourOverlay({ onFinish }: TourOverlayProps) {
+export function TourOverlay({ onFinish, onBack }: TourOverlayProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const stop = TOUR_STOPS[stepIndex]
   const [rect, setRect] = useState<Rect>(() =>
@@ -148,8 +149,16 @@ export function TourOverlay({ onFinish }: TourOverlayProps) {
               />
             ))}
           </div>
-          <div className="tour-callout-cta">
-            {stepIndex === TOUR_STOPS.length - 1 ? 'Finish' : 'Next'} ›
+          <div className="tour-callout-actions">
+            <button type="button" onClick={(event) => {
+              event.stopPropagation()
+              if (stepIndex > 0) setStepIndex(stepIndex - 1)
+              else onBack()
+            }}>Back</button>
+            <button type="button" onClick={(event) => {
+              event.stopPropagation()
+              handleAdvance()
+            }}>{stepIndex === TOUR_STOPS.length - 1 ? 'Finish' : 'Next'}</button>
           </div>
         </div>
       </div>

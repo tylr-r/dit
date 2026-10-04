@@ -160,6 +160,7 @@ export interface LearningSheetProps {
 export type EmailResult = { ok: true } | { ok: false; error: string }
 
 export interface SignInSheetProps {
+  presentation?: 'sheet' | 'onboarding'
   onClose: () => void
   onSignInWithApple: () => Promise<void>
   onSignInWithGoogle: () => Promise<void>

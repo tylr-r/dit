@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useScreenTracker } from '../lib/analytics'
 import type { SignInSheetProps } from './componentProps'
 
@@ -55,8 +55,9 @@ const EmailIcon = () => (
   </svg>
 )
 
-/** Bottom-sheet sign-in: Apple/Google/Email providers + email form swap-in. */
+/** Shared sign-in controls presented as a settings sheet or an onboarding stage. */
 export function SignInSheet({
+  presentation = 'sheet',
   onClose,
   onSignInWithApple,
   onSignInWithGoogle,
@@ -64,6 +65,12 @@ export function SignInSheet({
   onCreateAccountWithEmail,
 }: SignInSheetProps) {
   useScreenTracker('sign_in')
+  const isOnboarding = presentation === 'onboarding'
+  const titleRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    if (isOnboarding) titleRef.current?.focus()
+  }, [isOnboarding])
 
   const [view, setView] = useState<View>('picker')
   const [email, setEmail] = useState('')
@@ -116,14 +123,41 @@ export function SignInSheet({
   }
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
+    <div
+      className={isOnboarding ? 'nux-overlay nux-auth-stage' : 'modal-overlay sign-in-overlay'}
+      onClick={isOnboarding ? undefined : handleClose}
+    >
       <div
-        className="modal sign-in-sheet"
+        className={isOnboarding ? 'nux-auth-content' : 'modal sign-in-sheet'}
         role="dialog"
         aria-modal="true"
         aria-label="Sign in"
         onClick={(event) => event.stopPropagation()}
       >
+        {isOnboarding ? (
+          <>
+            <button
+              type="button"
+              className="nux-auth-back"
+              disabled={submitting}
+              onClick={() => {
+                if (view === 'email') {
+                  setError(null)
+                  setView('picker')
+                } else {
+                  handleClose()
+                }
+              }}
+              aria-label={view === 'email' ? 'Back to providers' : 'Back to welcome'}
+            >
+              <span aria-hidden="true">‹</span> Back
+            </button>
+            <div className="nux-auth-heading">
+              <h1 ref={titleRef} tabIndex={-1}>Welcome back.</h1>
+              <p>Pick up where you left off.</p>
+            </div>
+          </>
+        ) : (
         <div className="modal-header">
           <div className="modal-title">
             {view === 'email' ? (
@@ -151,6 +185,7 @@ export function SignInSheet({
             </button>
           </div>
         </div>
+        )}
         <div className="sign-in-body">
           {view === 'picker' ? (
             <ul className="sign-in-providers" role="list">
@@ -220,11 +255,9 @@ export function SignInSheet({
                   minLength={6}
                 />
               </label>
-              {error ? (
-                <div className="sign-in-error" role="alert">
-                  {error}
-                </div>
-              ) : null}
+              <div className="sign-in-error-slot">
+                {error ? <div className="sign-in-error" role="alert">{error}</div> : null}
+              </div>
               <button
                 type="submit"
                 className="panel-button sign-in-submit"

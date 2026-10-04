@@ -11,6 +11,10 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-04: Web onboarding owns `/app`.** Pending onboarding supersedes a requested Conversation route. Replace `/app/qso` with `/app` and leave Conversation when onboarding starts or is replayed. Do not run onboarding over another active mode or add route-specific exceptions for its audio. Completed and skipped users retain direct Conversation access.
+
+- **2026-10-03: Product identity governs every visual proposal.** Dit teaches auditory recognition of whole Morse character sounds and fluent keying. Onboarding and marketing must not teach or decorate with character-to-dot/dash mappings, encoded bars, or static countable character waveforms. This applies to generated mockups as well as shipped UI. Preserve the bounded Reference/hint and tap/hold tutorial behaviors; they do not justify visual decoding elsewhere. Read `docs/Pedagogical_philosophy.md` and apply the product fidelity gate in `DESIGN.md` before proposing or approving visuals.
+
 - **2026-09-04: Listen Words separates English words from Q codes.** Common words reuses the Practice English bank, excluding radio shorthand. Q codes is a separate curated set with meanings after answering. Do not mix the banks within a round or label CW abbreviations as English words. Switching sets is silent until Start listening is pressed again.
 
 - **2026-09-04: Listen Words is listen-first, then choose.** Conceal every option while the audio plays, including on replay. Reveal them together when it finishes. Keep the card positions stable and show identical placeholders rather than blurred text that still hints at word length. The exercise should train recognition from sound, not matching sounds against visible candidates.

@@ -208,6 +208,8 @@ export const useOnboardingActions = ({
           setNuxStep('sound_check')
           return
         case 'beginner_stages':
+          setTutorialTapCount(0)
+          setTutorialHoldCount(0)
           setNuxStep('button_tutorial')
           return
         case 'beginner_intro':

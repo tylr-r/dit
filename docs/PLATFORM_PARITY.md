@@ -22,7 +22,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Google sign-in | ✅ | ✅ | iOS uses native flow; web uses Firebase popup |
 | Apple sign-in | ✅ | ✅ | Web uses Firebase OAuthProvider('apple.com') with popup and redirect fallback |
 | Email + password | ✅ | ✅ | Sign in + create account with the collapsed bad-credential message |
-| Shared sign-in sheet | ✅ | ✅ | Same sheet from Settings and NUX welcome on both platforms |
+| Shared sign-in controls | ✅ | ✅ | iOS uses a sheet from Settings and welcome. Web uses a sheet in Settings and a full-screen stage during onboarding. |
 | Delete account | ✅ | ✅ | Web has no native session to revoke; Firebase deleteUser handles it |
 | Sign out | ✅ | ✅ | |
 
@@ -31,10 +31,13 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
 | Welcome screen | ✅ | ✅ | Both preserve the brand moment |
+| Onboarding visual layout | ✅ | ✅ | Web uses an open background, subtle profile choices, unboxed tutorial/stages, and large first-letter typography. iOS retains its native layout. |
+| Intro-slide illustrations | 🟡 | ✅ | Web replaces encoded patterns with animated recognition feedback, headphones, and whole-letter spacing, with static reduced-motion alternatives. iOS still has the superseded prototype illustrations and needs revision. |
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
 | Sound check | ✅ | ✅ | iOS: NUX step reads system volume when it looks low. Web: NUX step plus a Settings playback test row |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
-| Welcome-screen sign-in options | ✅ | ✅ | Sign in / Stay signed out fade in 2s after paint when signed out; reuses the shared sign-in sheet |
+| Welcome-screen sign-in options | ✅ | ✅ | iOS: Sign in / Stay signed out fade in after 2s. Web prototype: immediate Get started action and secondary sign-in link; sign-in replaces welcome content. |
+| Visible Back control | 🚫 | ✅ | Web onboarding and tour expose Back; iOS retains swipe navigation. |
 | Swipe left to go back | ✅ | ✅ | Backing up clears sound-check or Morse-key tutorial completion where needed |
 | Tutorial haptics toggle | ✅ | 🚫 | iOS-only since web has no haptic surface |
 | Daily reminder step | ✅ | 🚫 | Web has no notifications surface; auto-skipped in [NuxModal.tsx](../apps/web/src/components/NuxModal.tsx) |

@@ -21,6 +21,7 @@ This document captures the intended, shared behavior across web and iOS. iOS car
 - The app asks whether the user is new to Morse or already knows it. The answer is stored as `learnerProfile` and changes what the Reference modal emphasizes later (mastered count vs. best WPM).
 - Both paths begin with a sound check and a short input tutorial that explicitly teaches the big Morse key.
 - The button tutorial requires one short tap (dit) and one long press (dah) before continuing.
+- Web provides a visible Back button on every onboarding step after welcome and within the app tour. From the first tour stop it returns to the Morse key tutorial, skipping the iOS-only reminder. Returning to the key tutorial clears its counters so it does not immediately advance again.
 - Users can swipe left during onboarding to return to the previous step. Moving back from sound check clears its completion; moving back from the Morse key tutorial clears its tap/hold counts so stale progress does not auto-advance the user.
 - On iOS, the Morse key tutorial exposes a **Haptics** toggle that controls the same persisted haptics setting as Settings.
 - iOS also asks the user to set a daily practice reminder during NUX. The user can skip this and turn it on later in Settings.
@@ -28,6 +29,14 @@ This document captures the intended, shared behavior across web and iOS. iOS car
   the normal app flow.
 - Beginner users enter the guided course, which introduces letters in small packs and advances automatically.
 - NUX status (`pending`, `completed`, `skipped`) is persisted so it only runs once unless replayed from Settings.
+
+- On web, welcome shows **Get started** as the primary action and **Already use Dit? Sign in** below it, with no delayed reveal. Get started enters profile selection without requiring an account. Sign-in replaces the onboarding content on the same full-screen stage; Back returns from email to providers, then to welcome. The onboarding UI and tour are hidden while sign-in is open. Settings continues to use the sign-in sheet.
+
+- Web sound-check playback retries browser audio activation from the Play sound click if an earlier automatic playback request is still waiting for permission to start. Onboarding runs at `/app` and does not inherit Conversation audio suppression.
+
+- Pending web onboarding owns `/app`. Opening `/app/qso` before completion, or replaying onboarding from Conversation, replaces the URL with `/app` and exits Conversation. Its surface is unmounted, including during onboarding sign-in. Returning users with completed or skipped onboarding can open `/app/qso` directly. The liquid background remains visible.
+
+- Web onboarding keeps Continue anchored across steps. At desktop widths (900px and above), Back sits at the upper-left and Continue at the bottom-center of the viewport; the exercise remains centered. Smaller screens keep Continue centered. Sound playback and confirmation controls stay in place when feedback or troubleshooting appears; long content scrolls inside the middle region.
 
 #### Post-onboarding intro hints
 

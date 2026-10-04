@@ -7,6 +7,25 @@ direction only — durable product decisions, implementation, architecture, and
 app behavior live elsewhere (`docs/DECISIONS.md`, `CLAUDE.md`,
 `docs/APP_BEHAVIOR.md`, `docs/STYLE_GUIDE.md`).
 
+## Product fidelity gate
+
+**Read [Pedagogical philosophy](docs/Pedagogical_philosophy.md) before any visual design work, including research recommendations, mockups, and image-generation prompts.** Dit teaches recognition of whole sounds and fluent sending. Make that product identity the starting point for visual decisions.
+
+Before presenting or implementing a design:
+
+1. Identify the surface and the skill it supports. For a UI-only request, preserve the approved copy and learning flow.
+2. Check every illustration and state for an alternative visual route to decoding a character. Reject character-to-pattern mappings, dot/dash charts, long/short labeled symbols, encoded bars, and static countable waveforms in onboarding and marketing. Renaming dots and dashes as an "audio instrument" or drawing them as a waveform does not make them auditory learning.
+3. Prefer visuals of listening, input, progress, or recognition that do not expose an encoded answer. Existing audio-reactive feedback is not a license to create a static character-decoding diagram.
+4. Keep exceptions local: the brand mark, explicitly requested Reference/hint surfaces, and the tutorial that teaches the physical tap/hold action. Do not remove or expand those existing behaviors as part of a styling task. Consult `docs/APP_BEHAVIOR.md` for their current boundaries.
+5. Include the product constraints in generation prompts and delegated briefs. Inspect the rendered result itself, not just the prompt or a generator's description. Revise or discard failures before presentation; never recommend a noncompliant option as the preferred design.
+6. For implemented interactions, verify the actual click path: triggering a control must not move it when feedback appears, and shared navigation must stay anchored across steps. Check readable contrast, mobile layout, and reduced motion in the rendered UI.
+
+### Onboarding illustration constraints
+
+Letter-to-dot/dash mappings, long/short symbols, and connector diagrams teach visual decoding and conflict with Dit's auditory learning model. Keep whole letters unboxed. Illustration size and styling do not make encoded character patterns suitable for onboarding.
+
+The older `docs/superpowers/specs/2026-04-21-nux-educational-slides-design.md` illustration brief is superseded by this gate. The iOS branch's `IntroFluencyIllustration`, `IntroListenIllustration`, and `IntroSpeedIllustration` still contain inherited prototype patterns, not evidence of approval or a source to copy. Their encoded patterns need a separate compliant visual revision. Web replaced those assets with the revision described below. Do not describe this prototype as design-approved or release-ready on the strength of passing functional tests.
+
 Token source of truth:
 
 - `apps/ios/src/design/tokens.ts` — colors, spacing, radii
@@ -111,6 +130,27 @@ and pauses with a cross-fade when the tab is hidden / app is backgrounded.
 The "no ambient motion" rule still applies to _content_ surfaces — the
 shader is the single, expected exception, layered behind everything.
 
+### Web onboarding visual direction
+
+Visual calibration: [reference screens and adopted details](docs/design/onboarding-references.md). Use these references within Dit's product and visual constraints.
+
+- Onboarding owns the `/app` route and its foreground. Conversation is exited, not merely covered, when onboarding is pending or replayed.
+- All onboarding steps show the existing liquid background through the soft backdrop scrim (35% opacity), without an enclosing panel, border, or shadow. Do not cover the shader with an opaque onboarding backdrop. Keep the existing copy and step sequence.
+- Center the content within a 640px maximum width; explanatory copy stays within 480px. Use 28–36px, 600-weight headings, readable secondary text, and 32–40px spacing between groups.
+- Profile choices are equal, softly filled surfaces without outlines, side by side on desktop and stacked below 540px. Use 14px corners, stronger choice labels, a slight press compression, and orange hover/focus feedback.
+- Progress dots are small and neutral. Reserve green for confirmed input, not completed navigation steps.
+- Web intro slides use a shared illustration stage above the heading: whole-character recognition with a confirmation check, headphones for listening, and equal-size letters with different gaps for spacing. No chart, encoded signal, connector arrows, or letter chips. These are explanatory illustrations, not interactive exercises or the user's actual progress.
+- **Intro motion (October 4, 2026).** The recognition preview selects N, R, A, T, then E over twelve seconds, drawing a check, X, then check in a fixed feedback slot. It loops seamlessly by recycling duplicate letters outside the visible slots. The last frame matches the first, with no fade or reset. Check/X draws take 160ms. Headphone accents fade gently twice over 6.4 seconds; the spacing preview uses one centered row of whole letters and contracts its gaps once over 3.2 seconds. The animation itself shows before and after, so there is no duplicate comparison row. One fixed label beneath the letters changes from “More space” to “Less space” as the gaps tighten; reduced motion shows “Less space”. No audio, encoded patterns, score changes, or moving navigation. Reduced motion shows the settled static illustrations immediately. Returning to a slide restarts its brief sequence.
+- The intro artwork occupies 280px on desktop, 230px on phones, and 150px on short screens. Headings share a baseline across the three slides, use 600 weight at 28–36px, and sit above the existing explanatory copy. The footer stays fixed independently of copy length.
+- Illustrations sit directly on the background. Tutorial progress appears below the Morse key without individual cards. Lesson stages are an unboxed numbered sequence; first letters are large orange characters without chips.
+- Keep sound playback circular with a 32px orange play icon and a text label. Reserve space for a green check beside the confirmed hearing response; the replay control stays orange. Its confirmation choices are quiet text controls. Troubleshooting uses a subtle side rule instead of another card.
+- **Desktop frame (October 4, 2026).** At widths of 900px and above, navigation spans the viewport with 32–64px edge insets: Back upper-left, progress top-center, Continue bottom-center. Only the exercise stays within the 640px column. Its middle stage has a stable height capped at 560px so feedback cannot recenter controls. Smaller screens retain centered Continue and compact navigation. This replaces the narrow desktop frame that looked like a phone layout.
+- **Visible Back on web.** Keep a quiet Back button at the left of the fixed progress row on every step after welcome. The known-user tour also supports Back through its stops and returns to the key tutorial from its first stop.
+- **Stable control positions.** Use a viewport-sized onboarding grid with fixed progress and footer rows. Only the middle content region scrolls. Continue stays at the same position between steps; sound confirmation has reserved space and sound-check copy has a stable minimum height. Feedback must not recenter the screen or move the control that triggered it. Sign-in keeps a stable stage height and reserves error space above submission.
+- Use one brief step fade rather than staggered entrances, popping counters, or flipping letter chips. Respect reduced motion. Long steps scroll within the viewport at small sizes.
+- The known-user tour keeps an anchored callout for readability, with no border or shadow and a single orange spotlight outline.
+- This direction replaces the nested panel/card treatment on web. Native iOS styling has not yet adopted it.
+
 ### NUX welcome (iOS)
 
 - **Welcome auto-advance removed (2026-04-23).** The 2.2s `setTimeout` that
@@ -118,13 +158,14 @@ shader is the single, expected exception, layered behind everything.
   user choice. Signed-out users see two centered options (Sign in / Stay
   signed out) fade in ~2000ms after paint. Do not re-add a timer that skips
   this choice before the user acts.
+- **Web welcome and sign-in prototype.** Use one centered 400px column with the Dit logo, “Learn Morse by ear,” an orange Get started button, and a quieter “Already use Dit? Sign in” link. Actions appear immediately. Sign-in replaces welcome with an unboxed provider screen and Back navigation; email stays on that stage. Keep Settings sign-in in a sheet. Removed the floating sign-in-over-welcome treatment and repeating logo pulse on web welcome. The three educational intro slides remain in this prototype.
 - **Post-auth advance.** Once a signed-out welcome user successfully signs in,
   the welcome screen advances quickly to the next onboarding step unless
   remote progress skips NUX entirely. This prevents the options from
   disappearing while the user stays on the same page.
-- **Swipe-back gesture.** Onboarding supports a left swipe to return to the
-  previous step. Keep the gesture quiet and non-visual; do not add a visible
-  back button unless the flow grows beyond these short stages.
+- **Swipe-back gesture.** iOS onboarding supports a left swipe to return to the
+  previous step. Web additionally provides an explicit Back button in the
+  fixed navigation row.
 - **Tutorial haptics control.** The Morse key tutorial can show a compact
   haptics toggle on iOS. It uses the same setting as Settings so the user's
   choice persists after onboarding.

@@ -1,65 +1,16 @@
-const SIGNAL_COLOR = 'var(--color-accent-wave, #ff9d4a)'
-const ARROW_COLOR = 'rgba(245,245,245,0.3)'
-const LABEL_COLOR = 'rgba(245,245,245,0.4)'
-const TEXT_COLOR = '#f5f5f5'
-
-const CHART_ROWS = [
-  { letter: 'A', pattern: '· —' },
-  { letter: 'N', pattern: '— ·' },
-  { letter: 'R', pattern: '· — ·' },
-  { letter: 'T', pattern: '—' },
-  { letter: 'E', pattern: '·' },
-]
-
-/** Slide 2 illustration — chart table dissolves into a flowing waveform. */
+/** Listening is the subject: headphones with no encoded character or answer. */
 export const IntroListenIllustration = () => (
-  <svg viewBox="0 0 276 180" width="276" height="180" aria-hidden="true">
-    <g opacity={0.4}>
-      {CHART_ROWS.map((row, i) => (
-        <text
-          key={row.letter}
-          x={12}
-          y={40 + i * 22}
-          fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-          fontSize={10}
-          fill={TEXT_COLOR}
-          letterSpacing="0.08em"
-        >
-          {`${row.letter}  ${row.pattern}`}
-        </text>
-      ))}
+  <svg viewBox="0 0 480 280" aria-hidden="true" className="nux-listening-art">
+    <path d="M145 167v-40a95 95 0 0 1 190 0v40" fill="none" stroke="var(--color-text-primary-20)" strokeWidth="18" strokeLinecap="round" />
+    <path d="M145 127a95 95 0 0 1 190 0" fill="none" stroke="var(--color-text-primary-80)" strokeWidth="2" />
+    <path d="M163 121a77 77 0 0 1 154 0" fill="none" stroke="var(--color-text-primary-40)" strokeWidth="5" strokeLinecap="round" />
+    <g fill="var(--color-surface-panel-strong)" stroke="var(--color-text-primary-40)" strokeWidth="1.5">
+      <rect x="130" y="137" width="43" height="92" rx="21.5" transform="rotate(-8 151 183)" />
+      <rect x="307" y="137" width="43" height="92" rx="21.5" transform="rotate(8 329 183)" />
     </g>
-    <g stroke={ARROW_COLOR} strokeWidth={1} fill="none" strokeLinecap="round">
-      <line x1={100} y1={85} x2={150} y2={85} />
-      <path d="M 144 80 L 150 85 L 144 90" />
+    <g className="nux-listening-cushions" fill="var(--color-accent-wave)">
+      <rect x="161" y="145" width="13" height="73" rx="6.5" transform="rotate(-8 167 181)" />
+      <rect x="306" y="145" width="13" height="73" rx="6.5" transform="rotate(8 312 181)" />
     </g>
-    <path
-      d="M 160 85 Q 170 85 170 60 Q 170 85 182 85 Q 196 85 196 40 Q 196 85 210 85 Q 222 85 222 115 Q 222 85 236 85 Q 250 85 250 60 Q 250 85 264 85"
-      fill="none"
-      stroke={SIGNAL_COLOR}
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <text
-      x={12}
-      y={170}
-      fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-      fontSize={9}
-      fill={LABEL_COLOR}
-      letterSpacing="0.1em"
-    >
-      DECODE
-    </text>
-    <text
-      x={210}
-      y={170}
-      fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-      fontSize={9}
-      fill={LABEL_COLOR}
-      letterSpacing="0.1em"
-    >
-      HEAR
-    </text>
   </svg>
 )

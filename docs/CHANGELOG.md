@@ -13,6 +13,12 @@ Compared against `2026.5.31`.
 
 ### Changes
 
+- Web: Added a Back button throughout onboarding and the app tour. Desktop onboarding places navigation at the screen edges, leaving the exercise centered.
+
+- Web: Onboarding has a lighter layout over the liquid background, with fewer panels, larger listening and recognition illustrations with subtle animations, clearer playback controls, and clearer lesson previews.
+
+- Web: Welcome now leads with Get started, with sign-in available on a dedicated screen for returning users.
+
 - Web: Conversation now sends perfect RST reports as `5NN` and chooses `GM`, `GA`, `GE`, or `GN` from the learner's local time.
 - Web: Conversation replies now follow a natural CW exchange, keying is visually primary, optional copy collapses when empty, and a compact prosign reference is available during a QSO.
 - iOS: Onboarding sound check now notices when your volume is all the way down and asks you to turn it up before continuing.
@@ -22,6 +28,14 @@ Compared against `2026.5.31`.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
+
+- Web: Onboarding now opens on the main app page instead of running over Conversation.
+
+- Web: Fixed silent onboarding sound checks after blocked browser audio and when opening onboarding from Conversation.
+
+- Web: Onboarding buttons stay in place when steps change or sound-check feedback appears.
+
+- Web: Sign-in is now usable from the welcome screen instead of staying hidden until later in onboarding.
 
 - Web: Conversation no longer exposes an incoming message in the transcript before the operator is ready to reveal it.
 - Web: Loading `/app/qso` no longer starts hidden Practice audio before the operator chooses what to do.

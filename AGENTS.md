@@ -1,5 +1,15 @@
 # Agent Guidelines
 
+## Product identity: required before design work
+
+Dit builds auditory Morse recognition and fluent keying. Its learning model is hearing whole character sounds and developing a reflex, not counting or visually translating dots and dashes.
+
+- Before proposing, prompting an image generator, prototyping, implementing, or reviewing UI, onboarding, illustrations, or marketing, read `docs/Pedagogical_philosophy.md` and the **Product fidelity gate** in `DESIGN.md`. This applies to conversational mockups as well as code changes.
+- Do not use character-to-dot/dash charts, encoded bars, or countable character waveforms as teaching or decorative visuals in onboarding or marketing. Existing explicit Reference/hint surfaces and the key-input tutorial are bounded exceptions, not permission to spread visual decoding elsewhere.
+- Carry these constraints into every design brief, image-generation prompt, and delegated task. Inspect the actual output against them before showing or recommending it. Reject noncompliant output even when it looks polished.
+- A UI-only request preserves wording and learning flow unless Tyler explicitly requests those changes. Generic design trends and old implementation specs never override Dit's pedagogy.
+
+
 - Prefer `pnpm` when installing dependencies.
 - Ask for confirmation before adding new production dependencies.
 - Run `pnpm run lint` before running a build or making a commit. No need to run it if for every code change, just before making a git commit.

@@ -172,6 +172,8 @@ function MainApp({ initialConversationActive = false }: {
 }) {
   const { user } = useAuth()
   const onboarding = useOnboardingState()
+  const { nuxReady, nuxStatus } = onboarding
+  const isNuxActive = nuxReady && nuxStatus === 'pending'
   const { phaseModal, showPhaseModal, handlePhaseModalDismiss } =
     usePhaseModalState()
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
@@ -193,9 +195,14 @@ function MainApp({ initialConversationActive = false }: {
   const conversationPressingRef = useRef(false)
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null)
   const [signInFromSettings, setSignInFromSettings] = useState(false)
-  const [conversationActive, setConversationActive] = useState(
+  const [conversationSelected, setConversationActive] = useState(
     initialConversationActive,
   )
+  // Discard the requested mode as soon as loaded onboarding state owns the app.
+  if (isNuxActive && conversationSelected) {
+    setConversationActive(false)
+  }
+  const conversationActive = conversationSelected && !isNuxActive
   const sharedSessionCallbacks = useMemo(
     () => ({
       ...sessionCallbacks,
@@ -399,6 +406,14 @@ function MainApp({ initialConversationActive = false }: {
     startTone,
     stopTone,
   })
+  useEffect(() => {
+    if (!isNuxActive || window.location.pathname === '/app') return
+    conversation.end()
+    conversation.reset()
+    // Onboarding owns /app. Replace so Back cannot return to a hidden QSO.
+    window.history.replaceState(window.history.state, '', '/app')
+  }, [isNuxActive, conversation])
+
   const handleModeSwitcherChange = useCallback(
     (next: 'practice' | 'freestyle' | 'listen' | 'conversation') => {
       if (next === 'conversation') {
@@ -459,9 +474,6 @@ function MainApp({ initialConversationActive = false }: {
   }, [customListen.phase, customListen.encoded.code, state.listenWpm, state.listenEffectiveWpm])
 
   useScreenTracker(session.state.mode)
-
-  const { nuxReady, nuxStatus } = onboarding
-  const isNuxActive = nuxReady && nuxStatus === 'pending'
 
   useNuxStepTracker(onboarding.nuxStep, isNuxActive, trackEvent)
 
@@ -1149,7 +1161,7 @@ function MainApp({ initialConversationActive = false }: {
           ) : null}
         </div>
       </header>
-      {conversationActive ? (
+      {conversationActive ? (nuxReady && (
         <ConversationSurface
           phase={conversation.phase}
           turns={conversation.turns}
@@ -1182,7 +1194,7 @@ function MainApp({ initialConversationActive = false }: {
           onDraftBackspace={conversation.handleDraftBackspace}
           onDraftClear={conversation.handleDraftClear}
         />
-      ) : (
+      )) : (
         <>
           {isListen && customListen.phase === 'inactive' ? (
             <ListenContentSwitcher
@@ -1406,6 +1418,7 @@ function MainApp({ initialConversationActive = false }: {
       ) : null}
       {showSignIn ? (
         <SignInSheet
+          presentation={isNuxActive ? 'onboarding' : 'sheet'}
           onClose={handleCloseSignIn}
           onSignInWithApple={handleSignInWithApple}
           onSignInWithGoogle={handleSignInWithGoogle}
@@ -1419,10 +1432,17 @@ function MainApp({ initialConversationActive = false }: {
           onDismiss={handlePhaseModalDismiss}
         />
       ) : null}
-      {isNuxActive && onboarding.nuxStep === 'known_tour' ? (
-        <TourOverlay onFinish={handlers.handleFinishKnownTour} />
+      {isNuxActive && !showSignIn && onboarding.nuxStep === 'known_tour' ? (
+        <TourOverlay
+          onFinish={handlers.handleFinishKnownTour}
+          onBack={() => {
+            onboarding.setTutorialTapCount(0)
+            onboarding.setTutorialHoldCount(0)
+            onboarding.setNuxStep('button_tutorial')
+          }}
+        />
       ) : null}
-      {isNuxActive && onboarding.nuxStep !== 'known_tour' ? (
+      {isNuxActive && !showSignIn && onboarding.nuxStep !== 'known_tour' ? (
         <NuxModal
           step={onboarding.nuxStep}
           learnerProfile={state.learnerProfile}

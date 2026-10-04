@@ -38,7 +38,6 @@ type NuxModalProps = {
 }
 
 const SIGNED_IN_WELCOME_ADVANCE_MS = 350
-const WELCOME_OPTIONS_DELAY_MS = 2000
 const SWIPE_BACK_THRESHOLD_PX = 48
 type DotSlot =
   | 'profile'
@@ -109,7 +108,6 @@ export function NuxModal({
   onSkipReminder,
   onRequestSignIn,
 }: NuxModalProps) {
-  const [optionsVisible, setOptionsVisible] = useState(false)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -120,9 +118,6 @@ export function NuxModal({
       const timer = window.setTimeout(onWelcomeDone, SIGNED_IN_WELCOME_ADVANCE_MS)
       return () => window.clearTimeout(timer)
     }
-    // Signed-out: show sign-in options after 2s instead of auto-advancing
-    const t = window.setTimeout(() => setOptionsVisible(true), WELCOME_OPTIONS_DELAY_MS)
-    return () => window.clearTimeout(t)
   }, [step, user, onWelcomeDone])
 
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
@@ -199,26 +194,27 @@ export function NuxModal({
         onTouchStart={handleTouchStart}
         onTouchEnd={(event) => handleTouchEnd(event, 'welcome')}
       >
-        <div className="nux-welcome">
+        <div className="nux-welcome nux-welcome-start">
           <img src="/Dit-logo.svg" alt="Dit" className="nux-welcome-logo" />
-          <p className="nux-welcome-title">Dit</p>
-          <p className="nux-welcome-sub">Learn Morse by ear.</p>
+          <h1 className="nux-welcome-title">Learn Morse by ear.</h1>
           {!user ? (
-            <div className={`welcome-options${optionsVisible ? ' is-visible' : ''}`}>
+            <div className="nux-start-actions">
               <button
                 type="button"
-                className="welcome-option-button welcome-option-primary"
-                onClick={(e) => { e.stopPropagation(); onRequestSignIn() }}
+                className="nux-start-button"
+                onClick={(event) => { event.stopPropagation(); onWelcomeDone() }}
               >
-                Sign in
+                Get started
               </button>
-              <button
-                type="button"
-                className="welcome-option-button welcome-option-secondary"
-                onClick={(e) => { e.stopPropagation(); onWelcomeDone() }}
-              >
-                Stay signed out
-              </button>
+              <p className="nux-sign-in-prompt">
+                Already use Dit?{' '}
+                <button
+                  type="button"
+                  onClick={(event) => { event.stopPropagation(); onRequestSignIn() }}
+                >
+                  Sign in
+                </button>
+              </p>
             </div>
           ) : null}
         </div>
@@ -235,9 +231,20 @@ export function NuxModal({
       onTouchEnd={(event) => handleTouchEnd(event, displayedStep)}
     >
       <div className="nux-content">
-        <ProgressDots step={step} />
+        <div className="nux-navigation">
+          <button
+            type="button"
+            className="nux-back"
+            disabled={bodyExiting}
+            onClick={() => onBack(displayedStep)}
+          >
+            <span aria-hidden="true">‹</span> Back
+          </button>
+          <ProgressDots step={step} />
+        </div>
         <div
           className="nux-body"
+          data-step={displayedStep}
           data-exiting={bodyExiting ? '' : undefined}
           key={displayedStep}
         >
@@ -336,19 +343,23 @@ export function NuxModal({
               </div>
               <button
                 type="button"
-                className={`nux-sound-button ${
-                  soundCheckState === 'heard' ? 'complete' : ''
-                }`}
+                className="nux-sound-button"
                 onClick={handlePlaySound}
               >
+                <svg className="nux-sound-icon" viewBox="0 0 32 32" aria-hidden="true">
+                  <path d="M11 7.5a1.5 1.5 0 0 1 2.3-1.27l13 8.5a1.5 1.5 0 0 1 0 2.54l-13 8.5A1.5 1.5 0 0 1 11 24.5Z" fill="currentColor" />
+                </svg>
                 <span className="nux-sound-label">
                   {soundCheckState === 'idle' ? 'Play sound' : 'Play again'}
                 </span>
               </button>
-              {soundCheckState === 'played' ||
-              soundCheckState === 'not_heard' ||
-              soundCheckState === 'heard' ? (
-                <div className="nux-sound-confirm" role="group" aria-label="Did you hear it?">
+                <div
+                  className="nux-sound-confirm"
+                  role="group"
+                  aria-label="Did you hear it?"
+                  aria-hidden={soundCheckState === 'idle'}
+                  inert={soundCheckState === 'idle'}
+                >
                   <button
                     type="button"
                     className={`nux-sound-choice ${
@@ -357,6 +368,9 @@ export function NuxModal({
                     onClick={() => setSoundCheckState('heard')}
                     aria-pressed={soundCheckState === 'heard'}
                   >
+                    <svg className="nux-sound-checkmark" viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="m4 10 4 4 8-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                     Yes, I heard it
                   </button>
                   <button
@@ -370,7 +384,6 @@ export function NuxModal({
                     No sound
                   </button>
                 </div>
-              ) : null}
               {soundCheckState === 'not_heard' ? (
                 <div className="nux-sound-help">
                   {isIOS() ? (
