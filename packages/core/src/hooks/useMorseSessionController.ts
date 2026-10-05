@@ -1305,7 +1305,7 @@ export const useMorseSessionController = ({
 
   const submitListenAnswer = useCallback(
     (value: Letter) => {
-      if (listenStatus !== 'idle' || !/^[A-Z0-9]$/.test(value) || !activeLetterSet.has(value)) {
+      if (characterListenSuspendedRef.current || listenStatus !== 'idle' || !/^[A-Z0-9]$/.test(value) || !activeLetterSet.has(value)) {
         return
       }
       setListenHasSubmittedAnswer(true)
@@ -1767,6 +1767,22 @@ export const useMorseSessionController = ({
     stopTonePlayback()
     void stopMorseTone()
   }, [paddleInput, stopMorseTone, stopTonePlayback])
+
+  const cancelPendingSessionInput = useCallback(() => {
+    cancelExternalMorseInput()
+    clearTimer(letterTimeoutRef)
+    clearTimer(wordSpaceTimeoutRef)
+    clearTimer(successTimeoutRef)
+    clearTimer(errorTimeoutRef)
+    pressStartRef.current = null
+    inputRef.current = ''
+    freestyleInputRef.current = ''
+    practiceWordStartRef.current = null
+    setInput('')
+    setFreestyleInput('')
+    setStatus('idle')
+    resetListenState()
+  }, [cancelExternalMorseInput, resetListenState])
 
   const handlePressIn = useCallback(() => {
     if (pressStartRef.current !== null || isListen || (!isFreestyle && isErrorLocked())) {
@@ -2424,6 +2440,7 @@ export const useMorseSessionController = ({
       handleMorseSymbolPressIn,
       handleMorseSymbolPressOut,
       cancelExternalMorseInput,
+      cancelPendingSessionInput,
       handlePressOut,
       handleMaxLevelChange,
       handleSetGuidedCourseActive,

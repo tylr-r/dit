@@ -11,7 +11,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg'
 import { hslaFromHsl } from '../design/color'
 import { colors } from '../design/tokens'
-import { type ListenWavePlayback } from '@dit/core'
+import { getListenToneLevelAtElapsedMs, type ListenWavePlayback } from '@dit/core'
 
 type ListenWaveTintStatus = 'idle' | 'success' | 'error'
 
@@ -19,6 +19,8 @@ type ListenSineWaveProps = {
   playback: ListenWavePlayback | null;
   tintStatus?: ListenWaveTintStatus;
   liveActive?: boolean;
+  playbackElapsedMs?: number;
+  paused?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -73,44 +75,6 @@ const EDGE_WEIGHTS = SAMPLE_T_VALUES.map(
   (t) => 0.52 + Math.sin(Math.PI * t) * 0.48,
 )
 const SPATIAL_PHASES = SAMPLE_T_VALUES.map((t) => t * WAVE_CYCLES * TWO_PI)
-
-const getToneLevelAtElapsedMsWorklet = (
-  symbolsCode: string,
-  unitMs: number,
-  elapsedMs: number,
-  interCharacterGapMs: number,
-) => {
-  'worklet'
-
-  if (unitMs <= 0 || elapsedMs < 0) {
-    return 0
-  }
-
-  if (symbolsCode.length === 0) {
-    return 0
-  }
-
-  let cursorMs = 0
-  for (let symbolIndex = 0; symbolIndex < symbolsCode.length; symbolIndex += 1) {
-    const symbol = symbolsCode[symbolIndex]
-    const toneMs = symbol === '.' ? unitMs : unitMs * 3
-    if (elapsedMs < cursorMs + toneMs) {
-      return symbol === '.' ? 0.72 : 1
-    }
-    cursorMs += toneMs
-
-    if (symbolIndex < symbolsCode.length - 1) {
-      if (elapsedMs < cursorMs + unitMs) {
-        return 0
-      }
-      cursorMs += unitMs
-    } else if (elapsedMs < cursorMs + interCharacterGapMs) {
-      return 0
-    }
-  }
-
-  return 0
-}
 
 const createPath = (
   width: number,
@@ -168,6 +132,8 @@ export function ListenSineWave({
   playback,
   tintStatus = 'idle',
   liveActive = false,
+  playbackElapsedMs,
+  paused = false,
   style,
 }: ListenSineWaveProps) {
   const width = useSharedValue(0)
@@ -177,6 +143,8 @@ export function ListenSineWave({
   const tintOpacity = useSharedValue(0)
   const liveLevel = useSharedValue(0)
   const elapsedMs = useSharedValue(0)
+  const controlledClock = useSharedValue(false)
+  const pausedValue = useSharedValue(false)
   const symbolsCode = useSharedValue('')
   const unitMs = useSharedValue(40)
   const interCharacterGapMs = useSharedValue(120)
@@ -190,13 +158,16 @@ export function ListenSineWave({
       return
     }
     symbolsCode.value = playback.code
-      .split('')
-      .filter((symbol) => symbol === '.' || symbol === '-')
-      .join('')
     unitMs.value = playback.unitMs
     interCharacterGapMs.value = playback.interCharacterGapMs
-    elapsedMs.value = 0
-  }, [playback, symbolsCode, elapsedMs, interCharacterGapMs, unitMs])
+    if (playbackElapsedMs === undefined) elapsedMs.value = 0
+  }, [playback, playbackElapsedMs, symbolsCode, elapsedMs, interCharacterGapMs, unitMs])
+
+  useEffect(() => {
+    controlledClock.value = playbackElapsedMs !== undefined
+    pausedValue.value = paused
+    if (playbackElapsedMs !== undefined) elapsedMs.value = playbackElapsedMs
+  }, [playbackElapsedMs, paused, controlledClock, pausedValue, elapsedMs])
 
   useEffect(() => {
     const targetOpacity = tintStatus === 'idle' ? 0 : 0.7
@@ -217,13 +188,14 @@ export function ListenSineWave({
   }, [liveActive, liveLevel])
 
   useFrameCallback((frameInfo) => {
+    if (pausedValue.value) return
     const deltaMs = frameInfo.timeSincePreviousFrame
     if (deltaMs === null) {
       return
     }
 
-    elapsedMs.value += deltaMs
-    const toneLevel = getToneLevelAtElapsedMsWorklet(
+    if (!controlledClock.value) elapsedMs.value += deltaMs
+    const toneLevel = pausedValue.value ? 0 : getListenToneLevelAtElapsedMs(
       symbolsCode.value,
       unitMs.value,
       elapsedMs.value,

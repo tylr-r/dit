@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-04: Learning parity includes supplemental reception exercises.** Listen Words/Q codes, private custom-text copy practice, one-time unscored hints, and recognition-speed feedback belong on both platforms. Native controls and keyboards may differ; eligibility, hidden answers during playback, grading, and score isolation must match. Conversation also belongs on both platforms, sharing station rules, explicit turn handoff, optional copy, and unscored progress isolation. Native verification remains pending. Notifications, widgets, desktop shortcuts, and platform chrome remain intentional differences.
+
 - **2026-10-04: The operator initiates the QSO handoff.** The last tone can finish before the learner has typed the last word. Preserve the reception layout and copy focus indefinitely after playback, deferring transcript insertion until the operator starts their turn or ends the QSO; **Start my turn** opens keying. Do not add a timed switch or require copy grading. This supersedes the immediate handoff in the August 26 copy decision.
 
 - **2026-10-04: Web onboarding owns `/app`.** Pending onboarding supersedes a requested Conversation route. Replace `/app/qso` with `/app` and leave Conversation when onboarding starts or is replayed. Do not run onboarding over another active mode or add route-specific exceptions for its audio. Completed and skipped users retain direct Conversation access.
@@ -24,7 +26,7 @@ avoid undoing.
 - **2026-09-04: Listen Words teaches one token at a time.** Entering the mode stays silent until the learner chooses **Start listening**. The learner then hears one English word or Q code and chooses its written form from four options. Only after answering does Dit reveal a Q code's plain-English meaning. Exclude multiword phrases and joined prosigns from this first vocabulary. Keep word results separate from per-letter proficiency and recognition-time data because a missed word cannot be attributed honestly to one character.
 
 - **2026-08-27: Conversation uses on-air CW shorthand and local-time greetings.** Perfect RST reports are
-  transmitted as `5NN`, not `599`. Time-of-day greetings use the learner's browser-local hour to choose
+  transmitted as `5NN`, not `599`. Time-of-day greetings use the learner's device-local hour to choose
   `GM`, `GA`, `GE`, or `GN`. Keep both behaviors deterministic rather than relying only on model judgment.
 
 - **2026-08-27: Conversation transcript text never gives away a reception exercise.** A received message stays

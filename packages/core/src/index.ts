@@ -326,3 +326,9 @@ export type {
   NuxStep,
   TimeoutHandle,
 } from './utils/appState'
+
+export { useListenPhraseSession } from './hooks/useListenPhraseSession'
+export type { ListenPhraseStatus, UseListenPhraseSessionOptions, UseListenPhraseSessionResult } from './hooks/useListenPhraseSession'
+
+export * from './utils/conversation'
+export * from './hooks/useConversationSession'

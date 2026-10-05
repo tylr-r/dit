@@ -33,12 +33,15 @@ export const getListenTiming = (
   }
 }
 
-const isMorseSymbol = (value: string) => value === '.' || value === '-'
+const isMorseSymbol = (value: string) => {
+  'worklet'
+  return value === '.' || value === '-'
+}
 
-const tokenize = (code: string) =>
-  code
-    .split(' ')
-    .filter((token) => token === '/' || /^[.\-]+$/.test(token))
+const tokenize = (code: string) => {
+  'worklet'
+  return code.split(' ').filter((token) => token === '/' || /^[.\-]+$/.test(token))
+}
 
 export const getListenPlaybackDurationMs = (
   code: string,
@@ -139,6 +142,7 @@ export const getListenToneLevelAtElapsedMs = (
   interCharacterGapMs: number = unitMs * 3,
   interWordGapMs: number = (interCharacterGapMs * 7) / 3,
 ) => {
+  'worklet'
   if (unitMs <= 0 || elapsedMs < 0) {
     return 0
   }

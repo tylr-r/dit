@@ -1,65 +1,37 @@
-import { StyleSheet, View } from 'react-native'
-import Svg, { G, Line, Path, Text as SvgText } from 'react-native-svg'
+import { useEffect } from 'react'
+import Animated, { cancelAnimation, Easing, useAnimatedProps, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
+import Svg, { G, Path, Rect } from 'react-native-svg'
+import { colors } from '../../design/tokens'
+import { IntroArtwork } from './IntroArtwork'
+import { useReduceMotion } from './useReduceMotion'
 
-const SIGNAL_COLOR = '#ff9d4a'
-const GHOST_OPACITY = 0.4
-const ARROW_COLOR = 'rgba(245,245,245,0.3)'
-const LABEL_COLOR = 'rgba(245,245,245,0.4)'
-const TEXT_COLOR = '#f5f5f5'
+const AnimatedG = Animated.createAnimatedComponent(G)
 
-const CHART_ROWS = [
-  { letter: 'A', pattern: '· —' },
-  { letter: 'N', pattern: '— ·' },
-  { letter: 'R', pattern: '· — ·' },
-  { letter: 'T', pattern: '—' },
-  { letter: 'E', pattern: '·' },
-]
-
-/** Slide 2 illustration — chart table dissolves into a flowing waveform. */
+/** Listening as the learning action, with no visual Morse pattern to decode. */
 export function IntroListenIllustration() {
-  return (
-    <View style={styles.container}>
-      <Svg viewBox="0 0 276 180" width={276} height={180}>
-        <G opacity={GHOST_OPACITY}>
-          {CHART_ROWS.map((row, i) => (
-            <SvgText
-              key={row.letter}
-              x={12}
-              y={40 + i * 22}
-              fontFamily="Menlo"
-              fontSize={10}
-              fill={TEXT_COLOR}
-            >
-              {row.letter}  {row.pattern}
-            </SvgText>
-          ))}
-        </G>
-
-        <G stroke={ARROW_COLOR} strokeWidth={1} fill="none" strokeLinecap="round">
-          <Line x1={100} y1={85} x2={150} y2={85} />
-          <Path d="M 144 80 L 150 85 L 144 90" />
-        </G>
-
-        <Path
-          d="M 160 85 Q 170 85 170 60 Q 170 85 182 85 Q 196 85 196 40 Q 196 85 210 85 Q 222 85 222 115 Q 222 85 236 85 Q 250 85 250 60 Q 250 85 264 85"
-          fill="none"
-          stroke={SIGNAL_COLOR}
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        <SvgText x={12} y={170} fontFamily="Menlo" fontSize={9} fill={LABEL_COLOR}>
-          DECODE
-        </SvgText>
-        <SvgText x={210} y={170} fontFamily="Menlo" fontSize={9} fill={LABEL_COLOR}>
-          HEAR
-        </SvgText>
-      </Svg>
-    </View>
-  )
+  const reduceMotion = useReduceMotion()
+  const opacity = useSharedValue(1)
+  useEffect(() => {
+    opacity.value = reduceMotion ? 1 : withRepeat(withSequence(
+      withTiming(0.45, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+    ), 2)
+    return () => cancelAnimation(opacity)
+  }, [reduceMotion, opacity])
+  const cushions = useAnimatedProps(() => ({ opacity: opacity.value }))
+  return <IntroArtwork>
+    <Svg viewBox="0 0 480 280" width={480} height={280}>
+      <Path d="M145 167v-40a95 95 0 0 1 190 0v40" fill="none" stroke={colors.text.primary20} strokeWidth={18} strokeLinecap="round" />
+      <Path d="M145 127a95 95 0 0 1 190 0" fill="none" stroke={colors.text.primary80} strokeWidth={2} />
+      <Path d="M163 121a77 77 0 0 1 154 0" fill="none" stroke={colors.text.primary40} strokeWidth={5} strokeLinecap="round" />
+      <G fill={colors.surface.panelStrong} stroke={colors.text.primary40} strokeWidth={1.5}>
+        <Rect x={130} y={137} width={43} height={92} rx={21.5} transform="rotate(-8 151 183)" />
+        <Rect x={307} y={137} width={43} height={92} rx={21.5} transform="rotate(8 329 183)" />
+      </G>
+      <AnimatedG animatedProps={cushions} fill={colors.accent.wave}>
+        <Rect x={161} y={145} width={13} height={73} rx={6.5} transform="rotate(-8 167 181)" />
+        <Rect x={306} y={145} width={13} height={73} rx={6.5} transform="rotate(8 312 181)" />
+      </AnimatedG>
+    </Svg>
+  </IntroArtwork>
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center' },
-})

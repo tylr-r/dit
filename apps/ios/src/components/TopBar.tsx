@@ -34,7 +34,7 @@ export function TopBar({
             accessibilityHint="Shows your progress and the Morse code reference chart"
             style={styles.logoButton}
           >
-            <DitLogo />
+            <DitLogo size={36} opacity={0.7} />
           </Pressable>
         </View>
         <View style={styles.topBarCenter}>
@@ -55,8 +55,9 @@ export function TopBar({
               accessibilityLabel="Settings"
               icon="switch.2"
               radius={36}
-              padding={12}
-              iconSize={24}
+              size={44}
+              padding={10}
+              iconSize={22}
             />
           </View>
         </View>
@@ -80,8 +81,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   courseChipRow: {
     alignItems: 'center',
@@ -100,7 +102,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary40,
   },
   topBarSide: {
-    width: 60,
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -110,6 +112,10 @@ const styles = StyleSheet.create({
   },
   logoButton: {
     borderRadius: radii.iconCircle,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingsButtonWrap: {
     position: 'relative',

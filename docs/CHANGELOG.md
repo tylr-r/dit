@@ -6,12 +6,20 @@ Compared against `2026.5.31`.
 
 ### Highlights
 
+- iOS: Listen mode now offers word recognition. Choose English words or Q codes, listen before the answer choices appear, and learn what each Q code means after answering.
+- iOS: Added custom-text listening. Paste a passage, pause and resume playback, and optionally type along to compare your copy afterward.
+
 - Web: practicedit.com now opens with a homepage that introduces Dit, complete with a live Morse key you can try right on the page. The practice app itself now lives at practicedit.com/app.
-- Web: Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
-- Web: Added a new **Conversation** mode — practice a realistic CW conversation with an AI operator. Key your replies on the Morse key and hear the other station's replies played back as Morse, just like an on-air QSO.
+- Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
+- Added a new **Conversation** mode: practice a realistic CW conversation with an AI operator. Key your replies on the Morse key and hear the other station's replies played back as Morse, just like an on-air QSO.
 - Web: Listen mode now offers word recognition. Choose English words or Q codes, listen before the answer choices appear, and learn what each Q code means after answering.
 
 ### Changes
+
+- iOS: Progress now groups letters by mastery and shows how quickly you recognize them by ear.
+- iOS: Added Test sound in Settings so you can check your playback speed and pitch.
+- iOS: Onboarding has larger, animated listening and recognition illustrations, clearer text, and a consistent Continue button.
+- iOS: Conversation keeps connection errors and recovery actions together.
 
 - Web: Press Enter to send your Conversation reply.
 - Web: After choosing an answer in Listen Words or Q codes, press Enter for the next question.
@@ -33,6 +41,10 @@ Compared against `2026.5.31`.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
+
+- iOS: Mode names now stay on one line.
+- iOS: VoiceOver can reach both welcome screen choices.
+- iOS: Fixed extra-long gaps between words during Morse playback.
 
 - Web: The Backspace key now deletes characters from your outgoing Conversation reply. A fresh automatic space is skipped with the first letter deletion; spaces reached while editing can still be deleted on their own.
 

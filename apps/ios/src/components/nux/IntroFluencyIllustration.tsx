@@ -1,80 +1,66 @@
-import { StyleSheet, View } from 'react-native'
-import Svg, { G, Line, Path, Text as SvgText } from 'react-native-svg'
+import { useEffect } from 'react'
+import { StyleSheet } from 'react-native'
+import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedProps, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated'
+import Svg, { Path } from 'react-native-svg'
+import { normalizeColorForNative } from '../../design/color'
+import { colors } from '../../design/tokens'
+import { IntroArtwork } from './IntroArtwork'
+import { useReduceMotion } from './useReduceMotion'
 
-const SIGNAL_COLOR = '#ff9d4a'
-const GHOST_COLOR = 'rgba(245,245,245,0.35)'
-const ARROW_COLOR = 'rgba(245,245,245,0.3)'
-const LABEL_COLOR = 'rgba(245,245,245,0.4)'
+const AnimatedPath = Animated.createAnimatedComponent(Path)
+const sequence = ['N', 'R', 'A', 'T', 'E']
+const letters = Array.from({ length: 12 }, (_, index) => sequence[(index + 2) % 5])
+const slots = [
+  { x: -30, scale: 0.32, opacity: 0 }, { x: 48, scale: 0.32, opacity: 0.2 },
+  { x: 126, scale: 0.43, opacity: 0.4 }, { x: 240, scale: 1, opacity: 1 },
+  { x: 354, scale: 0.43, opacity: 0.4 }, { x: 432, scale: 0.32, opacity: 0.2 },
+  { x: 510, scale: 0.32, opacity: 0 },
+]
+const ink = normalizeColorForNative(colors.text.primary)
+const accent = normalizeColorForNative(colors.accent.wave)
 
-const LETTERS = ['K', 'Q', 'Z', 'X', 'J']
-const COUNTS = ['×4', '×3', '×3', '×2', '×1']
-
-/** Slide 1 illustration — weakest letters translate to a mastered letter with waveform. */
-export function IntroFluencyIllustration() {
-  return (
-    <View style={styles.container}>
-      <Svg viewBox="0 0 276 180" width={276} height={180}>
-        <G>
-          {LETTERS.map((letter, i) => (
-            <SvgText
-              key={letter}
-              x={20}
-              y={36 + i * 26}
-              fontFamily="Menlo"
-              fontSize={14}
-              fill={GHOST_COLOR}
-            >
-              {letter}
-            </SvgText>
-          ))}
-          {COUNTS.map((count, i) => (
-            <SvgText
-              key={`c-${i}`}
-              x={42}
-              y={36 + i * 26}
-              fontFamily="Menlo"
-              fontSize={8}
-              fill={GHOST_COLOR}
-            >
-              {count}
-            </SvgText>
-          ))}
-        </G>
-
-        <G stroke={ARROW_COLOR} strokeWidth={1} fill="none" strokeLinecap="round">
-          <Line x1={100} y1={88} x2={150} y2={88} />
-          <Path d="M 144 83 L 150 88 L 144 93" />
-        </G>
-
-        <SvgText
-          x={185}
-          y={78}
-          fontFamily="System"
-          fontSize={48}
-          fontWeight="600"
-          fill={SIGNAL_COLOR}
-        >
-          K
-        </SvgText>
-        <Path
-          d="M 178 120 L 192 120 L 192 104 L 204 104 L 204 120 L 216 120 L 216 108 L 228 108 L 228 120 L 246 120 L 246 104 L 258 104 L 258 120"
-          fill="none"
-          stroke={SIGNAL_COLOR}
-          strokeWidth={2}
-          strokeLinejoin="miter"
-        />
-
-        <SvgText x={18} y={172} fontFamily="Menlo" fontSize={9} fill={LABEL_COLOR}>
-          WEAKEST
-        </SvgText>
-        <SvgText x={210} y={172} fontFamily="Menlo" fontSize={9} fill={LABEL_COLOR}>
-          MASTERED
-        </SvgText>
-      </Svg>
-    </View>
-  )
+function RecognitionLetter({ index, phase }: { index: number; phase: ReturnType<typeof useSharedValue<number>> }) {
+  const style = useAnimatedStyle(() => {
+    const step = Math.floor(phase.value)
+    const transition = Math.max(0, (phase.value - step - 0.8) * 5)
+    const progress = 1 - Math.pow(1 - transition, 3)
+    const from = slots[Math.max(0, Math.min(6, index - step))]
+    const to = slots[Math.max(0, Math.min(6, index - step - 1))]
+    const scale = from.scale + (to.scale - from.scale) * progress
+    return {
+      opacity: from.opacity + (to.opacity - from.opacity) * progress,
+      color: interpolateColor(scale, [0.43, 1], [ink, accent]),
+      transform: [{ translateX: from.x + (to.x - from.x) * progress - 74 }, { scale }],
+    }
+  })
+  return <Animated.Text style={[styles.letter, style]}>{letters[index]}</Animated.Text>
 }
 
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center' },
-})
+/** A continuous whole-character recognition preview with no encoded answers. */
+export function IntroFluencyIllustration() {
+  const reduceMotion = useReduceMotion()
+  const phase = useSharedValue(0)
+  useEffect(() => {
+    phase.value = reduceMotion ? 0 : withRepeat(withTiming(5, { duration: 12000, easing: Easing.linear }), -1)
+    return () => cancelAnimation(phase)
+  }, [reduceMotion, phase])
+  const check = useAnimatedProps(() => {
+    const local = phase.value % 1
+    const draw = Math.max(0, Math.min(1, (local - 0.3) / (160 / 2400)))
+    return { opacity: reduceMotion ? 1 : Math.floor(phase.value) === 1 || local > 0.75 ? 0 : draw, strokeDashoffset: reduceMotion ? 0 : 40 * (1 - draw) }
+  })
+  const miss = useAnimatedProps(() => {
+    const local = phase.value % 1
+    const draw = Math.max(0, Math.min(1, (local - 0.3) / (160 / 2400)))
+    return { opacity: !reduceMotion && Math.floor(phase.value) === 1 && local <= 0.75 ? draw : 0, strokeDashoffset: 46 * (1 - draw) }
+  })
+  return <IntroArtwork>
+    {letters.map((_, index) => <RecognitionLetter key={index} index={index} phase={phase} />)}
+    <Svg viewBox="0 0 480 280" width={480} height={280} style={StyleSheet.absoluteFill}>
+      <AnimatedPath animatedProps={check} d="m229 234 8 8 15-17" fill="none" stroke={colors.feedback.success} strokeWidth={3} strokeDasharray={40} strokeLinecap="round" strokeLinejoin="round" />
+      <AnimatedPath animatedProps={miss} d="m232 226 16 16m0-16-16 16" fill="none" stroke={colors.feedback.error} strokeWidth={3} strokeDasharray={46} strokeLinecap="round" />
+    </Svg>
+  </IntroArtwork>
+}
+
+const styles = StyleSheet.create({ letter: { position: 'absolute', top: 46, width: 148, fontSize: 148, lineHeight: 168, textAlign: 'center', fontWeight: '600' } })

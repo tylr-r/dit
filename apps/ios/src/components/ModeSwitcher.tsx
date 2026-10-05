@@ -1,83 +1,68 @@
-import { Host, Picker, Text } from '@expo/ui/swift-ui'
-import {
-  accessibilityLabel,
-  foregroundStyle,
-  frame,
-  pickerStyle,
-  tag,
-} from '@expo/ui/swift-ui/modifiers'
-import { StyleSheet, View } from 'react-native'
+import { SymbolView } from 'expo-symbols'
+import { ActionSheetIOS, Pressable, StyleSheet, Text } from 'react-native'
 import { normalizeColorForNative } from '../design/color'
-import { colors, radii, spacing } from '../design/tokens'
-import { GlassView } from './GlassSurface'
+import { colors, spacing } from '../design/tokens'
 
-export type Mode = 'practice' | 'freestyle' | 'listen';
+export type Mode = 'practice' | 'freestyle' | 'listen' | 'conversation'
 
 type ModeSwitcherProps = {
-  value: Mode;
-  onChange: (value: Mode) => void;
-};
+  value: Mode
+  onChange: (value: Mode) => void
+}
 
 const MODE_LABELS: Record<Mode, string> = {
   practice: 'Practice',
   freestyle: 'Freestyle',
   listen: 'Listen',
+  conversation: 'Conversation',
 }
 
-const MODE_ORDER: Mode[] = ['practice', 'freestyle', 'listen']
-const MENU_MIN_WIDTH = 132
-
-/** Toggle between practice, freestyle, and listen modes. */
+const MODE_ORDER: Mode[] = ['practice', 'freestyle', 'listen', 'conversation']
+/** A single-line mode label opening the system's native selection sheet. */
 export function ModeSwitcher({ value, onChange }: ModeSwitcherProps) {
-  const pickerTintColor = normalizeColorForNative(colors.controls.pickerTint)
-  const pickerAccentColor = normalizeColorForNative(colors.text.primary80)
+  const chooseMode = () => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [...MODE_ORDER.map((mode) => MODE_LABELS[mode]), 'Cancel'],
+        cancelButtonIndex: MODE_ORDER.length,
+        userInterfaceStyle: 'dark',
+      },
+      (index) => {
+        const mode = MODE_ORDER[index]
+        if (mode) onChange(mode)
+      },
+    )
+  }
 
   return (
-    <GlassView
-      style={styles.glass}
-      glassEffectStyle="regular"
-      tintColor={pickerTintColor}
-      isInteractive
+    <Pressable
+      style={styles.control}
+      accessibilityRole="button"
+      accessibilityLabel={`Mode: ${MODE_LABELS[value]}`}
+      accessibilityHint="Choose a practice mode"
+      onPress={chooseMode}
     >
-      <View style={styles.pickerWrap}>
-        <Host matchContents>
-          <Picker<Mode>
-            label={MODE_LABELS[value]}
-            selection={value}
-            onSelectionChange={(next) => {
-              if (next) {
-                onChange(next)
-              }
-            }}
-            modifiers={[
-              accessibilityLabel('Mode'),
-              frame({ minWidth: MENU_MIN_WIDTH }),
-              pickerStyle('menu'),
-              foregroundStyle(pickerAccentColor),
-            ]}
-          >
-            {MODE_ORDER.map((mode) => (
-              <Text key={mode} modifiers={[tag(mode)]}>
-                {MODE_LABELS[mode]}
-              </Text>
-            ))}
-          </Picker>
-        </Host>
-      </View>
-    </GlassView>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+        maxFontSizeMultiplier={1.4}
+        style={styles.label}
+      >
+        {MODE_LABELS[value]}
+      </Text>
+      <SymbolView
+        name="chevron.down"
+        size={11}
+        tintColor={normalizeColorForNative(colors.text.primary60)}
+        style={styles.chevron}
+      />
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  glass: {
-    borderRadius: radii.pill,
-    padding: spacing.xs,
-    shadowColor: colors.shadow.base,
-    shadowOpacity: 0.2,
-    shadowRadius: spacing.md,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  pickerWrap: {
-    alignSelf: 'center',
-  },
+  control: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, maxWidth: '100%' },
+  label: { fontSize: 20, fontWeight: '500', letterSpacing: -0.5, color: colors.text.primary90, flexShrink: 1 },
+  chevron: { width: 11, height: 11 },
 })

@@ -4,6 +4,17 @@ Tracks the current delta between `apps/ios` and `apps/web`, plus the differences
 
 Update this when you ship a feature that closes (or opens) a gap.
 
+October 4 learning parity work: iOS Words/Q codes, custom-text listening,
+one-time hints, recognition feedback, revised intro illustrations, and
+Settings sound check are implemented. The app now builds, installs, and launches
+on the iOS 26.5 simulator. Intro slides, the single-line header, and initial
+Conversation error recovery have received rendered review. The three intro
+slides also fit the 375×667 iPhone SE simulator. New learning surfaces
+remain 🟡 pending device audio, haptics, and active keyboard review. Native Firebase
+AI Logic and App Check are wired, but Firebase rejects simulator debug attestation
+with HTTP 403. Debug-token registration and an end-to-end QSO remain unverified.
+Unit tests and TypeScript checks do not replace native review.
+
 ## Legend
 
 - ✅ shipped and at parity with the spec
@@ -32,7 +43,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 |---|---|---|---|
 | Welcome screen | ✅ | ✅ | Both preserve the brand moment |
 | Onboarding visual layout | ✅ | ✅ | Web uses an open background, subtle profile choices, unboxed tutorial/stages, and large first-letter typography. iOS retains its native layout. |
-| Intro-slide illustrations | 🟡 | ✅ | Web replaces encoded patterns with animated recognition feedback, headphones, and whole-letter spacing, with static reduced-motion alternatives. iOS still has the superseded prototype illustrations and needs revision. |
+| Intro-slide illustrations | 🟡 | ✅ | Web replaces encoded patterns with animated recognition feedback, headphones, and whole-letter spacing, with static reduced-motion alternatives. iOS now uses whole-letter recognition, headphones, and equal-size letters whose gaps contract. Native visual review is pending. |
 | Profile selection (new vs known) | ✅ | ✅ | Persists `learnerProfile` |
 | Sound check | ✅ | ✅ | iOS: NUX step reads system volume when it looks low. Web: NUX step plus a Settings playback test row |
 | Button tutorial (one dit + one dah) | ✅ | ✅ | |
@@ -53,7 +64,7 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Play current target tone | ✅ | ✅ | |
 | Hints toggle | ✅ | ✅ | |
 | Mnemonics toggle | ✅ | ✅ | |
-| One-time "Show this hint" | 🚫 | ✅ | Web-only button (+ `N` shortcut) when global hints are off |
+| One-time "Show this hint" | 🟡 | ✅ | Both expose a button when global hints are off, outside the guided course. The hinted attempt is unscored. Web also binds `N`. iOS native review pending. |
 | Practice Words (word mode) | ✅ | ✅ | |
 | Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ |  |
 | Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ |  |
@@ -71,9 +82,9 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys. iOS always shows the on-screen keyboard (unavailable letters dimmed); web only shows it on coarse-pointer devices and hides it when a hardware keyboard is detected. |
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
 | Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
-| Listen word recognition | ❌ | ✅ | Web offers separate Common words (Practice English bank) and Q codes vocabularies. Four choices stay concealed during playback; Q-code answers also teach the meaning. Word results are session-only and do not affect per-letter stats. |
-| Time-to-respond indicator | ❓ | ❌ | Spec says iOS-only; not located in either codebase. Confirm whether spec is aspirational or feature exists under another name. |
-| Custom text playback (head copy) | ❌ | ✅ | Web-only sub-mode of Listen — paste a passage, hear it as Morse, optionally type along with a char-level diff after. iOS adoption deferred. |
+| Listen word recognition | 🟡 | ✅ | Both offer separate Common words (Practice English bank) and Q codes vocabularies. Four choices stay concealed during playback; Q-code answers also teach the meaning. Word results are session-only and do not affect per-letter stats. iOS uses the shared round hook; native playback review pending. |
+| Time-to-respond indicator | ✅ | ✅ | Already wired as `listenTtrText` in both StageDisplay implementations. No new feature required. |
+| Custom text playback (head copy) | 🟡 | ✅ | Both accept a private passage and optional copy with a character diff. iOS adds native pause/resume and an audio clock, local AsyncStorage persistence, and a system copy keyboard. Native audio/haptic review pending. |
 
 ## Freestyle mode
 
@@ -90,11 +101,11 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Practice a CW QSO against an LLM | ❌ | ✅ | Web-only new mode — see [APP_BEHAVIOR.md](APP_BEHAVIOR.md#conversation-web). iOS adoption deferred. |
-| Keyed replies decode into a running draft | ❌ | ✅ | Reuses the same dit/dah reverse-lookup Freestyle uses (`decodeMorseCode` in `@dit/core`) |
-| Optional copy grading alongside keying | ❌ | ✅ | After playback, reception stays editable until **Start my turn**. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
-| In-QSO prosign reference | ❌ | ✅ | Side reference on desktop, bottom sheet on narrow screens. |
-| Pause / Resume / Replay / Retry | ❌ | ✅ | Same playback-control semantics as custom Listen text |
+| Practice a CW QSO against an LLM | 🟡 | ✅ | Both share the session, station prompt, callsign rules, and model. iOS uses native Firebase AI Logic with App Check. Native rebuild and end-to-end connectivity review pending. |
+| Keyed replies decode into a running draft | 🟡 | ✅ | Shared straight-key and paddle engine, automatic spaces, Backspace, Clear, and Send. iOS hardware capture yields to copy text entry. Native input review pending. |
+| Optional copy grading alongside keying | 🟡 | ✅ | After playback, reception stays editable until **Start my turn**. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
+| In-QSO prosign reference | 🟡 | ✅ | Plain meanings without encoded patterns. Web uses a side reference or bottom sheet; iOS uses a collapsible non-modal reference above the transcript, leaving the key usable. Native visual review pending. |
+| Pause / Resume / Replay / Retry | 🟡 | ✅ | iOS uses the native sample clock and completion callback. Late station replies are discarded after End, reset, or exit. Native audio/haptic review pending. |
 
 ## Settings
 
@@ -109,7 +120,7 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 | Freestyle Word mode | ✅ | ✅ | |
 | Listen speed (WPM) | ✅ | ✅ | |
 | Tone frequency | ✅ | ✅ | |
-| Sound check | 🟡 | ✅ | iOS: NUX only. Web: Settings playback test row |
+| Sound check | 🟡 | ✅ | Both now expose a Settings playback test using global speed/pitch. iOS also checks system volume during NUX. Native Settings review pending. |
 | Reference chart entry point | ✅ | ✅ | |
 | Auto-play sound (Practice) | ✅ | ✅ | |
 | Sequential order (Practice) | ✅ | ✅ | |
@@ -135,15 +146,15 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 
 ## Reference modal
 
-Web adds status-based sections (Known by ear / Now learning / Not yet) and per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. Both platforms tint mastered letters with the same relative score helpers in core. iOS adoption of the web section layout and recognition bars is deferred. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core for when iOS adopts.
+Web adds status-based sections (Known by ear / Now learning / Not yet) and per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. Both platforms tint mastered letters with the same relative score helpers in core. iOS now implements these sections, recognition bars, and the average recognition summary; native visual review is pending. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core for when iOS adopts.
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Letter/number cards with Morse patterns | ✅ | ✅ | Web shows pattern only on mastered tiles ("train the ear" for in-progress letters) |
-| Score-tinted cards | ✅ | ✅ | Both tint mastered letters via shared `@dit/core` relative score helpers; web adds status sections + recognition bars |
-| Sectioned by mastery status | 🚫 | ✅ | Web-only for now; iOS adoption deferred |
-| Per-letter recognition bar (Listen TTR fill) | 🚫 | ✅ | Web only; `getRecognitionFillRatio` lives in core |
-| Avg recognition (ms) summary | 🚫 | ✅ | Web only; `getAverageRecognitionMs` lives in core |
+| Letter/number cards with Morse patterns | ✅ | ✅ | Both show patterns on mastered tiles, with "Train the ear" for in-progress iOS letters. iOS change awaits native review. |
+| Score-tinted cards | ✅ | ✅ | Both tint mastered letters via shared `@dit/core` relative score helpers; both now implement status sections and recognition bars |
+| Sectioned by mastery status | 🟡 | ✅ | Known by ear / Now learning / Not yet on both platforms. iOS native visual review pending. |
+| Per-letter recognition bar (Listen TTR fill) | 🟡 | ✅ | Both use `getRecognitionFillRatio` from core. iOS native visual review pending. |
+| Avg recognition (ms) summary | 🟡 | ✅ | Both use `getAverageRecognitionMs` from core. iOS native visual review pending. |
 | Hero metric (mastered count or best WPM) | ✅ | ✅ | Web shows mastered count + total in stats card |
 | Current streak | ✅ | ✅ | Both render in stats card |
 | Today's correct count | ✅ | ✅ | Both render with progress bar |
@@ -209,7 +220,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for one-time Practice hint or Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice and Freestyle on iOS. `Enter` sends a Conversation draft or advances an answered Listen Words/Q codes round. Keyboard `Backspace` edits the outgoing Conversation draft during your turn. The `H`/`W` bindings referenced in older specs are not implemented.
+- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for the shared one-time Practice hint or web Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice, Freestyle, and Conversation on iOS. `Enter` sends a Conversation draft or advances an answered Listen Words/Q codes round. Keyboard `Backspace` edits the outgoing Conversation draft during your turn. The `H`/`W` bindings referenced in older specs are not implemented.
 - **Post-onboarding intro hints** (Morse key callout, then Settings spotlight) — iOS renders overlay UI; web advances the persisted hint step without showing those overlays (opening Settings still dismisses the settings step).
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.

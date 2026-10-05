@@ -24,7 +24,7 @@ Before presenting or implementing a design:
 
 Letter-to-dot/dash mappings, long/short symbols, and connector diagrams teach visual decoding and conflict with Dit's auditory learning model. Keep whole letters unboxed. Illustration size and styling do not make encoded character patterns suitable for onboarding.
 
-The older `docs/superpowers/specs/2026-04-21-nux-educational-slides-design.md` illustration brief is superseded by this gate. The iOS branch's `IntroFluencyIllustration`, `IntroListenIllustration`, and `IntroSpeedIllustration` still contain inherited prototype patterns, not evidence of approval or a source to copy. Their encoded patterns need a separate compliant visual revision. Web replaced those assets with the revision described below. Do not describe this prototype as design-approved or release-ready on the strength of passing functional tests.
+The older `docs/superpowers/specs/2026-04-21-nux-educational-slides-design.md` illustration brief is superseded by this gate. Both platforms use detailed headphones, a seamless whole-letter recognition loop, and one row of equal-size letters whose spacing contracts. All three have a settled Reduce Motion presentation. Verify visual fidelity separately from functional tests.
 
 Token source of truth:
 
@@ -149,7 +149,14 @@ Visual calibration: [reference screens and adopted details](docs/design/onboardi
 - **Stable control positions.** Use a viewport-sized onboarding grid with fixed progress and footer rows. Only the middle content region scrolls. Continue stays at the same position between steps; sound confirmation has reserved space and sound-check copy has a stable minimum height. Feedback must not recenter the screen or move the control that triggered it. Sign-in keeps a stable stage height and reserves error space above submission.
 - Use one brief step fade rather than staggered entrances, popping counters, or flipping letter chips. Respect reduced motion. Long steps scroll within the viewport at small sizes.
 - The known-user tour keeps an anchored callout for readability, with no border or shadow and a single orange spotlight outline.
-- This direction replaces the nested panel/card treatment on web. Native iOS styling has not yet adopted it.
+- This direction replaces the nested panel/card treatment on web. Native intro slides now share the illustration scale, motion, heading alignment, and anchored footer. Other native steps keep their existing learning flow and native controls.
+
+### Native intro and navigation (October 4, 2026)
+
+- Render the three intro illustrations in a shared 480×280 design canvas, scaled to the phone width. Reserve a 230-point stage, or 150 points below 700-point screen height. Keep the heading baseline and Continue placement stable across slides. The three intro layouts have been reviewed on iPhone 17 (402×874) and iPhone SE (375×667) simulators, including the pre-iOS 26 glass fallback. Reduce Motion support is implemented; rendered verification with that preference enabled remains pending.
+- Match the web recognition loop, layered headphones, and single contracting TEN row. Use whole letters, never encoded character patterns. Reduce Motion shows settled artwork; decorative letters are hidden from VoiceOver.
+- Use readable secondary copy and sentence-case, 16-point Continue labels. Welcome exposes its two explicit actions separately to accessibility rather than grouping them into the splash container.
+- The main header uses a 36-point brand mark, a single-line text mode selector, and a 44-point settings control. The mode selector opens the system action sheet; no enclosing mode pill or wrapping title.
 
 ### NUX welcome (iOS)
 
@@ -338,6 +345,14 @@ and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
   vocabulary.
 - Feedback enters with the standard short opacity and vertical-position
   transition. Reduced-motion behavior follows the existing global rules.
+
+### Learning surfaces on iOS
+
+- Reuse the native glass buttons, existing text colors, and audio-reactive wave. Characters / Words and Common words / Q codes use quiet text selectors; selection uses surface/text contrast.
+- Words uses a stable 2×2 answer grid. Identical ellipsis placeholders conceal every answer during playback and replay, including accessibility labels. Reveal all choices together only after native audio completes. Feedback and Q-code meanings occupy a reserved slot so Replay and Next stay anchored.
+- Custom text uses a native edit sheet and a scrollable playback surface. The source remains hidden until Reveal. The system keyboard is the native copy input; copy is disabled in Setup and Paused. Progress and the wave share the native playback clock and freeze on Pause.
+- Progress keeps native sheet chrome and the guided-course banner, but groups letters by mastery and adds recognition bars and an average-recognition summary. Only mastered tiles expose patterns and score colors.
+- These surfaces require a native rebuild and rendered review on a small iPhone, with the copy keyboard and Reduce Motion enabled, before claiming visual parity.
 
 ### Conversation surface (web)
 
@@ -823,3 +838,15 @@ instead of describing them:
 
 - In Listen Words and Q codes, number keys choose an answer and Enter advances
   after feedback. Enter does not skip an unanswered round or interrupt playback.
+
+### Conversation surface (iOS)
+
+The October 4 learning parity implementation reuses the native Morse key,
+glass actions with 44-point touch targets, and existing type, color, and spacing
+tokens. The transcript owns flexible space above a scrollable keying/reception
+workbench. Copy uses the system keyboard. Playback completion preserves the copy
+field and focus; only **Start my turn** opens the key. Optional comparison stays
+below keying, and incoming text remains absent from the rendered tree until an
+explicit reveal, checked copy, reply keying, or live-letter disclosure permits it.
+Idle, initial connection, empty failure, and empty ended states use a centered content group instead of reserving a blank transcript. Initial failure pairs a readable heading and explanation with a compact Retry button and quieter End QSO action. Keep sentence-case action labels and 44-point touch targets.
+**Prosigns** appears during a contact and expands a quiet, non-modal list of plain meanings above the transcript; there are no dot/dash patterns, and the key remains usable. The iPhone 17 header and initial failure state have been reviewed in the simulator. Active-contact keyboard layout, VoiceOver speech, audio, and haptics still need device review; Firebase App Check currently blocks a simulator QSO.

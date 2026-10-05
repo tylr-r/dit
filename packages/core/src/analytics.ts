@@ -8,6 +8,7 @@ export type ScreenName =
   | 'practice'
   | 'freestyle'
   | 'listen'
+  | 'conversation'
   | 'settings'
   | 'learning'
   | 'reference'

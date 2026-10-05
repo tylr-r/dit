@@ -404,4 +404,18 @@ describe('useConversationSession', () => {
 
     expect(opts.prepareToneEngine).toHaveBeenCalledTimes(2)
   })
+  it.each(['end', 'reset', 'unmount'] as const)('discards a late station response after %s', async (action) => {
+    let resolve: (text: string) => void = () => {}
+    sendTurnMock.mockImplementation(() => new Promise<string>((done) => { resolve = done }))
+    const opts = baseOptions()
+    const { result, unmount } = renderHook(() => useConversationSession(opts))
+    let pending: Promise<void>
+    act(() => { pending = result.current.start() })
+    act(() => { if (action === 'unmount') unmount(); else result.current[action]() })
+    await act(async () => { resolve('CQ LATE K'); await pending! })
+    expect(opts.playMorseTone).not.toHaveBeenCalled()
+    if (action !== 'unmount') expect(result.current.phase).toBe(action === 'end' ? 'ended' : 'idle')
+    if (action !== 'unmount') unmount()
+  })
+
 })

@@ -106,6 +106,12 @@ private final class ToneGenerator {
   private let engine = AVAudioEngine()
   private var sourceNode: AVAudioSourceNode?
   private let sequenceNode = AVAudioPlayerNode()
+  private var sequenceGeneration = 0
+  private var sequenceDurationMs: Double = 0
+  private var sequenceFinished = false
+  private var sequencePaused = false
+  private var pausedElapsedMs: Double = 0
+  private var lastElapsedMs: Double = 0
   private var phase: Float = 0
   private var frequency: Double = 440
   private var currentAmplitude: Float = 0
@@ -326,9 +332,10 @@ private final class ToneGenerator {
       let hasNextToken = tokenIndex < filteredTokens.count - 1
       if hasNextToken {
         let nextToken = filteredTokens[tokenIndex + 1]
-        let gapFrames = nextToken == "/" ? interWordGapFrames : interCharacterGapFrames
-        segments.append((false, gapFrames))
-        totalFrames += gapFrames
+        if nextToken != "/" {
+          segments.append((false, interCharacterGapFrames))
+          totalFrames += interCharacterGapFrames
+        }
       }
     }
 
@@ -340,64 +347,122 @@ private final class ToneGenerator {
     if totalFrames == 0 {
       return false
     }
-    guard let buffer = AVAudioPCMBuffer(
-      pcmFormat: format,
-      frameCapacity: AVAudioFrameCount(totalFrames)
-    ) else {
-      return false
-    }
-    buffer.frameLength = AVAudioFrameCount(totalFrames)
-    guard let channelData = buffer.floatChannelData?[0] else {
-      return false
-    }
+    // A pasted passage can run for minutes. Queue bounded PCM chunks instead of
+    // allocating one buffer for the entire passage on the UI thread.
+    sequenceGeneration += 1
+    let generation = sequenceGeneration
+    sequenceNode.stop()
+    sequenceDurationMs = Double(totalFrames) / sampleRate * 1000
+    sequenceFinished = false
+    sequencePaused = false
+    pausedElapsedMs = 0
+    lastElapsedMs = 0
     let clampedVolume = Float(max(0, min(volume, Double(maxToneVolume))))
     let phaseIncrement = Float(2.0 * Double.pi * frequency / sampleRate)
     let fadeFrames = max(1, Int(sampleRate * 0.003))
-    var frameIndex = 0
+    let chunkCapacity = max(1, Int(sampleRate * 8))
+    var remainingFrames = totalFrames
+    var segmentIndex = 0
+    var segmentOffset = 0
     var localPhase: Float = 0
-    for segment in segments {
-      if segment.isTone {
-        let toneFrames = segment.frames
-        let ramp = min(fadeFrames, max(1, toneFrames / 2))
-        for i in 0..<toneFrames {
+    var scheduledAny = false
+
+    func scheduleNextChunk() {
+      guard self.sequenceGeneration == generation, remainingFrames > 0 else { return }
+      let frameCount = min(remainingFrames, chunkCapacity)
+      guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount)),
+            let channelData = buffer.floatChannelData?[0] else { return }
+      buffer.frameLength = AVAudioFrameCount(frameCount)
+      for frame in 0..<frameCount {
+        let segment = segments[segmentIndex]
+        if segment.isTone {
+          let ramp = min(fadeFrames, max(1, segment.frames / 2))
           var envelope: Float = 1
           if ramp > 1 {
-            if i < ramp {
-              envelope = Float(i) / Float(ramp)
-            } else if i >= toneFrames - ramp {
-              envelope = Float(toneFrames - i - 1) / Float(ramp)
+            if segmentOffset < ramp {
+              envelope = Float(segmentOffset) / Float(ramp)
+            } else if segmentOffset >= segment.frames - ramp {
+              envelope = Float(segment.frames - segmentOffset - 1) / Float(ramp)
             }
           }
-          channelData[frameIndex] = sin(localPhase) * clampedVolume * envelope
-          localPhase += phaseIncrement
-          if localPhase >= Float(2.0 * Double.pi) {
-            localPhase -= Float(2.0 * Double.pi)
-          }
-          frameIndex += 1
+          channelData[frame] = sin(localPhase) * clampedVolume * envelope
+        } else {
+          channelData[frame] = 0
         }
-      } else {
-        for _ in 0..<segment.frames {
-          channelData[frameIndex] = 0
-          localPhase += phaseIncrement
-          if localPhase >= Float(2.0 * Double.pi) {
-            localPhase -= Float(2.0 * Double.pi)
+        localPhase += phaseIncrement
+        if localPhase >= Float(2.0 * Double.pi) { localPhase -= Float(2.0 * Double.pi) }
+        segmentOffset += 1
+        if segmentOffset == segment.frames {
+          segmentIndex += 1
+          segmentOffset = 0
+        }
+      }
+      remainingFrames -= frameCount
+      scheduledAny = true
+      let isLast = remainingFrames == 0
+      self.sequenceNode.scheduleBuffer(
+        buffer, at: nil, options: [],
+        completionCallbackType: isLast ? .dataPlayedBack : .dataConsumed
+      ) { [weak self] _ in
+        DispatchQueue.main.async {
+          guard let self, self.sequenceGeneration == generation else { return }
+          if isLast {
+            self.sequenceFinished = true
+            self.lastElapsedMs = self.sequenceDurationMs
+          } else {
+            scheduleNextChunk()
           }
-          frameIndex += 1
         }
       }
     }
-    sequenceNode.stop()
-    sequenceNode.scheduleBuffer(buffer, at: nil, options: [.interrupts])
+    // Maintain a full chunk of audio ahead of the player.
+    scheduleNextChunk()
+    scheduleNextChunk()
+    guard scheduledAny else { return false }
     if !sequenceNode.isPlaying {
       sequenceNode.play()
     }
     return true
   }
 
-  func stopMorseSequence() -> Bool {
-    if sequenceNode.isPlaying {
-      sequenceNode.stop()
+  func playbackState() -> [String: Any] {
+    if sequenceFinished {
+      lastElapsedMs = sequenceDurationMs
+    } else if sequencePaused {
+      lastElapsedMs = pausedElapsedMs
+    } else if let renderTime = sequenceNode.lastRenderTime,
+              let playerTime = sequenceNode.playerTime(forNodeTime: renderTime) {
+      lastElapsedMs = min(sequenceDurationMs, max(0, Double(playerTime.sampleTime) / playerTime.sampleRate * 1000))
     }
+    return ["elapsedMs": lastElapsedMs, "durationMs": sequenceDurationMs,
+            "finished": sequenceFinished, "paused": sequencePaused]
+  }
+
+  func pauseMorseSequence() -> Bool {
+    guard !sequenceFinished, !sequencePaused else { return false }
+    _ = playbackState()
+    sequenceNode.pause()
+    // Read again after pause to retain the exact sample position.
+    _ = playbackState()
+    pausedElapsedMs = lastElapsedMs
+    sequencePaused = true
+    return true
+  }
+
+  func resumeMorseSequence() -> Bool {
+    guard sequencePaused, !sequenceFinished else { return false }
+    sequencePaused = false
+    sequenceNode.play()
+    return true
+  }
+
+  func stopMorseSequence() -> Bool {
+    sequenceGeneration += 1
+    sequenceNode.stop()
+    sequenceDurationMs = 0
+    sequenceFinished = false
+    sequencePaused = false
+    lastElapsedMs = 0
     return true
   }
 }
@@ -408,7 +473,7 @@ private final class ToneGenerator {
 /// dit — not a transient buzz.
 private final class HapticController {
   private var engine: CHHapticEngine?
-  private var activePlayer: CHHapticPatternPlayer?
+  private var activePlayer: CHHapticAdvancedPatternPlayer?
   private var keyingPlayer: CHHapticPatternPlayer?
   private let supportsHaptics: Bool
   private var isEnabled: Bool = true
@@ -523,19 +588,27 @@ private final class HapticController {
       }
       if tokenIndex < tokens.count - 1 {
         let next = tokens[tokenIndex + 1]
-        cursor += next == "/" ? interWordGap : interCharGap
+        if next != "/" { cursor += interCharGap }
       }
     }
 
     guard !events.isEmpty else { return }
     do {
       let pattern = try CHHapticPattern(events: events, parameters: [])
-      let player = try engine.makePlayer(with: pattern)
+      let player = try engine.makeAdvancedPlayer(with: pattern)
       try player.start(atTime: CHHapticTimeImmediate)
       activePlayer = player
     } catch {
       activePlayer = nil
     }
+  }
+
+  func pauseSequence() {
+    try? activePlayer?.pause(atTime: CHHapticTimeImmediate)
+  }
+
+  func resumeSequence() {
+    try? activePlayer?.resume(atTime: CHHapticTimeImmediate)
   }
 
   func stopSequence() {
@@ -1021,7 +1094,7 @@ public final class DitNativeModule: Module {
     AsyncFunction("setHapticsEnabled") { (enabled: Bool) -> Bool in
       self.hapticController.setEnabled(enabled)
       return true
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("setExternalMorseKeyCaptureEnabled") { (enabled: Bool) -> Bool in
       return self.setHardwareMorseKeyCaptureEnabled(enabled)
@@ -1033,12 +1106,12 @@ public final class DitNativeModule: Module {
         self.hapticController.startKeying()
       }
       return started
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("stopTone") { () -> Bool in
       self.hapticController.stopKeying()
       return self.toneGenerator.stop()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("playTone") { (frequency: Double, durationMs: Double, volume: Double) -> Bool in
       return self.toneGenerator.play(
@@ -1046,11 +1119,11 @@ public final class DitNativeModule: Module {
         durationMs: durationMs,
         volume: volume
       )
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("prepareToneEngine") { () -> Bool in
       return self.toneGenerator.start(frequency: 640, volume: 0)
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("playMorseSequence") { (code: String, characterUnitMs: Double, farnsworthUnitMs: Double, frequency: Double, volume: Double) -> Bool in
       let started = self.toneGenerator.playMorseSequence(
@@ -1068,12 +1141,27 @@ public final class DitNativeModule: Module {
         )
       }
       return started
+    }.runOnQueue(.main)
+
+    Function("getMorsePlaybackState") {
+      if Thread.isMainThread { return self.toneGenerator.playbackState() }
+      return DispatchQueue.main.sync { self.toneGenerator.playbackState() }
     }
+
+    AsyncFunction("pauseMorseSequence") { () -> Bool in
+      self.hapticController.pauseSequence()
+      return self.toneGenerator.pauseMorseSequence()
+    }.runOnQueue(.main)
+
+    AsyncFunction("resumeMorseSequence") { () -> Bool in
+      self.hapticController.resumeSequence()
+      return self.toneGenerator.resumeMorseSequence()
+    }.runOnQueue(.main)
 
     AsyncFunction("stopMorseSequence") { () -> Bool in
       self.hapticController.stopSequence()
       return self.toneGenerator.stopMorseSequence()
-    }
+    }.runOnQueue(.main)
 
     AsyncFunction("signInWithGoogle") { (promise: Promise) in
       DispatchQueue.main.async { [weak self] in

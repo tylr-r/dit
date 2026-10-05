@@ -1,5 +1,6 @@
 import {
   customListenDiff,
+  CONVERSATION_PROSIGNS,
   getReceivedTextAtElapsedMs,
   type DiffToken,
 } from '@dit/core'
@@ -117,16 +118,7 @@ const TurnList = ({
   )
 }
 
-const PROSIGNS = [
-  { name: 'K', meaning: 'Go ahead' },
-  { name: 'KN', meaning: 'Named station only' },
-  { name: 'BK', meaning: 'Quick handoff' },
-  { name: 'AR', meaning: 'End of message' },
-  { name: 'SK', meaning: 'End of contact' },
-  { name: 'BT', meaning: 'Separator' },
-  { name: 'AS', meaning: 'Wait' },
-  { name: 'HH', meaning: 'Correction' },
-]
+const PROSIGNS = CONVERSATION_PROSIGNS.map(([name, meaning]) => ({ name, meaning }))
 
 const ProsignReference = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => {

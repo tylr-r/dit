@@ -21,20 +21,24 @@
         }
       ],
       "expo-dev-client",
+      "./plugins/withFirebaseAppCheck",
       "@react-native-firebase/app",
       [
         "expo-build-properties",
         {
           "ios": {
+            "deploymentTarget": "15.1",
             "useFrameworks": "static",
             "forceStaticLinking": [
               "RNFBApp",
-              "RNFBAnalytics"
+              "RNFBAnalytics",
+              "RNFBAppCheck"
             ]
           }
         }
       ],
       "./plugins/withModularHeaders",
+      "./plugins/withMinimumPodDeploymentTarget",
       "./plugins/withSplashScreenFix",
       [
         "expo-notifications",
@@ -71,7 +75,8 @@
       "entitlements": {
         "com.apple.developer.applesignin": [
           "Default"
-        ]
+        ],
+        "com.apple.developer.devicecheck.appattest-environment": "production"
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,

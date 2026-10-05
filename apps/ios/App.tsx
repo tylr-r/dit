@@ -36,6 +36,9 @@ import { AboutModal } from './src/components/AboutModal'
 import { BackgroundGlow } from './src/components/BackgroundGlow'
 import { DitButton } from './src/components/DitButton'
 import { ListenControls } from './src/components/ListenControls'
+import { ConversationSurface } from './src/components/ConversationSurface'
+import { useIosConversationSession } from './src/hooks/useIosConversationSession'
+import { ListenLearningSurface } from './src/components/ListenLearningSurface'
 import { MorseButton } from './src/components/MorseButton'
 import { MorseLiquidSurface } from './src/components/MorseLiquidSurface'
 import { NuxModal } from './src/components/NuxModal'
@@ -88,12 +91,33 @@ function AppShell() {
     handleRootTouchStart,
     registerAppInteraction,
   } = useBackgroundIdle()
+  const [wordCounts, setWordCounts] = useState({ correct: 0, attempted: 0 })
+  const handleWordAnswer = useCallback((correct: boolean) => {
+    setWordCounts((counts) => ({ correct: counts.correct + Number(correct), attempted: counts.attempted + 1 }))
+  }, [])
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
   const [showReference, setShowReference] = useState(false)
   const [settingsSignInSheetVisible, setSettingsSignInSheetVisible] = useState(false)
   const [learningSheetVisible, setLearningSheetVisible] = useState(false)
+
+  const [conversationCopyFocused, setConversationCopyFocused] = useState(false)
+  const [conversationSelected, setConversationSelected] = useState(false)
+  const conversationActive = conversationSelected && onboarding.nuxStatus !== 'pending'
+  const conversationActiveRef = useRef(conversationActive)
+  conversationActiveRef.current = conversationActive
+  const sharedSessionCallbacks = useMemo(() => ({
+    ...sessionCallbacks,
+    playMorseTone: async (options: Parameters<typeof playMorseTone>[0]) => {
+      if (!conversationActiveRef.current) await playMorseTone(options)
+    },
+    startTone: async (options?: Parameters<typeof startTone>[0]) => {
+      if (!conversationActiveRef.current) await startTone(options)
+    },
+    stopTone: async () => { if (!conversationActiveRef.current) await stopTone() },
+    stopMorseTone: async () => { if (!conversationActiveRef.current) await stopMorseTone() },
+  }), [])
 
   const session = useMorseSessionController({
     user,
@@ -106,19 +130,35 @@ function AppShell() {
     setShowReference,
     showPhaseModal,
     onboarding,
-    callbacks: sessionCallbacks,
+    callbacks: sharedSessionCallbacks,
   })
 
   const { state, setters, derived, handlers } = session
   const { dismissSettingsHint, nuxReady, nuxStatus } = onboarding
   const isNuxActive = nuxReady && nuxStatus === 'pending'
   const isKnownTourStep = onboarding.nuxStep === 'known_tour'
+  const conversationBlocked = showSettings || showAbout || showReference || learningSheetVisible || settingsSignInSheetVisible || Boolean(phaseModal) || isNuxActive
+  const conversation = useIosConversationSession({
+    active: conversationActive, blocked: conversationBlocked,
+    characterWpm: state.listenWpm, toneFrequency: state.toneFrequency,
+  })
+  useEffect(() => {
+    if (!conversationSelected || !isNuxActive) return
+    conversation.end()
+    conversation.reset()
+    setConversationSelected(false)
+    setConversationCopyFocused(false)
+  }, [conversationSelected, isNuxActive, conversation.end, conversation.reset])
 
   const tour = useKnownTour({
     active: isKnownTourStep,
     onFinish: handlers.handleFinishKnownTour,
   })
-  const externalMorseHandlersRef = useRef({
+  const externalMorseHandlersRef = useRef<{
+    pressIn: (symbol: '.' | '-') => void
+    pressOut: (symbol: '.' | '-') => void
+    cancel: () => void
+  }>({
     pressIn: handlers.handleMorseSymbolPressIn,
     pressOut: handlers.handleMorseSymbolPressOut,
     cancel: handlers.cancelExternalMorseInput,
@@ -149,11 +189,12 @@ function AppShell() {
   }, [registerAppInteraction, stopExternalMorseInteractionLoop])
   useEffect(() => {
     externalMorseHandlersRef.current = {
-      pressIn: handlers.handleMorseSymbolPressIn,
-      pressOut: handlers.handleMorseSymbolPressOut,
-      cancel: handlers.cancelExternalMorseInput,
+      pressIn: conversationActive ? conversation.handleMorseSymbolPressIn : handlers.handleMorseSymbolPressIn,
+      pressOut: conversationActive ? conversation.handleMorseSymbolPressOut : handlers.handleMorseSymbolPressOut,
+      cancel: conversationActive ? conversation.cancelPaddleInput : handlers.cancelExternalMorseInput,
     }
   }, [
+    conversationActive, conversation.handleMorseSymbolPressIn, conversation.handleMorseSymbolPressOut, conversation.cancelPaddleInput,
     handlers.cancelExternalMorseInput,
     handlers.handleMorseSymbolPressIn,
     handlers.handleMorseSymbolPressOut,
@@ -180,7 +221,7 @@ function AppShell() {
   }, [stopExternalMorseInteractionLoop, updateExternalMorseInteractionLoop])
   const externalMorseCaptureEnabled =
     nuxReady &&
-    !derived.isListen &&
+    (conversationActive ? conversation.phase === 'your-turn' && !conversationCopyFocused : !derived.isListen) &&
     !isNuxActive &&
     !isKnownTourStep &&
     !showSettings &&
@@ -211,7 +252,7 @@ function AppShell() {
     if (showSettings || showAbout) {
       return 'settings'
     }
-    return state.mode
+    return conversationActive ? 'conversation' : state.mode
   }, [
     isKnownTourStep,
     isNuxActive,
@@ -221,7 +262,7 @@ function AppShell() {
     showAbout,
     showReference,
     showSettings,
-    state.mode,
+    state.mode, conversationActive,
   ])
   useAnalyticsScreenTracker(analyticsScreen)
   useEffect(() => {
@@ -447,6 +488,35 @@ function AppShell() {
     }
   }, [progressForSideEffects])
 
+  const characterStage = (
+    <StageDisplay
+      letter={derived.stageLetter}
+      statusText={derived.statusText}
+      statusDetailText={!derived.isListen ? derived.guidedPracticeStatusDetailText : null}
+      statusDetailTokens={derived.isListen ? derived.listenStatusDetailTokens : null}
+      pips={derived.stagePips}
+      hintVisible={derived.hintVisible}
+      letterPlaceholder={derived.letterPlaceholder}
+      isListen={derived.isListen}
+      listenStatus={state.listenStatus}
+      practiceStatus={state.status}
+      listenWavePlayback={state.listenWavePlayback}
+      freestyleToneActive={state.isPressing}
+      practiceWpmText={derived.practiceWpmText}
+      listenTtrText={derived.listenTtrText}
+      practiceWordMode={derived.showPracticeWord}
+      practiceWord={derived.showPracticeWord ? derived.practiceWord : null}
+      practiceWordIndex={state.practiceWordIndex}
+      isFreestyle={derived.isFreestyle}
+      reservePracticeHelperSpace={
+        derived.hintVisible ||
+        derived.mnemonicVisible ||
+        derived.isGuidedPracticeActive ||
+        derived.isListen
+      }
+    />
+  )
+
   return (
     <SafeAreaProvider>
       <View style={styles.container} onStartShouldSetResponderCapture={handleRootTouchStart}>
@@ -466,8 +536,27 @@ function AppShell() {
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           {(!isNuxActive || isKnownTourStep) ? (
             <TopBar
-              mode={state.mode}
-              onModeChange={handlers.handleModeChange}
+              mode={conversationActive ? 'conversation' : state.mode}
+              onModeChange={(mode) => {
+                handlers.cancelExternalMorseInput()
+                externalMorseActiveSymbolsRef.current.clear()
+                stopExternalMorseInteractionLoop()
+                if (mode === 'conversation') {
+                  handlers.cancelPendingSessionInput()
+                  conversationActiveRef.current = true
+                  handlers.setCharacterListenSuspended(true)
+                  void stopTone()
+                  void stopMorseTone()
+                  setConversationSelected(true)
+                  return
+                }
+                if (conversationActive) conversation.end()
+                conversationActiveRef.current = false
+                setConversationSelected(false)
+                setConversationCopyFocused(false)
+                handlers.setCharacterListenSuspended(mode === 'listen')
+                handlers.handleModeChange(mode)
+              }}
               onPressReference={handleShowReference}
               onSettingsPress={handleSettingsToggle}
               showSettingsHint={derived.showSettingsHint}
@@ -514,6 +603,12 @@ function AppShell() {
               onReminderChange={handlers.handleReminderChange}
               onUseRecommended={handlers.handleUseRecommended}
               onShowAbout={handleShowAbout}
+              onSoundCheck={() => {
+                void playMorseTone(buildPlaybackToneRequest(MORSE_DATA.A.code, {
+                  listenWpm: state.listenWpm, listenEffectiveWpm: state.listenEffectiveWpm,
+                  toneFrequency: state.toneFrequency,
+                }))
+              }}
               user={user}
               onRequestLearning={handleRequestLearning}
               onRequestSignIn={handleRequestSignInFromSettings}
@@ -546,6 +641,8 @@ function AppShell() {
                 }).correct
               }
               letterAccuracy={state.letterAccuracy}
+              listenTtr={state.listenTtr}
+              streakAtRisk={todayStreakContribution({ dailyActivity: state.dailyActivity, streak: state.streak }).atRisk}
               courseProgress={
                 state.guidedCourseActive
                   ? {
@@ -570,34 +667,28 @@ function AppShell() {
             />
           ) : null}
           {(!isNuxActive || isKnownTourStep) ? (
-            <StageDisplay
-              letter={derived.stageLetter}
-              statusText={derived.statusText}
-              statusDetailText={!derived.isListen ? derived.guidedPracticeStatusDetailText : null}
-              statusDetailTokens={derived.isListen ? derived.listenStatusDetailTokens : null}
-              pips={derived.stagePips}
-              hintVisible={derived.hintVisible}
-              letterPlaceholder={derived.letterPlaceholder}
-              isListen={derived.isListen}
-              listenStatus={state.listenStatus}
-              practiceStatus={state.status}
-              listenWavePlayback={state.listenWavePlayback}
-              freestyleToneActive={state.isPressing}
-              practiceWpmText={derived.practiceWpmText}
-              listenTtrText={derived.listenTtrText}
-              practiceWordMode={derived.showPracticeWord}
-              practiceWord={derived.showPracticeWord ? derived.practiceWord : null}
-              practiceWordIndex={state.practiceWordIndex}
-              isFreestyle={derived.isFreestyle}
-              reservePracticeHelperSpace={
-                derived.hintVisible ||
-                derived.mnemonicVisible ||
-                derived.isGuidedPracticeActive ||
-                derived.isListen
-              }
-            />
+            conversationActive ? <ConversationSurface session={conversation} onCopyFocusChange={setConversationCopyFocused} /> : derived.isListen ? (
+              <ListenLearningSurface
+                wordCounts={wordCounts}
+                onWordAnswer={handleWordAnswer}
+                availableLetters={derived.activeLetters}
+                guidedCourseActive={state.guidedCourseActive}
+                characterWpm={state.listenWpm}
+                effectiveWpm={state.listenEffectiveWpm}
+                toneFrequency={state.toneFrequency}
+                blocked={showSettings || showAbout || showReference || learningSheetVisible || settingsSignInSheetVisible || Boolean(phaseModal) || isKnownTourStep}
+                suspendCharacters={handlers.setCharacterListenSuspended}
+                replayCharacter={handlers.handleListenReplay}
+                characterStage={characterStage}
+                characterControls={<>
+                  {derived.isGuidedLessonModeMismatch && <DitButton text="Return to lesson" onPress={() => handlers.moveIntoGuidedLesson(state.guidedPhase, state.guidedPackIndex, state.guidedProgress)} />}
+                  <ListenControls availableLetters={derived.activeLetters} listenStatus={state.listenStatus}
+                    onReplay={handlers.handleListenReplay} onSubmitAnswer={handlers.submitListenAnswer} />
+                </>}
+              />
+            ) : characterStage
           ) : null}
-          {(!isNuxActive || isKnownTourStep) ? (
+          {(!isNuxActive || isKnownTourStep) && !derived.isListen && !conversationActive ? (
             <View style={styles.controls}>
               {derived.isGuidedLessonModeMismatch ? (
                 <DitButton
@@ -640,6 +731,12 @@ function AppShell() {
                       text="Clear"
                     />
                   ) : null}
+                  {derived.canRequestOneTimeHint && <DitButton
+                    text="Show this hint" onPress={handlers.handleRequestOneTimeHint}
+                    accessibilityHint="Reveals the current pattern. This attempt will not count toward your score."
+                    style={{ marginBottom: 12, minHeight: 44 }}
+                    textStyle={{ fontSize: 14 }}
+                  />}
                   {!derived.isFreestyle ? (
                     <DitButton
                       onPress={handlers.handlePracticeReplay}

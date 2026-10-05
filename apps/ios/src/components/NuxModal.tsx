@@ -409,7 +409,9 @@ function WelcomeScreen({
       {...panResponder.panHandlers}
       style={styles.welcomeScreen}
       onPress={showOptions ? undefined : onWelcomeDone}
-      accessibilityLabel="Welcome to Dit"
+      accessible={!showOptions}
+      accessibilityRole={showOptions ? undefined : 'button'}
+      accessibilityLabel={showOptions ? undefined : 'Welcome to Dit'}
     >
       <Reanimated.View style={logoStyle}>
         <DitLogo size={120} opacity={0.9} animated />
@@ -1019,7 +1021,7 @@ export function NuxModal({
           <ProgressDots step={displayedStep} />
 
           <Reanimated.View
-            style={[styles.stepBody, bodyAnimStyle]}
+            style={[styles.stepBody, displayedStep.startsWith('intro_') && styles.introBody, bodyAnimStyle]}
             pointerEvents={isTutorial ? 'box-none' : undefined}
           >
             {displayedStep === 'profile' ? (
@@ -1071,41 +1073,42 @@ export function NuxModal({
 
             {displayedStep === 'intro_fluency' ? (
               <>
-                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                <View style={[styles.introArtwork, windowHeight < 700 && styles.introArtworkShort]}>
+                  <IntroFluencyIllustration />
+                </View>
+                <Animated.View style={[styles.copyBlock, styles.introCopy]}>
                   <Text style={styles.headline}>Real Morse fluency.</Text>
                   <Text style={styles.subtext}>
                     Science-backed training, instant feedback, and smart review that targets your
                     weakest letters.
                   </Text>
                 </Animated.View>
-                <View style={styles.stepFill}>
-                  <Animated.View style={stagger[1]}>
-                    <IntroFluencyIllustration />
-                  </Animated.View>
-                </View>
+
               </>
             ) : null}
 
             {displayedStep === 'intro_listen' ? (
               <>
-                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                <View style={[styles.introArtwork, windowHeight < 700 && styles.introArtworkShort]}>
+                  <IntroListenIllustration />
+                </View>
+                <Animated.View style={[styles.copyBlock, styles.introCopy]}>
                   <Text style={styles.headline}>No chart. Just listen.</Text>
                   <Text style={styles.subtext}>
                     Experienced operators don't count dots and dashes. They hear each letter the way
                     you hear your name. Dit trains that reflex from the start.
                   </Text>
                 </Animated.View>
-                <View style={styles.stepFill}>
-                  <Animated.View style={stagger[1]}>
-                    <IntroListenIllustration />
-                  </Animated.View>
-                </View>
+
               </>
             ) : null}
 
             {displayedStep === 'intro_speed' ? (
               <>
-                <Animated.View style={[styles.copyBlock, stagger[0]]}>
+                <View style={[styles.introArtwork, windowHeight < 700 && styles.introArtworkShort]}>
+                  <IntroSpeedIllustration />
+                </View>
+                <Animated.View style={[styles.copyBlock, styles.introCopy]}>
                   <Text style={styles.headline}>Real speed from day one.</Text>
                   <Text style={styles.subtext}>
                     Slow letters teach you to count. Dit uses the Koch method, which keeps every
@@ -1113,11 +1116,7 @@ export function NuxModal({
                     you improve, so you always have time to think.
                   </Text>
                 </Animated.View>
-                <View style={styles.stepFill}>
-                  <Animated.View style={stagger[1]}>
-                    <IntroSpeedIllustration />
-                  </Animated.View>
-                </View>
+
               </>
             ) : null}
 
@@ -1353,6 +1352,7 @@ export function NuxModal({
                 text="Continue"
                 onPress={onContinueFromIntroFluency}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1362,6 +1362,7 @@ export function NuxModal({
                 text="Continue"
                 onPress={onContinueFromIntroListen}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1371,6 +1372,7 @@ export function NuxModal({
                 text="Continue"
                 onPress={onContinueFromIntroSpeed}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1386,6 +1388,7 @@ export function NuxModal({
                   onPress={handleContinueFromSoundCheck}
                   disabled={!soundChecked}
                   style={styles.ctaButton}
+                  textStyle={styles.ctaText}
                   radius={radii.pill}
                   paddingVertical={16}
                 />
@@ -1396,6 +1399,7 @@ export function NuxModal({
                 text="Continue"
                 onPress={handleContinueFromStages}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1405,6 +1409,7 @@ export function NuxModal({
                 text="Start first lesson"
                 onPress={handleStartBeginnerCourse}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1414,6 +1419,7 @@ export function NuxModal({
                 text="Turn on reminder"
                 onPress={handleReminderSet}
                 style={styles.ctaButton}
+                textStyle={styles.ctaText}
                 radius={radii.pill}
                 paddingVertical={16}
               />
@@ -1488,6 +1494,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: spacing.lg,
   },
+  introBody: { alignItems: 'center', justifyContent: 'center', gap: 24 },
+  introArtwork: { width: '100%', height: 230, alignItems: 'center', justifyContent: 'center' },
+  introArtworkShort: { height: 150 },
+  introCopy: { minHeight: 180, width: '100%', maxWidth: 480 },
   stepFill: {
     flex: 1,
     justifyContent: 'center',
@@ -1521,13 +1531,14 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 28,
     fontWeight: '600',
+    letterSpacing: -0.6,
     color: colors.text.primary,
     textAlign: 'center',
   },
   subtext: {
     fontSize: 15,
     lineHeight: 22,
-    color: colors.text.primary40,
+    color: colors.text.primary70,
     textAlign: 'center',
   },
   optionColumn: {
@@ -1685,6 +1696,13 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     width: '100%' as unknown as number,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0,
+    textTransform: 'none',
+    color: colors.text.primary,
   },
   reminderPickerCard: {
     borderRadius: radii.lg,

@@ -2,11 +2,14 @@ import type {
   HeroMetric,
   Letter,
   LetterAccuracyRecord,
+  ListenTtrRecord,
   ScoreRecord,
   StreakState,
 } from '@dit/core'
 import {
-  MORSE_DATA,
+  classifyLetter,
+  getAverageRecognitionMs,
+  getRecognitionFillRatio,
   STREAK_DAILY_GOAL,
   computeReferenceScoreMaxDeviation,
   computeReferenceScoreMedian,
@@ -44,6 +47,8 @@ type ReferenceModalProps = {
   streak?: StreakState
   todayCorrect: number
   letterAccuracy?: LetterAccuracyRecord
+  listenTtr?: ListenTtrRecord
+  streakAtRisk?: boolean
   courseProgress?: CourseProgress | null
   onClose: () => void
   onResetScores: () => void
@@ -127,10 +132,12 @@ function StreakRow({
   streak,
   todayCorrect,
   goal,
+  atRisk,
 }: {
   streak?: StreakState
   todayCorrect: number
   goal: number
+  atRisk?: boolean
 }) {
   const current = streak?.current ?? 0
   const filled = Math.min(todayCorrect, goal)
@@ -151,6 +158,7 @@ function StreakRow({
         <View
           style={[
             styles.streakFill,
+            atRisk && { backgroundColor: colors.feedback.error },
             { width: `${Math.round(ratio * 100)}%` },
           ]}
         />
@@ -169,6 +177,8 @@ export function ReferenceModal({
   streak,
   todayCorrect,
   letterAccuracy,
+  listenTtr,
+  streakAtRisk,
   courseProgress,
   onClose,
   onResetScores,
@@ -179,6 +189,7 @@ export function ReferenceModal({
     () => ({ scores, letterAccuracy }),
     [scores, letterAccuracy],
   )
+  const averageRecognitionMs = getAverageRecognitionMs(masteryProgress, listenTtr)
   // Panel entrance/exit animation state
   const panelVisible = useSharedValue(0)
   const [exiting, setExiting] = React.useState(false)
@@ -245,6 +256,9 @@ export function ReferenceModal({
       masteredScoreMaxDeviation,
     )
     const code = morseData[char].code
+    const status = classifyLetter(masteryProgress, char)
+    const recognitionMs = listenTtr?.[char]?.averageMs
+    const fill = getRecognitionFillRatio(recognitionMs)
     const canPlaySound = typeof onPlaySound === 'function'
     const scoreStyle =
       scoreValue > 0
@@ -287,9 +301,7 @@ export function ReferenceModal({
         <Animated.View pointerEvents="none" style={overlayStyle} />
         <Pressable
           accessibilityRole={canPlaySound ? 'button' : undefined}
-          accessibilityLabel={`${char}, ${getCodeAccessibilityText(
-            code,
-          )}, ${getScoreAccessibilityText(scoreValue)}`}
+          accessibilityLabel={`${char}, ${status}${mastered ? `, ${getCodeAccessibilityText(code)}, ${getScoreAccessibilityText(scoreValue)}` : ''}${recognitionMs != null ? `, recognition ${Math.round(recognitionMs)} milliseconds` : ''}`}
           accessibilityHint={
             canPlaySound ? `Plays the Morse sound for ${char}` : undefined
           }
@@ -316,16 +328,19 @@ export function ReferenceModal({
           <View style={styles.cardHeader}>
             <Text style={styles.cardLetter}>{char}</Text>
             <Text style={[styles.cardScore, scoreStyle]}>
-              {scoreValue === 0 ? '' : formatScore(scoreValue)}
+              {!mastered || scoreValue === 0 ? '' : formatScore(scoreValue)}
             </Text>
           </View>
-          <View style={styles.cardCode} accessibilityLabel={code}>
+          {mastered ? <View style={styles.cardCode} accessibilityLabel={code}>
             {code.split('').map((symbol, index) => (
               <Text key={`${char}-${index}`} style={styles.cardSymbol}>
                 {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
               </Text>
             ))}
-          </View>
+          </View> : <Text style={styles.cardInstruction}>Train the ear</Text>}
+          {status !== 'not-yet' && <View style={styles.recognitionTrack}>
+            <View style={[styles.recognitionFill, { width: `${Math.round(Math.max(fill, mastered ? 0.05 : 0) * 100)}%` }]} />
+          </View>}
         </Pressable>
       </Animated.View>
     )
@@ -362,7 +377,12 @@ export function ReferenceModal({
           showsVerticalScrollIndicator={false}
         >
           <ProgressHero hero={hero} />
+          {averageRecognitionMs != null && <View style={styles.heroRow}>
+            <Text style={styles.recognitionValue}>{averageRecognitionMs} ms</Text>
+            <Text style={styles.heroLabel}>Avg recognition</Text>
+          </View>}
           <StreakRow
+            atRisk={streakAtRisk}
             streak={streak}
             todayCorrect={todayCorrect}
             goal={STREAK_DAILY_GOAL}
@@ -377,24 +397,18 @@ export function ReferenceModal({
               </Text>
             </View>
           ) : null}
-          {[1, 2, 3, 4].map((level) => {
-            let levelLetters = letters.filter(
-              (l) => MORSE_DATA[l].level === level,
-            )
-            if (level === 4) {
-              levelLetters = [...levelLetters, ...numbers]
-            }
-            if (levelLetters.length === 0) return null
-            return (
-              <View key={`level-${level}`} style={styles.levelSection}>
-                <Text style={styles.levelSectionTitle}>Level {level}</Text>
-                <GlassContainer spacing={spacing.sm} style={styles.levelCards}>
-                  {levelLetters.map((char) => (
-                    <ReferenceCard key={char} char={char} />
-                  ))}
-                </GlassContainer>
-              </View>
-            )
+          {([
+            ['mastered', 'Known by ear'], ['learning', 'Now learning'], ['not-yet', 'Not yet'],
+          ] as const).map(([status, title]) => {
+            const sectionLetters = [...letters, ...numbers].filter((char) => classifyLetter(masteryProgress, char) === status)
+            if (!sectionLetters.length) return null
+            return <View key={status} style={styles.levelSection}>
+              <Text style={styles.levelSectionTitle}>{title} · {sectionLetters.length}</Text>
+              {status !== 'not-yet' && <Text style={styles.recognitionLegend}>Recognition speed: slow to fast</Text>}
+              <GlassContainer spacing={spacing.sm} style={styles.levelCards}>
+                {sectionLetters.map((char) => <ReferenceCard key={char} char={char} />)}
+              </GlassContainer>
+            </View>
           })}
           <View style={styles.rowSpacer} />
         </ScrollView>
@@ -528,6 +542,11 @@ const styles = StyleSheet.create({
   scoreNeutral: {
     color: colors.text.primary60,
   },
+  recognitionValue: { color: colors.text.primary, fontSize: 24, fontWeight: '600' },
+  recognitionLegend: { color: colors.text.primary60, fontSize: 12, marginBottom: spacing.sm },
+  cardInstruction: { color: colors.text.primary40, fontSize: 11 },
+  recognitionTrack: { height: 3, backgroundColor: colors.surface.input, marginTop: spacing.sm, borderRadius: radii.sm, overflow: 'hidden' },
+  recognitionFill: { height: '100%', backgroundColor: colors.accent.wave },
   cardCode: {
     flexDirection: 'row',
     justifyContent: 'center',

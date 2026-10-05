@@ -61,6 +61,7 @@ type SettingsModalProps = {
   onUseRecommended: () => void
   onResetApp: () => void
   onShowAbout: () => void
+  onSoundCheck: () => void
   /**
    * Fires when the user taps the "Learning ›" row. Parent dismisses
    * Settings first, then opens the Learning sheet — same anti-stack
@@ -204,6 +205,7 @@ export function SettingsModal({
   onUseRecommended,
   onResetApp,
   onShowAbout,
+  onSoundCheck,
   onRequestLearning,
   onRequestSignIn,
   onSignOut,
@@ -611,6 +613,10 @@ export function SettingsModal({
                       Vibrate alongside the tone when keying or playing back
                       Morse.
                     </Text>
+                    <View style={styles.separator} />
+                    <ActionRow text="Test sound" accessibilityLabel="Test sound"
+                      accessibilityHint="Plays a tone at your current playback speed and pitch"
+                      onPress={onSoundCheck} />
                   </>
                 </SettingsGroup>
 

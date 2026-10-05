@@ -71,6 +71,9 @@ export const RESET_APP_STORAGE_KEYS = [
   LEGACY_INTRO_HINTS_KEY,
   NUX_STATUS_KEY,
   NUX_STATE_KEY,
+  'dit-ios-custom-listen-v1',
+  'dit-listen-content-v1',
+  'dit-listen-vocabulary-v1',
 ] as const
 export const BACKGROUND_IDLE_TIMEOUT_MS = 10000
 export const DEFAULT_PRACTICE_IFR_MODE = true

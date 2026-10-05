@@ -104,7 +104,7 @@ export const ROW_AVAILABILITY: Readonly<
   'playback-wpm': BOTH,
   'playback-tone': BOTH,
   'playback-haptics': ['ios'],
-  'sound-check': ['web'],
+  'sound-check': BOTH,
   'learning-method': BOTH,
   'practice-words': BOTH,
   'practice-autoplay': BOTH,

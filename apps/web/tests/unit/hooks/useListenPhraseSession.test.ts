@@ -52,6 +52,28 @@ const baseOptions = (): UseListenPhraseSessionOptions => ({
 })
 
 describe('useListenPhraseSession', () => {
+  it('counts a rapid double tap once and ignores a cancelled pending answer', async () => {
+    const options = baseOptions()
+    options.onAnswer = vi.fn()
+    const { result } = renderHook(() => useListenPhraseSession(options))
+    await act(async () => result.current.start())
+    await act(async () => {
+      await Promise.all([result.current.submitAnswer('one'), result.current.submitAnswer('one')])
+    })
+    expect(result.current.attemptCount).toBe(1)
+    expect(options.onAnswer).toHaveBeenCalledOnce()
+
+    await act(async () => result.current.next())
+    let finishStop = () => {}
+    vi.mocked(options.stopMorseTone).mockImplementationOnce(() => new Promise<void>((resolve) => { finishStop = resolve }))
+    let pending: Promise<void>
+    act(() => { pending = result.current.submitAnswer(result.current.round!.target.id) })
+    act(() => result.current.release())
+    await act(async () => { finishStop(); await pending })
+    expect(result.current.attemptCount).toBe(1)
+    expect(options.onAnswer).toHaveBeenCalledOnce()
+  })
+
   it('returns silently to ready when changing banks and ignores the previous audio completion', async () => {
     const options = baseOptions()
     let finishPreviousAudio = () => {}
