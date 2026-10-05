@@ -96,7 +96,7 @@ export function PrivacyPolicy() {
     <LegalPageLayout
       title="Privacy Policy"
       intro="How Dit handles information in the web and iOS apps."
-      lastUpdated="April 2026"
+      lastUpdated="October 2026"
       current="privacy"
     >
       <section className="legal-glance" aria-labelledby="glance-label">
@@ -107,8 +107,8 @@ export function PrivacyPolicy() {
           <div className="legal-highlight">
             <p className="legal-highlight-title">No account needed</p>
             <p className="legal-highlight-body">
-              Use Dit fully without signing in or sharing any personal
-              information.
+              Practice without signing in. Conversation sends the messages
+              you key to Google to generate replies.
             </p>
           </div>
           <div className="legal-highlight">
@@ -152,7 +152,18 @@ export function PrivacyPolicy() {
             so they can be restored across your devices.
           </li>
           <li>
-            Web app usage analytics through{' '}
+            When you use Conversation, your keyed messages and conversation
+            history are sent to Google Gemini through Firebase AI Logic to
+            generate the other station's replies. This includes any callsign,
+            name, or location you put in a message. Requests also include a
+            fictional station callsign and your device's local hour for
+            time-appropriate greetings. Your typed reception copy stays local
+            and is not sent to the AI service. Dit does not save conversations
+            to your account or include them in learning scores. On iOS, you
+            choose whether to allow this sharing before each contact.
+          </li>
+          <li>
+            App usage analytics through Firebase Analytics on iOS and{' '}
             <a
               href="https://marketingplatform.google.com/about/analytics/"
               rel="noreferrer"
@@ -172,7 +183,8 @@ export function PrivacyPolicy() {
           <li>Run the app and save your progress.</li>
           <li>Authenticate your account when you sign in.</li>
           <li>Sync your settings and progress across devices.</li>
-          <li>Measure web app usage so we can improve it.</li>
+          <li>Generate the other station's replies in Conversation.</li>
+          <li>Measure app usage so we can improve it.</li>
         </ul>
       </LegalSection>
       <LegalSection title="Services we rely on">
@@ -189,7 +201,11 @@ export function PrivacyPolicy() {
           >
             Google Analytics
           </a>{' '}
-          on the web. Sign-in providers (Google and Apple) handle
+          for usage analytics. Conversation uses Google Gemini for AI replies.
+          Google processes these requests under its own{' '}
+          <a href="https://policies.google.com/privacy" rel="noreferrer" target="_blank">
+            privacy policy
+          </a>. Sign-in providers (Google and Apple) handle
           authentication data under their own privacy policies.{' '}
           <strong>We do not sell personal information.</strong>
         </p>

@@ -106,8 +106,7 @@ are open, hardware paddles before/after copy focus, and End while a station repl
 is pending. Check that scores, daily activity, recognition time, and streaks stay
 unchanged. Also review a small phone with its keyboard open and VoiceOver.
 
-Unit tests and Swift parsing pass in the development environment; a native build,
-Firebase console registration, and device playback have not been verified.
+Unit tests, Swift parsing, the simulator build, and simulator App Check registration have passed. A production archive and physical-device App Check/audio remain unverified.
 
 ## CocoaPods: duplicate widget target after prebuild
 
@@ -201,3 +200,14 @@ copy of the accepted history. Failed and empty responses are excluded. The model
 system instructions, and station callsign remain the same for the contact.
 The real-SDK regression test covers a successful turn, a failed request, and a
 successful retry, including the exact history sent to the server.
+
+## App Store release preparation
+
+See [the 2026.10.4 iOS handoff](releases/2026.10.4-ios.md) for the current version,
+metadata drafts, exact archive/validation/upload commands, and remaining device
+checks. The build script's `--check` verifies release/RC Xcode and version inputs
+without changing files. Beta toolchains are rejected before prebuild or package
+changes. The upload script supports `--validate` and verifies that the IPA matches
+the prepared bundle, version, and build before contacting App Store Connect.
+Production archives remove dev-client autolinking temporarily and install from
+the frozen workspace lockfile.

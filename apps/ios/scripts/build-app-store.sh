@@ -10,17 +10,24 @@ BUILD_ROOT="$ROOT_DIR/build/app-store"
 ARCHIVE_PATH="$BUILD_ROOT/Dit.xcarchive"
 EXPORT_PATH="$BUILD_ROOT/export"
 PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
+cd "$ROOT_DIR"
 
 if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
+CHECK_ONLY=0
+if [[ "${1:-}" == "--check" ]]; then
+  CHECK_ONLY=1
   shift
 fi
 
 BUILD_NUMBER="${1:-}"
 VERSION="${VERSION:-}"
 
-if [[ -n "$BUILD_NUMBER" && ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-  echo "Ignoring non-numeric build number argument: $BUILD_NUMBER" >&2
-  BUILD_NUMBER=""
+if [[ -n "$BUILD_NUMBER" && ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Build number must be a positive integer." >&2
+  exit 1
 fi
 
 if [[ -z "$BUILD_NUMBER" ]]; then
@@ -35,9 +42,37 @@ if [[ -z "$VERSION" ]]; then
   )"
 fi
 
-echo "Using version $VERSION ($BUILD_NUMBER)"
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Version must contain three numeric components, such as 2026.10.4." >&2
+  exit 1
+fi
 
-node -e "const fs=require('fs');const path=require('path');const appPath=path.join(process.cwd(),'app.json');const app=JSON.parse(fs.readFileSync(appPath,'utf8'));app.expo ??= {}; app.expo.ios ??= {}; app.expo.ios.buildNumber=String(process.argv[1]); fs.writeFileSync(appPath, JSON.stringify(app, null, 2) + '\n');" "$BUILD_NUMBER"
+# Check before changing configuration or removing the generated native project.
+XCODE_VERSION="$(xcodebuild -version 2>/dev/null)" || {
+  echo "Select a release Xcode installation with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer." >&2
+  exit 1
+}
+XCODE_BUILD="$(awk '/Build version/ { print $3 }' <<< "$XCODE_VERSION")"
+XCODE_MAJOR="$(awk '/^Xcode/ { split($2, version, "."); print version[1] }' <<< "$XCODE_VERSION")"
+if [[ -z "$XCODE_BUILD" || "$XCODE_BUILD" =~ [a-z]$ ]]; then
+  echo "App Store archives require release or RC Xcode. Selected toolchain: $XCODE_VERSION" >&2
+  echo "Install release Xcode, then set DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer." >&2
+  exit 1
+fi
+if [[ ! "$XCODE_MAJOR" =~ ^[0-9]+$ || "$XCODE_MAJOR" -lt 26 ]]; then
+  echo "This release requires Xcode 26 or later. Selected toolchain: $XCODE_VERSION" >&2
+  exit 1
+fi
+
+echo "Using version $VERSION ($BUILD_NUMBER)"
+echo "$XCODE_VERSION"
+
+if [[ "$CHECK_ONLY" == "1" ]]; then
+  echo "Release toolchain and version checks passed. No files changed."
+  exit 0
+fi
+
+node -e "const fs=require('fs');const path=require('path');const appPath=path.join(process.cwd(),'app.json');const app=JSON.parse(fs.readFileSync(appPath,'utf8'));app.expo ??= {}; app.expo.ios ??= {}; app.expo.version=process.argv[2]; app.expo.ios.buildNumber=String(process.argv[1]); fs.writeFileSync(appPath, JSON.stringify(app, null, 2) + '\n');" "$BUILD_NUMBER" "$VERSION"
 
 export DIT_ENABLE_DEV_CLIENT=0
 
@@ -52,7 +87,7 @@ node -e "const fs=require('fs');const pkgPath=process.argv[1];const pkg=JSON.par
 
 (
   cd "$ROOT_DIR/../.."
-  pnpm install
+  pnpm install --frozen-lockfile
 )
 
 pnpm exec expo prebuild --platform ios --no-install --clean

@@ -10,9 +10,11 @@ const scrolling = vi.hoisted(() => ({
   resize: undefined as (() => void) | undefined,
   scroll: undefined as ((event: { nativeEvent: { contentOffset: { y: number }; contentSize: { height: number }; layoutMeasurement: { height: number } } }) => void) | undefined,
 }))
-beforeEach(() => { scrolling.toEnd.mockClear(); scrolling.to.mockClear() })
+const permission = vi.hoisted(() => ({ alert: vi.fn<(title: string, message: string, buttons: { text: string; onPress?: () => void }[]) => void>() }))
+beforeEach(() => { scrolling.toEnd.mockClear(); scrolling.to.mockClear(); permission.alert.mockClear() })
 
 vi.mock('react-native', () => ({
+  Alert: { alert: permission.alert },
   View: ({ children, testID }: { children: React.ReactNode; testID?: string }) => <div data-testid={testID}>{children}</div>,
   ScrollView: ({ children, ref, accessibilityLabel, onContentSizeChange, onScroll }: {
     children: React.ReactNode; ref?: React.Ref<unknown>; accessibilityLabel?: string;
@@ -52,6 +54,20 @@ const baseSession = (): UseConversationSessionResult => ({
 })
 
 describe('native QSO learning surface', () => {
+  it.each([['Send first', 'send'], ['Receive first', 'receive']])('requires explicit AI permission before %s', (label, direction) => {
+    const session = { ...baseSession(), phase: 'idle' as const }
+    const { unmount } = render(<ConversationSurface session={session} />)
+    fireEvent.click(screen.getByText(label))
+    expect(session.start).not.toHaveBeenCalled()
+    expect(permission.alert).toHaveBeenCalledWith('Use Google Gemini?', expect.stringContaining('keyed messages'), expect.any(Array))
+    const buttons = permission.alert.mock.calls[0][2]
+    buttons.find((button) => button.text === 'Cancel')?.onPress?.()
+    expect(session.start).not.toHaveBeenCalled()
+    buttons.find((button) => button.text === 'Allow')?.onPress?.()
+    expect(session.start).toHaveBeenCalledWith(direction)
+    unmount()
+  })
+
   it('keeps recovery actions together when a first connection fails', () => {
     const session = { ...baseSession(), phase: 'error' as const, errorMessage: 'Could not reach the other station. Try again.' }
     const { unmount } = render(<ConversationSurface session={session} />)

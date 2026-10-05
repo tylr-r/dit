@@ -6,7 +6,7 @@ import {
   type UseConversationSessionResult,
 } from '@dit/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import { Alert, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, radii, spacing } from '../design/tokens'
 import { getMorsePlaybackState } from '../utils/tone'
@@ -81,6 +81,11 @@ export function ConversationSurface({ session: s, onCopyFocusChange }: Props) {
     setRevealedTurns(new Set())
   }
   const endQso = () => { Keyboard.dismiss(); setCopyFocus(false); s.end() }
+  const startQso = (direction: 'send' | 'receive') => Alert.alert(
+    'Use Google Gemini?',
+    'Conversation sends your keyed messages to Google Gemini for replies. Copy stays on your device.',
+    [{ text: 'Cancel', style: 'cancel' }, { text: 'Allow', onPress: () => void s.start(direction) }],
+  )
 
   if (s.phase === 'idle' || (!s.turns.length && ['connecting', 'error', 'ended'].includes(s.phase))) {
     return <View style={[styles.empty, { paddingBottom: insets.bottom + 44 }]}>
@@ -91,8 +96,8 @@ export function ConversationSurface({ session: s, onCopyFocusChange }: Props) {
         {s.phase === 'error' && <Text style={styles.errorDescription}>{s.errorMessage?.replace(' Try again.', '\nTry again.')}</Text>}
         <View style={styles.emptyActions}>
           {s.phase === 'idle' ? <View style={styles.actions}>
-            <Action text="Send first" onPress={() => void s.start('send')} />
-            <Action text="Receive first" onPress={() => void s.start('receive')} />
+            <Action text="Send first" onPress={() => startQso('send')} />
+            <Action text="Receive first" onPress={() => startQso('receive')} />
           </View> : s.phase === 'error' ? <>
             <Action variant="primary" text="Retry" onPress={() => void s.retry()} />
             <Action variant="quiet" text="End QSO" onPress={endQso} />

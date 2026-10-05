@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-04: Native AI sharing requires explicit permission per contact.** Before a QSO starts, identify Google Gemini and ask whether the operator allows sharing keyed messages for replies. Cancel stays silent and creates no station session. Keep typed copy local. Retries belong to the same approved contact; new contacts ask again. The public privacy policy must describe the actual sharing before release.
+
 - **2026-10-04: Conversation labels use the context already on screen.** Use a compact **Reveal** text button for a received message and one **Reply** prompt in the empty draft. Do not repeat turn context in long button labels or stack instructional labels above the key. Keep fuller context available to accessibility when needed.
 
 - **2026-10-04: iOS Conversation separates copying from keying.** Show the copy field during reception without a disclosure. Offer optional checking after playback, then let **Reply** open the draft and bottom Morse key. Do not show the copy field and key together: each screen should have one clear task. Copy and checking never gate the handoff. Replay returns to reception. This supersedes the native coexistence and collapse behavior in the August 26 decision.

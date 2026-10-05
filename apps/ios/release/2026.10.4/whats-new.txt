@@ -1,0 +1,13 @@
+New ways to practice Morse by ear:
+
+- Listen to common words and Q codes, choose what you heard, and learn what each Q code means.
+- Practice a CW conversation with an AI operator. Hear the other station, then key your reply.
+- Listen to your own text, pause or replay it, and optionally check your copy.
+
+Also in this update:
+
+- Revised onboarding with animated listening and recognition illustrations.
+- Progress groups letters by mastery and shows how quickly you recognize them.
+- Reveal a Practice hint for one attempt without affecting your score.
+- Test your playback speed and pitch from Settings.
+- Improved Morse timing, answer feedback, and mode selection.
