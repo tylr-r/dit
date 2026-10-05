@@ -391,7 +391,7 @@ export const useConversationSession = (
   }, [start, playTheirTurn])
 
   const checkCopy = useCallback(() => {
-    if (phaseRef.current !== 'your-turn') return
+    if (!['finishing-copy', 'your-turn'].includes(phaseRef.current)) return
     setCopyWasChecked(true)
   }, [])
 

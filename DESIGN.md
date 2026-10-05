@@ -126,7 +126,12 @@ A procedural blue swirl shader runs full-viewport behind app content on both
 platforms. iOS uses Skia GLSL; web uses a WebGL port of the same fragment
 shader. Hue and cycle constants are shared via the `shader` token in
 `@dit/core`. The shader honors `prefers-reduced-motion` (frozen at `t=0`)
-and pauses with a cross-fade when the tab is hidden / app is backgrounded.
+and pauses when the tab is hidden / app is backgrounded. Web cross-fades the
+hidden-tab shader. On iOS, an active QSO keeps the background moving through
+connection, reception, copy, replies, and recovery until the contact ends. It
+bypasses idle and Low Power Mode pausing while in the foreground. Outside an
+active QSO, idle and Low Power Mode freeze the last rendered frame without
+fading it away; touch or paddle interaction resumes motion.
 The "no ambient motion" rule still applies to _content_ surfaces — the
 shader is the single, expected exception, layered behind everything.
 
@@ -843,10 +848,24 @@ instead of describing them:
 
 The October 4 learning parity implementation reuses the native Morse key,
 glass actions with 44-point touch targets, and existing type, color, and spacing
-tokens. The transcript owns flexible space above a scrollable keying/reception
-workbench. Copy uses the system keyboard. Playback completion preserves the copy
-field and focus; only **Start my turn** opens the key. Optional comparison stays
-below keying, and incoming text remains absent from the rendered tree until an
+tokens. During a reply, the Morse key is the last control in a fixed bottom dock,
+above the safe area. Empty drafts show one **Reply** prompt, replaced by keyed
+text. Do not stack **Your turn** and **Key your reply** instructions. Concealed
+transcript entries use a compact **Reveal** text button with a 44-point touch
+target. Use the text label rather than an eye icon so the action is explicit.
+VoiceOver announces **Reveal received message**. The draft and
+Backspace/Clear/Send sit directly above the key; long drafts scroll within a
+bounded area. Transcript and prosign meanings scroll above the dock.
+
+Receiving and replying have separate workspaces. The copy field is directly
+available during reception, with no Copy (optional) or Hide copy button. Playback
+completion preserves the same field and focus. **Check copy** is available once
+the transmission finishes; **Reply** opens keying without requiring copying or
+checking. The reply screen contains the draft and key, with no copy field or
+comparison. Replay returns to reception. The system keyboard scrolls the focused
+copy field into view. Each new turn opens at the latest content and controls;
+manual scrolling preserves access to older messages. Opening Prosigns scrolls
+to its reference. Incoming text remains absent from the rendered tree until an
 explicit reveal, checked copy, reply keying, or live-letter disclosure permits it.
 Idle, initial connection, empty failure, and empty ended states use a centered content group instead of reserving a blank transcript. Initial failure pairs a readable heading and explanation with a compact Retry button and quieter End QSO action. Keep sentence-case action labels and 44-point touch targets.
-**Prosigns** appears during a contact and expands a quiet, non-modal list of plain meanings above the transcript; there are no dot/dash patterns, and the key remains usable. The iPhone 17 header and initial failure state have been reviewed in the simulator. Active-contact keyboard layout, VoiceOver speech, audio, and haptics still need device review; Firebase App Check currently blocks a simulator QSO.
+**Prosigns** appears during a contact and expands a quiet, non-modal list of plain meanings above the transcript; there are no dot/dash patterns, and the key remains usable. The iPhone 17 header and initial failure state have been reviewed in the simulator. The header omits guided-course pack progress in Conversation. Simulator attestation and received-opener playback are now verified. The fixed reply dock, separate reception copy field, comparison, prosign expansion, and copy keyboard have received iPhone 17 simulator review. Smaller-device keyboard layout, VoiceOver speech, physical-device audio, and haptics still need review.

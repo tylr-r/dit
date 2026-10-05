@@ -62,7 +62,7 @@ export function TopBar({
           </View>
         </View>
       </View>
-      {courseChipText ? (
+      {mode !== 'conversation' && courseChipText ? (
         <View style={styles.courseChipRow}>
           <View style={styles.courseChip}>
             <Text style={styles.courseChipText}>{courseChipText}</Text>

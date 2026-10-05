@@ -11,9 +11,17 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-04: Conversation labels use the context already on screen.** Use a compact **Reveal** text button for a received message and one **Reply** prompt in the empty draft. Do not repeat turn context in long button labels or stack instructional labels above the key. Keep fuller context available to accessibility when needed.
+
+- **2026-10-04: iOS Conversation separates copying from keying.** Show the copy field during reception without a disclosure. Offer optional checking after playback, then let **Reply** open the draft and bottom Morse key. Do not show the copy field and key together: each screen should have one clear task. Copy and checking never gate the handoff. Replay returns to reception. This supersedes the native coexistence and collapse behavior in the August 26 decision.
+
+- **2026-10-04: Native QSO background motion continues through a contact.** Listening and copying without touch input are active use. Keep the foreground background moving through every active contact phase, including recovery, until the QSO ends, bypassing idle and Low Power Mode pausing. Outside contacts, pausing freezes the last visible frame instead of fading it away.
+
+- **2026-10-04: Keep the iOS Conversation Morse key at the bottom.** Keying needs a dependable thumb position. During replies, keep the key above the bottom safe area, with draft editing and Send above it. Transcript and prosign expansion scroll above the key and cannot move it. Copy and comparisons belong to reception. This supersedes the native placement implied by the August 26 copy decision; copying still never gates a reply.
+
 - **2026-10-04: Learning parity includes supplemental reception exercises.** Listen Words/Q codes, private custom-text copy practice, one-time unscored hints, and recognition-speed feedback belong on both platforms. Native controls and keyboards may differ; eligibility, hidden answers during playback, grading, and score isolation must match. Conversation also belongs on both platforms, sharing station rules, explicit turn handoff, optional copy, and unscored progress isolation. Native verification remains pending. Notifications, widgets, desktop shortcuts, and platform chrome remain intentional differences.
 
-- **2026-10-04: The operator initiates the QSO handoff.** The last tone can finish before the learner has typed the last word. Preserve the reception layout and copy focus indefinitely after playback, deferring transcript insertion until the operator starts their turn or ends the QSO; **Start my turn** opens keying. Do not add a timed switch or require copy grading. This supersedes the immediate handoff in the August 26 copy decision.
+- **2026-10-04: The operator initiates the QSO handoff.** The last tone can finish before the learner has typed the last word. Preserve the reception layout and copy focus indefinitely after playback, deferring transcript insertion until the operator starts their turn or ends the QSO; **Reply** on iOS and **Start my turn** on web open keying. Do not add a timed switch or require copy grading. This supersedes the immediate handoff in the August 26 copy decision.
 
 - **2026-10-04: Web onboarding owns `/app`.** Pending onboarding supersedes a requested Conversation route. Replace `/app/qso` with `/app` and leave Conversation when onboarding starts or is replayed. Do not run onboarding over another active mode or add route-specific exceptions for its audio. Completed and skipped users retain direct Conversation access.
 

@@ -1,7 +1,7 @@
-import { getAI, getGenerativeModel, GoogleAIBackend, type ChatSession } from 'firebase/ai'
+import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai'
 import { firebaseApp } from '../firebase'
 
-import { buildConversationSystemPrompt, CONVERSATION_MODEL_ID, ConversationAiError, type StartConversationOptions } from '@dit/core'
+import { buildConversationSystemPrompt, createRetryableConversationChat, CONVERSATION_MODEL_ID, type ConversationChat, type StartConversationOptions } from '@dit/core'
 
 export { ConversationAiError, type StartConversationOptions } from '@dit/core'
 
@@ -14,28 +14,17 @@ const getAi = () => {
   return ai
 }
 
-export const startConversation = (options: StartConversationOptions): ChatSession => {
+export const startConversation = (options: StartConversationOptions): ConversationChat => {
   const model = getGenerativeModel(getAi(), {
     model: CONVERSATION_MODEL_ID,
     systemInstruction: buildConversationSystemPrompt(options),
   })
-  return model.startChat({
-    history: [],
-  })
+  return createRetryableConversationChat(
+    model.startChat({ history: [] }),
+    (history) => model.startChat({ history }),
+    'Could not reach the other station',
+  )
 }
 
-export const sendTurn = async (chat: ChatSession, replyText: string): Promise<string> => {
-  try {
-    const result = await chat.sendMessage(replyText)
-    const text = result.response.text().trim().replace(/\b599\b/g, '5NN')
-    if (!text) {
-      throw new ConversationAiError('Empty response from the other station')
-    }
-    return text
-  } catch (error) {
-    if (error instanceof ConversationAiError) {
-      throw error
-    }
-    throw new ConversationAiError('Could not reach the other station', error)
-  }
-}
+export const sendTurn = (chat: ConversationChat, replyText: string): Promise<string> =>
+  chat.send(replyText)

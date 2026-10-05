@@ -11,8 +11,9 @@ on the iOS 26.5 simulator. Intro slides, the single-line header, and initial
 Conversation error recovery have received rendered review. The three intro
 slides also fit the 375×667 iPhone SE simulator. New learning surfaces
 remain 🟡 pending device audio, haptics, and active keyboard review. Native Firebase
-AI Logic and App Check are wired, but Firebase rejects simulator debug attestation
-with HTTP 403. Debug-token registration and an end-to-end QSO remain unverified.
+AI Logic and App Check are wired. The iPhone 17 simulator development token is
+registered, and attestation, model response, and native opener playback are verified.
+A full two-way contact and physical-device audio/haptics remain pending.
 Unit tests and TypeScript checks do not replace native review.
 
 ## Legend
@@ -101,11 +102,11 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Practice a CW QSO against an LLM | 🟡 | ✅ | Both share the session, station prompt, callsign rules, and model. iOS uses native Firebase AI Logic with App Check. Native rebuild and end-to-end connectivity review pending. |
+| Practice a CW QSO against an LLM | 🟡 | ✅ | Both share the session, station prompt, callsign rules, and model. iOS uses native Firebase AI Logic with App Check. Native rebuild, App Check, model connectivity, and received-opener playback verified on iPhone 17. Full two-way contact and physical-device review pending. |
 | Keyed replies decode into a running draft | 🟡 | ✅ | Shared straight-key and paddle engine, automatic spaces, Backspace, Clear, and Send. iOS hardware capture yields to copy text entry. Native input review pending. |
-| Optional copy grading alongside keying | 🟡 | ✅ | After playback, reception stays editable until **Start my turn**. Empty copy is collapsed below the key; typed copy stays expanded and can be checked, hidden, or ignored. |
+| Optional reception copy grading | 🟡 | ✅ | After playback, reception stays editable until **Reply** on iOS or **Start my turn** on web. Web allows showing/hiding copy during keying. iOS checks copy before the handoff, then shows only the draft and fixed bottom key; Replay returns to reception. Copy and grading remain optional on both platforms. New native turns open at the latest controls, and older transcript entries remain scrollable. Empty drafts show one Reply prompt; concealed transcript entries use Reveal. iPhone 17 reviewed; smaller-device review pending. |
 | In-QSO prosign reference | 🟡 | ✅ | Plain meanings without encoded patterns. Web uses a side reference or bottom sheet; iOS uses a collapsible non-modal reference above the transcript, leaving the key usable. Native visual review pending. |
-| Pause / Resume / Replay / Retry | 🟡 | ✅ | iOS uses the native sample clock and completion callback. Late station replies are discarded after End, reset, or exit. Native audio/haptic review pending. |
+| Pause / Resume / Replay / Retry | 🟡 | ✅ | iOS uses the native sample clock and completion callback. Late station replies are discarded after End, reset, or exit. Failed SDK chats are recreated with accepted history on both platforms so Retry can reach the server again. Physical-device audio/haptic review pending. |
 
 ## Settings
 
@@ -181,8 +182,8 @@ All computation lives in [packages/core/src/utils/retention.ts](../packages/core
 |---|---|---|---|
 | Liquid shader background | ✅ | ✅ | iOS: Skia GLSL via [MorseLiquidSurface.tsx](../apps/ios/src/components/MorseLiquidSurface.tsx). Web: WebGL port at [MorseLiquidSurface.tsx](../apps/web/src/components/MorseLiquidSurface.tsx). Hue and cycle constants share `shader` tokens in `@dit/core`. |
 | Soft radial glow overlay | ✅ | ✅ | iOS: SVG radial gradients. Web: CSS `radial-gradient`. RGB and alpha values match across platforms. |
-| Pause animation in Low Power Mode | ✅ | 🚫 | iOS: [hooks/useSystemLowPowerMode.ts](../apps/ios/src/hooks/useSystemLowPowerMode.ts). Web has no Low Power Mode API. |
-| Pause animation when idle/backgrounded | ✅ | ✅ | iOS: `useBackgroundIdle`. Web: `document.visibilitychange` with 420ms / 320ms cross-fade. |
+| Pause animation in Low Power Mode | ✅ | 🚫 | iOS: [hooks/useSystemLowPowerMode.ts](../apps/ios/src/hooks/useSystemLowPowerMode.ts); active foreground QSOs bypass this pause. Web has no Low Power Mode API. |
+| Pause animation when idle/backgrounded | ✅ | ✅ | iOS: active foreground QSOs keep moving without interaction until ended. Outside a QSO, `useBackgroundIdle` freezes the visible frame after ten seconds. Web: `document.visibilitychange` with 420ms / 320ms cross-fade for hidden tabs. |
 | Honor `prefers-reduced-motion` | ✅ | ✅ | Both freeze the shader at `t=0` instead of animating. |
 | Reschedule daily reminder on foreground | ✅ | 🚫 | iOS-only by design |
 

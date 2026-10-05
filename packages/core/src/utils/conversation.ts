@@ -8,6 +8,39 @@ export class ConversationAiError extends Error {
 }
 
 
+type SdkChat<HistoryItem> = {
+  sendMessage: (text: string) => Promise<{ response: { text: () => string } }>
+  getHistory: () => Promise<HistoryItem[]>
+}
+
+/** Recovers from a rejected SDK chat queue while retaining only accepted turns. */
+export function createRetryableConversationChat<HistoryItem>(
+  initialChat: SdkChat<HistoryItem>,
+  restart: (history: HistoryItem[]) => SdkChat<HistoryItem>,
+  failureMessage: string,
+): { send: (text: string) => Promise<string> } {
+  let chat = initialChat
+  let acceptedHistory: HistoryItem[] = []
+  return {
+    async send(text) {
+      try {
+        const result = await chat.sendMessage(text)
+        const reply = result.response.text().trim().replace(/\b599\b/g, '5NN')
+        if (!reply) throw new ConversationAiError('Empty response from the other station')
+        acceptedHistory = [...await chat.getHistory()]
+        return reply
+      } catch (error) {
+        // Firebase retains its rejected send promise. A fresh SDK chat is
+        // necessary for Retry to send another request rather than rethrow it.
+        chat = restart([...acceptedHistory])
+        if (error instanceof ConversationAiError) throw error
+        throw new ConversationAiError(failureMessage, error)
+      }
+    },
+  }
+}
+
+
 export interface StartConversationOptions {
   callsign: string
   localHour?: number

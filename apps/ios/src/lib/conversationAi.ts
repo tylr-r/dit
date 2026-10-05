@@ -1,5 +1,6 @@
 import {
   buildConversationSystemPrompt,
+  createRetryableConversationChat,
   CONVERSATION_MODEL_ID,
   ConversationAiError,
   type ConversationChat,
@@ -29,21 +30,15 @@ export async function createConversation(options: StartConversationOptions): Pro
   try {
     const appCheck = await ensureAppCheck()
     const ai = getAI(getApp(), { backend: new GoogleAIBackend(), appCheck })
-    const chat = getGenerativeModel(ai, {
+    const model = getGenerativeModel(ai, {
       model: CONVERSATION_MODEL_ID,
       systemInstruction: buildConversationSystemPrompt(options),
-    }).startChat({ history: [] })
-    return { send: async (text) => {
-      try {
-        const result = await chat.sendMessage(text)
-        const reply = result.response.text().trim().replace(/\b599\b/g, '5NN')
-        if (!reply) throw new ConversationAiError('Empty response from the other station')
-        return reply
-      } catch (error) {
-        if (error instanceof ConversationAiError) throw error
-        throw new ConversationAiError('Could not reach the other station. Try again.', error)
-      }
-    } }
+    })
+    return createRetryableConversationChat(
+      model.startChat({ history: [] }),
+      (history) => model.startChat({ history }),
+      'Could not reach the other station. Try again.',
+    )
   } catch (error) {
     throw new ConversationAiError('Could not start the QSO. Try again.', error)
   }

@@ -89,6 +89,10 @@ Before verifying the first native QSO:
    For Simulator/dev-client testing, register a debug token and optionally set
    `EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` in the local Expo environment.
    Do not commit the token. See [Firebase App Check setup](https://rnfirebase.io/app-check/usage).
+   Registration is specific to the development token. A new simulator or removed
+   app data can require another registration; normal restarts retain the token.
+   Keep the token in local simulator storage, never in source or diagnostic output.
+   Release builds continue using device attestation.
 3. Regenerate native configuration and rebuild from the repository root:
 
    ```bash
@@ -132,8 +136,8 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer pnpm --filter @dit
 This follows [Apple's command-line tools settings](https://developer.apple.com/documentation/xcode/configuring-command-line-tools-settings).
 
 Project serialization and CocoaPods installation passed after the repair. The
-app now builds and launches. Native Conversation playback remains blocked by
-Firebase App Check debug attestation (HTTP 403).
+app now builds and launches. After registering its simulator development token,
+Conversation receives a station opener and starts native playback.
 
 ## Xcode 27: Device Hub replaces Simulator
 
@@ -182,5 +186,18 @@ editing `Pods.xcodeproj`, because CocoaPods regenerates that project.
 
 CocoaPods installation and an inspection of all generated pod configurations
 passed after applying the fix. The iPhone 17 iOS 26.5 build succeeded, installed, and launched on October 4.
-Metro served the app successfully. Conversation still requires registration of
-the simulator App Check debug token before a full QSO can be verified.
+Metro served the app successfully. The iPhone 17 simulator development token was
+registered with App Check and both the attestation exchange and Firebase AI model
+request returned HTTP 200. A native received opener and playback were also verified.
+Physical-device audio/haptics and a complete two-way contact remain pending.
+
+## Conversation retry recovery
+
+The Firebase AI chat implementations retain a rejected send promise after a
+failed request. Reusing that chat makes subsequent Retry calls fail before
+issuing another network request, even after App Check or connectivity recovers.
+Both adapters now use a shared wrapper that replaces a failed SDK chat using a
+copy of the accepted history. Failed and empty responses are excluded. The model,
+system instructions, and station callsign remain the same for the contact.
+The real-SDK regression test covers a successful turn, a failed request, and a
+successful retry, including the exact history sent to the server.

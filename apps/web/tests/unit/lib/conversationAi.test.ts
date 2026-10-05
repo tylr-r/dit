@@ -72,12 +72,14 @@ describe('startConversation', () => {
   })
 
   it('normalizes a 599 report to CW cut numbers', async () => {
-    const chat = {
+    startChatMock.mockReturnValue({
+      getHistory: async () => [],
       sendMessage: vi.fn().mockResolvedValue({
         response: { text: () => 'UR RST 599 599' },
       }),
-    }
+    })
+    const chat = startConversation({ callsign: 'K1ABC' })
 
-    await expect(sendTurn(chat as never, 'R')).resolves.toBe('UR RST 5NN 5NN')
+    await expect(sendTurn(chat, 'R')).resolves.toBe('UR RST 5NN 5NN')
   })
 })

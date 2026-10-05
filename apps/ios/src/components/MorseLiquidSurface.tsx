@@ -8,8 +8,6 @@ import {
   type ViewStyle,
 } from 'react-native'
 import {
-  default as Animated,
-  useAnimatedStyle,
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
@@ -31,8 +29,6 @@ type MorseLiquidSurfaceProps = {
 
 const SHADER_HUE = shaderTokens.liquidHue
 const SHADER_CYCLE_SECONDS = shaderTokens.liquidCycleSeconds
-const PAUSE_FADE_DURATION_MS = 420
-const RESUME_FADE_DURATION_MS = 320
 
 const SWIRL_SHADER_SOURCE = `
   uniform float iTime;
@@ -114,7 +110,7 @@ const useLayoutSize = () => {
   return { layout, onLayout }
 }
 
-/** Liquid shader layer for Morse UI surfaces or full-screen backgrounds. */
+/** Liquid shader background that freezes in place when animation is paused. */
 export function MorseLiquidSurface({
   targetFps = 24,
   paused = false,
@@ -154,7 +150,6 @@ export function MorseLiquidSurface({
   const frameIntervalMs = useSharedValue(
     1000 / Math.max(1, Math.round(targetFps)),
   )
-  const surfaceOpacity = useSharedValue(paused ? 0 : 1)
 
   const speed = useSharedValue(speedMultiplier)
   useEffect(() => {
@@ -169,16 +164,7 @@ export function MorseLiquidSurface({
     frameIntervalMs.value = 1000 / Math.max(1, Math.round(targetFps))
   }, [frameIntervalMs, targetFps])
 
-  useEffect(() => {
-    surfaceOpacity.value = withTiming(paused ? 0 : 1, {
-      duration: paused ? PAUSE_FADE_DURATION_MS : RESUME_FADE_DURATION_MS,
-    })
-  }, [paused, surfaceOpacity])
-
   const speedValue = useDerivedValue(() => speed.value, [speed])
-  const surfaceAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: surfaceOpacity.value,
-  }))
 
   useFrameCallback((frameInfo) => {
     if (pausedValue.value || frameInfo.timeSincePreviousFrame === null) {
@@ -240,7 +226,7 @@ export function MorseLiquidSurface({
       onLayout={onLayout}
       pointerEvents="none"
     >
-      <Animated.View style={[styles.canvasLayer, surfaceAnimatedStyle]}>
+      <View style={styles.canvasLayer}>
         <Canvas
           style={{ width: layout.width, height: layout.height }}
           pointerEvents="none"
@@ -249,7 +235,7 @@ export function MorseLiquidSurface({
             <Shader source={SWIRL_RUNTIME_EFFECT} uniforms={uniforms} />
           </RoundedRect>
         </Canvas>
-      </Animated.View>
+      </View>
     </View>
   )
 }

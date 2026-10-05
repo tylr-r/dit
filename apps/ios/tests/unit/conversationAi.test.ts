@@ -10,7 +10,7 @@ beforeEach(() => {
   vi.stubGlobal('__DEV__', true)
   mocks.getAI.mockReturnValue({})
   mocks.initialize.mockResolvedValue(mocks.appCheck)
-  mocks.model.mockReturnValue({ startChat: () => ({ sendMessage: mocks.send }) })
+  mocks.model.mockReturnValue({ startChat: () => ({ sendMessage: mocks.send, getHistory: async () => [] }) })
   mocks.send.mockResolvedValue({ response: { text: () => 'UR RST 599 K' } })
 })
 afterEach(() => vi.unstubAllGlobals())
@@ -49,4 +49,36 @@ describe('iOS station adapter', () => {
     mocks.send.mockResolvedValueOnce({ response: { text: () => ' ' } })
     await expect(chat.send('CQ')).rejects.toThrow('Empty response')
   })
+  it('retries a failed SDK request with only the previously accepted conversation history', async () => {
+    const sdk = await vi.importActual<typeof import('@firebase/ai')>('@firebase/ai')
+    const firebase = await vi.importActual<typeof import('@firebase/app')>('@firebase/app')
+    const app = firebase.initializeApp({ apiKey: 'test-key', projectId: 'test-project', appId: 'test-ios-app' }, 'qso-retry-test')
+    const ai = sdk.getAI(app, { backend: new sdk.GoogleAIBackend() })
+    mocks.model.mockImplementation((_, options) => sdk.getGenerativeModel(ai, options))
+    const response = (text: string) => new Response(JSON.stringify({
+      candidates: [{ content: { role: 'model', parts: [{ text }] } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(response('DE K1ABC K'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: 'Temporary outage' } }), { status: 503 }))
+      .mockResolvedValueOnce(response('R NAME PAT K'))
+    vi.stubGlobal('fetch', fetch)
+    try {
+      const { createConversation } = await import('../../src/lib/conversationAi')
+      const chat = await createConversation({ callsign: 'K1ABC' })
+      await expect(chat.send('CQ')).resolves.toBe('DE K1ABC K')
+      await expect(chat.send('NAME TYLER')).rejects.toThrow('Could not reach the other station')
+      await expect(chat.send('NAME TYLER')).resolves.toBe('R NAME PAT K')
+      expect(fetch).toHaveBeenCalledTimes(3)
+      const request = JSON.parse(fetch.mock.calls[2][1].body)
+      expect(request.contents).toEqual([
+        { role: 'user', parts: [{ text: 'CQ' }] },
+        { role: 'model', parts: [{ text: 'DE K1ABC K' }] },
+        { role: 'user', parts: [{ text: 'NAME TYLER' }] },
+      ])
+    } finally {
+      await firebase.deleteApp(app)
+    }
+  })
+
 })

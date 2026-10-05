@@ -51,6 +51,22 @@ describe('native QSO session', () => {
     unmount()
   })
 
+  it('checks completed reception before replying without committing or gating the turn', async () => {
+    const { result, unmount } = renderHook(() => useIosConversationSession(options))
+    await act(async () => result.current.start())
+    act(() => result.current.checkCopy())
+    expect(result.current.copyWasChecked).toBe(false)
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => { result.current.setTypedCopy('CQ'); result.current.checkCopy() })
+    expect(result.current.copyWasChecked).toBe(true)
+    expect(result.current.phase).toBe('finishing-copy')
+    expect(result.current.turns).toEqual([])
+    act(() => result.current.beginReply())
+    expect(result.current.phase).toBe('your-turn')
+    expect(result.current.typedCopy).toBe('CQ')
+    unmount()
+  })
+
   it('does not play a late station response after backgrounding', async () => {
     let resolve: (text: string) => void = () => {}
     mocks.send.mockImplementation(() => new Promise<string>((done) => { resolve = done }))

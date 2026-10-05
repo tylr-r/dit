@@ -335,8 +335,9 @@ function AppShell() {
       if (pendingRaf != null) cancelAnimationFrame(pendingRaf)
     }
   }, [nuxReady, postSplashOverlayOpacity])
+  const isQsoInProgress = conversationActive && !['idle', 'ended'].includes(conversation.phase)
   const isBackgroundAnimationPaused =
-    !isNuxActive && (isSystemLowPowerModeEnabled || isBackgroundIdle)
+    !isNuxActive && !isQsoInProgress && (isSystemLowPowerModeEnabled || isBackgroundIdle)
 
   const handleShowReference = useCallback(() => {
     setShowSettings(false)
