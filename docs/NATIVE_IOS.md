@@ -211,3 +211,8 @@ changes. The upload script supports `--validate` and verifies that the IPA match
 the prepared bundle, version, and build before contacting App Store Connect.
 Production archives remove dev-client autolinking temporarily and install from
 the frozen workspace lockfile.
+
+Release Xcode 27.0 (`27A266a`) is installed and selected as of October 16.
+A letter suffix alone does not identify a beta: this is Apple's shipping build.
+The App Store preflight explicitly accepts it; the earlier `27A5218g` beta stays
+rejected. Toolchain preflight is separate from archive success and Apple validation.

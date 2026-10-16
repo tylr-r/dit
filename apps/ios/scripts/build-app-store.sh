@@ -54,7 +54,9 @@ XCODE_VERSION="$(xcodebuild -version 2>/dev/null)" || {
 }
 XCODE_BUILD="$(awk '/Build version/ { print $3 }' <<< "$XCODE_VERSION")"
 XCODE_MAJOR="$(awk '/^Xcode/ { split($2, version, "."); print version[1] }' <<< "$XCODE_VERSION")"
-if [[ -z "$XCODE_BUILD" || "$XCODE_BUILD" =~ [a-z]$ ]]; then
+# Apple's shipping Xcode 27 build has a letter suffix too.
+# Verified at https://developer.apple.com/news/releases/ (September 14, 2026).
+if [[ -z "$XCODE_BUILD" || ( "$XCODE_BUILD" =~ [a-z]$ && "$XCODE_BUILD" != "27A266a" ) ]]; then
   echo "App Store archives require release or RC Xcode. Selected toolchain: $XCODE_VERSION" >&2
   echo "Install release Xcode, then set DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer." >&2
   exit 1

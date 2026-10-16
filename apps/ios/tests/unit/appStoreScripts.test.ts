@@ -34,8 +34,8 @@ describe('App Store preparation scripts', () => {
     expect(['app.json', 'package.json'].map((name) => readFileSync(join(appRoot, name), 'utf8'))).toEqual(before)
   })
 
-  it('checks a release toolchain from any directory without starting an archive', () => {
-    const result = runBuild('27A123', ['--check', '1'])
+  it.each(['27A123', '27A266a'])('checks release toolchain %s from any directory without starting an archive', (build) => {
+    const result = runBuild(build, ['--check', '1'])
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('No files changed')
     expect(result.stdout).toContain('(1)')
