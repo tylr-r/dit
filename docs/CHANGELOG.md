@@ -47,6 +47,8 @@ Compared against `2026.5.31`.
 
 ### Fixes
 
+- Conversation replays the same station response when retrying failed audio.
+
 - iOS: Listen answer cards respond to taps across the whole card.
 
 - iOS: Conversation keeps the background moving throughout a contact, even while listening without touching the screen.

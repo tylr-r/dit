@@ -221,6 +221,69 @@ describe('useConversationSession', () => {
     expect(result.current.errorMessage).toBeTruthy()
   })
 
+  it.each(['opener', 'reply', 'request retry'] as const)('retries the accepted %s after playback fails without another AI request', async (source) => {
+    vi.useFakeTimers()
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 0 })
+    sendTurnMock.mockResolvedValue('R FB 73')
+    const opts = baseOptions()
+    vi.mocked(opts.playMorseTone).mockRejectedValueOnce(new Error('Audio unavailable'))
+    if (source === 'request retry') sendTurnMock.mockRejectedValueOnce(new Error('offline'))
+    const { result } = renderHook(() => useConversationSession(opts))
+
+    await act(async () => result.current.start(source === 'reply' ? 'send' : 'receive'))
+    if (source === 'reply') {
+      act(() => {
+        result.current.handleKeyPressIn()
+        result.current.handleKeyPressOut()
+        vi.advanceTimersByTime(INTER_CHAR_GAP_MS)
+      })
+      await act(async () => result.current.sendReply())
+    }
+    if (source === 'request retry') await act(async () => result.current.retry())
+    expect(result.current.phase).toBe('error')
+    expect(result.current.incomingText).toBe('R FB 73')
+    const requestCount = sendTurnMock.mock.calls.length
+    const turns = result.current.turns
+    const acceptedPlayback = vi.mocked(opts.playMorseTone).mock.calls[0][0]
+
+    vi.mocked(opts.playMorseTone).mockRejectedValueOnce(new Error('Still unavailable'))
+    await act(async () => result.current.retry())
+    expect(result.current.phase).toBe('error')
+    expect(sendTurnMock).toHaveBeenCalledTimes(requestCount)
+    await act(async () => result.current.retry())
+
+    expect(sendTurnMock).toHaveBeenCalledTimes(requestCount)
+    expect(opts.playMorseTone).toHaveBeenCalledTimes(3)
+    expect(opts.playMorseTone).toHaveBeenLastCalledWith(acceptedPlayback)
+    expect(result.current.phase).toBe('finishing-copy')
+    expect(result.current.errorMessage).toBeNull()
+    expect(result.current.turns).toEqual(turns)
+    act(() => result.current.beginReply())
+    expect(result.current.turns).toEqual([...turns, { speaker: 'them', text: 'R FB 73' }])
+  })
+
+  it('resends a failed AI request after an earlier successful reception', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { cb(0); return 0 })
+    sendTurnMock.mockResolvedValueOnce('CQ TEST K').mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce('R FB 73')
+    const opts = baseOptions()
+    const { result } = renderHook(() => useConversationSession(opts))
+    await act(async () => result.current.start())
+    act(() => result.current.beginReply())
+    act(() => {
+      result.current.handleKeyPressIn()
+      result.current.handleKeyPressOut()
+      vi.advanceTimersByTime(INTER_CHAR_GAP_MS)
+    })
+    await act(async () => result.current.sendReply())
+    expect(result.current.phase).toBe('error')
+    await act(async () => result.current.retry())
+    expect(sendTurnMock).toHaveBeenCalledTimes(3)
+    expect(sendTurnMock).toHaveBeenLastCalledWith({}, 'E')
+    expect(result.current.incomingText).toBe('R FB 73')
+    expect(result.current.turns).toEqual([{ speaker: 'them', text: 'CQ TEST K' }, { speaker: 'you', text: 'E' }])
+  })
+
   it('keys a dit and commits it to the draft after the letter gap', async () => {
     sendTurnMock.mockResolvedValueOnce('K')
     vi.useFakeTimers()

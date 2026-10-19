@@ -120,6 +120,7 @@ export const useConversationSession = (
   const startDirectionRef = useRef<ConversationStartDirection>('receive')
   const lastOtherCallsignRef = useRef<string | undefined>(undefined)
   const pendingTheirTextRef = useRef('')
+  const playbackTextRef = useRef<string | null>(null)
   const playDurationRef = useRef(0)
   const playbackReadyRef = useRef(false)
 
@@ -257,6 +258,7 @@ export const useConversationSession = (
   }, [phase])
 
   const playTheirTurn = useCallback(async (text: string) => {
+    playbackTextRef.current = text
     const { characterWpm: wpm, toneFrequency: freq } = optionsRef.current
     const { code, normalized } = textToMorseCode(text)
     const timing = getListenTiming(wpm, wpm, LISTEN_MIN_UNIT_MS)
@@ -285,6 +287,7 @@ export const useConversationSession = (
       startDirectionRef.current = direction
       const operation = ++operationRef.current
       pendingTheirTextRef.current = ''
+      playbackTextRef.current = null
       chatRef.current = null
       // Start or resume Web Audio while this function is still running inside
       // the Start QSO click. The AI request resolves later, after Chrome's
@@ -351,6 +354,7 @@ export const useConversationSession = (
     handleDraftClear()
     setTurns((prev) => [...prev, { speaker: 'you', text }])
     lastReplyRef.current = text
+    playbackTextRef.current = null
     setPhase('sending')
     try {
       const responseText = await chatRef.current.send(text)
@@ -376,11 +380,17 @@ export const useConversationSession = (
     }
     setPhase('sending')
     try {
-      const message = lastReplyRef.current ?? KICKOFF_MESSAGE
-      const responseText = await chatRef.current.send(message)
-      if (operation !== operationRef.current) return
-      pendingTheirTextRef.current = responseText
-      await playTheirTurn(responseText)
+      if (playbackTextRef.current !== null) {
+        // The station already accepted this exchange. Retry only its audio.
+        void optionsRef.current.prepareToneEngine()
+        await playTheirTurn(playbackTextRef.current)
+      } else {
+        const message = lastReplyRef.current ?? KICKOFF_MESSAGE
+        const responseText = await chatRef.current.send(message)
+        if (operation !== operationRef.current) return
+        pendingTheirTextRef.current = responseText
+        await playTheirTurn(responseText)
+      }
     } catch (error) {
       if (operation !== operationRef.current) return
       setErrorMessage(
@@ -461,6 +471,7 @@ export const useConversationSession = (
     chatRef.current = null
     lastReplyRef.current = null
     pendingTheirTextRef.current = ''
+    playbackTextRef.current = null
     symbolBufferRef.current = ''
     draftRef.current = ''
     hasAutomaticTrailingSpaceRef.current = false

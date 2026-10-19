@@ -117,4 +117,21 @@ describe('native QSO session', () => {
     unmount()
   })
 
+  it('retries native playback of an accepted station response without requesting another', async () => {
+    mocks.play.mockRejectedValueOnce(new Error('Native audio unavailable'))
+    const { result, unmount } = renderHook(() => useIosConversationSession(options))
+    await act(async () => result.current.start())
+    expect(result.current.phase).toBe('error')
+    const playback = mocks.play.mock.calls[0][0]
+    await act(async () => result.current.retry())
+    expect(mocks.send).toHaveBeenCalledOnce()
+    expect(mocks.play).toHaveBeenCalledTimes(2)
+    expect(mocks.play).toHaveBeenLastCalledWith(playback)
+    expect(result.current.phase).toBe('their-turn-playing')
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => result.current.beginReply())
+    expect(result.current.turns).toEqual([{ speaker: 'them', text: 'CQ K1ABC K' }])
+    unmount()
+  })
+
 })
