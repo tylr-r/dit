@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import Animated, { cancelAnimation, Easing, useAnimatedProps, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import Svg, { G, Path, Rect } from 'react-native-svg'
 import { colors } from '../../design/tokens'
+import { BEZIER } from './animationTokens'
 import { IntroArtwork } from './IntroArtwork'
 import { useReduceMotion } from './useReduceMotion'
 
@@ -13,8 +14,8 @@ export function IntroListenIllustration() {
   const opacity = useSharedValue(1)
   useEffect(() => {
     opacity.value = reduceMotion ? 1 : withRepeat(withSequence(
-      withTiming(0.45, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+      withTiming(0.45, { duration: 1600, easing: Easing.bezier(...BEZIER.inOut) }),
+      withTiming(1, { duration: 1600, easing: Easing.bezier(...BEZIER.inOut) }),
     ), 2)
     return () => cancelAnimation(opacity)
   }, [reduceMotion, opacity])
