@@ -2,6 +2,10 @@
 
 This document captures the intended, shared behavior across web and iOS. iOS carries more features than web; platform-specific behavior is called out inline.
 
+## Supported iOS versions
+
+The next iOS release requires iOS 16.4 or later.
+
 ## Core input
 
 - Tap the big Morse button for dit, hold longer (dit threshold) for dah.

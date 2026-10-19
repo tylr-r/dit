@@ -73,12 +73,15 @@ Conversation uses `@react-native-firebase/ai` and `@react-native-firebase/app-ch
 are shared with web; the native adapter initializes App Check lazily when a
 contact starts and passes that instance explicitly to Firebase AI Logic.
 
-The local `withFirebaseAppCheck` plugin exposes `RNFBAppCheckModule` in the Swift
-bridging header and registers its provider before the app plugin calls
-`FirebaseApp.configure()`. RNFB 24's stock App Check Swift plugin can configure
-Firebase twice, so do not add it alongside this local plugin. Keep the local
-plugin before the Firebase App plugin in config because Expo executes dangerous
-mods from last to first. App Attest uses the
+The local `withFirebaseAppCheck` plugin imports `RNFBAppCheck` directly in Swift
+and registers its provider before calling `FirebaseApp.configure()`, then returns
+to Expo's launch method. The scene delegate starts React Native afterward.
+RNFB 24's app plugin cannot find its old startup anchor in the Expo 58 template;
+the local plugin owns initialization and runs first. Keep it **after** the
+Firebase App plugin in config because Expo executes dangerous mods from last to
+first. Do not add RNFB's stock App Check plugin alongside it, which can configure
+Firebase twice. The old App Check bridging-header import is removed to avoid
+loading a cached Clang module through the precompiled header. App Attest uses the
 production entitlement; debug builds use the debug provider.
 
 Before verifying the first native QSO:
@@ -140,35 +143,10 @@ Conversation receives a station opener and starts native playback.
 
 ## Xcode 27: Device Hub replaces Simulator
 
-Xcode 27 uses `DeviceHub.app` in `Contents/Applications` instead of
-`Simulator.app` in `Contents/Developer/Applications`. The installed Expo SDK 55
-CLI (55.0.25) only looked for Simulator and failed before building, even with
-working `simctl` and installed iOS runtimes. Changing `xcode-select` alone cannot
-restore the removed app.
-
-`patches/@expo__cli@55.0.25.patch` backports the discovery and process checks from
-[Expo PR 46757](https://github.com/expo/expo/pull/46757), with the device deep link
-from [Expo PR 46809](https://github.com/expo/expo/pull/46809). It accepts Device
-Hub's bundle ID, falls back to its Info.plist when LaunchServices has not indexed
-it, opens the selected device, falls back to opening Device Hub directly if its
-URL handler is unavailable, and makes window focus failure nonfatal. Older
-Xcode installations keep the Simulator path. The patch is applied by
-`pnpm install`; remove it when upgrading to a CLI release that includes these fixes.
-
-Verify the installed CLI without running a build:
-
-```bash
-pnpm --filter @dit/ios exec vitest run tests/unit/expoSimulatorCompatibility.test.ts
-DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer node -e 'require("./node_modules/@expo/cli/build/src/start/doctor/apple/SimulatorAppPrerequisite.js").SimulatorAppPrerequisite.instance.assertAsync().then(() => console.log("Simulator prerequisite passed"))'
-```
-
-The compatibility tests cover both apps, the unregistered bundle fallback,
-Device Hub opening, the direct-app fallback, and window focus failure. On
-October 4, the patched prerequisite passed and the existing iOS 26.5 iPhone 17
-booted. The first device-link window launch timed out; opening Device Hub
-directly succeeded, after which Expo's running-app check and final window
-activation passed. Native compilation and app playback remain separate
-verification steps.
+Xcode 27 uses Device Hub instead of Simulator.app. Expo 58's CLI includes Device
+Hub discovery, launch, and window focusing. The local Expo 55 CLI patch and its
+implementation-specific tests were removed during the upgrade. Keep the separate
+`xcode@3.0.1` patch, which fixes UUID generation in the project-writing library.
 
 ## Xcode 27: CocoaPods resource deployment targets
 
@@ -177,7 +155,7 @@ post-install step raises main pod targets to its minimum, but leaves resource
 bundle targets at their podspec values. This caused nine resource targets to
 fail the build plan with deployment targets from 9.0 to 13.4.
 
-The app explicitly configures iOS 15.1 through `expo-build-properties`.
+The app explicitly configures iOS 16.4 through `expo-build-properties`.
 `withMinimumPodDeploymentTarget` adds a post-install step that raises older pod
 targets, including resources, to that configured minimum. Targets that require
 a newer iOS version keep their requirement. Keep this in the plugin instead of
@@ -203,7 +181,7 @@ successful retry, including the exact history sent to the server.
 
 ## App Store release preparation
 
-See [the 2026.10.4 iOS handoff](releases/2026.10.4-ios.md) for the current version,
+See [the 2026.10.18 iOS handoff](releases/2026.10.18-ios.md) for the current version,
 metadata drafts, exact archive/validation/upload commands, and remaining device
 checks. The build script's `--check` verifies release/RC Xcode and version inputs
 without changing files. Beta toolchains are rejected before prebuild or package
@@ -212,7 +190,33 @@ the prepared bundle, version, and build before contacting App Store Connect.
 Production archives remove dev-client autolinking temporarily and install from
 the frozen workspace lockfile.
 
-Release Xcode 27.0 (`27A266a`) is installed and selected as of October 16.
+The selected installation reports Xcode 27.1 (`27A9275`) as of October 18.
+The October 16 preflight was verified with release Xcode 27.0 (`27A266a`).
 A letter suffix alone does not identify a beta: this is Apple's shipping build.
 The App Store preflight explicitly accepts it; the earlier `27A5218g` beta stays
 rejected. Toolchain preflight is separate from archive success and Apple validation.
+
+### Expo 58 scene lifecycle migration
+
+The October 18 build 1 archive used Expo 55 with Xcode 27.1. Its simulator binary
+repeatedly crashed in `UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`.
+Both the generated project and archived app lacked `UIApplicationSceneManifest`.
+
+The replacement candidate is **2026.10.18 (2)**, using Expo 58.0.14 and React Native
+0.88.0. [Expo's scene lifecycle](https://github.com/expo/fyi/blob/main/ios-scene-lifecycle.md)
+generates SceneDelegate.swift, registers it in the app target and Info.plist, and
+forwards lifecycle and link events through ExpoAppDelegate. Firebase initialization
+is adapted above. The App Store script rejects generated projects without a scene
+delegate when using Xcode 27 or later.
+
+The minimum iOS version is now 16.4. React and its renderer are aligned to 19.3;
+web uses the same React version so shared hooks resolve consistently in the hoisted
+workspace. The app explicitly declares its existing icon library and Expo DOM
+WebView, which otherwise resolved to the old SDK through automatic peer resolution.
+The unused root expo-module-scripts dependency was removed.
+
+Project generation, CocoaPods installation, lint/type checks and unit tests pass.
+A native rebuild and device launch are still required; passing those checks does
+not establish that the compiler diagnostic or launch failure is resolved in a
+fresh binary. Build 1 remains on disk and the upload script rejects its identity
+because the candidate is now build 2. See the release handoff for current checks.

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Svg, { Circle, G, Path } from 'react-native-svg'
 import { Animated, Easing } from 'react-native'
 import { colors } from '../design/tokens'

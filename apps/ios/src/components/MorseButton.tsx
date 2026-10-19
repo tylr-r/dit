@@ -8,7 +8,7 @@ import {
   TAP_HINT_ICON_SIZE,
   TAP_HINT_PULSE_MS,
 } from '@dit/core'
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Animated, Pressable, StyleSheet } from 'react-native'
 import { GlassView } from './GlassSurface'
 

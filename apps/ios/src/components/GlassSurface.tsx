@@ -8,7 +8,6 @@ import {
   type GlassStyle,
   type GlassViewProps,
 } from 'expo-glass-effect'
-import React from 'react'
 import { StyleSheet, View, type ViewStyle } from 'react-native'
 import { colors } from '../design/tokens'
 

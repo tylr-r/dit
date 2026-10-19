@@ -2,7 +2,7 @@
   "expo": {
     "name": "Dit",
     "slug": "dit-ios",
-    "version": "2026.10.4",
+    "version": "2026.10.18",
     "platforms": [
       "ios"
     ],
@@ -21,13 +21,13 @@
         }
       ],
       "expo-dev-client",
-      "./plugins/withFirebaseAppCheck",
       "@react-native-firebase/app",
+      "./plugins/withFirebaseAppCheck",
       [
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "15.1",
+            "deploymentTarget": "16.4",
             "useFrameworks": "static",
             "forceStaticLinking": [
               "RNFBApp",
@@ -108,7 +108,7 @@
           }
         ]
       },
-      "buildNumber": "1",
+      "buildNumber": "2",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

@@ -1,5 +1,5 @@
 import { Canvas, RoundedRect, Shader, Skia } from '@shopify/react-native-skia'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   StyleProp,

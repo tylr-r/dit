@@ -1,4 +1,3 @@
-import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { colors, radii, spacing } from '../design/tokens'
 import { DitButton } from './DitButton'

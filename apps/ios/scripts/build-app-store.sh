@@ -94,6 +94,13 @@ node -e "const fs=require('fs');const pkgPath=process.argv[1];const pkg=JSON.par
 
 pnpm exec expo prebuild --platform ios --no-install --clean
 
+if [[ "$XCODE_MAJOR" -ge 27 ]]; then
+  if ! /usr/libexec/PlistBuddy -c 'Print :UIApplicationSceneManifest:UISceneConfigurations:UIWindowSceneSessionRoleApplication:0:UISceneDelegateClassName' "$ROOT_DIR/ios/Dit/Info.plist" >/dev/null 2>&1; then
+    echo "Xcode 27 archives require a configured scene delegate to launch on iOS 27. Check Expo scene lifecycle generation." >&2
+    exit 1
+  fi
+fi
+
 (
   cd "$ROOT_DIR/ios"
   pod install

@@ -1,0 +1,9 @@
+Dit teaches Morse recognition by ear and fluent keying. An account is optional; the learning modes can be reviewed while signed out.
+
+Conversation: Choose Conversation from the mode menu. Choose Send first or Receive first, then Allow the Google Gemini sharing prompt. Receive first plays a fictional station opener. After playback, choose Reply to key a response. Copying and checking are optional. The Prosigns reference explains the continuous signals supported for listening and keying. This feature requires internet access and uses Google Gemini through Firebase AI Logic. Keyed messages and conversation history are sent to Google; typed reception copy stays on the device. The fictional callsign and local-hour greeting context are also sent. Conversations do not affect learning scores or sync to the user's account. Release builds use App Attest with DeviceCheck fallback.
+
+Listen: Choose Listen, then Words for common English words or Q codes. Start listening. Answer choices stay hidden until playback finishes. Q-code meanings appear after answering. These results do not affect per-letter learning scores.
+
+Custom text: In Listen, choose Use custom, enter a passage, and choose Save, then Play. Pause, resume, and optional copy checking are available. The saved passage stays on the device; passage and copy are never synced to the user's account.
+
+The app supports iPhone and iPad running iOS 16.4 or later. No non-exempt encryption is used.

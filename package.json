@@ -19,7 +19,6 @@
     "test:e2e": "turbo run test:e2e"
   },
   "devDependencies": {
-    "expo-module-scripts": "^55.0.2",
     "turbo": "^2.9.16"
   },
   "pnpm": {
@@ -32,8 +31,7 @@
       "xcode>uuid": "^14.0.0"
     },
     "patchedDependencies": {
-      "xcode@3.0.1": "patches/xcode@3.0.1.patch",
-      "@expo/cli@55.0.25": "patches/@expo__cli@55.0.25.patch"
+      "xcode@3.0.1": "patches/xcode@3.0.1.patch"
     },
     "onlyBuiltDependencies": [
       "@firebase/util",

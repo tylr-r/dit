@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-native'
-import React from 'react'
 import { View } from 'react-native'
 import { DitButton } from './DitButton'
 

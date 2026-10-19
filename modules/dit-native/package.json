@@ -5,11 +5,11 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "expo-modules-core": "^55.0.23"
+    "expo-modules-core": "~58.0.22"
   },
   "peerDependencies": {
-    "expo": "^55.0.0",
-    "react": "^19.2.0",
-    "react-native": "^0.83.0"
+    "expo": "^58.0.0",
+    "react": "^19.3.0",
+    "react-native": "^0.88.0"
   }
 }

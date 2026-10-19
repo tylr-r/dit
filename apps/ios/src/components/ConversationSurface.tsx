@@ -5,7 +5,7 @@ import {
   type ConversationTurn,
   type UseConversationSessionResult,
 } from '@dit/core'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react'
 import { Alert, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, radii, spacing } from '../design/tokens'
@@ -25,7 +25,7 @@ function Action({ variant = 'control', ...props }: ButtonProps & { variant?: 'co
 /** Sound-first QSO practice with concealed reception and an explicit reply handoff. */
 export function ConversationSurface({ session: s, onCopyFocusChange }: Props) {
   const insets = useSafeAreaInsets()
-  const contentRef = useRef<ScrollView>(null)
+  const contentRef = useRef<ComponentRef<typeof ScrollView>>(null)
   const followingLatest = useRef(true)
   const copyFocused = useRef(false)
   const workbenchY = useRef(0)

@@ -865,7 +865,7 @@ export function NuxModal({
   // spawn a ghost that tweens toward the MorseButton's known geometry, and
   // fire the step change partway through so the real key is mounted before
   // the ghost fades out.
-  const ctaSlotRef = useRef<View | null>(null)
+  const ctaSlotRef = useRef<React.ComponentRef<typeof View> | null>(null)
   const [morphSource, setMorphSource] = useState<MorphRect | null>(null)
   const [morphActive, setMorphActive] = useState(false)
 

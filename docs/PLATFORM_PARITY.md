@@ -16,6 +16,12 @@ registered, and attestation, model response, and native opener playback are veri
 A full two-way contact and physical-device audio/haptics remain pending.
 Unit tests and TypeScript checks do not replace native review.
 
+October 18 release compatibility: the iOS candidate now uses Expo 58 and requires
+iOS 16.4 or later. The previous Expo 55 binary crashes on iOS 27 when built with
+Xcode 27. Scene generation and pod installation now pass; the replacement binary
+still needs native build and device verification. The October 4 rendered and
+runtime evidence above applies to the earlier toolchain.
+
 ## Legend
 
 - ✅ shipped and at parity with the spec

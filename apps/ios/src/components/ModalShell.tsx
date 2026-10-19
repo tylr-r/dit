@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { colors, spacing } from '../design/tokens'
 

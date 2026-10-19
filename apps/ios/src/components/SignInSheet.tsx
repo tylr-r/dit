@@ -291,7 +291,7 @@ export function SignInSheet({
 
 const styles = StyleSheet.create({
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   keyboardWrap: {
     position: 'absolute',
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 12, 18, 0.6)',
   },
   sheetTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10, 12, 18, 0.35)',
   },
   grabber: {

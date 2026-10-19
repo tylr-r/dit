@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-18: Require iOS 16.4 for the next iOS release.** Use Expo's supported scene lifecycle for iOS 27 compatibility. Accept the SDK's newer OS minimum instead of maintaining a custom lifecycle backport for older devices.
+
 - **2026-10-18: Conversation supports the continuous signals its reference teaches.** Play standalone prosign labels as joined Morse characters and accept their joined keyed input. Keep callsigns and other words letter-spaced, reveal a prosign label only once its whole sound has finished, and keep this vocabulary out of scored character practice and custom Listen.
 
 - **2026-10-04: Native AI sharing requires explicit permission per contact.** Before a QSO starts, identify Google Gemini and ask whether the operator allows sharing keyed messages for replies. Cancel stays silent and creates no station session. Keep typed copy local. Retries belong to the same approved contact; new contacts ask again. The public privacy policy must describe the actual sharing before release.

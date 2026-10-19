@@ -16,6 +16,8 @@ Compared against `2026.5.31`.
 
 ### Changes
 
+- iOS: This update requires iOS 16.4 or later.
+
 - iOS: Conversation asks permission before sharing your keyed messages with Google Gemini.
 
 - iOS: Conversation separates copying from keying, with optional copy checking before you reply.

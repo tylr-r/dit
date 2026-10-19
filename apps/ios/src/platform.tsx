@@ -9,7 +9,7 @@ import {
   type StorageAdapter,
 } from '@dit/core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Alert, AppState, InteractionManager, type AppStateStatus } from 'react-native'
+import { Alert, AppState, type AppStateStatus } from 'react-native'
 import type { ReactNode } from 'react'
 import { auth } from './firebase'
 import {
@@ -42,11 +42,11 @@ const appLifecycle: AppLifecycleAdapter = {
 }
 
 const showAlert = (title: string, message: string | undefined, actions: DialogAction[]) => {
-  InteractionManager.runAfterInteractions(() => {
+  requestIdleCallback(() => {
     requestAnimationFrame(() => {
       Alert.alert(title, message, actions)
     })
-  })
+  }, { timeout: 1000 })
 }
 
 const dialog: DialogAdapter = {
