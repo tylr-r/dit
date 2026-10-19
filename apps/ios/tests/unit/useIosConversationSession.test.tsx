@@ -33,6 +33,51 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('native QSO session', () => {
+  it.each(['reply', 'end', 'retry then reply'] as const)('keeps one received turn after replay and %s', async (action) => {
+    const { result, unmount } = renderHook(() => useIosConversationSession(options))
+    await act(async () => result.current.start())
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => result.current.beginReply())
+    const receivedTurns = [{ speaker: 'them', text: 'CQ K1ABC K' }]
+    expect(result.current.turns).toEqual(receivedTurns)
+
+    mocks.state.finished = false
+    if (action === 'retry then reply') mocks.play.mockRejectedValueOnce(new Error('Audio unavailable'))
+    await act(async () => result.current.replay())
+    if (action === 'retry then reply') {
+      expect(result.current.phase).toBe('error')
+      await act(async () => result.current.retry())
+    }
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => action === 'end' ? result.current.end() : result.current.beginReply())
+    expect(result.current.turns).toEqual(receivedTurns)
+    expect(mocks.send).toHaveBeenCalledOnce()
+    unmount()
+  })
+
+  it('commits separate station responses even when their text is identical', async () => {
+    const { result, unmount } = renderHook(() => useIosConversationSession(options))
+    await act(async () => result.current.start())
+    await act(async () => result.current.replay())
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => result.current.beginReply())
+    act(() => {
+      result.current.handleKeyPressIn()
+      result.current.handleKeyPressOut()
+      vi.advanceTimersByTime(INTER_CHAR_GAP_MS)
+    })
+    mocks.state.finished = false
+    await act(async () => result.current.sendReply())
+    act(() => { mocks.state.finished = true; vi.advanceTimersByTime(32) })
+    act(() => result.current.beginReply())
+    expect(result.current.turns).toEqual([
+      { speaker: 'them', text: 'CQ K1ABC K' },
+      { speaker: 'you', text: 'E' },
+      { speaker: 'them', text: 'CQ K1ABC K' },
+    ])
+    unmount()
+  })
+
   it.each([['AR', '.-.-.'], ['SK', '...-.-']])('accepts the joined %s signal from native paddles', async (name, code) => {
     const { result, unmount } = renderHook(() => useIosConversationSession(options))
     await act(async () => result.current.start('send'))

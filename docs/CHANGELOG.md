@@ -47,6 +47,8 @@ Compared against `2026.5.31`.
 
 ### Fixes
 
+- Conversation no longer repeats a received message in the transcript after Replay.
+
 - iOS: Returning learners can go back from reminders and repeat the Morse key tutorial without being advanced automatically.
 - Conversation plays prosigns as continuous sounds and recognizes them when you key them.
 

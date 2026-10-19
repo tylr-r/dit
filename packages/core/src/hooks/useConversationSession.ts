@@ -256,14 +256,15 @@ export const useConversationSession = (
     return () => cancelAnimationFrame(frame)
   }, [phase])
 
-  const playTheirTurn = useCallback(async (text: string) => {
+  const playTheirTurn = useCallback(async (text: string, { newTransmission = false } = {}) => {
     playbackTextRef.current = text
     const { characterWpm: wpm, toneFrequency: freq } = optionsRef.current
     const { code, normalized } = textToConversationMorseCode(text)
     const timing = getListenTiming(wpm, wpm, LISTEN_MIN_UNIT_MS)
     const duration = getListenPlaybackDurationMs(code, timing.unitMs, timing.interCharacterGapMs)
     playbackReadyRef.current = false
-    pendingTheirTextRef.current = normalized
+    // Replay and audio recovery keep the transmission's existing commit state.
+    if (newTransmission) pendingTheirTextRef.current = normalized
     playDurationRef.current = duration
     setIncomingText(normalized)
     setIncomingCode(code)
@@ -319,8 +320,7 @@ export const useConversationSession = (
         }
         const opener = await chat.send(KICKOFF_MESSAGE)
         if (operation !== operationRef.current) return
-        pendingTheirTextRef.current = opener
-        await playTheirTurn(opener)
+        await playTheirTurn(opener, { newTransmission: true })
       } catch (error) {
         if (operation !== operationRef.current) return
         setErrorMessage(
@@ -358,8 +358,7 @@ export const useConversationSession = (
     try {
       const responseText = await chatRef.current.send(text)
       if (operation !== operationRef.current) return
-      pendingTheirTextRef.current = responseText
-      await playTheirTurn(responseText)
+      await playTheirTurn(responseText, { newTransmission: true })
     } catch (error) {
       if (operation !== operationRef.current) return
       setErrorMessage(
@@ -387,8 +386,7 @@ export const useConversationSession = (
         const message = lastReplyRef.current ?? KICKOFF_MESSAGE
         const responseText = await chatRef.current.send(message)
         if (operation !== operationRef.current) return
-        pendingTheirTextRef.current = responseText
-        await playTheirTurn(responseText)
+        await playTheirTurn(responseText, { newTransmission: true })
       }
     } catch (error) {
       if (operation !== operationRef.current) return
