@@ -215,8 +215,19 @@ workspace. The app explicitly declares its existing icon library and Expo DOM
 WebView, which otherwise resolved to the old SDK through automatic peer resolution.
 The unused root expo-module-scripts dependency was removed.
 
-Project generation, CocoaPods installation, lint/type checks and unit tests pass.
-A native rebuild and device launch are still required; passing those checks does
-not establish that the compiler diagnostic or launch failure is resolved in a
-fresh binary. Build 1 remains on disk and the upload script rejects its identity
-because the candidate is now build 2. See the release handoff for current checks.
+The simulator build exposed two additional compatibility issues. Storybook's
+automatically resolved Gesture Handler 2.x included a removed React Native header.
+Its existing native peers are now declared in devDependencies: Gesture Handler
+3.4, DateTimePicker 9.2.1, and Slider 5.2.1. Gesture Handler is excluded from Expo's
+version recommendation because the [maintainer compatibility table](https://docs.swmansion.com/react-native-gesture-handler/docs/fundamentals/getting-started/)
+requires 3.4 for React Native 0.88, while Expo 58 recommends 3.3.
+Metro now uses Expo's default package exports resolution. Disabling it prevented
+expo-asset from resolving React Native's exported internal entry point.
+
+Project generation, CocoaPods installation, lint/type checks and 420 unit tests
+pass. The Release build installs and runs on iPhone 18 Pro with iOS 27.0 using
+Xcode 27.1. Its build log contains no compiler errors or prior App Check
+precompiled-module diagnostic. Physical-device validation and a fresh App Store
+archive remain required. Build 1 remains on disk and the upload script rejects
+its identity because the candidate is now build 2. See the release handoff for
+the tested flows and remaining checks.

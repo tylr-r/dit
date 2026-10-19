@@ -18,9 +18,11 @@ Unit tests and TypeScript checks do not replace native review.
 
 October 18 release compatibility: the iOS candidate now uses Expo 58 and requires
 iOS 16.4 or later. The previous Expo 55 binary crashes on iOS 27 when built with
-Xcode 27. Scene generation and pod installation now pass; the replacement binary
-still needs native build and device verification. The October 4 rendered and
-runtime evidence above applies to the earlier toolchain.
+Xcode 27. The replacement Release binary now builds, installs, and runs on the
+iPhone 18 Pro simulator with iOS 27.0. Beginner onboarding, key input, Practice,
+Listen, and Settings have received simulator smoke testing. Physical-device
+audio, haptics, and production attestation remain pending. The October 4 evidence
+above applies to the earlier toolchain; see the release handoff for current coverage.
 
 ## Legend
 
