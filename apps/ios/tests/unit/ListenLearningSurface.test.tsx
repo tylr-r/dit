@@ -12,12 +12,21 @@ vi.mock('react-native', () => ({
   View: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   ScrollView: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  StyleSheet: { create: (styles: unknown) => styles },
+  Pressable: ({ children, style, onPress, disabled, accessibilityLabel }: {
+    children: React.ReactNode; style: unknown; onPress: () => void; disabled?: boolean; accessibilityLabel?: string
+  }) => <button style={Object.assign({}, ...[style].flat(Infinity).filter(Boolean))}
+    onClick={onPress} disabled={disabled} aria-label={accessibilityLabel}>{children}</button>,
+  StyleSheet: {
+    create: (styles: unknown) => styles,
+    flatten: (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean)),
+  },
   AppState: { addEventListener: () => ({ remove() {} }) },
 }))
-vi.mock('../../src/components/DitButton', () => ({
-  DitButton: ({ text, onPress, disabled, accessibilityLabel }: { text: string; onPress: () => void; disabled?: boolean; accessibilityLabel?: string }) =>
-    <button onClick={onPress} disabled={disabled} aria-label={accessibilityLabel}>{text}</button>,
+vi.mock('@expo/vector-icons', () => ({ MaterialIcons: () => null }))
+vi.mock('expo-symbols', () => ({ SymbolView: () => null }))
+vi.mock('../../src/components/GlassSurface', () => ({
+  GlassView: ({ children, style }: { children: React.ReactNode; style: unknown }) =>
+    <div style={Object.assign({}, ...[style].flat(Infinity).filter(Boolean))}>{children}</div>,
 }))
 vi.mock('../../src/components/ListenSineWave', () => ({ ListenSineWave: () => <div /> }))
 vi.mock('../../src/components/CustomListenSurface', () => ({ CustomListenSurface: () => <div>Custom listening</div> }))
@@ -64,6 +73,12 @@ describe('iOS Listen learning surfaces', () => {
     const answers = screen.getAllByLabelText(/^Answer /)
     expect(answers).toHaveLength(4)
     expect(answers.every((button) => !button.hasAttribute('disabled'))).toBe(true)
+    for (const answer of answers) {
+      expect(answer.parentElement?.style.width).toBe('47%')
+      expect(answer.parentElement?.style.minHeight).toBe('56px')
+      expect(answer.style.width).toBe('100%')
+      expect(answer.style.alignSelf).toBe('stretch')
+    }
     fireEvent.click(screen.getByText('Replay'))
     await flush()
     expect(screen.getAllByLabelText('Answer concealed during playback')).toHaveLength(4)

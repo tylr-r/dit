@@ -47,6 +47,8 @@ Compared against `2026.5.31`.
 
 ### Fixes
 
+- iOS: Listen answer cards respond to taps across the whole card.
+
 - iOS: Conversation keeps the background moving throughout a contact, even while listening without touching the screen.
 
 - iOS: Conversation keeps the Morse key at the bottom while you reply.

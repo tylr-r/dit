@@ -248,8 +248,8 @@ const getPressableFillStyle = (width?: SizeValue, height?: SizeValue) => {
   }
 
   return {
-    ...(width != null ? { width } : null),
-    ...(height != null ? { height } : null),
+    ...(width != null ? { width: '100%' as const } : null),
+    ...(height != null ? { height: '100%' as const } : null),
   }
 }
 
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   pressable: {
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
   },
