@@ -79,9 +79,9 @@ export const getListenPlaybackDurationMs = (
   return elapsedMs + interCharacterGapMs
 }
 
-/** Returns the portion of normalized text whose Morse tones have completed. */
+/** Returns completed text; token arrays support multi-letter labels for one sound. */
 export const getReceivedTextAtElapsedMs = (
-  text: string,
+  text: string | readonly string[],
   code: string,
   unitMs: number,
   elapsedMs: number,

@@ -33,6 +33,24 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('native QSO session', () => {
+  it.each([['AR', '.-.-.'], ['SK', '...-.-']])('accepts the joined %s signal from native paddles', async (name, code) => {
+    const { result, unmount } = renderHook(() => useIosConversationSession(options))
+    await act(async () => result.current.start('send'))
+    for (const symbol of code) {
+      const paddle = symbol === '.' ? '.' : '-'
+      act(() => {
+        result.current.handleMorseSymbolPressIn(paddle)
+        result.current.handleMorseSymbolPressOut(paddle)
+        vi.advanceTimersByTime(paddle === '.' ? 100 : 200)
+      })
+    }
+    act(() => vi.advanceTimersByTime(INTER_CHAR_GAP_MS))
+    expect(result.current.draft).toBe(name)
+    await act(async () => result.current.sendReply())
+    expect(mocks.send).toHaveBeenCalledWith(name)
+    unmount()
+  })
+
   it('enters silently, follows native completion, and waits indefinitely for the explicit handoff', async () => {
     const { result, unmount } = renderHook(() => useIosConversationSession(options))
     expect(mocks.create).not.toHaveBeenCalled()

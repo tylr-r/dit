@@ -1,7 +1,7 @@
 import {
   CONVERSATION_PROSIGNS,
   customListenDiff,
-  getReceivedTextAtElapsedMs,
+  getReceivedConversationTextAtElapsedMs,
   type ConversationTurn,
   type UseConversationSessionResult,
 } from '@dit/core'
@@ -67,7 +67,7 @@ export function ConversationSurface({ session: s, onCopyFocusChange }: Props) {
   }, [receiving, s.phase, s.playDurationMs, s.incomingCode])
 
   const revealTurn = (turn: ConversationTurn) => setRevealedTurns((current) => new Set([...current, turn]))
-  const liveText = showLiveLetters && receiving ? getReceivedTextAtElapsedMs(
+  const liveText = showLiveLetters && receiving ? getReceivedConversationTextAtElapsedMs(
     s.incomingText, s.incomingCode, s.playUnitMs, elapsed, s.playInterCharacterGapMs,
   ) : ''
   const status = s.phase === 'their-turn-playing' ? 'Listening…'

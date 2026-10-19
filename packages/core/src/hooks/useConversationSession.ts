@@ -1,7 +1,6 @@
 import { clearTimer, now, DOT_THRESHOLD_MS, INTER_CHAR_GAP_MS, LISTEN_MIN_UNIT_MS, WORD_GAP_EXTRA_MS, type TimeoutHandle } from '../utils/appState'
-import { decodeMorseCode } from '../utils/morseUtils'
 import { getListenTiming, getListenPlaybackDurationMs } from '../utils/listenWave'
-import { textToMorseCode } from '../utils/customListenText'
+import { decodeConversationMorseCode, textToConversationMorseCode } from '../utils/conversationMorse'
 import { useMorsePaddleInput } from './useMorsePaddleInput'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConversationAiError, generatePracticeCallsign, type StartConversationOptions } from '../utils/conversation'
@@ -153,7 +152,7 @@ export const useConversationSession = (
       const code = symbolBufferRef.current
       symbolBufferRef.current = ''
       if (code) {
-        const letter = decodeMorseCode(code)
+        const letter = decodeConversationMorseCode(code)
         if (letter) {
           draftRef.current += letter
           hasAutomaticTrailingSpaceRef.current = false
@@ -260,7 +259,7 @@ export const useConversationSession = (
   const playTheirTurn = useCallback(async (text: string) => {
     playbackTextRef.current = text
     const { characterWpm: wpm, toneFrequency: freq } = optionsRef.current
-    const { code, normalized } = textToMorseCode(text)
+    const { code, normalized } = textToConversationMorseCode(text)
     const timing = getListenTiming(wpm, wpm, LISTEN_MIN_UNIT_MS)
     const duration = getListenPlaybackDurationMs(code, timing.unitMs, timing.interCharacterGapMs)
     playbackReadyRef.current = false

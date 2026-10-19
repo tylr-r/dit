@@ -204,7 +204,7 @@ describe('useOnboardingActions', () => {
 
     expect(beginner.setNuxStep).toHaveBeenCalledWith('beginner_intro')
 
-    const known = buildOptions()
+    const known = buildOptions({ tutorialTapCount: 3, tutorialHoldCount: 3 })
     known.learnerProfileRef.current = 'known'
     const { result: knownResult } = renderOnboardingHook(known)
 
@@ -213,6 +213,8 @@ describe('useOnboardingActions', () => {
     })
 
     expect(known.setNuxStep).toHaveBeenCalledWith('button_tutorial')
+    expect(known.setTutorialTapCount).toHaveBeenCalledWith(0)
+    expect(known.setTutorialHoldCount).toHaveBeenCalledWith(0)
   })
 
   it('persists the pending NUX status via platform storage on replay', async () => {

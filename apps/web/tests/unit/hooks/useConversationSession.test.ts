@@ -50,6 +50,37 @@ afterEach(() => {
 })
 
 describe('useConversationSession', () => {
+  it.each([
+    ['AR', '.-.-.'], ['SK', '...-.-'], ['BT', '-...-'], ['AS', '.-...'],
+    ['KN', '-.--.'], ['BK', '-...-.-'], ['HH', '........'],
+  ])('plays %s as a continuous Conversation signal', async (text, code) => {
+    sendTurnMock.mockResolvedValueOnce(`73 ${text}`)
+    const opts = baseOptions()
+    const { result } = renderHook(() => useConversationSession(opts))
+    await act(async () => result.current.start())
+    expect(opts.playMorseTone).toHaveBeenCalledWith(expect.objectContaining({ code: `--... ...-- / ${code}` }))
+    expect(result.current.incomingText).toBe(`73 ${text}`)
+  })
+
+  it.each([['AR', '.-.-.'], ['SK', '...-.-']])('accepts joined %s from the Morse key and sends its label', async (text, code) => {
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useConversationSession(baseOptions()))
+    await act(async () => result.current.start('send'))
+    for (const symbol of code) {
+      act(() => {
+        result.current.handleKeyPressIn()
+        vi.advanceTimersByTime(symbol === '.' ? 50 : 250)
+        result.current.handleKeyPressOut()
+        vi.advanceTimersByTime(50)
+      })
+    }
+    act(() => vi.advanceTimersByTime(INTER_CHAR_GAP_MS))
+    expect(result.current.draft).toBe(text)
+    sendTurnMock.mockResolvedValueOnce('73 SK')
+    await act(async () => result.current.sendReply())
+    expect(sendTurnMock).toHaveBeenLastCalledWith({}, text)
+  })
+
   it.each([false, true])('only skips a freshly automatic space when backspacing: %s', async (withSpace) => {
     vi.useFakeTimers()
     const { result } = renderHook(() => useConversationSession(baseOptions()))

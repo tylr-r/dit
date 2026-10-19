@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-18: Conversation supports the continuous signals its reference teaches.** Play standalone prosign labels as joined Morse characters and accept their joined keyed input. Keep callsigns and other words letter-spaced, reveal a prosign label only once its whole sound has finished, and keep this vocabulary out of scored character practice and custom Listen.
+
 - **2026-10-04: Native AI sharing requires explicit permission per contact.** Before a QSO starts, identify Google Gemini and ask whether the operator allows sharing keyed messages for replies. Cancel stays silent and creates no station session. Keep typed copy local. Retries belong to the same approved contact; new contacts ask again. The public privacy policy must describe the actual sharing before release.
 
 - **2026-10-04: Conversation labels use the context already on screen.** Use a compact **Reveal** text button for a received message and one **Reply** prompt in the empty draft. Do not repeat turn context in long button labels or stack instructional labels above the key. Keep fuller context available to accessibility when needed.

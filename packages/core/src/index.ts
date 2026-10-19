@@ -331,4 +331,5 @@ export { useListenPhraseSession } from './hooks/useListenPhraseSession'
 export type { ListenPhraseStatus, UseListenPhraseSessionOptions, UseListenPhraseSessionResult } from './hooks/useListenPhraseSession'
 
 export * from './utils/conversation'
+export * from './utils/conversationMorse'
 export * from './hooks/useConversationSession'

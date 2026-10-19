@@ -216,6 +216,10 @@ export const useOnboardingActions = ({
           setNuxStep('beginner_stages')
           return
         case 'reminder':
+          if (learnerProfileRef.current === 'known') {
+            setTutorialTapCount(0)
+            setTutorialHoldCount(0)
+          }
           setNuxStep(learnerProfileRef.current === 'known' ? 'button_tutorial' : 'beginner_intro')
           return
         case 'known_tour':

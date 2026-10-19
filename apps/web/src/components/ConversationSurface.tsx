@@ -1,7 +1,7 @@
 import {
   customListenDiff,
   CONVERSATION_PROSIGNS,
-  getReceivedTextAtElapsedMs,
+  getReceivedConversationTextAtElapsedMs,
   type DiffToken,
 } from '@dit/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -293,7 +293,7 @@ export function ConversationSurface({
         elapsedTextRef.current.textContent = formatPlaybackTime(elapsed)
       }
       if (liveLettersRef.current) {
-        liveLettersRef.current.textContent = getReceivedTextAtElapsedMs(
+        liveLettersRef.current.textContent = getReceivedConversationTextAtElapsedMs(
           incomingText,
           incomingCode,
           playUnitMs,
