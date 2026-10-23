@@ -16,6 +16,9 @@ Compared against `2026.5.31`.
 
 ### Changes
 
+- iOS: Listen now uses a segmented control for Characters and Words, with a menu for Common words and Q codes.
+- iOS: Word listening exercises sit centered below the waveform.
+
 - iOS: This update requires iOS 16.4 or later.
 
 - iOS: Conversation asks permission before sharing your keyed messages with Google Gemini.
@@ -48,6 +51,10 @@ Compared against `2026.5.31`.
 - Web: Settings, Learning, and sign-in no longer open on top of each other.
 
 ### Fixes
+
+- iOS: Replay stays centered while answering words and Q codes.
+
+- iOS: Waveforms in word and custom-text listening now extend across the screen.
 
 - Conversation no longer repeats a received message in the transcript after Replay.
 

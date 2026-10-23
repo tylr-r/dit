@@ -353,8 +353,11 @@ and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
 
 ### Learning surfaces on iOS
 
-- Reuse the native glass buttons, existing text colors, and audio-reactive wave. Characters / Words and Common words / Q codes use quiet text selectors; selection uses surface/text contrast.
+- Reuse the existing text colors and audio-reactive wave. Characters / Words uses a system segmented picker anchored below the top bar; Common words / Q codes uses a compact native menu picker above the Words exercise. Use sentence-case labels and system selection styling. Separate glass action buttons make content selection look like competing actions.
+- Words and custom-text waves span the available screen width. Put horizontal padding on the selectors, text, and answer grid, never on the shared scroll container that also holds the wave. The wave remains abstract audio-reactive feedback and must not expose a countable character pattern.
+- In Words, center the prompt, answers, feedback, and actions together between the visible waveform midline and the bottom safe area, with equal top and bottom padding. The lower scroll viewport starts at the wave's midline; do not count the lower half of its transparent canvas as extra top spacing. Keep the selectors and wave in place. Let the exercise grow and scroll on small screens or with larger text rather than clipping its content.
 - Words uses a stable 2×2 answer grid. Identical ellipsis placeholders conceal every answer during playback and replay, including accessibility labels. Reveal all choices together only after native audio completes. Feedback and Q-code meanings occupy a reserved slot so Replay and Next stay anchored.
+- Replay stays centered on the screen in its own action column. Next occupies the trailing column, balanced by an empty leading column, so revealing it never shifts Replay. An invisible Next button must not offset the visible control.
 - Custom text uses a native edit sheet and a scrollable playback surface. The source remains hidden until Reveal. The system keyboard is the native copy input; copy is disabled in Setup and Paused. Progress and the wave share the native playback clock and freeze on Pause.
 - Progress keeps native sheet chrome and the guided-course banner, but groups letters by mastery and adds recognition bars and an average-recognition summary. Only mastered tiles expose patterns and score colors.
 - These surfaces require a native rebuild and rendered review on a small iPhone, with the copy keyboard and Reduce Motion enabled, before claiming visual parity.

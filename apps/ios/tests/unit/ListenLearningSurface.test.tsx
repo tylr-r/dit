@@ -8,6 +8,26 @@ import { playMorseTone } from '../../src/utils/tone'
 
 const storage = vi.hoisted(() => ({ getItem: vi.fn(), setItem: vi.fn().mockResolvedValue(undefined) }))
 vi.mock('@dit/core', async (original) => ({ ...await original<typeof import('@dit/core')>(), usePlatform: () => ({ storage }) }))
+vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 34, left: 0 }) }))
+vi.mock('@expo/ui/swift-ui/modifiers', () => ({
+  tag: (value: string) => ({ tag: value }),
+  disabled: (value: boolean) => ({ disabled: value }),
+  pickerStyle: () => ({}), accessibilityLabel: () => ({}), labelsHidden: () => ({}), frame: () => ({}),
+}))
+vi.mock('@expo/ui/swift-ui', () => ({
+  Host: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Text: () => null,
+  Picker: ({ label, selection, onSelectionChange, children }: {
+    label: string; selection: string | null; onSelectionChange: (value: string) => void; children: React.ReactNode
+  }) => <select aria-label={label} value={selection ?? ''} onChange={(event) => onSelectionChange(event.target.value)}>
+    {selection === null && <option value="" hidden />}
+    {React.Children.map(children, (child) => {
+      if (!React.isValidElement<{ children: React.ReactNode; modifiers: { tag?: string; disabled?: boolean }[] }>(child)) return null
+      const value = child.props.modifiers.find((modifier) => modifier.tag)?.tag
+      return <option value={value} disabled={child.props.modifiers.some((modifier) => modifier.disabled)}>{child.props.children}</option>
+    })}
+  </select>,
+}))
 vi.mock('react-native', () => ({
   View: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   ScrollView: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -100,11 +120,41 @@ describe('iOS Listen learning surfaces', () => {
   it('switches vocabulary silently and keeps the app-session tally', async () => {
     const { unmount } = render(<ListenLearningSurface {...props()} wordCounts={{ correct: 2, attempted: 3 }} />)
     await flush()
-    fireEvent.click(screen.getByText('Q codes'))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Word vocabulary' }), { target: { value: 'q-codes' } })
     await flush()
     expect(playMorseTone).not.toHaveBeenCalled()
     expect(screen.getByText('Ready when you are')).toBeTruthy()
     expect(storage.setItem).toHaveBeenCalledWith('dit-listen-vocabulary-v1', 'q-codes')
+    unmount()
+  })
+
+  it('switches content through the native picker and restores character playback only on returning', async () => {
+    const options = props()
+    const { unmount } = render(<ListenLearningSurface {...options} />)
+    await flush()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Listen content' }), { target: { value: 'characters' } })
+    await flush()
+    expect(screen.getByText('Character keyboard')).toBeTruthy()
+    expect(options.replayCharacter).toHaveBeenCalledOnce()
+    expect(storage.setItem).toHaveBeenCalledWith('dit-listen-content-v1', 'characters')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Listen content' }), { target: { value: 'words' } })
+    await flush()
+    expect(screen.getByText('Ready when you are')).toBeTruthy()
+    expect(options.replayCharacter).toHaveBeenCalledOnce()
+    expect(playMorseTone).not.toHaveBeenCalled()
+    unmount()
+  })
+
+  it('keeps Words unavailable when the active characters cannot supply four choices', async () => {
+    const options = { ...props(), availableLetters: ['E', 'T'] as Letter[] }
+    const { unmount } = render(<ListenLearningSurface {...options} />)
+    await flush()
+    expect(screen.getByText('Character keyboard')).toBeTruthy()
+    expect(screen.getByRole('option', { name: 'Words' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.change(screen.getByRole('combobox', { name: 'Listen content' }), { target: { value: 'words' } })
+    await flush()
+    expect(screen.getByText('Character keyboard')).toBeTruthy()
+    expect(screen.queryByText('Ready when you are')).toBeNull()
     unmount()
   })
 })

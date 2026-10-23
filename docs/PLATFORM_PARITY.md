@@ -90,8 +90,8 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Playback at WPM | ✅ | ✅ | |
 | On-screen + physical keyboard answer | ✅ | ✅ | Web binds letter/digit keys. iOS always shows the on-screen keyboard (unavailable letters dimmed); web only shows it on coarse-pointer devices and hides it when a hardware keyboard is detected. |
 | Replay current letter | ✅ | ✅ | Web binds spacebar |
-| Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs` |
-| Listen word recognition | 🟡 | ✅ | Both offer separate Common words (Practice English bank) and Q codes vocabularies. Four choices stay concealed during playback; Q-code answers also teach the meaning. Word results are session-only and do not affect per-letter stats. iOS uses the shared round hook; native playback review pending. |
+| Sine wave visualization | ✅ | ✅ | Both use [@dit/core](../packages/core) `getListenToneLevelAtElapsedMs`. iOS Words and custom text keep the wave outside horizontal content padding so it spans the screen. Updated native layout review pending. |
+| Listen word recognition | 🟡 | ✅ | Both offer separate Common words (Practice English bank) and Q codes vocabularies. Four choices stay concealed during playback; Q-code answers also teach the meaning. Word results are session-only and do not affect per-letter stats. iOS uses the shared round hook, a native Characters / Words segmented control, and a vocabulary menu. Updated native controls and playback review pending. |
 | Time-to-respond indicator | ✅ | ✅ | Already wired as `listenTtrText` in both StageDisplay implementations. No new feature required. |
 | Custom text playback (head copy) | 🟡 | ✅ | Both accept a private passage and optional copy with a character diff. iOS adds native pause/resume and an audio clock, local AsyncStorage persistence, and a system copy keyboard. Native audio/haptic review pending. |
 

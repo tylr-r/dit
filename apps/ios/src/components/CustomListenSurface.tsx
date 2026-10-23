@@ -44,73 +44,76 @@ export function CustomListenSurface({ session, onDone }: Props) {
           paused={paused}
         />
       </View>
-      <Text style={styles.title} accessibilityLiveRegion="polite">
-        {revealed ? 'Compare your copy' : playing ? 'Listening…' : paused ? 'Paused' : `${session.text.length} chars · ${session.text.split(' ').filter(Boolean).length} words ready`}
-      </Text>
-      {(playing || paused) && <>
-        <View style={styles.track}><View style={[styles.fill, { width: `${progress * 100}%` }]} /></View>
-        <Text style={styles.detail}>{Math.floor(session.elapsedMs / 1000)} / {Math.ceil(session.durationMs / 1000)} seconds</Text>
-      </>}
-      {revealed ? <>
-        <Text selectable style={styles.source}>{session.text}</Text>
-        {session.typeAlong && diff && <>
-          <Text selectable style={styles.source} accessibilityLabel="Copy comparison">
-            {diff.tokens.map((token, index) => (
-              <Text key={index} style={token.kind === 'ok' ? styles.correct : styles.missed}>{token.text}</Text>
-            ))}
-          </Text>
-          <Text style={styles.detail}>{diff.matched} / {diff.total} matched · {diff.missed} missed · {diff.extra} extra</Text>
+      <View style={styles.content}>
+        <Text style={styles.title} accessibilityLiveRegion="polite">
+          {revealed ? 'Compare your copy' : playing ? 'Listening…' : paused ? 'Paused' : `${session.text.length} chars · ${session.text.split(' ').filter(Boolean).length} words ready`}
+        </Text>
+        {(playing || paused) && <>
+          <View style={styles.track}><View style={[styles.fill, { width: `${progress * 100}%` }]} /></View>
+          <Text style={styles.detail}>{Math.floor(session.elapsedMs / 1000)} / {Math.ceil(session.durationMs / 1000)} seconds</Text>
         </>}
-      </> : session.typeAlong ? <TextInput
-        accessibilityLabel="Type what you hear"
-        placeholder="Type what you hear"
-        placeholderTextColor={colors.text.primary40}
-        value={session.typedCopy}
-        onChangeText={(value) => session.setTypedCopy(value.toUpperCase())}
-        editable={playing}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        multiline
-        style={styles.input}
-      /> : null}
-      {session.error && <Text style={styles.missed}>{session.error}</Text>}
-      <View style={styles.actions}>
-        <DitButton text={playing ? 'Pause' : paused ? 'Resume' : revealed ? 'Replay' : 'Play'}
-          disabled={!session.text} onPress={() => void (playing ? session.pause() : paused ? session.resume() : session.play())} />
-        {(playing || paused) ? <>
-          <DitButton text="Restart" onPress={() => void session.play()} />
-          <DitButton text="End" onPress={() => void session.reveal()} />
-        </> : <>
-          <DitButton text={revealed ? 'New text' : 'Edit text'} onPress={edit} />
-          <DitButton text="Done" onPress={onDone} />
-          {!revealed && <DitButton text="Clear" onPress={() => { void session.save('', session.typeAlong); onDone() }} />}
-        </>}
+        {revealed ? <>
+          <Text selectable style={styles.source}>{session.text}</Text>
+          {session.typeAlong && diff && <>
+            <Text selectable style={styles.source} accessibilityLabel="Copy comparison">
+              {diff.tokens.map((token, index) => (
+                <Text key={index} style={token.kind === 'ok' ? styles.correct : styles.missed}>{token.text}</Text>
+              ))}
+            </Text>
+            <Text style={styles.detail}>{diff.matched} / {diff.total} matched · {diff.missed} missed · {diff.extra} extra</Text>
+          </>}
+        </> : session.typeAlong ? <TextInput
+          accessibilityLabel="Type what you hear"
+          placeholder="Type what you hear"
+          placeholderTextColor={colors.text.primary40}
+          value={session.typedCopy}
+          onChangeText={(value) => session.setTypedCopy(value.toUpperCase())}
+          editable={playing}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          multiline
+          style={styles.input}
+        /> : null}
+        {session.error && <Text style={styles.missed}>{session.error}</Text>}
+        <View style={styles.actions}>
+          <DitButton text={playing ? 'Pause' : paused ? 'Resume' : revealed ? 'Replay' : 'Play'}
+            disabled={!session.text} onPress={() => void (playing ? session.pause() : paused ? session.resume() : session.play())} />
+          {(playing || paused) ? <>
+            <DitButton text="Restart" onPress={() => void session.play()} />
+            <DitButton text="End" onPress={() => void session.reveal()} />
+          </> : <>
+            <DitButton text={revealed ? 'New text' : 'Edit text'} onPress={edit} />
+            <DitButton text="Done" onPress={onDone} />
+            {!revealed && <DitButton text="Clear" onPress={() => { void session.save('', session.typeAlong); onDone() }} />}
+          </>}
+        </View>
+        <Modal visible={editing} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setEditing(false); if (!session.text) onDone() }}>
+          <KeyboardAvoidingView behavior="padding" style={styles.editor}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + spacing.xl, gap: spacing.lg }}>
+              <Text style={styles.title}>Custom text</Text>
+              <TextInput accessibilityLabel="Text to play as Morse" value={draft} onChangeText={setDraft}
+                multiline autoCorrect={false} autoCapitalize="characters" placeholder="Paste a passage"
+                placeholderTextColor={colors.text.primary40} style={[styles.input, styles.editorInput]} />
+              <Text style={styles.detail}>{normalized.normalized.length} / 2000 chars · {normalized.ignored} ignored · about {Math.ceil(estimateMs / 1000)} seconds</Text>
+              <View style={styles.actions}>
+                <Text style={styles.source}>Type along</Text>
+                <Switch accessibilityLabel="Type along" value={typeAlong} onValueChange={setTypeAlong} />
+              </View>
+              <View style={styles.actions}>
+                <DitButton text="Discard" onPress={() => { setEditing(false); if (!session.text) onDone() }} />
+                <DitButton text="Save" onPress={() => void save()} />
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
-      <Modal visible={editing} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { setEditing(false); if (!session.text) onDone() }}>
-        <KeyboardAvoidingView behavior="padding" style={styles.editor}>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.xl, paddingBottom: insets.bottom + spacing.xl, gap: spacing.lg }}>
-            <Text style={styles.title}>Custom text</Text>
-            <TextInput accessibilityLabel="Text to play as Morse" value={draft} onChangeText={setDraft}
-              multiline autoCorrect={false} autoCapitalize="characters" placeholder="Paste a passage"
-              placeholderTextColor={colors.text.primary40} style={[styles.input, styles.editorInput]} />
-            <Text style={styles.detail}>{normalized.normalized.length} / 2000 chars · {normalized.ignored} ignored · about {Math.ceil(estimateMs / 1000)} seconds</Text>
-            <View style={styles.actions}>
-              <Text style={styles.source}>Type along</Text>
-              <Switch accessibilityLabel="Type along" value={typeAlong} onValueChange={setTypeAlong} />
-            </View>
-            <View style={styles.actions}>
-              <DitButton text="Discard" onPress={() => { setEditing(false); if (!session.text) onDone() }} />
-              <DitButton text="Save" onPress={() => void save()} />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
     </>
   )
 }
 
 const styles = StyleSheet.create({
   wave: { width: '100%', height: 120 },
+  content: { width: '100%', paddingHorizontal: spacing.xl, alignItems: 'center', gap: spacing.lg },
   title: { color: colors.text.primary, fontSize: 20, fontWeight: '600', textAlign: 'center' },
   detail: { color: colors.text.primary60, fontSize: 13, textAlign: 'center' },
   source: { color: colors.text.primary, fontSize: 18, lineHeight: 26 },
