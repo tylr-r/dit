@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ initialize: vi.fn(), getAI: vi.fn(), model: vi.fn(), send: vi.fn(), app: {}, appCheck: {} }))
+const mocks = vi.hoisted(() => ({ initialize: vi.fn(), getToken: vi.fn(), getAI: vi.fn(), model: vi.fn(), send: vi.fn(), app: {}, appCheck: {} }))
 vi.mock('@react-native-firebase/app', () => ({ getApp: () => mocks.app }))
-vi.mock('@react-native-firebase/app-check', () => ({ initializeAppCheck: mocks.initialize }))
+vi.mock('@react-native-firebase/app-check', () => ({ initializeAppCheck: mocks.initialize, getToken: mocks.getToken }))
 vi.mock('@react-native-firebase/ai', () => ({
   GoogleAIBackend: class {}, getAI: mocks.getAI, getGenerativeModel: mocks.model,
 }))
@@ -10,10 +10,14 @@ beforeEach(() => {
   vi.stubGlobal('__DEV__', true)
   mocks.getAI.mockReturnValue({})
   mocks.initialize.mockResolvedValue(mocks.appCheck)
+  mocks.getToken.mockResolvedValue({ token: 'test-app-check-token' })
   mocks.model.mockReturnValue({ startChat: () => ({ sendMessage: mocks.send, getHistory: async () => [] }) })
   mocks.send.mockResolvedValue({ response: { text: () => 'UR RST 599 K' } })
 })
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('iOS station adapter', () => {
   it('initializes App Check once before constructing either station, without requesting a reply', async () => {
@@ -23,7 +27,7 @@ describe('iOS station adapter', () => {
     expect(mocks.initialize).toHaveBeenCalledWith(mocks.app, expect.objectContaining({
       provider: { providerOptions: { apple: expect.objectContaining({ provider: 'debug' }) } }, isTokenAutoRefreshEnabled: true,
     }))
-    expect(mocks.getAI).toHaveBeenCalledWith(mocks.app, expect.objectContaining({ appCheck: mocks.appCheck }))
+    expect(mocks.getAI).toHaveBeenCalledWith(mocks.app, expect.objectContaining({ appCheck: expect.objectContaining({ getToken: expect.any(Function) }) }))
     expect(mocks.initialize.mock.invocationCallOrder[0]).toBeLessThan(mocks.getAI.mock.invocationCallOrder[0])
     expect(mocks.send).not.toHaveBeenCalled()
     expect(mocks.model).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
@@ -32,8 +36,31 @@ describe('iOS station adapter', () => {
     await expect(first.send('R')).resolves.toBe('UR RST 5NN K')
   })
 
+  it('routes the AI SDK token getter through the modular API, including forced refresh and failures', async () => {
+    const { createConversation } = await import('../../src/lib/conversationAi')
+    await createConversation({ callsign: 'K1ABC' })
+    const { appCheck } = mocks.getAI.mock.calls[0][1]
+    await expect(appCheck.getToken()).resolves.toEqual({ token: 'test-app-check-token' })
+    expect(mocks.getToken).toHaveBeenLastCalledWith(mocks.appCheck, undefined)
+    await appCheck.getToken(true)
+    expect(mocks.getToken).toHaveBeenLastCalledWith(mocks.appCheck, true)
+    const error = new Error('App attestation failed')
+    mocks.getToken.mockRejectedValueOnce(error)
+    await expect(appCheck.getToken()).rejects.toBe(error)
+  })
+
+  it('uses a configured debug token in development', async () => {
+    vi.stubEnv('EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN', 'test-debug-token')
+    const { createConversation } = await import('../../src/lib/conversationAi')
+    await createConversation({ callsign: 'K1ABC' })
+    expect(mocks.initialize).toHaveBeenCalledWith(mocks.app, expect.objectContaining({
+      provider: { providerOptions: { apple: { provider: 'debug', debugToken: 'test-debug-token' } } },
+    }))
+  })
+
   it('uses device attestation in a release build', async () => {
     vi.stubGlobal('__DEV__', false)
+    vi.stubEnv('EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN', 'test-debug-token')
     const { createConversation } = await import('../../src/lib/conversationAi')
     await createConversation({ callsign: 'K1ABC' })
     expect(mocks.initialize).toHaveBeenCalledWith(mocks.app, expect.objectContaining({

@@ -71,7 +71,9 @@ Native logs: Xcode console, filter for "Dit". JS logs: Metro.
 Conversation uses `@react-native-firebase/ai` and `@react-native-firebase/app-check`
 24.0.0, matching the existing app/analytics SDKs. The station prompt and session
 are shared with web; the native adapter initializes App Check lazily when a
-contact starts and passes that instance explicitly to Firebase AI Logic.
+contact starts and passes it explicitly to Firebase AI Logic. RNFB AI 24 calls
+the namespaced token getter internally, so the adapter forwards that getter
+through App Check's modular `getToken` API to avoid deprecation warnings.
 
 The local `withFirebaseAppCheck` plugin imports `RNFBAppCheck` directly in Swift
 and registers its provider before calling `FirebaseApp.configure()`, then returns
@@ -90,12 +92,20 @@ Before verifying the first native QSO:
    same Gemini Developer API backend and model used by web.
 2. Register the iOS app with Firebase App Check for App Attest and DeviceCheck.
    For Simulator/dev-client testing, register a debug token and optionally set
-   `EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` in the local Expo environment.
+   `EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN` in the ignored
+   `apps/ios/.env.local` file. Restart Metro and reload the app after changing it;
+   a native rebuild is not needed for this environment change.
    Do not commit the token. See [Firebase App Check setup](https://rnfirebase.io/app-check/usage).
    Registration is specific to the development token. A new simulator or removed
    app data can require another registration; normal restarts retain the token.
-   Keep the token in local simulator storage, never in source or diagnostic output.
-   Release builds continue using device attestation.
+   An explicitly configured token can be reused across local development devices
+   without relying on their generated tokens.
+   Keep debug tokens in local simulator storage or the ignored environment file,
+   never in committed source or diagnostic output. Release builds continue using
+   device attestation even when a debug token is configured locally.
+   An `exchangeDebugToken` HTTP 403 with `App attestation failed` means the
+   development token was rejected. Check its registration for the iOS app in
+   `practice-dit`, rather than rebuilding native code or disabling App Check.
 3. Regenerate native configuration and rebuild from the repository root:
 
    ```bash

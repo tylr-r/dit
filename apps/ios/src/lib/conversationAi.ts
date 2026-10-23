@@ -8,7 +8,7 @@ import {
 } from '@dit/core'
 import { getAI, getGenerativeModel, GoogleAIBackend } from '@react-native-firebase/ai'
 import { getApp } from '@react-native-firebase/app'
-import { initializeAppCheck, type AppCheckOptions } from '@react-native-firebase/app-check'
+import { getToken, initializeAppCheck, type AppCheckOptions } from '@react-native-firebase/app-check'
 
 let appCheckPromise: ReturnType<typeof initializeAppCheck> | null = null
 
@@ -29,7 +29,14 @@ const ensureAppCheck = () => {
 export async function createConversation(options: StartConversationOptions): Promise<ConversationChat> {
   try {
     const appCheck = await ensureAppCheck()
-    const ai = getAI(getApp(), { backend: new GoogleAIBackend(), appCheck })
+    const ai = getAI(getApp(), {
+      backend: new GoogleAIBackend(),
+      // RNFB AI 24 calls the namespaced getter. Delegate to the modular API.
+      appCheck: {
+        ...appCheck,
+        getToken: (forceRefresh) => getToken(appCheck, forceRefresh),
+      },
+    })
     const model = getGenerativeModel(ai, {
       model: CONVERSATION_MODEL_ID,
       systemInstruction: buildConversationSystemPrompt(options),
