@@ -164,7 +164,7 @@ export function MorseLiquidSurface({
     frameIntervalMs.value = 1000 / Math.max(1, Math.round(targetFps))
   }, [frameIntervalMs, targetFps])
 
-  const speedValue = useDerivedValue(() => speed.value, [speed])
+  const speedValue = useDerivedValue(() => speed.value)
 
   useFrameCallback((frameInfo) => {
     if (pausedValue.value || frameInfo.timeSincePreviousFrame === null) {
@@ -189,7 +189,7 @@ export function MorseLiquidSurface({
       iTime: time.value,
       iResolution: [width, height],
     }
-  }, [layout.width, layout.height])
+  })
 
   useEffect(() => {
     if (!__DEV__) {
