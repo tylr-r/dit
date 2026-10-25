@@ -344,3 +344,5 @@ Top-bar buttons, the morse key, the Play button in Listen, and the Clear button 
 
 - A single daily local notification, scheduled for the time set in Settings or NUX. The app reschedules it whenever progress changes and when the app returns to the foreground, so the "next fire" always reflects current state.
 - The DitProgress home-screen widget publishes streak, daily activity, and hero metric from the same progress snapshot that drives the Reference modal, so the widget and in-app view stay consistent.
+- The small, medium, and rectangular Lock Screen widgets bundle an initial layout and zero-progress props so they can render before the app first opens or publishes progress. The layout also tolerates missing props.
+- Every widget family declares a WidgetKit container background to avoid the iOS 17+ background compatibility warning. Home-screen widgets use the existing dark background; the rectangular Lock Screen widget uses a transparent container background. Device rendering was confirmed on October 25, 2026. Fresh-install and progress-refresh checks remain unverified.

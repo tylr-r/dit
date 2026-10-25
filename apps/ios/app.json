@@ -56,12 +56,15 @@
               "name": "DitProgress",
               "displayName": "Dit",
               "description": "Your streak and today's progress.",
-              "supportedFamilies": [
-                "systemSmall",
-                "systemMedium",
-                "accessoryRectangular"
-              ],
-              "contentMarginsDisabled": true
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ],
+                "contentMarginsDisabled": true,
+                "initialLayout": "./src/widgets/DitProgress.tsx"
+              }
             }
           ]
         }

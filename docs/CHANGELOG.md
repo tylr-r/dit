@@ -51,6 +51,10 @@ Compared against `2026.5.31`.
 
 ### Fixes
 
+- iOS: Fixed widgets showing a background compatibility warning instead of progress.
+
+- iOS: Widgets can display initial progress before the app first opens, and no longer fail when progress is unavailable.
+
 - iOS: Replay stays centered while answering words and Q codes.
 
 - iOS: Waveforms in word and custom-text listening now extend across the screen.

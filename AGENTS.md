@@ -21,6 +21,9 @@ Dit builds auditory Morse recognition and fluent keying. Its learning model is h
 - `pnpm run dev`: Do not run this command. Ask the user to run it to start all app dev servers in parallel via Turbo.
 - `pnpm --filter @dit/web dev`: Do not run this command. Ask the user to run it to start only the web app locally.
 - `pnpm --filter @dit/ios dev`: Do not run this command. Ask the user to run it to start only the Expo iOS app.
+- For iOS development with Metro, ask the user to run `pnpm device` for a connected iPhone or `pnpm sim` for Simulator. For standalone device verification, including confirming a widget fix, use `pnpm --filter @dit/ios exec expo run:ios --device --configuration Release --no-bundler`. This builds and installs the app and embedded widget extension with bundled JavaScript, without a local server or upload. All native build commands are user-run.
+- After changing native app configuration or config plugins (including widgets, extensions, and entitlements), first ask the user to run `pnpm --filter @dit/ios exec expo prebuild --platform ios --clean`, then the appropriate device or Simulator command above. Prebuild regenerates the ignored native iOS project; `expo run:ios` does not regenerate an existing native project.
+- Recommend `pnpm --filter @dit/ios app-store:build` only when the user asks to prepare a release or distribution build. It creates an archive and IPA; it does not install the app on a device. State what a suggested command produces and whether it installs or uploads anything.
 - `pnpm run build`: build all packages/apps with Turbo.
 - `pnpm run lint`: lint all workspaces via ESLint.
 - `pnpm run test:unit`, `pnpm run test:e2e`, `pnpm run test:types`: run unit tests, Playwright e2e, or TypeScript checks across the repo.

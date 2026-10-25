@@ -15,6 +15,9 @@ declare const Spacer: typeof import('@expo/ui/swift-ui').Spacer
 declare const Image: typeof import('@expo/ui/swift-ui').Image
 declare const ProgressView: typeof import('@expo/ui/swift-ui').ProgressView
 declare const background: typeof import('@expo/ui/swift-ui/modifiers').background
+declare const containerBackground: typeof import(
+  '@expo/ui/swift-ui/modifiers'
+).containerBackground
 declare const font: typeof import('@expo/ui/swift-ui/modifiers').font
 declare const resizable: typeof import('@expo/ui/swift-ui/modifiers').resizable
 declare const foregroundStyle: typeof import(
@@ -42,7 +45,7 @@ export type DitProgressWidgetProps = {
 // inside the widget extension, so module-scope helpers and constants are
 // not available there.
 const DitProgressLayout = (
-  props: DitProgressWidgetProps,
+  props: Partial<DitProgressWidgetProps> = {},
   env: WidgetEnvironment,
 ) => {
   'widget'
@@ -95,7 +98,11 @@ const DitProgressLayout = (
     const subtitleLine = hasStreak ? todayLine : heroLabel
     const progress = hasStreak ? todayProgress : masteredProgress
     return (
-      <VStack alignment="leading" spacing={2}>
+      <VStack
+        alignment="leading"
+        spacing={2}
+        modifiers={[containerBackground('#00000000', 'widget')]}
+      >
         <HStack spacing={4}>
           <Text modifiers={[font({ size: 14, weight: 'semibold' })]}>
             {titleLine}
@@ -126,6 +133,7 @@ const DitProgressLayout = (
         modifiers={[
           frame({ maxWidth: 10000, maxHeight: 10000 }),
           background(OVERLAY),
+          containerBackground(OVERLAY, 'widget'),
         ]}
       >
         {hasBgMedium ? (
@@ -226,6 +234,7 @@ const DitProgressLayout = (
       modifiers={[
         frame({ maxWidth: 10000, maxHeight: 10000 }),
         background(OVERLAY),
+        containerBackground(OVERLAY, 'widget'),
       ]}
     >
       {hasBgSmall ? (
@@ -309,4 +318,16 @@ const DitProgressLayout = (
 export const DitProgressWidget = createWidget<DitProgressWidgetProps>(
   'DitProgress',
   DitProgressLayout,
+  {
+    streak: 0,
+    todayCorrect: 0,
+    goal: 15,
+    heroKind: 'mastered',
+    heroValue: 0,
+    heroTotal: 36,
+    bestWpm: 0,
+    iconUri: '',
+    bgSmallUri: '',
+    bgMediumUri: '',
+  },
 )
