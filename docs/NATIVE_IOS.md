@@ -191,7 +191,7 @@ successful retry, including the exact history sent to the server.
 
 ## App Store release preparation
 
-See [the 2026.10.18 iOS handoff](releases/2026.10.18-ios.md) for the current version,
+See [the 2026.10.25 iOS handoff](releases/2026.10.25-ios.md) for the current version,
 metadata drafts, exact archive/validation/upload commands, and remaining device
 checks. The build script's `--check` verifies release/RC Xcode and version inputs
 without changing files. Beta toolchains are rejected before prebuild or package
@@ -212,7 +212,7 @@ The October 18 build 1 archive used Expo 55 with Xcode 27.1. Its simulator binar
 repeatedly crashed in `UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`.
 Both the generated project and archived app lacked `UIApplicationSceneManifest`.
 
-The replacement candidate is **2026.10.18 (2)**, using Expo 58.0.14 and React Native
+The October 18 replacement candidate used **2026.10.18 (2)**, Expo 58.0.14 and React Native
 0.88.0. [Expo's scene lifecycle](https://github.com/expo/fyi/blob/main/ios-scene-lifecycle.md)
 generates SceneDelegate.swift, registers it in the app target and Info.plist, and
 forwards lifecycle and link events through ExpoAppDelegate. Firebase initialization
@@ -238,6 +238,6 @@ Project generation, CocoaPods installation, lint/type checks and 420 unit tests
 pass. The Release build installs and runs on iPhone 18 Pro with iOS 27.0 using
 Xcode 27.1. Its build log contains no compiler errors or prior App Check
 precompiled-module diagnostic. Physical-device validation and a fresh App Store
-archive remain required. Build 1 remains on disk and the upload script rejects
-its identity because the candidate is now build 2. See the release handoff for
-the tested flows and remaining checks.
+archive remain required. At that check, build 1 remained on disk and the upload
+script rejected it because the replacement was build 2. See the current release
+handoff above for the latest candidate, tested flows, and remaining checks.
