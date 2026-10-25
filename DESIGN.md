@@ -260,6 +260,8 @@ Shared dimensions, timings, accessibility labels, and the
 `MorseButtonState` contract live in
 `@dit/core/components/morseButton`.
 
+Practice keeps target audio replay as its immediate assistance control on both platforms. Do not add a per-letter visual hint button beside the key. Visual hints remain an explicit Settings choice, with their existing scoring rules.
+
 ### Pressable (`ScalePressable`)
 
 Generic tappable surface. Press scale 0.97, `TIMING.press` (120ms). Currently

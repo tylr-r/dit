@@ -11,6 +11,8 @@ avoid undoing.
 
 ## Decisions
 
+- **2026-10-23: Practice assistance favors hearing the target again.** Remove the one-time **Show this hint** button from both platforms and its web Practice `N` shortcut. A prominent visual reveal encourages decoding instead of auditory reflex. Keep target audio replay, the explicit Settings hint option and its scoring rules, and guided-course behavior. This supersedes the one-time hint portions of the June 11 and October 4 decisions.
+
 - **2026-10-18: Require iOS 16.4 for the next iOS release.** Use Expo's supported scene lifecycle for iOS 27 compatibility. Accept the SDK's newer OS minimum instead of maintaining a custom lifecycle backport for older devices.
 
 - **2026-10-18: Conversation supports the continuous signals its reference teaches.** Play standalone prosign labels as joined Morse characters and accept their joined keyed input. Keep callsigns and other words letter-spaced, reveal a prosign label only once its whole sound has finished, and keep this vocabulary out of scored character practice and custom Listen.

@@ -151,7 +151,6 @@ const makeSession = (status: 'idle' | 'success' | 'error') => ({
     showMorseHint: false,
     showPracticeWord: false,
     showSettingsHint: false,
-    canRequestOneTimeHint: false,
     stageLetter: 'E',
     stagePips: [{ type: 'dot', state: status === 'success' ? 'hit' : 'expected' }],
     statusText: status === 'success' ? 'Correct' : ' ',
@@ -162,7 +161,6 @@ const makeSession = (status: 'idle' | 'success' | 'error') => ({
     handleFinishKnownTour: vi.fn(),
     handleFreestyleClear: vi.fn(),
     handleIntroPressIn: vi.fn(),
-    handleRequestOneTimeHint: vi.fn(),
     setCharacterListenSuspended: vi.fn(),
     handleListenReplay: vi.fn(),
     handleMaxLevelChange: vi.fn(),
@@ -284,6 +282,29 @@ describe('App', () => {
     render(<App />)
 
     expect(document.querySelector('.app')).toHaveClass('status-success')
+  })
+
+  it('leaves N unused in Practice when hints are off', () => {
+    const session = makeSession('idle')
+    session.state.showHint = false
+    session.derived.hintVisible = false
+    mockUseMorseSessionController.mockReturnValue(session)
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: 'Show this hint' })).not.toBeInTheDocument()
+    expect(fireEvent.keyDown(window, { key: 'n', code: 'KeyN' })).toBe(true)
+    expect(session.handlers.handleFreestyleClear).not.toHaveBeenCalled()
+  })
+
+  it('preserves N for clearing Freestyle input', () => {
+    const session = makeSession('idle')
+    session.state.mode = 'freestyle'
+    session.derived.isFreestyle = true
+    mockUseMorseSessionController.mockReturnValue(session)
+    render(<App />)
+
+    fireEvent.keyDown(window, { key: 'n', code: 'KeyN' })
+    expect(session.handlers.handleFreestyleClear).toHaveBeenCalledOnce()
   })
 
   it('opens Conversation directly at the QSO route', () => {

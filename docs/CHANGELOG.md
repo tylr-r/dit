@@ -10,7 +10,6 @@ Compared against `2026.5.31`.
 - iOS: Added custom-text listening. Paste a passage, pause and resume playback, and optionally type along to compare your copy afterward.
 
 - Web: practicedit.com now opens with a homepage that introduces Dit, complete with a live Morse key you can try right on the page. The practice app itself now lives at practicedit.com/app.
-- Added **Show this hint** in Practice — when hints are turned off, you can reveal the pattern for the current letter once. That round won't count toward your score.
 - Added a new **Conversation** mode: practice a realistic CW conversation with an AI operator. Key your replies on the Morse key and hear the other station's replies played back as Morse, just like an on-air QSO.
 - Web: Listen mode now offers word recognition. Choose English words or Q codes, listen before the answer choices appear, and learn what each Q code means after answering.
 

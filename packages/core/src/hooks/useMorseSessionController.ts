@@ -263,7 +263,6 @@ export const useMorseSessionController = ({
   const [mode, setMode] = useState<Mode>('practice')
   const [showHint, setShowHint] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
-  const [oneTimeHintActive, setOneTimeHintActive] = useState(false)
   const [hapticsEnabled, setHapticsEnabled] = useState(true)
   const [practiceAutoPlay, setPracticeAutoPlay] = useState(true)
   const [practiceLearnMode, setPracticeLearnMode] = useState(true)
@@ -948,18 +947,8 @@ export const useMorseSessionController = ({
     setShowReference(false)
   }, [isNuxActive, setShowAbout, setShowReference, setShowSettings])
 
-  const oneTimeHintActiveRef = useRef(false)
-
-  useEffect(() => {
-    oneTimeHintActiveRef.current = false
-    setOneTimeHintActive(false)
-  }, [letter])
-
   const canScoreAttempt = useCallback(
-    () =>
-      !isNuxActive &&
-      (!showHint || isGuidedPracticeActive) &&
-      !oneTimeHintActiveRef.current,
+    () => !isNuxActive && (!showHint || isGuidedPracticeActive),
     [isGuidedPracticeActive, isNuxActive, showHint],
   )
 
@@ -2064,14 +2053,6 @@ export const useMorseSessionController = ({
     showMnemonic,
   ])
 
-  const handleRequestOneTimeHint = useCallback(() => {
-    if (showHint || isFreestyle || isListen || isNuxActive || guidedCourseActive) {
-      return
-    }
-    oneTimeHintActiveRef.current = true
-    setOneTimeHintActive(true)
-  }, [guidedCourseActive, isFreestyle, isListen, isNuxActive, showHint])
-
   const handleModeChange = useCallback(
     (nextMode: Mode) => {
       logAnalyticsEvent('mode_start', { mode: nextMode })
@@ -2230,14 +2211,7 @@ export const useMorseSessionController = ({
 
   const target = MORSE_DATA[letter].code
   const targetSymbols = useMemo(() => target.split(''), [target])
-  const hintVisible =
-    !isFreestyle && !isListen && (showHint || oneTimeHintActive)
-  const canRequestOneTimeHint =
-    !isFreestyle &&
-    !isListen &&
-    !showHint &&
-    !isNuxActive &&
-    !guidedCourseActive
+  const hintVisible = !isFreestyle && !isListen && showHint
   const mnemonicVisible = !isFreestyle && !isListen && showMnemonic
   const ifrActive =
     !isFreestyle && !isListen && !isNuxActive && !guidedCourseActive && practiceIfrMode
@@ -2417,7 +2391,6 @@ export const useMorseSessionController = ({
       showMorseHint: introHintStep === 'morse' && !isListen && !isNuxActive,
       showSettingsHint: introHintStep === 'settings' && !isListen && !isNuxActive,
       isMorseDisabled,
-      canRequestOneTimeHint,
     },
     handlers: {
       handleResetScores,
@@ -2435,7 +2408,6 @@ export const useMorseSessionController = ({
       submitListenAnswer,
       handleFreestyleClear,
       handlePracticeReplay,
-      handleRequestOneTimeHint,
       handleIntroPressIn,
       handleMorseSymbolPressIn,
       handleMorseSymbolPressOut,

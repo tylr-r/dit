@@ -160,7 +160,7 @@ selected count, not the actual characters.
 - **Auto-play sound** (on by default) plays the target tone automatically when it appears.
 - **Sequential order** (the "learn mode" toggle, on by default) makes Practice serve letters from the start of the active set rather than weighted-random. Turning it off switches to the weighted algorithm below.
 - With sequential order off, character selection prioritizes less proficient characters ahead of well-known ones.
-- Hints and mnemonics can be toggled in Settings. When **Show hints** is on, Practice does not accumulate scores, streak credit, or `letterAccuracy` updates (guided course practice is exempt). When hints are off, both platforms expose a one-time **Show this hint** control outside the guided course (web also binds `N`) that reveals the pattern for the current letter only and disables scoring for that attempt.
+- Hints and mnemonics can be toggled in Settings. When **Show hints** is on, Practice does not accumulate scores, streak credit, or `letterAccuracy` updates (guided course practice is exempt). When hints are off, Practice offers target audio replay without a per-letter visual reveal button or shortcut on either platform.
 - **Word mode** (Practice Words) shows a full word, highlights progress letter by letter, and computes WPM on completion.
 - During the guided beginner course, Practice runs in fixed lesson phases:
   - Teach: repeat the new letters until each is answered correctly enough times.
@@ -303,7 +303,7 @@ Availability rules:
 - `F`: Freestyle
 - `L`: Listen
 - `P`: Practice
-- `N`: one-time **Show this hint** in Practice when global hints are off; clear input in Freestyle
+- `N`: clear input in Freestyle
 - `Space`: hold to key (Practice/Freestyle), tap to replay the current Listen character, or start/replay the current Listen word
 - `1` through `4`: choose an answer in Listen Words
 - `Esc`: close the reference modal

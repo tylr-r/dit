@@ -732,12 +732,6 @@ function AppShell() {
                       text="Clear"
                     />
                   ) : null}
-                  {derived.canRequestOneTimeHint && <DitButton
-                    text="Show this hint" onPress={handlers.handleRequestOneTimeHint}
-                    accessibilityHint="Reveals the current pattern. This attempt will not count toward your score."
-                    style={{ marginBottom: 12, minHeight: 44 }}
-                    textStyle={{ fontSize: 14 }}
-                  />}
                   {!derived.isFreestyle ? (
                     <DitButton
                       onPress={handlers.handlePracticeReplay}

@@ -269,7 +269,6 @@ function MainApp({ initialConversationActive = false }: {
     practiceWpmText,
     listenTtrText,
     guidedCurrentPack,
-    canRequestOneTimeHint,
   } = derived
 
   useEffect(() => {
@@ -770,16 +769,6 @@ function MainApp({ initialConversationActive = false }: {
         handleModeSwitcherChange('conversation')
         return
       }
-      if (
-        !isFreestyle &&
-        !isListen &&
-        key === 'n' &&
-        canRequestOneTimeHint
-      ) {
-        event.preventDefault()
-        handlers.handleRequestOneTimeHint()
-        return
-      }
       if (isFreestyle && key === 'n') {
         event.preventDefault()
         handlers.handleFreestyleClear()
@@ -829,7 +818,6 @@ function MainApp({ initialConversationActive = false }: {
       window.removeEventListener('keyup', handleKeyUp)
     }
   }, [
-    canRequestOneTimeHint,
     conversation,
     conversationActive,
     handleModeSwitcherChange,
@@ -1352,21 +1340,6 @@ function MainApp({ initialConversationActive = false }: {
               />
             ) : (
               <>
-                {canRequestOneTimeHint ? (
-                  <Tooltip
-                    label="Show pattern for this letter once"
-                    shortcut={useCustomKeyboard ? undefined : 'N'}
-                    placement="top"
-                  >
-                    <button
-                      type="button"
-                      className="hint-button submit-button"
-                      onClick={handlers.handleRequestOneTimeHint}
-                    >
-                      Show this hint
-                    </button>
-                  </Tooltip>
-                ) : null}
                 <MorseButton
                   buttonRef={morseButtonRef}
                   isPressing={isPressing}

@@ -5,7 +5,7 @@ Tracks the current delta between `apps/ios` and `apps/web`, plus the differences
 Update this when you ship a feature that closes (or opens) a gap.
 
 October 4 learning parity work: iOS Words/Q codes, custom-text listening,
-one-time hints, recognition feedback, revised intro illustrations, and
+recognition feedback, revised intro illustrations, and
 Settings sound check are implemented. The app now builds, installs, and launches
 on the iOS 26.5 simulator. Intro slides, the single-line header, and initial
 Conversation error recovery have received rendered review. The three intro
@@ -73,7 +73,6 @@ Data plumbing for everything below is shared via [@dit/core](../packages/core). 
 | Play current target tone | ✅ | ✅ | |
 | Hints toggle | ✅ | ✅ | |
 | Mnemonics toggle | ✅ | ✅ | |
-| One-time "Show this hint" | 🟡 | ✅ | Both expose a button when global hints are off, outside the guided course. The hinted attempt is unscored. Web also binds `N`. iOS native review pending. |
 | Practice Words (word mode) | ✅ | ✅ | |
 | Auto-play sound toggle (`practiceAutoPlay`) | ✅ | ✅ |  |
 | Sequential order toggle (`practiceLearnMode`) | ✅ | ✅ |  |
@@ -230,7 +229,7 @@ These are not gaps. Don't open tickets to "fix" them.
 
 ### Web-only by design
 
-- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for the shared one-time Practice hint or web Freestyle clear depending on mode, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice, Freestyle, and Conversation on iOS. `Enter` sends a Conversation draft or advances an answered Listen Words/Q codes round. Keyboard `Backspace` edits the outgoing Conversation draft during your turn. The `H`/`W` bindings referenced in older specs are not implemented.
+- **Desktop keyboard shortcuts** (`F`/`L`/`P`/`C` mode switching, `N` for Freestyle clear, `Space` to key or replay, `Esc` close reference, and letter/digit keys to answer in Listen) are a broad web affordance. VBand-style left/right paddle keys work in Practice, Freestyle, and Conversation on web, and in Practice, Freestyle, and Conversation on iOS. `Enter` sends a Conversation draft or advances an answered Listen Words/Q codes round. Keyboard `Backspace` edits the outgoing Conversation draft during your turn. The `H`/`W` bindings referenced in older specs are not implemented.
 - **Post-onboarding intro hints** (Morse key callout, then Settings spotlight) — iOS renders overlay UI; web advances the persisted hint step without showing those overlays (opening Settings still dismisses the settings step).
 - **Hover/focus tooltips** with optional shortcut chips on the logo, settings gear, morse key, Listen replay, and Freestyle clear — desktop affordance; iOS uses `accessibilityHint` instead.
 - **Hardware-keyboard detection** that hides the on-screen Listen keyboard for fine-pointer devices.
