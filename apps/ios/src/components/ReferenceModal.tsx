@@ -337,8 +337,8 @@ export function ReferenceModal({
                 {symbol === '.' ? '•' : symbol === '-' ? '—' : symbol}
               </Text>
             ))}
-          </View> : <Text style={styles.cardInstruction}>Train the ear</Text>}
-          {status !== 'not-yet' && <View style={styles.recognitionTrack}>
+          </View> : null}
+          {status !== 'not-yet' && recognitionMs != null && <View style={styles.recognitionTrack}>
             <View style={[styles.recognitionFill, { width: `${Math.round(Math.max(fill, mastered ? 0.05 : 0) * 100)}%` }]} />
           </View>}
         </Pressable>
@@ -398,13 +398,14 @@ export function ReferenceModal({
             </View>
           ) : null}
           {([
-            ['mastered', 'Known by ear'], ['learning', 'Now learning'], ['not-yet', 'Not yet'],
+            ['mastered', 'Known by ear'], ['learning', 'Now learning'], ['not-yet', 'Not started'],
           ] as const).map(([status, title]) => {
             const sectionLetters = [...letters, ...numbers].filter((char) => classifyLetter(masteryProgress, char) === status)
             if (!sectionLetters.length) return null
+            const hasRecognitionData = status !== 'not-yet' && sectionLetters.some((char) => listenTtr?.[char]?.averageMs != null)
             return <View key={status} style={styles.levelSection}>
               <Text style={styles.levelSectionTitle}>{title} · {sectionLetters.length}</Text>
-              {status !== 'not-yet' && <Text style={styles.recognitionLegend}>Recognition speed: slow to fast</Text>}
+              {hasRecognitionData && <Text style={styles.recognitionLegend}>Recognition speed: slow to fast</Text>}
               <GlassContainer spacing={spacing.sm} style={styles.levelCards}>
                 {sectionLetters.map((char) => <ReferenceCard key={char} char={char} />)}
               </GlassContainer>
@@ -512,6 +513,7 @@ const styles = StyleSheet.create({
   },
   cardPressable: {
     width: '100%',
+    minHeight: 44,
     paddingVertical: CARD_VERTICAL_PADDING,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.md,
@@ -544,7 +546,6 @@ const styles = StyleSheet.create({
   },
   recognitionValue: { color: colors.text.primary, fontSize: 24, fontWeight: '600' },
   recognitionLegend: { color: colors.text.primary60, fontSize: 12, marginBottom: spacing.sm },
-  cardInstruction: { color: colors.text.primary40, fontSize: 11 },
   recognitionTrack: { height: 3, backgroundColor: colors.surface.input, marginTop: spacing.sm, borderRadius: radii.sm, overflow: 'hidden' },
   recognitionFill: { height: '100%', backgroundColor: colors.accent.wave },
   cardCode: {

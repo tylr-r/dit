@@ -336,7 +336,7 @@ Top-bar buttons, the morse key, the Play button in Listen, and the Clear button 
 
 ## Reference
 
-- The Reference modal shows letters and numbers grouped into Known by ear, Now learning, and Not yet. Patterns are shown on mastered letters; iOS in-progress cards say Train the ear.
+- The Reference modal groups letters and numbers by mastery. iOS labels the sections Known by ear, Now learning, and Not started. Not started means there are no recorded attempts for that character. Patterns are shown on mastered letters. iOS in-progress cards show the character without repeated instructional text; recognition bars appear only when timing data exists, and the speed legend appears only in sections with samples.
 - Mastered letters use a shared relative score tint (green/red vs the section median). Both platforms show Listen recognition bars and average recognition time across mastered letters with samples. Missing samples do not imply zero latency. These iOS display changes await native visual review.
 - iOS also shows the hero metric, current streak, today's correct count, and, when the guided course is active, the current pack, phase, and pack letters. Tapping a card plays that character at the current playback letter speed from Settings.
 

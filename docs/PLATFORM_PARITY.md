@@ -155,14 +155,14 @@ Information architecture (section order, grouping, headers, collapse behavior, p
 
 ## Reference modal
 
-Web adds status-based sections (Known by ear / Now learning / Not yet) and per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. Both platforms tint mastered letters with the same relative score helpers in core. iOS now implements these sections, recognition bars, and the average recognition summary; native visual review is pending. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core for when iOS adopts.
+Web adds status-based sections (Known by ear / Now learning / Not started) and per-letter recognition bars driven by Listen TTR EMAs from `@dit/core`. Both platforms tint mastered letters with the same relative score helpers in core. iOS now implements these sections, recognition bars, and the average recognition summary; native visual review is pending. Helpers `classifyLetter`, `getAverageRecognitionMs`, and `getRecognitionFillRatio` live in core for when iOS adopts.
 
 | Feature | iOS | Web | Notes |
 |---|---|---|---|
-| Letter/number cards with Morse patterns | ✅ | ✅ | Both show patterns on mastered tiles, with "Train the ear" for in-progress iOS letters. iOS change awaits native review. |
+| Letter/number cards with Morse patterns | ✅ | ✅ | Both show patterns on mastered tiles. iOS in-progress tiles show the character without repeated instructional copy. Updated iOS layout awaits native review. |
 | Score-tinted cards | ✅ | ✅ | Both tint mastered letters via shared `@dit/core` relative score helpers; both now implement status sections and recognition bars |
-| Sectioned by mastery status | 🟡 | ✅ | Known by ear / Now learning / Not yet on both platforms. iOS native visual review pending. |
-| Per-letter recognition bar (Listen TTR fill) | 🟡 | ✅ | Both use `getRecognitionFillRatio` from core. iOS native visual review pending. |
+| Sectioned by mastery status | 🟡 | ✅ | Known by ear / Now learning / Not started on both platforms. iOS native visual review pending. |
+| Per-letter recognition bar (Listen TTR fill) | 🟡 | ✅ | Both use `getRecognitionFillRatio` from core. iOS omits bars without timing data and legends in sections without samples; web still renders empty tracks. iOS native visual review pending. |
 | Avg recognition (ms) summary | 🟡 | ✅ | Both use `getAverageRecognitionMs` from core. iOS native visual review pending. |
 | Hero metric (mastered count or best WPM) | ✅ | ✅ | Web shows mastered count + total in stats card |
 | Current streak | ✅ | ✅ | Both render in stats card |

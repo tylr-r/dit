@@ -25,7 +25,7 @@ Compared against `2026.5.31`.
 - iOS: Conversation separates copying from keying, with optional copy checking before you reply.
 - iOS: Conversation uses shorter labels and a single reply prompt.
 
-- iOS: Progress now groups letters by mastery and shows how quickly you recognize them by ear.
+- iOS: Progress now groups letters by mastery and shows recognition speed when it has been measured.
 - iOS: Added Test sound in Settings so you can check your playback speed and pitch.
 - iOS: Onboarding has larger, animated listening and recognition illustrations, clearer text, and a consistent Continue button.
 - iOS: Conversation keeps connection errors and recovery actions together.

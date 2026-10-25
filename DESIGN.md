@@ -362,6 +362,8 @@ and bottom). Draw: scaleY 0→1 from top, `TIMING.connector` (700ms),
 - Replay stays centered on the screen in its own action column. Next occupies the trailing column, balanced by an empty leading column, so revealing it never shifts Replay. An invisible Next button must not offset the visible control.
 - Custom text uses a native edit sheet and a scrollable playback surface. The source remains hidden until Reveal. The system keyboard is the native copy input; copy is disabled in Setup and Paused. Progress and the wave share the native playback clock and freeze on Pause.
 - Progress keeps native sheet chrome and the guided-course banner, but groups letters by mastery and adds recognition bars and an average-recognition summary. Only mastered tiles expose patterns and score colors.
+- Progress tiles show the character and its measured information. Do not repeat instructional slogans on every unmastered tile; the section heading already provides the context. On iOS, omit recognition bars without timing data and show the speed legend only in sections that have samples.
+- Label characters without recorded attempts **Not started**, matching web. Avoid the ambiguous **Not yet** category name.
 - These surfaces require a native rebuild and rendered review on a small iPhone, with the copy keyboard and Reduce Motion enabled, before claiming visual parity.
 
 ### Conversation surface (web)
