@@ -152,15 +152,11 @@ export function PrivacyPolicy() {
             so they can be restored across your devices.
           </li>
           <li>
-            When you use Conversation, your keyed messages and conversation
-            history are sent to Google Gemini through Firebase AI Logic to
-            generate the other station's replies. This includes any callsign,
-            name, or location you put in a message. Requests also include a
-            fictional station callsign and your device's local hour for
-            time-appropriate greetings. Your typed reception copy stays local
-            and is not sent to the AI service. Dit does not save conversations
-            to your account or include them in learning scores. On iOS, you
-            choose whether to allow this sharing before each contact.
+            Conversation sends your keyed messages and chat history to Google
+            Gemini to generate replies, along with a fictional station callsign
+            and your local hour. Typed reception copy stays on your device.
+            Dit does not save conversations to your account or use them for
+            learning scores. On iOS, you approve sharing before each contact.
           </li>
           <li>
             App usage analytics through Firebase Analytics on iOS and{' '}
