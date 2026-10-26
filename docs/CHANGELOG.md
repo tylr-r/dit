@@ -13,6 +13,9 @@ Compared against `2026.5.31`.
 
 ### Changes
 
+- Morse tones are louder and easier to hear.
+- Playback consistently follows your selected speed, spacing, and tone pitch, including the sound check and Reference chart.
+- iOS: Controls retain a translucent appearance on versions before iOS 26.
 - Web: Conversation now sends perfect RST reports as `5NN` and chooses `GM`, `GA`, `GE`, or `GN` from the learner's local time.
 - Web: Conversation replies now follow a natural CW exchange, keying is visually primary, optional copy collapses when empty, and a compact prosign reference is available during a QSO.
 - iOS: Onboarding sound check now notices when your volume is all the way down and asks you to turn it up before continuing.
@@ -28,7 +31,10 @@ Compared against `2026.5.31`.
 
 - Onboarding now moves forward automatically after a successful sign-in instead of leaving you on the welcome screen without sign-in choices.
 - iOS: Practice now shows green or red feedback again when an answer is correct or missed.
-- Fixed the Reference chart playing letters at a speed that didn't match your Listen setting.
+- iOS: Fixed paddle input continuing after opening another screen or switching modes.
+- Reset App now works offline and explains when synced progress cannot be cleared.
+- Settings reopens after sign-in when sign-in was started from Settings.
+- Web: Improved audio startup so the first keypress remains audible and fresh interactions can retry playback.
 - Fixed **Use recommended settings** always applying the returning-learner preset, even when you said you're new to Morse.
 
 ## 2026.5.31

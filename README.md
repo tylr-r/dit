@@ -28,13 +28,15 @@ Dit ships on the App Store and runs on [practicedit.com](https://practicedit.com
 - **Frequency-based letter order.** The first letters form real words (TEN, RAT, NET), so practice doesn't feel abstract.
 - **Self-paced.** Beginners get a guided course that advances in small packs. Everyone else free-roams.
 
-More on the research behind this and how it maps to the app: [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md).
+More on the research behind this and how it maps to the app: [docs/Pedagogical_philosophy.md](docs/Pedagogical_philosophy.md).
 
-## The three modes
+## Practice modes
 
 - **Practice**: match the prompted letter. Get it right and it moves on. Get it wrong and, depending on settings, you either stay on the same target or advance immediately (IFR mode). Word mode strings letters into a full word and reports your WPM at the end.
 - **Freestyle**: tap whatever you want, pause, and Dit tells you what letter you sent. Word mode collects decoded letters into a running sentence.
 - **Listen**: Dit plays a letter at the speed you pick. You type the answer.
+
+On web, Listen also offers English-word and Q-code recognition, plus custom-text playback with optional type-along practice. Web also has **Conversation** mode: key replies to an AI CW operator and hear its responses in Morse. These additions are not available in the iOS app.
 
 Intended behavior across platforms is in [docs/APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md).
 
@@ -53,7 +55,7 @@ Everything below is here for people who want to run the code locally or understa
 - Monorepo: Turborepo + pnpm workspaces.
 - `packages/core`: shared Morse logic, types, constants, Firebase helpers, React hooks. Both apps depend on it.
 - `apps/web`: Vite + React 19.
-- `apps/ios`: Expo SDK 55 + React Native 0.81.
+- `apps/ios`: Expo SDK 55 + React Native 0.83.
 - `modules/dit-native`: Swift/UIKit Expo native module for audio playback, haptics, and glass effects.
 - iOS also ships `DitProgress`, a home-screen widget that reads the same progress snapshot the in-app Reference view uses.
 - Firebase Auth + Realtime Database for optional cross-device sync. Firebase Analytics for basic usage events.
@@ -100,7 +102,7 @@ You'll need your own Firebase project if you want sign-in or sync to work end-to
 ## Docs
 
 - [docs/APP_BEHAVIOR.md](docs/APP_BEHAVIOR.md): intended behavior across platforms.
-- [docs/PEDAGOGICAL_PHILOSOPHY.md](docs/PEDAGOGICAL_PHILOSOPHY.md): the learning methodology behind the modes and progression.
+- [docs/Pedagogical_philosophy.md](docs/Pedagogical_philosophy.md): the learning methodology behind the modes and progression.
 - [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md): code style, naming, and UI design principles.
 - [docs/NATIVE_IOS.md](docs/NATIVE_IOS.md): iOS native module architecture.
 - [DESIGN.md](DESIGN.md): visual, motion, and interaction direction; also what we've tried and removed.

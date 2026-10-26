@@ -96,7 +96,7 @@ export function PrivacyPolicy() {
     <LegalPageLayout
       title="Privacy Policy"
       intro="How Dit handles information in the web and iOS apps."
-      lastUpdated="April 2026"
+      lastUpdated="October 2026"
       current="privacy"
     >
       <section className="legal-glance" aria-labelledby="glance-label">
@@ -107,8 +107,8 @@ export function PrivacyPolicy() {
           <div className="legal-highlight">
             <p className="legal-highlight-title">No account needed</p>
             <p className="legal-highlight-body">
-              Use Dit fully without signing in or sharing any personal
-              information.
+              Practice Morse without creating an account or providing your
+              name or email address.
             </p>
           </div>
           <div className="legal-highlight">
@@ -152,7 +152,7 @@ export function PrivacyPolicy() {
             so they can be restored across your devices.
           </li>
           <li>
-            Web app usage analytics through{' '}
+            Web and iOS app usage analytics through{' '}
             <a
               href="https://marketingplatform.google.com/about/analytics/"
               rel="noreferrer"
@@ -160,8 +160,11 @@ export function PrivacyPolicy() {
             >
               Google Analytics
             </a>
-            . If you sign in, your Dit user ID is sent to Google Analytics so
-            your usage can be linked across sessions and devices. The Dit
+            . Analytics includes app interactions, screen views, session
+            information, and an app-instance or browser identifier. Google
+            Analytics may also derive a general location from your IP
+            address. If you sign in, your Dit user ID is sent to Google
+            Analytics so your usage can be linked across sessions and devices. The Dit
             user ID is an opaque identifier; it does not contain your name or
             email.
           </li>
@@ -172,7 +175,7 @@ export function PrivacyPolicy() {
           <li>Run the app and save your progress.</li>
           <li>Authenticate your account when you sign in.</li>
           <li>Sync your settings and progress across devices.</li>
-          <li>Measure web app usage so we can improve it.</li>
+          <li>Measure web and iOS app usage so we can improve Dit.</li>
         </ul>
       </LegalSection>
       <LegalSection title="Services we rely on">
@@ -189,7 +192,7 @@ export function PrivacyPolicy() {
           >
             Google Analytics
           </a>{' '}
-          on the web. Sign-in providers (Google and Apple) handle
+          on web and iOS. Sign-in providers (Google and Apple) handle
           authentication data under their own privacy policies.{' '}
           <strong>We do not sell personal information.</strong>
         </p>
@@ -246,7 +249,7 @@ export function TermsOfService() {
     <LegalPageLayout
       title="Terms of Service"
       intro="These terms govern your use of the Dit web and iOS apps."
-      lastUpdated="April 2026"
+      lastUpdated="October 2026"
       current="terms"
     >
       <LegalSection title="Use of the service">
@@ -283,7 +286,7 @@ export function TermsOfService() {
           >
             Google Analytics
           </a>{' '}
-          on the web, and Google and Apple for optional sign-in on iOS. Your
+          on web and iOS, and Google and Apple for optional sign-in. Your
           use of those services is subject to their own terms and policies.
         </p>
       </LegalSection>

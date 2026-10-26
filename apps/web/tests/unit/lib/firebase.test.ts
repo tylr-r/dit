@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
 
 const {
   firebaseApp,
@@ -41,12 +41,15 @@ vi.mock('firebase/database', () => ({
   set: vi.fn(),
 }))
 
+// Exercise the configured path without depending on an untracked local .env.
+vi.stubEnv('VITE_RECAPTCHA_SITE_KEY', 'test-recaptcha-site-key')
 await import('../../../src/firebase')
+afterAll(() => vi.unstubAllEnvs())
 
 describe('Firebase App Check', () => {
   it('initializes the Enterprise provider with the configured site key', () => {
     expect(providerKeys).toEqual([
-      '6LfFt5gtAAAAAGZXheWKWkHpCWz-nRR-Rq4J6YR8',
+      'test-recaptcha-site-key',
     ])
     expect(initializeAppCheckMock).toHaveBeenCalledWith(
       firebaseApp,
