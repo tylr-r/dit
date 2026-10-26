@@ -160,6 +160,10 @@ export function PrivacyPolicy() {
             optional and is not part of the iOS app.
           </li>
           <li>
+            Technical diagnostic information from supporting SDKs, used to
+            monitor and maintain service reliability.
+          </li>
+          <li>
             Web and iOS app usage analytics through{' '}
             <a
               href="https://marketingplatform.google.com/about/analytics/"
