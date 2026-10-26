@@ -152,6 +152,14 @@ export function PrivacyPolicy() {
             so they can be restored across your devices.
           </li>
           <li>
+            If you use Conversation mode on the web, messages you send and
+            conversation context, including your current local hour, are
+            sent to Google Gemini through Firebase AI Logic to generate
+            practice replies. Messages can include a callsign, name, or
+            location if you choose to send those details. This feature is
+            optional and is not part of the iOS app.
+          </li>
+          <li>
             Web and iOS app usage analytics through{' '}
             <a
               href="https://marketingplatform.google.com/about/analytics/"
@@ -175,6 +183,7 @@ export function PrivacyPolicy() {
           <li>Run the app and save your progress.</li>
           <li>Authenticate your account when you sign in.</li>
           <li>Sync your settings and progress across devices.</li>
+          <li>Generate AI operator replies in web Conversation practice.</li>
           <li>Measure web and iOS app usage so we can improve Dit.</li>
         </ul>
       </LegalSection>
@@ -195,6 +204,14 @@ export function PrivacyPolicy() {
           on web and iOS. Sign-in providers (Google and Apple) handle
           authentication data under their own privacy policies.{' '}
           <strong>We do not sell personal information.</strong>
+        </p>
+        <p>
+          Optional web Conversation practice uses{' '}
+          <a href="https://ai.google.dev/" rel="noreferrer" target="_blank">
+            Google Gemini
+          </a>{' '}
+          through Firebase AI Logic. Content sent to Google for this feature
+          is handled under Google's applicable terms and privacy policies.
         </p>
       </LegalSection>
       <LegalSection title="Your choices">
@@ -286,8 +303,10 @@ export function TermsOfService() {
           >
             Google Analytics
           </a>{' '}
-          on web and iOS, and Google and Apple for optional sign-in. Your
-          use of those services is subject to their own terms and policies.
+          on web and iOS, Google Gemini through Firebase AI Logic for
+          optional web Conversation practice, and Google and Apple for
+          optional sign-in. Your use of those services is subject to their
+          own terms and policies.
         </p>
       </LegalSection>
       <LegalSection title="Intellectual property">
