@@ -46,6 +46,7 @@ Dit builds auditory Morse recognition and fluent keying. Its learning model is h
 
 ## Documentation
 
+- Write repository docs and commit messages as factual project records: behavior, decisions and rationale, verification results, limitations, and next steps. No diary-style narration of agent sessions, conversations, approval history, rejected drafts, or tool-access incidents. Preserve standing approval requirements and describe unverified work directly.
 - Keep `docs/APP_BEHAVIOR.md`, `docs/PLATFORM_PARITY.md`, `docs/DECISIONS.md`, and `DESIGN.md` up to date as you make changes. These are the canonical references for behavior, parity, durable product decisions, and design direction — outdated docs mislead future work.
 - When closing or opening a platform parity gap, update `docs/PLATFORM_PARITY.md`.
 - When adding, changing, or removing a behavior or flow, update `docs/APP_BEHAVIOR.md`.
