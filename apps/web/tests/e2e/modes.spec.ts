@@ -40,35 +40,38 @@ const seedLocalStorage = ({ listenWpm }: LocalStorageSeed = {}) => {
 
 const sendSymbol = async (page: Page, symbol: '.' | '-') => {
   await page.keyboard.down(' ')
-  await page.waitForTimeout(symbol === '.' ? DOT_PRESS_MS : DASH_PRESS_MS)
+  await page.clock.runFor(symbol === '.' ? DOT_PRESS_MS : DASH_PRESS_MS)
   await page.keyboard.up(' ')
-  await page.waitForTimeout(SYMBOL_GAP_MS)
+  await page.clock.runFor(SYMBOL_GAP_MS)
 }
 
 const sendMorse = async (page: Page, code: string) => {
   for (const symbol of code) {
     await sendSymbol(page, symbol as '.' | '-')
   }
-  await page.waitForTimeout(LETTER_GAP_MS)
+  await page.clock.runFor(LETTER_GAP_MS)
 }
 
 const sendVbandSymbol = async (page: Page, code: 'ControlLeft' | 'ControlRight') => {
   await page.keyboard.down(code)
-  await page.waitForTimeout(30)
+  await page.clock.runFor(30)
   await page.keyboard.up(code)
-  await page.waitForTimeout(code === 'ControlLeft' ? 130 : 330)
+  await page.clock.runFor(code === 'ControlLeft' ? 130 : 330)
 }
 
 const gotoApp = async (
   page: Page,
   { coarsePointer = false, listenWpm }: { coarsePointer?: boolean; listenWpm?: number } = {},
 ) => {
+  // Load normally, then control press lengths and every paddle-repeat timer.
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') })
   await page.addInitScript(seedLocalStorage, { listenWpm })
   if (coarsePointer) {
     await page.addInitScript(overrideCoarsePointer)
   }
   await page.goto('/app')
   await page.getByLabel('Tap for dot, hold for dah').waitFor()
+  await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'))
 }
 
 const selectMode = async (page: Page, mode: 'practice' | 'freestyle' | 'listen') => {
@@ -132,7 +135,7 @@ test('freestyle mode accepts VBand paddle keyboard input', async ({ page }) => {
 
   await sendVbandSymbol(page, 'ControlLeft')
   await sendVbandSymbol(page, 'ControlRight')
-  await page.waitForTimeout(LETTER_GAP_MS)
+  await page.clock.runFor(LETTER_GAP_MS)
 
   await expect(page.locator('.freestyle-overlay-letter')).toHaveText('A')
 })
@@ -143,9 +146,9 @@ test('freestyle mode repeats a held VBand paddle', async ({ page }) => {
   await selectMode(page, 'freestyle')
 
   await page.keyboard.down('ControlLeft')
-  await page.waitForTimeout(260)
+  await page.clock.runFor(260)
   await page.keyboard.up('ControlLeft')
-  await page.waitForTimeout(LETTER_GAP_MS)
+  await page.clock.runFor(LETTER_GAP_MS)
 
   await expect(page.locator('.freestyle-overlay-letter')).toHaveText('I')
 })
@@ -156,9 +159,9 @@ test('freestyle VBand paddle repeat follows playback speed', async ({ page }) =>
   await selectMode(page, 'freestyle')
 
   await page.keyboard.down('ControlLeft')
-  await page.waitForTimeout(130)
+  await page.clock.runFor(130)
   await page.keyboard.up('ControlLeft')
-  await page.waitForTimeout(LETTER_GAP_MS)
+  await page.clock.runFor(LETTER_GAP_MS)
 
   await expect(page.locator('.freestyle-overlay-letter')).toHaveText('I')
 })
@@ -169,13 +172,13 @@ test('freestyle mode switches quickly between VBand paddles', async ({ page }) =
   await selectMode(page, 'freestyle')
 
   await page.keyboard.down('ControlLeft')
-  await page.waitForTimeout(30)
+  await page.clock.runFor(30)
   await page.keyboard.down('ControlRight')
-  await page.waitForTimeout(30)
+  await page.clock.runFor(30)
   await page.keyboard.up('ControlLeft')
-  await page.waitForTimeout(330)
+  await page.clock.runFor(330)
   await page.keyboard.up('ControlRight')
-  await page.waitForTimeout(LETTER_GAP_MS)
+  await page.clock.runFor(LETTER_GAP_MS)
 
   await expect(page.locator('.freestyle-overlay-letter')).toHaveText('A')
 })
