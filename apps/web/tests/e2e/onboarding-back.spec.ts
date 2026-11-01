@@ -1,18 +1,22 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const completeKeyTutorial = async (page: Page) => {
+  // Classify taps and holds independently of test-driver scheduling delays.
+  await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'))
   const key = page.locator('.nux-tutorial-button-slot button').first()
   for (const duration of [80, 80, 80, 400, 400, 400]) {
     await key.hover()
     await page.mouse.down()
-    await page.waitForTimeout(duration)
+    await page.clock.runFor(duration)
     await page.mouse.up()
-    await page.waitForTimeout(140)
+    await page.clock.runFor(140)
   }
+  await page.clock.resume()
 }
 
 for (const profile of ['beginner', 'known']) {
   test(`${profile} onboarding can go back through slides and the final steps`, async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') })
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/app')
     await page.getByRole('button', { name: 'Get started', exact: true }).click()
