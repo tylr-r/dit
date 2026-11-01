@@ -13,16 +13,18 @@ Dit builds auditory Morse recognition and fluent keying. Its learning model is h
 - Prefer `pnpm` when installing dependencies.
 - Ask for confirmation before adding new production dependencies.
 - Run `pnpm run lint` before running a build or making a commit. No need to run it if for every code change, just before making a git commit.
-- Do not run build scripts yourself. Give the exact build command to the user and ask them to run it so we do not waste chat tokens or context on build output.
+- Agents may run local builds, development servers, and Simulator checks to verify authorized work. Keep build output in log files and report concise results.
+- Track every server or watcher started for a task and stop it when finished, including after failures. Shut down any Simulator device booted for the task. Preserve servers and Simulator devices that were already running unless Tyler asks otherwise. Verify cleanup before reporting completion.
+- Release archives, distribution uploads, and production deployments require an explicit request from Tyler.
 
 ## Build, Test, and Development Commands
 
 - `pnpm install`: install workspace dependencies.
-- `pnpm run dev`: Do not run this command. Ask the user to run it to start all app dev servers in parallel via Turbo.
-- `pnpm --filter @dit/web dev`: Do not run this command. Ask the user to run it to start only the web app locally.
-- `pnpm --filter @dit/ios dev`: Do not run this command. Ask the user to run it to start only the Expo iOS app.
-- For iOS development with Metro, ask the user to run `pnpm device` for a connected iPhone or `pnpm sim` for Simulator. For standalone device verification, including confirming a widget fix, use `pnpm --filter @dit/ios exec expo run:ios --device --configuration Release --no-bundler`. This builds and installs the app and embedded widget extension with bundled JavaScript, without a local server or upload. All native build commands are user-run.
-- After changing native app configuration or config plugins (including widgets, extensions, and entitlements), first ask the user to run `pnpm --filter @dit/ios exec expo prebuild --platform ios --clean`, then the appropriate device or Simulator command above. Prebuild regenerates the ignored native iOS project; `expo run:ios` does not regenerate an existing native project.
+- `pnpm run dev`: start all app dev servers in parallel via Turbo; stop task-started servers when verification is complete.
+- `pnpm --filter @dit/web dev`: start only the web app locally; stop it when verification is complete.
+- `pnpm --filter @dit/ios dev`: start only the Expo iOS app; stop Metro when verification is complete.
+- For iOS development with Metro, use `pnpm device` for a connected iPhone or `pnpm sim` for Simulator. For standalone device verification, including confirming a widget fix, use `pnpm --filter @dit/ios exec expo run:ios --device --configuration Release --no-bundler`. This builds and installs the app and embedded widget extension with bundled JavaScript, without a local server or upload. Agents may run these local verification commands and must clean up task-started processes and Simulator devices afterward.
+- After changing native app configuration or config plugins (including widgets, extensions, and entitlements), first run `pnpm --filter @dit/ios exec expo prebuild --platform ios --clean`, then the appropriate device or Simulator command above. Prebuild regenerates the ignored native iOS project; `expo run:ios` does not regenerate an existing native project.
 - Recommend `pnpm --filter @dit/ios app-store:build` only when the user asks to prepare a release or distribution build. It creates an archive and IPA; it does not install the app on a device. State what a suggested command produces and whether it installs or uploads anything.
 - `pnpm run build`: build all packages/apps with Turbo.
 - `pnpm run lint`: lint all workspaces via ESLint.
