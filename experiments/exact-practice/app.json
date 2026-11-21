@@ -1,0 +1,62 @@
+{
+  "host": {
+    "web": {},
+    "ios": {
+      "minimumOS": "26.0",
+      "icon": "art/AppIcon.icon",
+      "deviceFamily": [
+        "iphone",
+        "ipad"
+      ]
+    }
+  },
+  "deploy": {
+    "store": {
+      "web": "0",
+      "ios": "0"
+    }
+  },
+  "$schema": ".exact/checkout/scripts/app.schema.json",
+  "name": "Dit Practice Spike",
+  "short_name": "Dit Practice Spike",
+  "id": "com.tylerobinson.dit.exactspike",
+  "start_url": "/app",
+  "display": "standalone",
+  "userInterfaceStyle": "dark",
+  "app": {
+    "id": "com.tylerobinson.dit.exactspike",
+    "name": "Dit"
+  },
+  "data": ["reference-letter", "peekable"],
+  "modules": [
+    "dit-key",
+    "dit-reminder-wheel",
+    "dit-mode-selector",
+    "dit-listen-wave",
+    "dit-intro-artwork"
+  ],
+  "widgets": [
+    {
+      "kind": "DitProgress",
+      "title": "Dit",
+      "description": "Your streak and today's progress.",
+      "component": "DitProgressWidget",
+      "props": "DitWidgetProps",
+      "families": [
+        "systemSmall",
+        "systemMedium",
+        "accessoryRectangular"
+      ],
+      "refresh": "ditProgress",
+      "preview": {
+        "showArtwork": false,
+        "known": false,
+        "mastered": 0,
+        "bestWpm": 0,
+        "streak": 0,
+        "today": 0,
+        "goal": 15
+      }
+    }
+  ]
+}

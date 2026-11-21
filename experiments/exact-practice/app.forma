@@ -1,0 +1,14 @@
+forma dit
+
+theme
+  dit-ink = #faf7f5  scheme=fixed
+  dit-ink-muted = rgba(250,247,245,0.6)  scheme=fixed
+  dit-ink-secondary = rgba(250,247,245,0.7)  scheme=fixed
+  dit-backdrop = #060b0e  scheme=fixed
+  dit-scrim = rgba(6,11,14,0.72)  scheme=fixed
+  dit-panel = rgba(12,18,24,0.92)  scheme=fixed
+  dit-input = rgba(255,255,255,0.06)  scheme=fixed
+  dit-input-pressed = rgba(255,255,255,0.12)  scheme=fixed
+  dit-border = rgba(255,255,255,0.1)  scheme=fixed
+  dit-selected-border = rgba(255,255,255,0.32)  scheme=fixed
+  dit-reference = #131d26  scheme=fixed

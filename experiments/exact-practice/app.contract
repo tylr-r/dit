@@ -1,0 +1,2120 @@
+use ShaderState from "@exact/shader"
+use DitProgressWidget, DitWidgetProps from "./widget.contract"
+// Isolated Dit web experiment; no production data or services.
+routes nav
+  home "/"
+  app "/app"
+  qso "/app/qso"
+
+shape Media
+  prefersReducedMotion: bool
+  hover: string
+  height: number
+
+shape Page
+  hasFocus: bool
+
+style SheetControl
+  appearance="none" box-sizing="border-box" font-weight=400 color="dit-ink" background-color="dit-input" border="1px solid var(--dit-border)" min-height=44 cursor="pointer"
+  :checked
+    background-color="dit-panel" border-color="dit-selected-border"
+  :active
+    background-color="dit-input-pressed"
+
+style SheetSegment
+  appearance="none" box-sizing="border-box" font-weight=400 color="dit-ink" background-color="dit-input" border="1px solid var(--dit-border)" border-radius=12 padding="10px 12px" min-height=44 flex="1 1 7rem" min-width=0 font-size="1rem" line-height=1.5 cursor="pointer"
+  :checked
+    background-color="dit-panel" border-color="dit-selected-border"
+  :active
+    background-color="dit-input-pressed"
+
+style LearningRow
+  appearance="none" display="flex" flex-direction="row" flex-shrink=0 align-items="center" justify-content="space-between" gap=12 text-align="left" width="100%" min-height=44 padding="12px 14px" box-sizing="border-box" border="1px solid var(--dit-border)" border-radius=14 color="dit-ink" background-color="dit-input" cursor="pointer"
+  :checked
+    border-color="dit-selected-border"
+  :active
+    background-color="dit-input-pressed"
+
+style RowTitle
+  font-size="0.8333rem" line-height=1.15 font-weight=500 white-space="normal"
+
+style RowSubtitle
+  font-size="0.7083rem" line-height=1.15 color="dit-ink-secondary" white-space="normal"
+
+style SettingsGroup
+  width="100%" flex-shrink=0 box-sizing="border-box" border-radius=18 background-color="#101217" overflow="hidden"
+
+style SettingsRow
+  width="100%" box-sizing="border-box" min-height=66 padding="14px 24px" align-items="center" justify-content="space-between" gap=6 flex-wrap="wrap"
+
+style SettingsLabel
+  font-size="0.941rem" color="dit-ink" white-space="normal"
+
+style SettingsHelp
+  font-size="0.765rem" line-height=1.385 color="dit-ink-secondary" padding="0 24px 16px" white-space="normal"
+
+style SettingsSeparator
+  height=1 margin="0 24px" background-color="rgba(255,255,255,0.08)"
+
+style ListenAction
+  box-sizing="border-box" min-height=44 backgroundMaterial="glass-clear" border-radius=12 padding="0 16px" font-size="0.824rem" letter-spacing=1 text-transform="uppercase" color="dit-ink"
+
+style SettingsAction
+  appearance="none" border-width=0 min-height=66 width="100%" text-align="left" padding="12px 24px" font-size="0.941rem" color="#80caff" background-color="transparent"
+
+style ContactQuiet
+  appearance="none" background-color="transparent" border-width=0 min-height=44 padding="12px 16px" font-size="0.882rem" font-weight=500 color="dit-ink-muted"
+
+style NativeContactChoice
+  appearance="none" min-height=44 padding="12px 16px" box-sizing="border-box" border-radius=10 backgroundMaterial="glass" font-weight=500 font-size="0.882rem" color="rgba(244,247,249,0.9)"
+
+style NativeScopeRow
+  appearance="none" width="100%" min-height=44 box-sizing="border-box" border-width=0 border-bottom="1px solid rgba(255,255,255,0.08)" border-radius=0 padding="14px 16px" background-color="transparent" text-align="left" display="flex" align-items="center" justify-content="space-between" gap=8 flex-shrink=0
+  :active
+    background-color="dit-input-pressed"
+
+style ScopeFooter
+  appearance="none" width="100%" min-height=46 border-radius=14 padding="8px 14px" box-sizing="border-box" border-width=0 font-size="0.882rem" font-weight=500 color="dit-ink"
+
+style HeroCaption
+  color="dit-ink-secondary" font-size="0.706rem" font-weight=600 letter-spacing=0.8 text-transform="uppercase"
+
+style PassageField
+  width="100%" box-sizing="border-box" padding=12 color="dit-ink" background-color="rgba(255,255,255,0.06)" border="1px solid var(--dit-border)" border-radius=12 font-size="1.059rem"
+
+style SettingsStepper
+  min-width=36 min-height=44 padding=0 appearance="none" border-width=0 background-color="transparent" color="dit-ink" font-size="1rem"
+
+style ReferenceTile
+  appearance="none" box-sizing="border-box" min-width=44 min-height=84 flex="1 1 3rem" border-width=0 border-radius=12 padding="8px 3px" font-size="1.25rem" font-weight=600 color="dit-ink" background-color="dit-reference" cursor="pointer"
+  :hover
+    background-color="dit-input-pressed"
+  :focus-visible
+    box-shadow="0 0 0 2px var(--dit-ink-secondary)"
+  :active
+    background-color="dit-input-pressed"
+
+
+shape WidgetSaved
+  ok: bool
+
+component ExactPractice
+  mutation widgetPublished as shape WidgetSaved queue
+  resource media = exactViewport() as shape Media
+  state panel = ""
+  derive nativeSettings = appleSession and panel == "settings"
+  state masteredCards = ""
+  state learningCards = ""
+  state unstudiedCards = ""
+  state dayDetail = ""
+  state dayFill = "0%"
+  state refKnown = ""
+  state refLearning = ""
+  state refUnknown = "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9"
+  state refRecentSend = "0"
+  state refRecentListen = "0"
+  state refSelected = ""
+  state refPattern = ""
+  state refTtrAverage = ""
+  state refTtrBars = ""
+  state refStreakToday = ""
+  state refStreakCurrent = ""
+  state refStreakBest = ""
+  state refStreakRisk = false
+  state refVisible = false
+  state refPeek = ""
+  state refToken = 0
+  derive refEligible = refSelected != "" and (refKnown.split(",").includes(refSelected) or refLearning.split(",").includes(refSelected))
+  action reference(letter: string)
+    if panel == "progress"
+      refSelected = letter
+      refPattern = ""
+      refVisible = false
+      refToken = refToken + 1
+  action toggleReferencePattern
+    if panel == "progress" and refEligible and refPattern != ""
+      refVisible = not refVisible
+  state panelRouteId = 0
+  action settings
+    if desk
+      cancel()
+      practiceSettingsExpanded = mode == "practice" or mode == "guided"
+      helpersExpanded = false
+      panel = "settings"
+      panelRouteId = top(nav).id
+      showModal(appleSession ? "apple-settings" : "options")
+  action progress
+    if desk
+      cancel()
+      panel = "progress"
+      refSelected = ""
+      refPattern = ""
+      refVisible = false
+      panelRouteId = top(nav).id
+      showModal(appleSession ? "apple-progress" : "options")
+  action openAboutLink(label: string)
+    if panel == "about"
+      openURL("https://practicedit.com/" + label.toLowerCase())
+  action about
+    if panel == "settings"
+      close(nativeSettings ? "apple-settings" : "options")
+      panel = "about"
+      panelRouteId = top(nav).id
+      showModal("about")
+  action closePanel
+    if panel == "about"
+      close("about")
+    else if panel == "entry-account"
+      close("entry-account")
+    else if appleSession and panel == "progress"
+      close("apple-progress")
+    else if panel == "scope"
+      close(appleSession ? "native-learning" : "learning")
+      focus("settings-button")
+    else
+      close(nativeSettings ? "apple-settings" : "options")
+    refPeek = ""
+    panel = ""
+    scopeEditing = false
+    scopeDraft = ""
+  resource page = exactPage() as shape Page
+  state selectedMode = "practice"
+  derive route = top(nav)
+  state introHint = "done"
+  state appleSession = false
+  state appleSessionFailed = false
+  state legacyProgressHeld = false
+  state nuxStatus = "checking"
+  state nuxStorage = "empty"
+  state nuxOwned = false
+  state nuxStep = "welcome"
+  state learnerProfile = ""
+  action setFreestyleWords(enabled: bool)
+    if enabled != wordMode
+      preference("toggle-words")
+  state practiceWords = false
+  state practiceWord = ""
+  state practicePrefix = ""
+  state practiceWpm = ""
+  state bestWpm = ""
+  state practiceSettingsExpanded = false
+  action togglePracticeSettings
+    practiceSettingsExpanded = not practiceSettingsExpanded
+  action setSequential(enabled: bool)
+    preference(enabled ? "sequential-on" : "sequential-off")
+  action setIfr(enabled: bool)
+    preference(enabled ? "ifr-on" : "ifr-off")
+  action setReview(enabled: bool)
+    preference(enabled ? "review-on" : "review-off")
+  action setPracticeWords(enabled: bool)
+    preference(enabled ? "practice-words-on" : "practice-words-off")
+  state helpersExpanded = false
+  state showHint = false
+  state showMnemonic = false
+  state helperCode = ""
+  state helperMnemonic = ""
+  state helperHits = ""
+  action toggleHelpers
+    helpersExpanded = not helpersExpanded
+  action setShowHint(enabled: bool)
+    preference(enabled ? "hint-on" : "hint-off")
+  action setShowMnemonic(enabled: bool)
+    preference(enabled ? "mnemonic-on" : "mnemonic-off")
+  state practiceAutoPlay = true
+  state hapticsEnabled = true
+  state hapticsSaved = true
+  state reminderEnabled = false
+  state reminderPointer = -1
+  state reminderStartX = 0
+  state reminderStartY = 0
+  state reminderBusy = false
+  state reminderExiting = false
+  state reminderError = ""
+  state reminderTime = "19:00"
+  state nuxReminderTime = "19:00"
+  state nuxReminderLabel = "7:00 PM"
+  state nuxSound = "idle"
+  state nuxTaps = "0"
+  state nuxHolds = "0"
+  state nuxResume = false
+  state nuxTourIndex = "0"
+  state nuxToken = 0
+  state nuxCommand = ""
+  derive nuxGate = nuxStatus == "pending" and (route.name == "app" or route.name == "qso" or (route.name == "home" and nuxOwned))
+  derive bootGate = appleSessionFailed or (nuxStatus == "checking" and (route.name == "app" or route.name == "qso"))
+  derive mode = bootGate ? "boot" : nuxGate ? "nux" : route.name == "qso" ? "conversation" : selectedMode
+  derive webKey = not appleSession and nuxStatus != "checking"
+  state courseLessonMode = "practice"
+  derive nativeLessonMismatch = appleSession and listenCourse and not guideCompleted and (mode == "practice" or mode == "freestyle" or mode == "listen") and mode != courseLessonMode
+  state guidePhase = "teach"
+  derive nativeGuidedKey = appleSession and mode == "guided" and (guidePhase == "teach" or guidePhase == "practice")
+  derive nativeGate = appleSession and mode == "guided" and guidePhase.startsWith("gate-")
+  derive gateFromKey = nativeGate and (guidePhase == "gate-practice" or guidePhase == "gate-listen")
+  derive nativePhaseDialog = nativeGate or (appleSession and guideCelebrate)
+  derive gateTitle = guideCelebrate ? "Course complete" : guidePhase == "gate-practice" ? "Next up" : guidePhase == "gate-listen" ? "Ready to listen" : guidePhase == "gate-retry" ? "Keep going" : "New letters unlocked"
+  derive gateSubtitle = guideCelebrate ? "You unlocked all beginner letter packs." : guidePhase == "gate-practice" ? "Practice in mixed order." : guidePhase == "gate-listen" ? "Hear and identify these letters." : guidePhase == "gate-retry" ? "One more practice round before new letters." : ""
+  state gatePresented = false
+  task revealPracticeGate when nativePhaseDialog and not gatePresented
+    after(1, presentPracticeGate)
+  action presentPracticeGate
+    if nativePhaseDialog and not gatePresented
+      gatePresented = true
+      showModal("phase-gate")
+  task removePracticeGate when gatePresented and not nativePhaseDialog
+    after(1, closePracticeGate)
+  action closePracticeGate
+    close("phase-gate")
+    gatePresented = false
+  action acceptPracticeGate
+    if nativePhaseDialog and gatePresented
+      if guideCelebrate
+        guideCelebrate = false
+      else
+        advanceGuide()
+      closePracticeGate()
+  derive nativePractice = appleSession and (mode == "practice" or nativeGuidedKey or gateFromKey)
+  derive nativeWelcome = appleSession and mode == "nux" and nuxStep == "welcome"
+  derive nativeProfile = appleSession and mode == "nux" and nuxStep == "profile"
+  derive nativeIntro = appleSession and mode == "nux" and nuxStep.startsWith("intro_")
+  derive nativeSoundCheck = appleSession and mode == "nux" and nuxStep == "sound_check"
+  state outputVolumeLow = false
+  derive nativeTutorial = appleSession and mode == "nux" and nuxStep == "button_tutorial"
+  derive nativeLessonPreview = appleSession and mode == "nux" and (nuxStep == "beginner_stages" or nuxStep == "beginner_intro")
+  derive nativeReminder = appleSession and mode == "nux" and nuxStep == "reminder"
+  derive nativeStepGroup = nativeProfile ? 1 : nativeIntro ? 2 : nativeSoundCheck ? 3 : nativeTutorial ? 4 : nativeLessonPreview ? 5 : 6
+  derive protectedEntry = nuxStorage == "unsupported" or nuxStorage == "unavailable"
+  derive entryWarning = nuxStorage == "unsupported" ? "Saved setup is protected. Changes here are temporary." : "Setup cannot be saved on this device."
+  derive nativeEntry = nativeWelcome or nativeProfile or nativeIntro or nativeSoundCheck or nativeTutorial or nativeLessonPreview or nativeReminder
+  derive nativeCharacters = appleSession and (listening or (nativeGate and not gateFromKey))
+  derive nativeCustom = appleSession and mode == "listen" and listenContent == "custom"
+  derive nativeWords = appleSession and mode == "listen" and listenContent == "words"
+  derive nativeFreestyle = appleSession and mode == "freestyle"
+  derive freestyleGlyph = wordMode ? transcript : feedback.length == 1 ? feedback : ""
+  derive freestyleStatus = feedback.length == 1 ? (wordMode ? "Added " + feedback : " ") : feedback != "" ? feedback : freestyleInput != "" ? "Input " + freestyleInput : wordMode and transcript != "" ? "Word " + transcript : "Tap to dit or dah"
+  derive nativeContact = appleSession and mode == "conversation"
+  derive nativeReply = nativeContact and qsoPhase == "tx"
+  derive nativeContactEntry = nativeContact and (qsoPhase == "idle" or qsoPhase == "consent")
+  derive nativeHintSurface = nativeFreestyle or nativeGuidedKey or (appleSession and mode == "practice")
+  derive nativeDeskLayout = nativePractice or nativeFreestyle or nativeWords or nativeCustom or nativeCharacters or nativeContact
+  derive fullBleed = nativeDeskLayout or nativeEntry
+  state welcomeChoices = false
+  derive signedInWelcome = nativeWelcome and accountEmail != "" and panel != "entry-account"
+  task advanceSignedInWelcome when signedInWelcome and not media.prefersReducedMotion
+    after(350, advanceRestoredWelcome)
+  task advanceReducedWelcome when signedInWelcome and media.prefersReducedMotion
+    after(1, advanceRestoredWelcome)
+  action advanceRestoredWelcome
+    if nativeWelcome and accountEmail != "" and panel != "entry-account"
+      nux("start")
+  task waitForWelcomeChoices when nativeWelcome and accountEmail == ""
+    after(2000, revealWelcomeChoices)
+  action revealWelcomeChoices
+    if nativeWelcome
+      welcomeChoices = true
+  state fixtureAccounts = false
+  state accountEmail = ""
+  state accountFromSettings = false
+  state returnToAccountSettings = false
+  task restoredAccountSettings when returnToAccountSettings and accountEmail != "" and panel == "" and desk and (nuxStatus == "skipped" or nuxStatus == "completed")
+    after(1, showRestoredAccountSettings)
+  action showRestoredAccountSettings
+    returnToAccountSettings = false
+    settings()
+  state accountAction = ""
+  state accountToken = 0
+  action chooseFixtureAccount(account: string)
+    returnToAccountSettings = accountFromSettings and account != "sign-out"
+    accountAction = account
+    accountToken = accountToken + 1
+  action openEntryAccount
+    accountFromSettings = panel == "settings"
+    if panel == "settings"
+      close(nativeSettings ? "apple-settings" : "options")
+    panel = "entry-account"
+    panelRouteId = top(nav).id
+    showModal("entry-account")
+  action closeEntryAccount
+    close("entry-account")
+    panel = ""
+  action backFromNativeStep(e: PointerEvent)
+    if reminderPointer == e.pointerId and not reminderExiting
+      let dx = e.clientX - reminderStartX
+      let dy = e.clientY - reminderStartY
+      if dx < -48 and (0 - dx) > dy * 1.4 and (0 - dx) > (0 - dy) * 1.4
+        nux("back")
+    reminderPointer = -1
+  derive desk = mode != "nux" and mode != "boot"
+  derive tour = mode == "nux" and nuxStep == "known_tour"
+  derive tourModes = tour and nuxTourIndex == "0"
+  derive tourSettings = tour and nuxTourIndex == "1"
+  derive tourProgress = tour and nuxTourIndex == "2"
+  task ownOnboardingRoute when nuxGate and route.name != "app"
+    after(1, ownOnboarding)
+  action ownOnboarding
+    nav = replace(nav, path("app"))
+  action startReminderSwipe(e: PointerEvent)
+    reminderPointer = e.pointerId
+    reminderStartX = e.clientX
+    reminderStartY = e.clientY
+  action reminderWheel(value: string)
+    nux("reminder-time:" + value)
+  action setAutoPlay(enabled: bool)
+    preference(enabled ? "autoplay-on" : "autoplay-off")
+  action setHaptics(enabled: bool)
+    preference(enabled ? "haptics-on" : "haptics-off")
+  action settingsReminder(enabled: bool)
+    preference(enabled ? "reminder-on" : "reminder-off")
+  action settingsReminderTime(value: string)
+    preference("reminder-time:" + value)
+  action nux(command: string)
+    nuxCommand = command
+    nuxToken = nuxToken + 1
+  action askLocalReset
+    if nativeSettings
+      showModal("reset-local-app")
+  action replayNux
+    closePanel()
+    cancel()
+    nux("replay")
+    if route.name != "app"
+      nav = push(nav, path("app"))
+  action follow(url: string)
+    nav = go(nav, url)
+  task dismissRouteSheet when panel != "" and panelRouteId != top(nav).id
+    after(1, closePanel)
+  state guideCompleted = false
+  state guideCelebrate = false
+  state ordinaryListenPool = "T,E,N,R,A"
+  state scopeSelection = "legacy"
+  state scopeLetters = ""
+  state scopeDraft = ""
+  state scopeEditing = false
+  state learningMethod = "open"
+  state coursePacks = ""
+  derive firstPackLetters = match coursePacks.split(";").at(0) { case some(pack) => pack, case none => "" }
+  state courseCurrent = "1"
+  state courseReached = "1"
+  state courseLearned = ""
+  state courseGraduated = false
+  state guideTitle = "Teach"
+  state guidePack = "E,T"
+  state guidePool = "E,T"
+  state guideTarget = "E"
+  state guideFeedback = ""
+  state teachRemaining = ""
+  state teachPraise = ""
+  derive stageFeedback = guidedKeying ? guideFeedback : feedback
+  state guideStorage = "empty"
+  state guideToken = 0
+  derive listening = (mode == "listen" and listenContent == "characters") or (mode == "guided" and guidePhase == "listen")
+  derive guidedKeying = mode == "guided" and (guidePhase == "teach" or guidePhase == "practice")
+  derive qsoCopying = mode == "conversation" and (qsoPhase == "receiving" or qsoPhase == "paused" or qsoPhase == "rx-ready")
+  derive regularKey = mode == "practice" or mode == "freestyle" or guidedKeying
+  derive showKey = regularKey or gateFromKey or (mode == "nux" and nuxStep == "button_tutorial") or (mode == "conversation" and qsoPhase == "tx")
+  state listenContent = "characters"
+  state listenChoiceToken = 0
+  state listenCourse = false
+  state wordsAvailable = false
+  state wordTarget = ""
+  state qsoPercent = "0"
+  state qsoPhase = "idle"
+  state qsoCallsign = ""
+  state qsoDraft = ""
+  state qsoCopy = ""
+  state qsoCopyChecked = false
+  state qsoCopyDisplay = ""
+  state qsoLiveEnabled = false
+  state qsoLiveText = ""
+  state qsoProsigns = false
+  derive qsoMayCopyTx = mode == "conversation" and qsoPhase == "tx" and qsoReplayable and not qsoCopyChecked
+  derive qsoCopyExpanded = qsoMayCopyTx and (qsoCopyDisplay == "open" or (qsoCopyDisplay != "hidden" and qsoCopy != ""))
+  state qsoRxText = ""
+  state qsoCopySummary = ""
+  state qsoCopyDiff = ""
+  state qsoTranscript = ""
+  state qsoError = ""
+  state qsoReplayable = false
+  state qsoToken = 0
+  state qsoCommand = ""
+  state customPhase = "editor"
+  state customSource = ""
+  state customCopy = ""
+  state customType = true
+  state customReveal = ""
+  state customSummary = ""
+  state customDiff = ""
+  state customIgnored = "0"
+  state customTruncated = false
+  state customChars = "0"
+  state customWords = "0"
+  state customStorage = "empty"
+  state customTime = ""
+  state customEstimate = ""
+  state customFill = "0%"
+  state customActive = false
+  state customEditorPresented = false
+  derive editingPassage = nativeCustom and customActive and customPhase == "editor"
+  task openPassageEditor when editingPassage and not customEditorPresented
+    after(1, presentPassageEditor)
+  action presentPassageEditor
+    if editingPassage and not customEditorPresented
+      customEditorPresented = true
+      showModal("passage-editor")
+  task hidePassageEditor when customEditorPresented and not editingPassage
+    after(1, closePassageEditor)
+  action closePassageEditor
+    close("passage-editor")
+    customEditorPresented = false
+  action discardPassageEditor
+    custom("discard")
+  action setTypeAlong(enabled: bool)
+    customType = enabled
+  state customToken = 0
+  state customCommand = ""
+  state wordPhase = "ready"
+  state wordVocabulary = "common"
+  state wordAll = false
+  state wordEligible = false
+  state wordOptions = ""
+  state wordPicked = ""
+  state wordCorrect = ""
+  state wordFeedback = ""
+  state wordMeaning = ""
+  state wordCount = "0/0"
+  state wordToken = 0
+  state wordCommand = ""
+  state listenPhase = "ready"
+  state listenPrompt = ""
+  state answerPrompt = ""
+  state listenReveal = ""
+  state listenFeedback = ""
+  state listenSubmitted = false
+  state listenRecognition = ""
+  state answerToken = 0
+  state answerValue = ""
+  state target = "T"
+  state score = "0"
+  state pressing = false
+  state backgroundIdle = false
+  state aboutYear = ""
+  state lowPower = false
+  state interactionCount = 0
+  action interacted
+    if appleSession
+      backgroundIdle = false
+      interactionCount = interactionCount + 1
+  task backgroundInactivity when appleSession and not pressing and not backgroundIdle key=interactionCount
+    after(10000, idleBackdrop)
+  action idleBackdrop
+    backgroundIdle = true
+  derive backgroundPaused = media.prefersReducedMotion or (appleSession and mode != "nux" and not (mode == "conversation" and qsoPhase != "idle" and qsoPhase != "ended") and (lowPower or backgroundIdle))
+  state cancelToken = 0
+  state clearToken = 0
+  state warmToken = 0
+  state feedback = ""
+  state transcript = ""
+  state freestyleInput = ""
+  state ifr = true
+  state wordMode = false
+  state strategy = "sequential"
+  state reviewMisses = true
+  state speed = "12"
+  state effectiveSpeed = "8"
+  state autoTighten = true
+  state pitch = "600"
+  state historyCount = "0"
+  state storage = "empty"
+  state prefToken = 0
+  state prefCommand = ""
+  action play
+    warmToken = warmToken + 1
+  action clear
+    clearToken = clearToken + 1
+    pressing = false
+  action deskMode(nextMode: string)
+    if desk and mode != nextMode
+      cancel()
+      selectedMode = nextMode
+      feedback = ""
+      if route.name == "qso"
+        nav = push(nav, path("app"))
+  action practice
+    deskMode("practice")
+  action freestyle
+    deskMode("freestyle")
+  action listen
+    deskMode("listen")
+  action chooseListenContent(content: string)
+    if mode == "listen" and listenContent != content
+      listenContent = content
+      if appleSession
+        listenChoiceToken = listenChoiceToken + 1
+  action conversation
+    if desk and mode != "conversation"
+      cancel()
+      nav = push(nav, path("qso"))
+  action chooseNativeMode(value: string)
+    if value == "conversation"
+      conversation()
+    else if listenCourse and not guideCompleted and value == courseLessonMode
+      deskMode("guided")
+    else if value == "practice" or value == "freestyle" or value == "listen"
+      deskMode(value)
+  action conversationCommand(command: string)
+    qsoCommand = command
+    qsoToken = qsoToken + 1
+  action finishContactConsent
+    if qsoPhase == "consent" and (qsoCommand == "send-first" or qsoCommand == "receive-first")
+      conversationCommand("consent-cancel")
+  action showQsoCopy
+    qsoCopyDisplay = "open"
+  action hideQsoCopy
+    qsoCopyDisplay = "hidden"
+  action toggleProsigns
+    qsoProsigns = not qsoProsigns
+  task showCheckedContact when nativeContact and qsoPhase == "rx-ready" and qsoCopySummary != ""
+    after(1, showCheckedContactResult)
+  action showCheckedContactResult
+    scrollIntoView("contact-workbench-end", block="end", behavior="instant")
+  action setContactLive(enabled: bool)
+    conversationCommand(enabled ? "live-on" : "live-off")
+  action editQsoCopy(value: string)
+    qsoCopy = appleSession ? value.toUpperCase() : value
+  action editCustomSource(value: string)
+    customSource = value
+  action editCustomCopy(value: string)
+    customCopy = appleSession ? value.toUpperCase() : value
+  action toggleCustom
+    customType = not customType
+  action custom(command: string)
+    customCommand = command
+    customToken = customToken + 1
+  action doneCustom
+    chooseListenContent("characters")
+  action words(command: string)
+    wordCommand = command
+    wordToken = wordToken + 1
+  action guide
+    if not guideCompleted
+      closePanel()
+      deskMode("guided")
+  action dismissCourseComplete
+    close("course-complete")
+    guideCelebrate = false
+  action advanceGuide
+    guideToken = guideToken + 1
+  action answer(letter: string)
+    if listenPhase == "answering"
+      answerPrompt = listenPrompt
+      answerValue = letter
+      answerToken = answerToken + 1
+  action openScope
+    if panel == "settings"
+      scopeEditing = false
+      scopeDraft = ""
+      let method = mode == "guided" or (appleSession and listenCourse) ? "course" : "open"
+      learningMethod = method
+      close(nativeSettings ? "apple-settings" : "options")
+      panel = "scope"
+      showModal(appleSession ? "native-learning" : "learning")
+      focus(appleSession ? (method == "course" ? "native-course-tab" : "native-open-tab") : (method == "course" ? "course-tab" : "open-tab"))
+  action switchLearningMethod(method: string)
+    if panel == "scope"
+      learningMethod = method
+      scopeDraft = ""
+      scopeEditing = false
+      if method == "course" and not guideCompleted
+        deskMode("guided")
+      if method == "open" and (mode == "guided" or (appleSession and listenCourse))
+        preference("course-open")
+        if mode == "guided"
+          deskMode(guidePhase == "listen" ? "listen" : "practice")
+  action learningTabKey(k: string)
+    if k == "ArrowLeft" or k == "ArrowRight" or k == "Home" or k == "End"
+      preventDefault()
+      let method = k == "Home" ? "course" : k == "End" ? "open" : learningMethod == "course" ? "open" : "course"
+      switchLearningMethod(method)
+      focus(appleSession ? (method == "course" ? "native-course-tab" : "native-open-tab") : (method == "course" ? "course-tab" : "open-tab"))
+  action backToTiers
+    scopeEditing = false
+    scopeDraft = ""
+    focus(appleSession ? "native-custom-choice" : "custom-choice")
+  action openCoursePack(index: string)
+    if panel == "scope" and learningMethod == "course"
+      preference("course-pack:" + index)
+      deskMode("guided")
+      closePanel()
+  action openCustomScope
+    if panel == "scope"
+      scopeDraft = scopeLetters
+      scopeEditing = true
+      focus(appleSession ? "native-custom-back" : "custom-back")
+  action toggleScopeLetter(letter: string)
+    if panel == "scope" and scopeEditing
+      scopeDraft = scopeDraft.includes(letter) ? scopeDraft.replaceAll(letter, "") : scopeDraft + letter
+  action applyScope(command: string)
+    if panel == "scope"
+      preference(command)
+      if mode == "guided"
+        selectedMode = guidePhase == "listen" ? "listen" : "practice"
+      closePanel()
+  action confirmCustomScope
+    if scopeEditing and scopeDraft != ""
+      applyScope("scope-custom:" + scopeDraft)
+  action preference(command: string)
+    prefCommand = command
+    prefToken = prefToken + 1
+  action nativeKey(message: string)
+    if message.startsWith("fixture-account:")
+      fixtureAccounts = true
+      accountEmail = message.slice(16)
+    if message.startsWith("widget-summary:")
+      send widgetPublished = saveDitWidget(message.slice(15))
+    if message == "local-reset:error"
+      showModal("local-reset-error")
+    if message == "account-session:changed"
+      send widgetPublished = saveDitWidget("null")
+      nuxStatus = "checking"
+      appleSessionFailed = false
+      legacyProgressHeld = false
+    if message == "local-reset:complete" or message == "account-session:changed"
+      closePanel()
+      selectedMode = "practice"
+      guideCompleted = false
+      guideCelebrate = false
+      welcomeChoices = false
+      customActive = false
+      customSource = ""
+      customCopy = ""
+      customReveal = ""
+      customDiff = ""
+      customSummary = ""
+      qsoPhase = "idle"
+      qsoCallsign = ""
+      qsoRxText = ""
+      qsoCopyDisplay = ""
+      qsoCopyDiff = ""
+      qsoCopySummary = ""
+      qsoDraft = ""
+      qsoCopy = ""
+      qsoTranscript = ""
+      qsoLiveText = ""
+      qsoCopyChecked = false
+      qsoLiveEnabled = false
+      if route.name != "app"
+        nav = replace(nav, path("app"))
+    if message == "apple-session:ready"
+      appleSession = true
+    if message == "apple-session:legacy-held"
+      legacyProgressHeld = true
+    if message == "apple-session:failed" or message == "apple-session:legacy-held"
+      appleSessionFailed = true
+    if message.startsWith("output-volume:")
+      outputVolumeLow = message == "output-volume:low"
+    if message.startsWith("calendar-year:")
+      aboutYear = message.slice(14)
+    if message.startsWith("low-power:")
+      lowPower = message == "low-power:on"
+    if message == "active:on"
+      interacted()
+      pressing = true
+    if message == "active:off" or message == "cancelled"
+      pressing = false
+    if message.startsWith("target:")
+      target = message.slice(7)
+    if message.startsWith("feedback:")
+      feedback = message.slice(9)
+    if message.startsWith("score:")
+      score = message.slice(6)
+    if message.startsWith("freestyleInput:")
+      freestyleInput = message.slice(15)
+    if message.startsWith("transcript:")
+      transcript = message.slice(11)
+    if message.startsWith("effectiveSpeed:")
+      effectiveSpeed = message.slice(15)
+    if message.startsWith("autoTighten:")
+      autoTighten = message == "autoTighten:true"
+    if message.startsWith("speed:")
+      speed = message.slice(6)
+    if message.startsWith("practiceWords:")
+      practiceWords = message == "practiceWords:true"
+    if message.startsWith("practiceWord:")
+      practiceWord = message.slice(13)
+    if message.startsWith("practice-prefix:")
+      practicePrefix = message.slice(16)
+    if message.startsWith("practiceWpm:")
+      practiceWpm = message.slice(12)
+    if message.startsWith("bestWpm:")
+      bestWpm = message.slice(8)
+    if message.startsWith("showHint:")
+      showHint = message == "showHint:true"
+    if message.startsWith("showMnemonic:")
+      showMnemonic = message == "showMnemonic:true"
+    if message.startsWith("helper-code:")
+      helperCode = message.slice(12)
+    if message.startsWith("helper-mnemonic:")
+      helperMnemonic = message.slice(16)
+    if message.startsWith("helper-hits:")
+      helperHits = message.slice(12)
+    if message.startsWith("pitch:")
+      pitch = message.slice(6)
+    if message.startsWith("ifr:")
+      ifr = message == "ifr:true"
+    if message.startsWith("words:")
+      wordMode = message == "words:true"
+    if message.startsWith("strategy:")
+      strategy = message.slice(9)
+    if message.startsWith("reviewMisses:")
+      reviewMisses = message == "reviewMisses:true"
+    if message.startsWith("history:")
+      historyCount = message.slice(8)
+    if message.startsWith("scope-selection:")
+      scopeSelection = message.slice(16)
+    if message.startsWith("scope-letters:")
+      scopeLetters = message.slice(14)
+    if message.startsWith("study-pool:")
+      ordinaryListenPool = message.slice(11)
+    if message.startsWith("nux-enter:")
+      selectedMode = guideCompleted and message == "nux-enter:guided" ? "practice" : message.slice(10)
+    if message.startsWith("course-packs:")
+      coursePacks = message.slice(13)
+    if message.startsWith("course-lesson-mode:")
+      courseLessonMode = message.slice(19)
+    if message.startsWith("course-current:")
+      courseCurrent = message.slice(15)
+    if message.startsWith("course-reached:")
+      courseReached = message.slice(15)
+    if message.startsWith("course-learned:")
+      courseLearned = message.slice(15)
+    if message.startsWith("course-graduated:")
+      courseGraduated = message == "course-graduated:1"
+    if message.startsWith("course-finished:")
+      guideCompleted = message == "course-finished:1"
+    if message.startsWith("guide-completed:")
+      guideCompleted = true
+      if message == "guide-completed:celebrate"
+        guideCelebrate = true
+        selectedMode = "listen"
+        listenContent = "characters"
+        if not appleSession
+          showModal("course-complete")
+    if message.startsWith("guide-phase:")
+      guidePhase = message.slice(12)
+    if message.startsWith("guide-title:")
+      guideTitle = message.slice(12)
+    if message.startsWith("guide-pack:")
+      guidePack = message.slice(11)
+    if message.startsWith("guide-pool:")
+      guidePool = message.slice(11)
+    if message.startsWith("guide-target:") and (not appleSession or message != "guide-target:")
+      guideTarget = message.slice(13)
+    if message.startsWith("teach-remaining:")
+      teachRemaining = message.slice(16)
+    if message.startsWith("teach-praise:")
+      teachPraise = message.slice(13)
+    if message.startsWith("guide-feedback:")
+      guideFeedback = message.slice(15)
+    if message.startsWith("guide-storage:")
+      guideStorage = message.slice(14)
+    if message.startsWith("intro-hint:")
+      introHint = message.slice(11)
+    if message.startsWith("nux-profile:")
+      learnerProfile = message.slice(12)
+    if message.startsWith("nux-status:")
+      nuxStatus = message.slice(11)
+    if message.startsWith("nux-storage:")
+      nuxStorage = message.slice(12)
+    if message.startsWith("nux-owned:")
+      nuxOwned = message == "nux-owned:1"
+    if message.startsWith("autoPlay:")
+      practiceAutoPlay = message.slice(9) == "true"
+    if message.startsWith("nux-step:")
+      if nuxStep != message.slice(9)
+        welcomeChoices = false
+      nuxStep = message.slice(9)
+    if message.startsWith("nux-reminder-exiting:")
+      reminderExiting = message == "nux-reminder-exiting:1"
+    if message.startsWith("nux-reminder-time:")
+      nuxReminderTime = message.slice(18)
+    if message.startsWith("nux-reminder-label:")
+      nuxReminderLabel = message.slice(19)
+    if message.startsWith("reminder-time:")
+      reminderTime = message.slice(14)
+    if message.startsWith("haptics-enabled:")
+      hapticsEnabled = message == "haptics-enabled:1"
+    if message.startsWith("haptics-saved:")
+      hapticsSaved = message == "haptics-saved:1"
+    if message.startsWith("reminder-enabled:")
+      reminderEnabled = message == "reminder-enabled:1"
+    if message.startsWith("reminder-busy:")
+      reminderBusy = message == "reminder-busy:1"
+    if message.startsWith("reminder-error:")
+      reminderError = message.slice(15)
+    if message.startsWith("nux-sound:")
+      nuxSound = message.slice(10)
+    if message.startsWith("nux-taps:")
+      nuxTaps = message.slice(9)
+    if message.startsWith("nux-holds:")
+      nuxHolds = message.slice(10)
+    if message.startsWith("nux-tour:")
+      nuxTourIndex = message.slice(9)
+    if message.startsWith("nux-resume:")
+      nuxResume = message == "nux-resume:1"
+    if message.startsWith("ref-cards-mastered:")
+      masteredCards = message.slice(19)
+    if message.startsWith("ref-cards-learning:")
+      learningCards = message.slice(19)
+    if message.startsWith("ref-cards-not-yet:")
+      unstudiedCards = message.slice(18)
+    if message.startsWith("ref-day-label:")
+      dayDetail = message.slice(14)
+    if message.startsWith("ref-day-fill:")
+      dayFill = message.slice(13)
+    if message.startsWith("ref-mastered:")
+      refKnown = message.slice(13)
+    if message.startsWith("ref-learning:")
+      refLearning = message.slice(13)
+    if message.startsWith("ref-noEvidence:")
+      refUnknown = message.slice(15)
+    if message.startsWith("ref-recentSend:")
+      refRecentSend = message.slice(15)
+    if message.startsWith("ref-recentListen:")
+      refRecentListen = message.slice(17)
+    if message.startsWith("ref-ttr-average:")
+      refTtrAverage = message.slice(16)
+    if message.startsWith("ref-ttr-bars:")
+      refTtrBars = message.slice(13)
+    if message.startsWith("ref-streak-today:")
+      refStreakToday = message.slice(17)
+    if message.startsWith("ref-streak-current:")
+      refStreakCurrent = message.slice(19)
+    if message.startsWith("ref-streak-best:")
+      refStreakBest = message.slice(16)
+    if message.startsWith("ref-streak-risk:")
+      refStreakRisk = message == "ref-streak-risk:1"
+    if message.startsWith("ref-peek:")
+      refPeek = panel == "progress" ? message.slice(9) : ""
+    if message.startsWith("ref-pattern:")
+      refPattern = message.slice(12)
+    if message.startsWith("qso-percent:")
+      qsoPercent = message.slice(12)
+    if message.startsWith("qso-phase:")
+      if appleSession and mode == "conversation" and qsoPhase != "consent" and message == "qso-phase:consent"
+        showModal("local-contact-consent")
+      qsoPhase = message.slice(10)
+      if message == "qso-phase:receiving" or message == "qso-phase:idle"
+        qsoCopyDisplay = ""
+    if message.startsWith("qso-callsign:")
+      qsoCallsign = message.slice(13)
+    if message.startsWith("qso-draft:")
+      qsoDraft = message.slice(10)
+    if message.startsWith("qso-copy-checked:")
+      qsoCopyChecked = message == "qso-copy-checked:1"
+    if message.startsWith("qso-live-enabled:")
+      qsoLiveEnabled = message == "qso-live-enabled:1"
+    if message.startsWith("qso-live:")
+      qsoLiveText = message.slice(9)
+    if message.startsWith("qso-copy:")
+      qsoCopy = message.slice(9)
+    if message.startsWith("qso-rx-text:")
+      qsoRxText = message.slice(12)
+    if message.startsWith("qso-copy-summary:")
+      qsoCopySummary = message.slice(17)
+    if message.startsWith("qso-copy-diff:")
+      qsoCopyDiff = message.slice(14)
+    if message.startsWith("qso-transcript:")
+      qsoTranscript = message.slice(15)
+    if message.startsWith("qso-error:")
+      qsoError = message.slice(10)
+    if message.startsWith("qso-replayable:")
+      qsoReplayable = message == "qso-replayable:1"
+    if message == "custom-done"
+      doneCustom()
+    if message.startsWith("custom-fill:")
+      customFill = message.slice(12)
+    if message.startsWith("custom-estimate:")
+      customEstimate = message.slice(16)
+    if message.startsWith("custom-active:")
+      customActive = message == "custom-active:1"
+    if message.startsWith("custom-time:")
+      customTime = message.slice(12)
+    if message.startsWith("custom-phase:")
+      customPhase = message.slice(13)
+    if message.startsWith("custom-editor:")
+      customSource = message.slice(14)
+    if message.startsWith("custom-copy:")
+      customCopy = message.slice(12)
+    if message.startsWith("custom-reveal:")
+      customReveal = message.slice(14)
+    if message.startsWith("custom-summary:")
+      customSummary = message.slice(15)
+    if message.startsWith("custom-diff:")
+      customDiff = message.slice(12)
+    if message.startsWith("custom-ignored:")
+      customIgnored = message.slice(15)
+    if message.startsWith("custom-chars:")
+      customChars = message.slice(13)
+    if message.startsWith("custom-words:")
+      customWords = message.slice(13)
+    if message.startsWith("custom-storage:")
+      customStorage = message.slice(15)
+    if message.startsWith("custom-typealong:")
+      customType = message == "custom-typealong:1"
+    if message.startsWith("custom-truncated:")
+      customTruncated = message == "custom-truncated:1"
+    if message.startsWith("apple-listen-content:")
+      listenContent = message.slice(21)
+    if message.startsWith("listen-course:")
+      listenCourse = message == "listen-course:1"
+    if message.startsWith("words-available:")
+      wordsAvailable = message == "words-available:1"
+    if message.startsWith("word-target:")
+      wordTarget = message.slice(12)
+    if message.startsWith("word-phase:")
+      wordPhase = message.slice(11)
+    if message.startsWith("word-vocab:")
+      wordVocabulary = message.slice(11)
+    if message.startsWith("word-pool:")
+      wordAll = message == "word-pool:1"
+    if message.startsWith("word-ready:")
+      wordEligible = message == "word-ready:1"
+    if message.startsWith("word-options:")
+      wordOptions = message.slice(13)
+    if message.startsWith("word-picked:")
+      wordPicked = message.slice(12)
+    if message.startsWith("word-correct:")
+      wordCorrect = message.slice(13)
+    if message.startsWith("word-feedback:")
+      wordFeedback = message.slice(14)
+    if message.startsWith("word-meaning:")
+      wordMeaning = message.slice(13)
+    if message.startsWith("word-count:")
+      wordCount = message.slice(11)
+    if message.startsWith("listen-prompt:")
+      listenPrompt = message.slice(14)
+    if message.startsWith("listen-phase:")
+      listenPhase = message.slice(13)
+    if message.startsWith("listen-feedback:")
+      listenFeedback = message.slice(16)
+    if message.startsWith("listen-submitted:")
+      listenSubmitted = message == "listen-submitted:1"
+    if message.startsWith("listen-reveal:")
+      listenReveal = message.slice(14)
+    if message.startsWith("listen-recognition:")
+      listenRecognition = message.slice(19)
+    if message.startsWith("storage:")
+      storage = message.slice(8)
+  action cancel
+    cancelToken = cancelToken + 1
+    pressing = false
+  view
+    main testId="root" pointerdown=interacted viewport-fit=(fullBleed ? "cover" : "auto") interactive-widget=(nativeContact ? "resizes-content" : "resizes-visual") tabindex=0 navigationKey=`${route.id}` navigate=follow display="flex" flex-direction="column" width="100%" height="100%" min-height=(fullBleed ? 0 : 560) position="relative" overflow="hidden" background-color=(fullBleed ? "#0a0c12" : "dit-backdrop") color="dit-ink" font-family="system-ui" align-items="center" box-sizing="border-box"
+      canvas surface=shader(src="assets/liquid.wgsl", maxFps=20, animationPlayState=(backgroundPaused ? "paused" : "running")) position="absolute" inset=0 width="100%" height="100%" aria-hidden=true opacity=(fullBleed ? 0.55 : 1) pointer-events="none" testId="liquid"
+      column position="absolute" inset=0 pointer-events="none" aria-hidden=true background-image="radial-gradient(ellipse at 25% 85%, rgba(168,192,255,0.08), transparent 60%), radial-gradient(ellipse at 75% 15%, rgba(196,181,253,0.06), transparent 65%), radial-gradient(ellipse at 50% 50%, rgba(245,199,247,0.04), transparent 70%)"
+      column position="relative" width="100%" max-width="47.5rem" height="100%" padding-top=(nativeDeskLayout ? "calc(env(safe-area-inset-top) + 8px)" : appleSession and (desk or tour) ? "8px" : "24px") padding-right=(nativeDeskLayout ? "calc(env(safe-area-inset-right) + 24px)" : "24px") padding-left=(nativeDeskLayout ? "calc(env(safe-area-inset-left) + 24px)" : "24px") padding-bottom=(nativeReply ? "calc(env(safe-area-inset-bottom) + 12px)" : "24px") box-sizing="border-box" align-items="center" overflow=(nativeContact and not nativeContactEntry ? "hidden" : "auto")
+        row width=(nativeDeskLayout ? "calc(100% + 16px)" : "100%") display=(desk or tour ? "flex" : "none") align-items="center" justify-content="space-between" min-height=44 gap=12 flex-wrap="wrap" flex-shrink=0
+          button press=progress aria-label="Open progress" testId="nux-target-progress" disabled=tour box-shadow=(tourProgress ? "0 0 0 2px #80caff" : "none") width=44 height=44 appearance="none" display="flex" padding=0 justify-content="center" align-items="center" background-color="transparent" border-width=0
+            image "assets/dit-logo.svg" width=36 height=36 opacity=0.7 aria-hidden=true
+          if appleSession
+            dit-mode-selector current-mode=(mode == "guided" and (guidePhase == "listen" or (nativeGate and not gateFromKey)) ? "listen" : mode) mode-disabled=tour message=chooseNativeMode testId="nux-target-modes" flex=1 min-width=0 height=44
+          else
+            row gap=8 flex-wrap="wrap" testId="nux-target-modes" box-shadow=(tourModes ? "0 0 0 2px #80caff" : "none") border-radius=24
+              button "Practice" press=practice testId="mode-practice" disabled=tour aria-pressed=(mode == "practice") font-size="0.75rem" padding="6px 12px" border-radius=24 backgroundMaterial="glass-clear"
+              button "Freestyle" press=freestyle testId="mode-freestyle" disabled=tour aria-pressed=(mode == "freestyle") font-size="0.75rem" padding="6px 12px" border-radius=24 backgroundMaterial="glass-clear"
+              button "Listen" press=listen testId="mode-listen" disabled=tour aria-pressed=(mode == "listen") font-size="0.75rem" padding="6px 10px" border-radius=24 backgroundMaterial="glass-clear"
+              button "Conversation" press=conversation testId="mode-conversation" disabled=tour aria-pressed=(mode == "conversation") font-size="0.75rem" padding="6px 10px" border-radius=24 backgroundMaterial="glass-clear"
+          button press=settings id="settings-button" aria-label="Settings" testId="nux-target-settings" disabled=tour box-shadow=(tourSettings ? "0 0 0 2px #80caff" : "none") width=44 height=44 appearance="none" backgroundMaterial="glass-clear" border-radius=22 display="flex" padding=0 align-items="center" justify-content="center"
+            if appleSession
+              image "symbol:sf/switch.2" width=22 height=22 aria-hidden=true
+            else
+              image "symbol:sf/slider.horizontal.3" width=22 height=22 aria-hidden=true
+        if nativeGuidedKey or nativeGate or (nativeCharacters and mode == "guided") or nativeLessonMismatch
+          column margin-top=16 align-items="center" align-self="center" border-radius=22 padding="4px 12px" background-color="rgba(255,255,255,0.06)"
+            text ("PACK " + courseCurrent) testId="guided-pack" font-size="0.647rem" font-weight=600 letter-spacing=0.8 color="rgba(244,247,249,0.4)"
+        if nativeHintSurface and introHint == "settings" and panel == ""
+          column testId="practice-settings-hint" position="absolute" top="calc(env(safe-area-inset-top) + 62px)" right="calc(env(safe-area-inset-right) + 16px)" width=190 max-width="90%" background-color="#1a242e" border="1px solid rgba(255,255,255,0.12)" border-radius=12 padding="10px 12px" box-sizing="border-box" pointer-events="none" z-index=4
+            text "Add hints, change speed, and save progress in settings." text-align="center" font-size="0.8125rem" line-height=1.38 color="dit-ink"
+        if appleSession and desk and reminderEnabled and reminderError != "" and panel == ""
+          text reminderError role="status"
+        if desk and nuxStorage == "unavailable"
+          text "Setup could not be saved. You may need to repeat it after reloading." testId="nux-save-warning" role="status" font-size="0.875rem" text-align="center" color="dit-ink" background-color="#172633" padding="6px 10px" border-radius=10 width="100%" box-sizing="border-box"
+        if appleSession and mode == "listen" and not listenCourse
+          row role="radiogroup" aria-label="Listen content" width="100%" max-width=360 min-height=44 margin-top=8 margin-bottom=8
+            button "Characters" role="radio" aria-checked=(listenContent == "characters") press=chooseListenContent("characters") testId="listen-characters"
+            button "Words" role="radio" aria-checked=(listenContent == "words") disabled=(not wordsAvailable) press=chooseListenContent("words") testId="listen-words"
+        else if mode == "listen" and not appleSession
+          row justify-content="center" gap=8 min-height=44 flex-wrap="wrap" flex-shrink=0
+            button "Characters" press=chooseListenContent("characters") testId="listen-characters" aria-pressed=(listenContent == "characters") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+            button "Custom text" press=chooseListenContent("custom") testId="listen-custom" aria-pressed=(listenContent == "custom") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+            button "Words" press=chooseListenContent("words") testId="listen-words" aria-pressed=(listenContent == "words") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+        if nativeWords
+          select value=wordVocabulary change=words aria-label="Word vocabulary" testId="word-vocabulary" accent-color="dit-ink" min-height=44 margin-top=16 margin-bottom=16 color="dit-ink"
+            option "Common words" value="common"
+            option "Q codes" value="q-codes"
+          column position="relative" height=60 width="calc(100% + 48px)" flex-shrink=0 pointer-events="none"
+            dit-listen-wave testId="word-wave" letter-speed=speed feedback=(wordPhase == "answered" ? wordFeedback : "") wave-paused=(media.prefersReducedMotion or lowPower or panel != "" or not page.hasFocus) position="absolute" inset="0 0 auto 0" width="100%" height=120 role="img" aria-label="Morse waveform"
+        if nativeCustom
+          dit-listen-wave letter-speed=speed feedback="" wave-paused=(media.prefersReducedMotion or lowPower or panel != "" or editingPassage or customPhase == "paused" or not page.hasFocus) margin-top=16 width="calc(100% + 48px)" height=120 flex-shrink=0 role="img" aria-label="Morse waveform"
+        column flex=1 width="100%" min-height=(nativeContact ? "0" : "auto") justify-content=(nativeCustom ? "flex-start" : "center") padding-top=(nativeCustom ? 16 : 0) align-items="center" gap=16
+          if mode == "boot"
+            text (legacyProgressHeld ? "Dit couldn’t restore your saved progress. Reopen the app to try again." : appleSessionFailed ? "Dit could not open this session. Close and reopen the app to try again." : "Opening Dit…") role="status"
+          if mode == "nux" and not nativeEntry
+            column width="100%" max-width=560 gap=12 align-items="center" opacity=(nuxStep == "reminder" and reminderExiting and not media.prefersReducedMotion ? 0 : 1) scale=(nuxStep == "reminder" and reminderExiting and not media.prefersReducedMotion ? 1.04 : 1) transition=(nuxStep == "reminder" and not media.prefersReducedMotion ? "opacity 360ms cubic-bezier(0.23,1,0.32,1), scale 360ms cubic-bezier(0.23,1,0.32,1)" : "none")
+              if nuxStep == "welcome"
+                image "assets/dit-logo.svg" width=48 height=48 aria-hidden=true testId="nux-welcome"
+              text (nuxStep == "welcome" ? "Welcome to Dit" : nuxStep == "profile" ? "Choose your path" : nuxStep == "intro_fluency" ? "Real Morse fluency." : nuxStep == "intro_listen" ? "No chart. Just listen." : nuxStep == "intro_speed" ? "Real speed from day one." : nuxStep == "sound_check" ? "Check your sound" : nuxStep == "button_tutorial" ? "Meet the Morse key" : nuxStep == "beginner_stages" ? "How you'll learn" : nuxStep == "beginner_intro" ? "Your first letters" : nuxStep == "reminder" ? "Daily nudge" : "Quick app tour") testId="nux-step" role="heading" aria-level=1 font-size="1.75rem" text-align="center"
+              if nuxStep == "welcome"
+                button "Get started" press=nux("start") testId="nux-start" min-height=44 color="dit-ink" background-color="#172633"
+                if nuxResume
+                  button "Resume setup" press=nux("resume") testId="nux-resume" min-height=44 color="dit-ink" background-color="#172633"
+              if nuxStorage == "unsupported" or nuxStorage == "unavailable"
+                text (nuxStorage == "unsupported" ? "Saved setup is protected. Changes here are temporary." : (appleSession ? "Setup cannot be saved on this device." : "Setup cannot be saved in this browser. You may need to repeat it after reloading.")) testId="nux-storage" role="status" font-size="0.875rem" text-align="center"
+              if nuxStep == "profile"
+                button "Learn Morse" press=nux("beginner") testId="nux-beginner" min-height=44 color="dit-ink" background-color="#172633"
+                button "I know Morse" press=nux("known") testId="nux-known" min-height=44 color="dit-ink" background-color="#172633"
+              if nuxStep == "intro_fluency"
+                text "Build recognition by practicing real Morse sounds and reviewing your hardest letters." text-align="center"
+              if nuxStep == "intro_listen"
+                text "Hear each whole letter the way you hear your name. Don't count dots and dashes." text-align="center"
+              if nuxStep == "intro_speed"
+                text "Keep the letters at a usable speed. Give yourself more space between them as you learn." text-align="center"
+              if nuxStep == "sound_check"
+                button (appleSession ? (nuxSound == "heard" ? "Sound works" : "Test sound") : nuxSound == "idle" ? "Play sound" : "Play again") press=nux("play") testId="nux-sound-play" min-height=44 color="dit-ink" background-color="#172633"
+                if appleSession and nuxSound == "low"
+                  text "Raise the volume with the side buttons." role="status" text-align="center"
+                if appleSession and nuxSound == "failed"
+                  text "Check your audio output and test the sound again." role="status" text-align="center"
+                if not appleSession and nuxSound != "idle"
+                  row flex-wrap="wrap" justify-content="center" gap=8
+                    button "Yes, I heard it" press=nux("heard") testId="nux-sound-heard" aria-pressed=(nuxSound == "heard") min-height=44 color="dit-ink" background-color="#172633"
+                    button "No sound" press=nux("no-sound") testId="nux-no-sound" aria-pressed=(nuxSound == "not_heard") min-height=44 color="dit-ink" background-color="#172633"
+                  if nuxSound == "not_heard"
+                    text "Turn up the volume, unmute this tab and check your audio output." testId="nux-sound-help" text-align="center"
+              if nuxStep == "button_tutorial"
+                text "Short taps are dits. Long holds are dahs." text-align="center"
+                text `Taps ${nuxTaps}/3` testId="nux-taps"
+                text `Holds ${nuxHolds}/3` testId="nux-holds"
+                if appleSession
+                  row align-items="center" justify-content="space-between" width="100%" min-height=44
+                    text "Haptics"
+                    input type="checkbox" switch checked=hapticsEnabled change=setHaptics aria-label="Haptics" testId="tutorial-haptics"
+                  if not hapticsSaved
+                    text "Haptics changes apply to this session only." role="status"
+              if nuxStep == "beginner_stages"
+                text "Hear and send new letters, practice them in mixed order, then recognize them by ear." text-align="center"
+              if nuxStep == "beginner_intro"
+                text "Start with E and T. Add letters as you become comfortable with their sounds." text-align="center"
+              if tour
+                column role="group" aria-label="Quick app tour" gap=10 padding="14px 18px" border-radius=20 background-color="#172633" width="100%" max-width="22.5rem" box-sizing="border-box"
+                  text (tourModes ? "Modes" : tourSettings ? "Settings" : "Progress") testId="nux-tour-title" role="heading" aria-level=2 font-size="1.125rem"
+                  text (tourModes ? "Switch between Practice, Freestyle, and Listen." : tourSettings ? "Tune character speed, spacing, and practice helpers here." : "See your score and number of attempts here.") testId="nux-tour-body"
+                  text (tourModes ? "1 of 3" : tourSettings ? "2 of 3" : "3 of 3") font-size="0.75rem" color="#b7c7d6"
+                  row gap=10 flex-wrap="wrap"
+                    button "Back" press=nux("back") testId="nux-tour-back" min-height=44 color="dit-ink" background-color="#26394c"
+                    button (tourProgress ? "Finish" : "Next") press=nux("tour-next") testId="nux-tour-next" min-height=44 color="dit-ink" background-color="#26394c"
+              if nuxStep == "intro_fluency" or nuxStep == "intro_listen" or nuxStep == "intro_speed" or nuxStep == "sound_check" or nuxStep == "beginner_stages" or nuxStep == "beginner_intro"
+                button (nuxStep == "beginner_intro" ? "Start lesson" : "Continue") press=nux("continue") testId="nux-continue" disabled=(nuxStep == "sound_check" and nuxSound != "heard") min-height=44 color="dit-ink" background-color="#172633"
+              row justify-content="center" gap=8
+                if nuxStep != "welcome" and not tour
+                  button "Back" press=nux("back") testId="nux-back" min-height=44 color="dit-ink" background-color="#172633"
+                if nuxStep != "reminder"
+                  button "Skip setup" press=nux("skip") testId="nux-skip" min-height=44 color="dit-ink" background-color="#172633"
+          if mode == "guided" and not nativeGuidedKey and not nativeGate and not nativeCharacters
+            text guideTitle testId="guided-phase" role="status" font-size="1rem"
+            text guidePack testId="guided-pack" font-size="0.875rem"
+            if (guidePhase == "practice" or guidePhase == "listen") and guidePool != guidePack
+              text ("Available: " + guidePool) testId="guided-pool" font-size="0.75rem"
+            if guidePhase.startsWith("gate-")
+              button "Continue" press=advanceGuide testId="guided-continue" min-height=44 padding="8px 18px" border-radius=24 backgroundMaterial="glass-clear"
+          if mode == "guided" and (guideStorage == "unavailable" or guideStorage == "unsupported")
+            text "Lesson progress is temporary on this device" testId="guided-storage" font-size="0.75rem"
+          if mode == "practice" and practiceWords and practiceWord != ""
+            row gap=8 justify-content="center" align-items="center" flex-wrap="wrap" aria-label=("Word " + practiceWord) testId="practice-word"
+              for letter, i in practiceWord.split("") key=(`${i}`)
+                text letter font-size="2.118rem" letter-spacing=4 font-weight=(nativePractice ? 400 : 600) color=(i == practicePrefix.length ? (feedback == "Try again" ? "#ff6b6b" : "dit-ink") : i < practicePrefix.length ? "dit-ink-secondary" : "dit-ink-muted")
+          else if mode == "practice" or guidedKeying or gateFromKey
+            text (guidedKeying or gateFromKey ? guideTarget : target) testId="target" padding-left=(nativeGuidedKey ? 8 : 0) font-size="140px" line-height=1.2 font-weight=500 letter-spacing=10 text-align="center" color=(stageFeedback == "Correct" ? "#36f2a0" : stageFeedback == "Try again" ? "#ff6b6b" : "#faf6f3") transition=(media.prefersReducedMotion ? "none" : "color 120ms ease-out")
+          if nativeFreestyle
+            column position="relative" width="calc(100% + 48px)" height=162 align-items="center" justify-content="center"
+              dit-listen-wave letter-speed=speed feedback="" wave-paused=(media.prefersReducedMotion or lowPower or panel != "" or not page.hasFocus) width="100%" height=162 opacity=(freestyleGlyph != "" ? 0.3 : 1) transition=(media.prefersReducedMotion ? "none" : "opacity 320ms ease-in-out") role="img" aria-label="Morse waveform" pointer-events="none"
+              if freestyleGlyph != ""
+                text freestyleGlyph testId="transcript" role="heading" position="absolute" width="100%" text-align="center" white-space="pre-wrap" overflow-wrap="anywhere" font-size=(freestyleGlyph.length >= 7 ? 48 : 140 - (freestyleGlyph.length - 1) * 18) line-height=1 font-weight=500 letter-spacing=(freestyleGlyph.length >= 5 ? 2 : 10 - (freestyleGlyph.length - 1) * 2)
+            column min-height=22 aria-hidden=true
+            column min-height=64 align-items="center" justify-content="center"
+              text freestyleStatus testId="feedback" role="status" text-align="center" font-size="0.824rem" line-height=1.15 letter-spacing=2 text-transform="uppercase" color="dit-ink-secondary"
+          else if mode == "freestyle" and wordMode
+            text transcript testId="transcript" width="100%" text-align="center" font-size="1.125rem" white-space="pre-wrap" overflow-wrap="anywhere"
+          if nativePractice and not nativeGate and showHint and helperCode != ""
+            row min-height=22 gap=12 align-items="center" justify-content="center" role="img" aria-label=("Hint: " + helperCode.replaceAll(".", "dit ").replaceAll("-", "dah ").trim()) testId="practice-pattern"
+              for pip, i in helperCode.split("") key=(`${i}`)
+                column width=(pip == "." ? 12 : 34) height=12 border-radius=6 opacity=(stageFeedback == "Correct" or i < helperHits.length ? 1 : 0.35) background-color=(stageFeedback == "Correct" ? "#36f2a0" : stageFeedback == "Try again" ? "#ff6b6b" : "#faf6f3")
+          if nativeGuidedKey
+            if not showHint
+              column min-height=22 aria-hidden=true pointer-events="none"
+            column min-height=64 justify-content="center" align-items="center" gap=4
+              text (guideFeedback == "Correct" ? (guidePhase == "teach" ? teachPraise : "Correct") : guideFeedback == "Try again" ? (guidePhase == "teach" ? "Try again" : "Listen and try again") : guidePhase == "teach" ? "Repeat what you heard" : " ") testId="feedback" role="status" font-size="0.824rem" line-height=1.15 letter-spacing=2 text-transform="uppercase" text-align="center" color=(guideFeedback == "Correct" ? "#36f2a0" : guideFeedback == "Try again" ? "#ff6b6b" : "rgba(244,247,249,0.6)")
+              if guidePhase == "teach" and guideFeedback != "Correct"
+                text (teachRemaining + " remaining") testId="teach-remaining" font-size="0.824rem" line-height=1.29 letter-spacing=0.6 color="rgba(244,247,249,0.4)"
+            column min-height=16 aria-hidden=true pointer-events="none"
+          else if regularKey and not nativeFreestyle
+            text (guidedKeying ? guideFeedback : mode == "practice" and practiceWords and feedback == "" and not showHint and not showMnemonic ? `Letter ${practicePrefix.length + 1} of ${practiceWord.length}` : nativePractice and showMnemonic and feedback == "" ? helperMnemonic : feedback) testId="feedback" min-height=24 text-transform=(nativePractice and practiceWords ? "uppercase" : "none") font-size=(mode == "practice" ? "0.875rem" : "2rem") letter-spacing=1.2 color=(feedback == "Correct" ? "#36f2a0" : feedback == "Try again" ? "#ff6b6b" : "rgba(250,246,243,0.6)")
+          if mode == "practice" and practiceWords and practiceWpm != ""
+            text (practiceWpm + " WPM") testId="practice-word-wpm" font-size="0.824rem" color="dit-ink-secondary"
+          if nativeCharacters
+            column position="relative" align-items="center" justify-content="center" width="calc(100% + 48px)" height=162
+              dit-listen-wave letter-speed=speed feedback=listenFeedback wave-paused=(media.prefersReducedMotion or lowPower or panel != "" or nativePhaseDialog or not page.hasFocus) role="img" aria-label="Morse waveform" width="100%" height=162 pointer-events="none"
+              if listenReveal != ""
+                text listenReveal testId="listen-reveal" position="absolute" inset=0 text-align="center" line-height=1.15 font-size="140px" color=(listenFeedback == "Correct" ? "#36f2a0" : "#ff6b6b")
+            column min-height=22 aria-hidden=true
+            column min-height=64 align-items="center" justify-content="center" gap=8
+              text (nativePhaseDialog ? " " : listenFeedback != "" ? listenFeedback : listenSubmitted ? " " : "Type what you hear") testId="listen-feedback" role="status" text-align="center" font-size="0.824rem" letter-spacing=2 text-transform="uppercase" color="dit-ink-secondary"
+              if mode == "guided" and not nativeGate and not listenSubmitted and listenFeedback == ""
+                row gap=12 justify-content="center" flex-wrap="wrap"
+                  for letter in guidePack.split(",") key=letter
+                    column min-width=44 min-height=44 justify-content="center" align-items="center" border-radius=10 border="1px solid var(--dit-border)" background-color="rgba(255,255,255,0.08)"
+                      text letter font-size="1.059rem" font-weight=600 color="dit-ink-secondary"
+            text listenRecognition testId="listen-recognition" min-height=16 font-size="0.765rem" color="dit-ink-secondary"
+          else if listening
+            text listenReveal testId="listen-reveal" font-size="5rem" min-height=96 color=(listenFeedback == "Correct" ? "#36f2a0" : "#faf6f3")
+            text listenFeedback testId="listen-feedback" role="status" min-height=24 font-size="1rem"
+            text listenRecognition testId="listen-recognition" min-height=22 font-size="0.875rem"
+          if nativeContactEntry
+            column align-items="center" width="100%" max-width=360 box-sizing="border-box" padding-bottom="calc(env(safe-area-inset-bottom) + 20px)" gap=28
+              text "Do you want to send or receive first?" role="heading" aria-level=2 testId="qso-phase" font-size="1.647rem" line-height=1.214 font-weight=600 letter-spacing=-0.8 color="rgba(244,247,249,0.9)" text-align="center"
+              row align-items="center" justify-content="center" gap=8 flex-wrap="wrap"
+                button "Send first" press=conversationCommand("send-first") testId="qso-send-first" class=NativeContactChoice glassInteractive=true
+                button "Receive first" press=conversationCommand("receive-first") testId="qso-receive-first" class=NativeContactChoice glassInteractive=true
+          else if nativeContact and qsoTranscript == "" and (qsoPhase == "ended" or qsoPhase == "error" or qsoPhase == "sending")
+            column align-items="center" max-width=360 gap=12 padding-bottom="calc(env(safe-area-inset-bottom) + 20px)"
+              text (qsoPhase == "ended" ? "QSO ended" : qsoPhase == "error" ? "Station unavailable" : "Connecting…") testId="qso-phase" role="status" font-size="1.647rem" font-weight=600 text-align="center"
+              if qsoPhase == "error"
+                text qsoError testId="qso-error" text-align="center"
+                button "Retry" press=conversationCommand("retry") testId="qso-retry" class=NativeContactChoice
+              if qsoPhase == "ended"
+                button "New QSO" press=conversationCommand("new") testId="qso-new" min-width=168 class=NativeContactChoice
+              else
+                button "End QSO" press=conversationCommand("end") testId="qso-end" class=ContactQuiet
+          else if nativeContact
+            column width="calc(100% + 16px)" flex=1 min-height=0
+              row justify-content="center" width="100%"
+                button (qsoProsigns ? "Close prosigns" : "Prosigns") press=toggleProsigns testId="qso-prosign-toggle" aria-expanded=qsoProsigns class=ContactQuiet
+              column flex=1 width="100%" min-height=0 overflow="auto" gap=12 aria-label="Conversation history and copy"
+                if qsoProsigns
+                  NativeProsigns()
+                NativeContactTurns(transcript=qsoTranscript, reveal=conversationCommand)
+                column flex=1 min-height=0
+                if not nativeReply
+                  text (qsoPhase == "rx-ready" ? "Transmission complete" : qsoPhase == "receiving" ? "Listening…" : qsoPhase == "paused" ? "Paused" : qsoPhase == "ended" ? "QSO ended" : qsoPhase == "sending" ? "Waiting for the other station…" : "") testId="qso-phase" role="status" min-height=24 font-size="0.941rem" text-align="center"
+                if qsoCopying
+                  column height=3 width="100%" border-radius=2 background-color="dit-input" role="progressbar" aria-label="Received transmission" aria-valuemin=0 aria-valuemax=100 aria-valuenow=qsoPercent testId="qso-progress"
+                    column height=3 width=(qsoPercent + "%") background-color="dit-ink-muted" border-radius=2
+                  row justify-content="center" flex-wrap="wrap" gap=8
+                    if qsoPhase == "rx-ready"
+                      button "Reply" press=conversationCommand("start-turn") testId="qso-start-turn" class=NativeContactChoice
+                      button "Check copy" press=conversationCommand("check") testId="qso-check" class=NativeContactChoice
+                    else if qsoPhase == "paused"
+                      button "Resume" press=conversationCommand("resume") testId="qso-resume" class=NativeContactChoice
+                    else
+                      button "Pause" press=conversationCommand("pause") testId="qso-pause" class=NativeContactChoice
+                    button "Replay" press=conversationCommand("replay") testId="qso-replay" class=NativeContactChoice
+                  textarea testId="qso-copy" aria-label="Type what you hear" placeholder="Type what you hear (optional)" autocorrect="off" autocapitalize="characters" spellcheck=false value=qsoCopy input=editQsoCopy rows=3 maxlength=2000 class=PassageField min-height=84 font-size="0.941rem"
+                  row justify-content="center" align-items="center" gap=8
+                    text "Show received letters" font-size="0.824rem" color="dit-ink-muted"
+                    input type="checkbox" switch checked=qsoLiveEnabled change=setContactLive aria-label="Show received letters" testId="qso-live-toggle"
+                  if qsoLiveEnabled
+                    text qsoLiveText testId="qso-live-text" role="status" font-family="monospace" white-space="pre-wrap"
+                  if qsoCopyChecked and qsoPhase == "rx-ready"
+                    row flex-wrap="wrap" testId="qso-copy-diff" aria-label="Copy comparison"
+                      for item, i in qsoCopyDiff.split("|") key=i
+                        text (item.startsWith("ok:") ? item.slice(3) : item.slice(item.startsWith("miss:") ? 5 : 6)).replaceAll("%7C", "|").replaceAll("%25", "%") color=(item.startsWith("ok:") ? "#36f2a0" : "#ff6b6b") white-space="pre-wrap" font-family="monospace"
+                    text qsoCopySummary.replaceAll("/", " / ") testId="qso-copy-summary" font-size="0.824rem" color="dit-ink-muted"
+                if nativeReply and qsoReplayable
+                  button "Replay" press=conversationCommand("replay") testId="qso-replay" class=NativeContactChoice align-self="center"
+                if qsoPhase == "error"
+                  text qsoError testId="qso-error" text-align="center"
+                  button "Retry" press=conversationCommand("retry") testId="qso-retry" class=NativeContactChoice align-self="center"
+                if qsoPhase == "ended"
+                  button "New QSO" press=conversationCommand("new") testId="qso-new" min-width=168 class=NativeContactChoice align-self="center"
+                else
+                  button "End QSO" press=conversationCommand("end") id="contact-workbench-end" testId="qso-end" class=ContactQuiet align-self="center"
+          else if mode == "conversation"
+            text "Local practice station" role="heading" aria-level=2
+            text (qsoCallsign == "" ? "Simulated contact. No network." : qsoCallsign) testId="qso-callsign"
+            text (qsoPhase == "rx-ready" ? "Transmission complete" : qsoPhase == "tx" ? "Your turn" : qsoPhase == "receiving" ? "Receiving" : qsoPhase == "paused" ? "Paused" : qsoPhase == "sending" ? "Waiting for the local station" : qsoPhase == "consent" ? "Approve this simulated contact" : qsoPhase == "ended" ? "Contact ended" : qsoPhase == "error" ? "Contact interrupted" : "Choose how to start") testId="qso-phase" role="status"
+            if qsoError != "" and qsoPhase == "error"
+              text qsoError testId="qso-error" text-align="center"
+            if qsoCopying
+              button (qsoLiveEnabled ? "Show letters as received: on" : "Show letters as received: off") press=conversationCommand(qsoLiveEnabled ? "live-off" : "live-on") testId="qso-live-toggle" aria-pressed=qsoLiveEnabled min-height=44 color="dit-ink" background-color="#172633"
+              if qsoLiveEnabled
+                text qsoLiveText testId="qso-live-text" role="status"
+            if qsoPhase == "consent"
+              column testId="qso-consent" gap=8
+                text "Simulated iOS consent" role="heading" aria-level=3
+                text "Local fixture only. Allow simulates permission for this contact and its retries. Nothing is sent to Google Gemini or over the network." text-align="center"
+                row justify-content="center" gap=8
+                  button "Cancel" press=conversationCommand("consent-cancel") testId="qso-consent-cancel" min-height=44 color="dit-ink" background-color="#172633"
+                  button "Allow local simulation" press=conversationCommand("consent-allow") testId="qso-consent-allow" min-height=44 color="dit-ink" background-color="#172633"
+            if qsoCopying or qsoCopyExpanded
+              textarea testId="qso-copy" aria-label="Optional typed copy" value=qsoCopy input=editQsoCopy disabled=(qsoPhase == "paused") rows=3 maxlength=2000 width="100%" max-width=560 color="dit-ink" background-color="#172633"
+            if qsoMayCopyTx
+              row justify-content="center" gap=8
+                if qsoCopyExpanded
+                  button "Check copy" press=conversationCommand("check") testId="qso-check" min-height=44 color="dit-ink" background-color="#172633"
+                  button "Hide copy" press=hideQsoCopy testId="qso-copy-hide" min-height=44 color="dit-ink" background-color="#172633"
+                else
+                  button "Copy reception (optional)" press=showQsoCopy testId="qso-copy-expand" min-height=44 color="dit-ink" background-color="#172633"
+            if qsoPhase != "idle" and qsoPhase != "consent"
+              button "Prosigns" press=toggleProsigns testId="qso-prosign-toggle" aria-expanded=qsoProsigns min-height=44 color="dit-ink" background-color="#172633"
+              if qsoProsigns
+                column testId="qso-prosigns" max-height=145 overflow="auto" gap=4 width="100%"
+                  for item in ["K: Go ahead", "KN: Named station only", "BK: Quick handoff", "AR: End of message", "SK: End of contact", "BT: Separator", "AS: Wait", "HH: Correction"] key=item
+                    text item text-align="center" font-size="0.875rem"
+            if qsoRxText != ""
+              text qsoRxText testId="qso-rx-text" white-space="pre-wrap"
+            if qsoCopySummary != ""
+              text qsoCopySummary testId="qso-copy-summary" role="status"
+            if qsoCopyDiff != ""
+              row max-width="100%" flex-wrap="wrap" testId="qso-copy-diff"
+                for item, i in qsoCopyDiff.split("|") key=i
+                  text (item.startsWith("ok:") ? item.slice(3) : item.slice(item.startsWith("miss:") ? 5 : 6)).replaceAll("%7C", "|").replaceAll("%25", "%") color=(item.startsWith("ok:") ? "#9aebc2" : item.startsWith("miss:") ? "#ffc2c8" : "#ffd18c") white-space="pre-wrap"
+            if qsoTranscript != ""
+              column width="100%" max-height=180 overflow="auto"
+                text qsoTranscript testId="qso-transcript" white-space="pre-wrap" overflow-wrap="anywhere"
+          if nativeCustom and customPhase != "editor"
+            text (customPhase == "playing" ? "Listening…" : customPhase == "paused" ? "Paused" : customPhase == "reveal" ? "Compare your copy" : `${customChars} chars · ${customWords} words ready`) testId="custom-ready" role="status" font-size="1.176rem" font-weight=600 text-align="center"
+            if customPhase == "playing" or customPhase == "paused"
+              column width="100%" height=4 border-radius=4 background-color="dit-input" aria-hidden=true
+                column width=customFill height=4 border-radius=4 background-color="#ff954d"
+              text customTime testId="custom-time" font-size="0.765rem" color="dit-ink-secondary"
+            if customPhase == "reveal"
+              text customReveal testId="custom-reveal" font-size="1.059rem" line-height=1.44 white-space="pre-wrap" overflow-wrap="anywhere"
+              if customDiff != ""
+                row width="100%" flex-wrap="wrap" justify-content="center" testId="custom-diff" aria-label="Copy comparison"
+                  for item, i in customDiff.split("|") key=i
+                    text (item.startsWith("ok:") ? item.slice(3) : item.slice(item.startsWith("miss:") ? 5 : 6)).replaceAll("%7C", "|").replaceAll("%25", "%") font-size="1.059rem" white-space="pre-wrap" color=(item.startsWith("ok:") ? "#36f2a0" : "#ff6b6b")
+              if customSummary != ""
+                text customSummary.replaceAll("/", " / ") testId="custom-summary" role="status" text-align="center" font-size="0.765rem" color="dit-ink-secondary"
+            else if customType
+              textarea testId="custom-copy" class=PassageField aria-label="Type what you hear" placeholder="Type what you hear" value=customCopy input=editCustomCopy disabled=(customPhase != "playing") rows=3 min-height=80 maxlength=2000
+            if customPhase == "audio-error"
+              text "Could not play the text. Try Play again." role="status"
+            if customStorage == "unsupported" or customStorage == "unavailable"
+              text "This text could not be saved on this device. You can still listen to it now." testId="custom-storage" role="status"
+            row justify-content="center" align-items="center" width="100%" gap=12 flex-wrap="wrap"
+              if customPhase == "playing" or customPhase == "paused"
+                button (customPhase == "paused" ? "Resume" : "Pause") press=custom(customPhase == "paused" ? "resume" : "pause") testId=(customPhase == "paused" ? "custom-resume" : "custom-pause") class=ListenAction
+                button "Restart" press=custom("play") testId="custom-restart" class=ListenAction
+                button "End" press=custom("reveal") testId="custom-end" class=ListenAction
+              else
+                button (customPhase == "reveal" ? "Replay" : "Play") press=custom("play") testId=(customPhase == "reveal" ? "custom-replay" : "custom-play") class=ListenAction
+                button (customPhase == "reveal" ? "New text" : "Edit text") press=custom("edit") testId=(customPhase == "reveal" ? "custom-new" : "custom-edit") class=ListenAction
+                button "Done" press=doneCustom testId="custom-done" class=ListenAction
+                if customPhase != "reveal"
+                  button "Clear" press=custom("clear") testId="custom-clear" class=ListenAction
+          if not appleSession and mode == "listen" and listenContent == "custom"
+            if customPhase == "editor"
+              text (appleSession ? "Custom text" : "Prepare a passage") role="heading" aria-level=2
+              textarea testId="custom-source" aria-label="Source passage" value=customSource input=editCustomSource rows=4 maxlength=8000 width="100%" max-width=560 color="dit-ink" background-color="#172633"
+              if customIgnored != "0" or customTruncated
+                text `Ignored ${customIgnored}` testId="custom-ignored"
+              if customTruncated
+                text "Trimmed to 2000 characters."
+              button (customType ? "Type along: on" : "Type along: off") press=toggleCustom testId="custom-type-along" min-height=44 color="dit-ink" background-color="#172633"
+            if customPhase == "setup"
+              text `${customChars} chars · ${customWords} words ready` testId="custom-ready"
+            if customPhase == "audio-error"
+              text "Audio could not start. Try Restart." role="status"
+            if appleSession and (customPhase == "playing" or customPhase == "paused")
+              text (customPhase == "paused" ? "Paused" : "Listening…") role="status"
+              text customTime testId="custom-time"
+            if customType and (customPhase == "playing" or customPhase == "paused" or customPhase == "ended")
+              textarea testId="custom-copy" aria-label=(appleSession ? "Type what you hear" : "Your copy") value=customCopy input=editCustomCopy disabled=(customPhase == "paused") rows=4 maxlength=2000 width="100%" max-width=560 color="dit-ink" background-color="#172633"
+            if customPhase == "reveal"
+              column width="100%" max-height=300 overflow="auto" gap=8
+                if appleSession
+                  text "Compare your copy" role="status"
+                text customReveal testId="custom-reveal" color="dit-ink" white-space="pre-wrap" overflow-wrap="anywhere"
+                if customSummary != ""
+                  text customSummary testId="custom-summary" role="status"
+                if customDiff != ""
+                  row flex-wrap="wrap" testId="custom-diff"
+                    for item, i in customDiff.split("|") key=i
+                      text (item.startsWith("ok:") ? item.slice(3) : item.slice(item.startsWith("miss:") ? 5 : 6)).replaceAll("%7C", "|").replaceAll("%25", "%") color=(item.startsWith("ok:") ? "#9aebc2" : item.startsWith("miss:") ? "#ffc2c8" : "#ffd18c") white-space="pre-wrap"
+            if customStorage == "unsupported" or customStorage == "unavailable"
+              text (appleSession ? "This text could not be saved on this device. You can still listen to it now." : "Passage is temporary in this browser.") testId="custom-storage"
+          if nativeWords
+            text (wordPhase == "playing" ? "Listening…" : wordPhase == "choosing" ? "Choose what you heard" : wordPhase == "answered" ? (wordFeedback == "Correct" ? "Correct" : "The word was") : wordEligible ? "Ready when you are" : "More characters needed") role="status" testId=(wordPhase == "answered" ? "word-feedback" : "word-prompt") font-size="1.176rem" font-weight=600 text-align="center"
+            if wordPhase == "ready" or wordPhase == "audio-error"
+              text (wordEligible ? (wordVocabulary == "common" ? "Listen to one English word, then choose what you heard." : "Listen to one Q code, then choose what you heard.") : "This set needs at least four choices from your active characters. Try the other set or add more characters.") text-align="center" font-size="0.824rem" line-height=1.43 color="dit-ink-secondary"
+              button "Start listening" press=words("start") testId="word-start" disabled=(not wordEligible) min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+            else
+              text (wordCount.replaceAll("/", " / ") + " correct") testId="word-count" font-size="0.824rem" color="dit-ink-secondary"
+              if wordPhase == "playing"
+                view display="grid" grid-template-columns="minmax(0,1fr) minmax(0,1fr)" width="100%" gap=12 aria-hidden=true testId="word-concealed"
+                  for slot in ["1", "2", "3", "4"] key=slot
+                    column box-sizing="border-box" width="100%" min-width=0 min-height=56 border-radius=12 backgroundMaterial="glass-clear" align-items="center" justify-content="center"
+                      text "…" font-size="1.176rem"
+              else
+                view display="grid" grid-template-columns="minmax(0,1fr) minmax(0,1fr)" width="100%" gap=12
+                  for option, i in wordOptions.split(",") key=option
+                    button option press=words(`option-${i + 1}`) testId=(`word-option-${i + 1}`) disabled=(wordPhase == "answered") box-sizing="border-box" width="100%" min-width=0 min-height=56 padding=0 backgroundMaterial="glass-clear" border-radius=12 font-size="1.176rem" color=(wordPhase == "answered" and `${i + 1}` == wordCorrect ? "#36f2a0" : wordPhase == "answered" and `${i + 1}` == wordPicked ? "#ff6b6b" : "dit-ink") aria-label=("Answer " + option + (wordPhase == "answered" and `${i + 1}` == wordCorrect ? ", correct" : wordPhase == "answered" and `${i + 1}` == wordPicked ? ", incorrect" : ""))
+              column min-height=96 justify-content="center" align-items="center" gap=8
+                if wordPhase == "answered"
+                  text wordTarget testId="word-target" font-size="1.176rem" font-weight=600
+                  if wordMeaning != ""
+                    text wordMeaning testId="word-meaning" font-size="0.824rem" text-align="center" color="dit-ink-secondary"
+              row width="100%" align-items="center"
+                column flex=1
+                column flex=1 align-items="center"
+                  button "Replay" press=words("replay") testId="word-replay" disabled=(wordPhase == "playing") min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+                column flex=1 align-items="flex-end"
+                  if wordPhase == "answered"
+                    button "Next" press=words("next") testId="word-next" min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+            if wordPhase == "audio-error"
+              text "Could not play the word. Try Start listening again." role="status"
+          else if mode == "listen" and listenContent == "words"
+            row justify-content="center" gap=8 flex-wrap="wrap"
+              button "Common words" press=words("common") testId="word-common" aria-pressed=(wordVocabulary == "common") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+              button "Q codes" press=words("q-codes") testId="word-qcodes" aria-pressed=(wordVocabulary == "q-codes") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+            button (wordAll ? "All characters" : "Current letters") press=words(wordAll ? "current" : "all") testId="word-pool-toggle" min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+            text wordCount testId="word-count" font-size="0.875rem"
+            if wordPhase == "ready" and not wordEligible
+              text "At least four words must use your available letters." testId="word-ineligible" text-align="center"
+            if wordPhase == "playing"
+              text "Listening…" role="status"
+            if wordPhase == "audio-error"
+              text "Audio could not start. Try Replay." role="status"
+            if (wordPhase == "choosing" or wordPhase == "answered") and wordOptions != ""
+              row justify-content="center" gap=8 flex-wrap="wrap"
+                for option, i in wordOptions.split(",") key=option
+                  button option press=words(`option-${i + 1}`) testId=(`word-option-${i + 1}`) disabled=(wordPhase == "answered") min-height=44 padding="6px 12px" color="dit-ink" background-color=(wordPhase == "answered" ? (`${i + 1}` == wordCorrect ? "#16513e" : `${i + 1}` == wordPicked ? "#682c38" : "#172633") : "#172633") aria-label=(wordPhase == "answered" ? (`${i + 1}` == wordCorrect ? option + ", correct answer" : `${i + 1}` == wordPicked ? option + ", your answer" : option) : option) border-radius=22
+            if wordPhase == "answered"
+              text wordFeedback testId="word-feedback" role="status"
+              if wordMeaning != ""
+                text wordMeaning testId="word-meaning" text-align="center"
+          if desk and not nativeDeskLayout
+            text `${speed} WPM` font-size="0.75rem" color="rgba(250,246,243,0.6)" letter-spacing=1.2
+        column width="100%" align-items="center" gap=(nativeCharacters ? 0 : nativePractice or nativeFreestyle ? 12 : 16) flex-shrink=(nativeDeskLayout ? 0 : 1)
+          if nativeLessonMismatch
+            button press=deskMode("guided") aria-label="Return to guided lesson" testId="return-guided" min-height=44 appearance="none" border-width=0 background-color="transparent" padding=0 display="flex" align-items="center" justify-content="center"
+              column backgroundMaterial="glass" border-radius=24 padding="10px 16px" pointer-events="none"
+                text "RETURN TO LESSON" font-size="0.824rem" letter-spacing=1.1 color="dit-ink-secondary"
+          if nativePractice
+            button press=play testId="play" aria-label="Play target character" appearance="none" background-color="transparent" border-width=0 padding=0 min-height=44 display="flex" align-items="center" justify-content="center"
+              column backgroundMaterial="glass" glassInteractive=true border-radius=24 padding="8px 18px" pointer-events="none"
+                text "PLAY" font-size="0.765rem" line-height=1.25 letter-spacing=1.2 color="rgba(244,247,249,0.8)"
+          else if mode == "practice" or guidedKeying
+            button "Play" press=play testId="play" aria-label="Play target sound" backgroundMaterial="glass-clear" glassInteractive=true min-height=40 padding="8px 18px" border-radius=24 font-size="0.8125rem" letter-spacing=1.2 text-transform="uppercase" color="dit-ink" background-color="rgba(255,255,255,0.06)" border="1px solid rgba(255,255,255,0.12)"
+          if nativeCharacters
+            column align-items="center" width="calc(100% + 48px)" gap=28 flex-shrink=0
+              button press=play aria-label="Play morse letter sound" testId="listen-play" disabled=(nativePhaseDialog or listenPhase == "reveal" or listenPhase == "gap") appearance="none" background-color="transparent" border-width=0 padding=0 min-height=46 display="flex" align-items="center" justify-content="center"
+                column padding="12px 18px" border-radius=24 backgroundMaterial="glass-clear" pointer-events="none"
+                  text "PLAY" font-size="1.059rem" letter-spacing=1.2 color="dit-ink"
+              column width="100%" gap=8 align-items="center" testId="listen-keyboard"
+                for keys in ["1234567890","QWERTYUIOP","ASDFGHJKL","ZXCVBNM"] key=keys
+                  row width="100%" gap=4 justify-content="center" flex-wrap="wrap"
+                    for letter in keys.split("") key=letter
+                      button letter press=answer(letter) testId=("listen-answer-" + letter) aria-label=("Type " + letter) disabled=(nativePhaseDialog or listenPhase != "answering" or not (mode == "guided" ? guidePool : ordinaryListenPool).includes(letter)) opacity=((mode == "guided" ? guidePool : ordinaryListenPool).includes(letter) ? 1 : 0.28) appearance="none" border-width=0 backgroundMaterial="glass" border-radius=8 padding=0 min-height=36 min-width="min(100%, max(28px, 1.6rem))" width="min(36px, calc((100vw - 36px) / 10))" font-size="1.059rem" color="dit-ink"
+              if mode != "guided" and not listenCourse
+                button "Use custom" press=chooseListenContent("custom") testId="listen-custom" min-height=44 backgroundMaterial="glass-clear"
+          else if listening
+            button "Play" press=play testId="listen-play" aria-label="Replay character" disabled=(listenPhase == "reveal" or listenPhase == "gap") min-height=44 padding="8px 18px" border-radius=24 backgroundMaterial="glass-clear"
+            row justify-content="center" gap=6 flex-wrap="wrap"
+              for letter in (mode == "guided" ? guidePool : ordinaryListenPool).split(",") key=letter
+                button letter press=answer(letter) testId=("listen-answer-" + letter) disabled=(listenPhase != "answering") min-width=44 min-height=44 color="dit-ink" background-color="#172633" border-radius=22
+            if appleSession and not listenCourse and mode != "guided"
+              button "Use custom" press=chooseListenContent("custom") testId="listen-custom" min-height=44 backgroundMaterial="glass-clear"
+          if not appleSession and mode == "listen" and listenContent == "words"
+            row justify-content="center" gap=8 flex-wrap="wrap"
+              if wordPhase == "ready" or (appleSession and wordPhase == "audio-error")
+                button "Start listening" press=words("start") testId="word-start" disabled=(not wordEligible) min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+              else
+                button "Replay" press=words("replay") testId="word-replay" disabled=(appleSession and wordPhase == "playing") min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+              if wordPhase == "answered"
+                button "Next" press=words("next") testId="word-next" min-height=44 color="dit-ink" background-color="#172633" border-radius=22 padding="6px 12px"
+          if not appleSession and mode == "listen" and listenContent == "custom"
+            row justify-content="center" gap=8 flex-wrap="wrap"
+              if customPhase == "editor"
+                button "Save" press=custom("save") testId="custom-save" min-height=44 color="dit-ink" background-color="#172633"
+                button "Discard" press=custom("discard") testId="custom-discard" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "setup"
+                button "Play" press=custom("play") testId="custom-play" min-height=44 color="dit-ink" background-color="#172633"
+                button "Edit text" press=custom("edit") testId="custom-edit" min-height=44 color="dit-ink" background-color="#172633"
+                if appleSession
+                  button "Done" press=doneCustom testId="custom-done" min-height=44 backgroundMaterial="glass-clear"
+                button "Clear" press=custom("clear") testId="custom-clear" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "playing"
+                button "Pause" press=custom("pause") testId="custom-pause" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "paused"
+                button "Resume" press=custom("resume") testId="custom-resume" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "playing" or customPhase == "paused" or customPhase == "audio-error"
+                button "Restart" press=custom("play") testId="custom-restart" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "playing" or customPhase == "paused"
+                button "End" press=custom("reveal") testId="custom-end" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "ended"
+                button "Reveal" press=custom("reveal") testId="custom-check" min-height=44 color="dit-ink" background-color="#172633"
+              if customPhase == "reveal"
+                button "Replay" press=custom("play") testId="custom-replay" min-height=44 color="dit-ink" background-color="#172633"
+                button "New text" press=custom("edit") testId="custom-new" min-height=44 color="dit-ink" background-color="#172633"
+                button "Done" press=doneCustom testId="custom-done" min-height=44 color="dit-ink" background-color="#172633"
+          if nativeReply
+            column width="calc(100% + 16px)" align-items="center" gap=12 padding-top=12
+              column width="100%" min-height=48 max-height=72 overflow="auto" justify-content="center"
+                text (qsoDraft == "" ? "Reply" : qsoDraft) testId="qso-draft" aria-label=("Outgoing draft: " + (qsoDraft == "" ? "empty" : qsoDraft)) role="status" text-align="center" white-space="pre-wrap" font-family="monospace" font-size="1.176rem"
+              row justify-content="center" align-items="center" gap=8 flex-wrap="wrap"
+                button "Backspace" press=conversationCommand("backspace") disabled=(qsoDraft == "" or pressing) testId="qso-backspace" opacity=((qsoDraft == "" or pressing) ? 0.55 : 1) class=NativeContactChoice
+                button "Clear" press=conversationCommand("clear") disabled=(qsoDraft == "" or pressing) testId="qso-clear" opacity=((qsoDraft == "" or pressing) ? 0.55 : 1) class=NativeContactChoice
+                button "Send" press=conversationCommand("send") disabled=(qsoDraft.trim() == "" or pressing) testId="qso-send" opacity=((qsoDraft.trim() == "" or pressing) ? 0.55 : 1) class=NativeContactChoice
+          else if mode == "conversation" and not nativeContact
+            if qsoPhase == "tx"
+              text qsoDraft testId="qso-draft" min-height=26 width="100%" text-align="center" white-space="pre-wrap"
+            row justify-content="center" gap=8 flex-wrap="wrap"
+              if qsoPhase == "idle"
+                button "Send first" press=conversationCommand("send-first") testId="qso-send-first" min-height=44 color="dit-ink" background-color="#172633"
+                button "Receive first" press=conversationCommand("receive-first") testId="qso-receive-first" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "tx"
+                button "Backspace" press=conversationCommand("backspace") testId="qso-backspace" min-height=44 color="dit-ink" background-color="#172633"
+                button "Clear" press=conversationCommand("clear") testId="qso-clear" min-height=44 color="dit-ink" background-color="#172633"
+                button "Send" press=conversationCommand("send") testId="qso-send" disabled=(qsoDraft == "") min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "rx-ready"
+                button "Reveal" press=conversationCommand("reveal") testId="qso-reveal" min-height=44 color="dit-ink" background-color="#172633"
+                button "Check copy" press=conversationCommand("check") testId="qso-check" min-height=44 color="dit-ink" background-color="#172633"
+                button "Start my turn" press=conversationCommand("start-turn") testId="qso-start-turn" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "receiving"
+                button "Pause" press=conversationCommand("pause") testId="qso-pause" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "paused"
+                button "Resume" press=conversationCommand("resume") testId="qso-resume" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoReplayable and (qsoCopying or (qsoPhase == "tx" and qsoDraft == ""))
+                button "Replay" press=conversationCommand("replay") testId="qso-replay" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "error"
+                button "Retry" press=conversationCommand("retry") testId="qso-retry" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase != "idle" and qsoPhase != "ended" and qsoPhase != "consent"
+                button "End QSO" press=conversationCommand("end") testId="qso-end" min-height=44 color="dit-ink" background-color="#172633"
+              if qsoPhase == "ended"
+                button "New QSO" press=conversationCommand("new") testId="qso-new" min-height=44 color="dit-ink" background-color="#172633"
+          if nativeFreestyle
+            button press=clear testId="clear" aria-label="Clear freestyle word" appearance="none" background-color="transparent" border-width=0 min-height=44 padding=0 display="flex" align-items="center" justify-content="center"
+              column backgroundMaterial="glass" glassInteractive=true border-radius=24 padding="8px 12px" pointer-events="none"
+                text "CLEAR" font-size="0.824rem" letter-spacing=1.2 color="dit-ink-secondary"
+          else if mode == "freestyle"
+            button "Clear" press=clear testId="clear" aria-label="Clear Freestyle" min-height=40 padding="8px 18px" border-radius=24 backgroundMaterial="glass-clear"
+          if nativeHintSurface and introHint == "morse"
+            column testId="practice-first-key-hint" width="100%" max-width=320 align-items="center" box-sizing="border-box" padding="12px 14px" position="relative" background-color="rgba(24,36,47,0.9)" border="1px solid rgba(255,255,255,0.12)" border-radius=16
+              column position="absolute" width=12 height=12 bottom=-6 background-color="#1a2632" border-right="1px solid rgba(255,255,255,0.12)" border-bottom="1px solid rgba(255,255,255,0.12)" rotate="45deg" aria-hidden=true pointer-events="none"
+              text "Tap the big Morse key to make a dit (short press) or dah (long press)." text-align="center" font-size="0.765rem" line-height=1.385 color="rgba(244,247,249,0.9)"
+          column box-sizing="border-box" width=(nativeReply ? "calc(100% + 16px)" : "100%") max-width=480 height=(showKey ? 96 : 0) opacity=(showKey ? 1 : 0) border-radius=48 backgroundMaterial="glass-clear" glassInteractive=true position="relative" background-color=(nativePractice or nativeFreestyle or nativeTutorial or nativeReply ? "transparent" : "rgba(255,255,255,0.08)") border=(nativePractice or nativeFreestyle or nativeTutorial or nativeReply ? "none" : "1px solid rgba(255,255,255,0.12)") scale=(pressing ? 0.98 : 1) transition=(media.prefersReducedMotion ? "none" : "scale 120ms cubic-bezier(0.16,1,0.3,1)") box-shadow="inset 0 1px 0 rgba(255,255,255,0.08)"
+            dit-key role=(webKey ? "button" : "presentation") tabindex=(webKey and showKey ? 0 : -1) aria-hidden=(not showKey) message=nativeKey blocked=(panel != "" or guideCelebrate or not page.hasFocus) tone-volume=0.75 watch-volume=nativeSoundCheck mode=mode reduce-motion=media.prefersReducedMotion settings-open=(panel == "settings") reference-open=(panel == "progress" and page.hasFocus) reference-token=refToken reference-char=refSelected nux-token=nuxToken nux-command=nuxCommand route-boundary=route.id qso-token=qsoToken qso-command=qsoCommand qso-copy-value=qsoCopy listen-content=listenContent listen-choice-token=listenChoiceToken custom-token=customToken custom-command=customCommand custom-source-value=customSource custom-copy-value=customCopy custom-type-value=customType word-token=wordToken word-command=wordCommand guide-token=guideToken answer-token=answerToken answer-value=answerValue answer-prompt=answerPrompt account-token=accountToken account-action=accountAction pref-token=prefToken pref-command=prefCommand clear-token=clearToken cancel-token=cancelToken warm-token=warmToken testId="morse-key" aria-label=(webKey ? "Morse key" : "") width="100%" height="100%" touch-action="none"
+            if nativeTutorial and not pressing
+              column position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
+                image "symbol:sf/touchid" width=34 height=34 opacity=0.4
+      if nativeWelcome
+        column position="absolute" inset=0 justify-content="center" align-items="center" gap=48 padding="0 24px" box-sizing="border-box" aria-hidden=(panel == "entry-account")
+          image "assets/dit-logo.svg" width=120 height=120 opacity=0.9 aria-hidden=true testId="nux-welcome"
+          text "Welcome to Dit" role="heading" aria-level=1 testId="nux-step" font-size="1.882rem" font-weight=600 text-align="center" color="dit-ink"
+        column position="absolute" bottom=62 left=0 right=0 gap=0 align-items="center" opacity=(welcomeChoices ? 1 : 0) transition=(media.prefersReducedMotion ? "none" : "opacity 600ms cubic-bezier(0.23,1,0.32,1)") aria-hidden=(not welcomeChoices or panel == "entry-account")
+          if protectedEntry
+            text entryWarning testId="nux-storage" role="status" font-size="0.875rem" text-align="center" color="dit-ink" background-color="dit-panel" padding="6px 12px" border-radius=12
+          if welcomeChoices and accountEmail == ""
+            button "Sign in" press=openEntryAccount testId="welcome-sign-in" appearance="none" border-width=0 background-color="transparent" box-sizing="border-box" min-height=44 padding="6px 12px" font-size="0.882rem" font-weight=500 letter-spacing="0.2px" color="#e6f0ff"
+            button "Stay signed out" press=nux("start") testId="nux-start" appearance="none" border-width=0 background-color="transparent" box-sizing="border-box" min-height=44 padding="6px 12px" font-size="0.765rem" letter-spacing="0.2px" color="rgba(200,210,220,0.5)"
+      if nativeEntry and not nativeWelcome
+        column opacity=(nativeReminder and reminderExiting and not media.prefersReducedMotion ? 0 : 1) scale=(nativeReminder and reminderExiting and not media.prefersReducedMotion ? 1.04 : 1) transition=(nativeReminder and not media.prefersReducedMotion ? "opacity 360ms cubic-bezier(0.23,1,0.32,1), scale 360ms cubic-bezier(0.23,1,0.32,1)" : "none") position="absolute" top=0 left=0 right=0 bottom=(nativeTutorial ? 120 : 0) overflow="auto" box-sizing="border-box" padding=(nativeTutorial ? "calc(env(safe-area-inset-top) + 24px) 24px 0" : "calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px)") pointerdown=startReminderSwipe pointerup=backFromNativeStep touch-action="pan-y"
+          if protectedEntry
+            text entryWarning testId="nux-storage" role="status" font-size="0.875rem" text-align="center" color="dit-ink" background-color="dit-panel" padding="6px 12px" border-radius=12
+          row justify-content="center" gap=6 min-height=7 aria-hidden=true
+            for point in [1,2,3,4,5,6] key=point
+              column width=(point == nativeStepGroup ? 20 : 7) height=7 border-radius=4 background-color=(point == nativeStepGroup ? "dit-ink" : point < nativeStepGroup ? "#71deb0" : "rgba(250,247,245,0.2)")
+          if nativeProfile
+            column align-items="center" gap=12 padding-top=32
+              text "Choose your path" role="heading" aria-level=1 testId="nux-step" font-size="1.647rem" font-weight=600 letter-spacing="-0.6px" text-align="center"
+              text "Pick the option that fits your experience." font-size="0.882rem" line-height=1.47 text-align="center" color="dit-ink-secondary"
+            column flex=1 justify-content="center" gap=12 padding-top=24
+              for path in ["beginner", "known"] key=path
+                button press=nux(path) testId=("nux-" + path) aria-label=(path == "beginner" ? "Learn Morse from the basics" : "Quick tour for experienced users") appearance="none" display="flex" flex-direction="column" align-items="flex-start" gap=8 width="100%" padding=24 box-sizing="border-box" border-radius=16 border="1px solid var(--dit-border)" background-color="dit-panel" color="dit-ink"
+                  row align-items="center" gap=12
+                    if path == "beginner"
+                      image "symbol:sf/graduationcap.fill" width=22 height=22 aria-hidden=true
+                    else
+                      image "symbol:sf/bolt.fill" width=22 height=22 aria-hidden=true
+                    text (path == "beginner" ? "Learn Morse" : "I know Morse") font-size="1.06rem" font-weight=600
+                  text (path == "beginner" ? "Start from the basics and build up." : "Quick tour, then dive right in.") font-size="0.824rem" line-height=1.43 color="dit-ink-muted" text-align="left"
+            column height=48 flex-shrink=0 aria-hidden=true
+          else if nativeLessonPreview or nativeReminder
+            column align-items="center" gap=12 padding-top=32
+              text (nativeReminder ? "Daily nudge" : nuxStep == "beginner_stages" ? "How you'll learn" : "Your first letters") role="heading" aria-level=1 testId="nux-step" font-size="1.647rem" font-weight=600 letter-spacing="-0.6px" text-align="center"
+              text (nativeReminder ? "Pick a time and we'll remind you to practice. Change or turn it off anytime in Settings." : nuxStep == "beginner_stages" ? "Each pack moves through three stages." : "You'll start with two letters and build from there.") font-size="0.882rem" line-height=1.47 text-align="center" color="dit-ink-secondary"
+            if nuxStep == "beginner_stages"
+              column flex=1 align-items="center" justify-content="center"
+                for phase, i in ["Listen","Practice","Recall"] key=phase
+                  if i > 0
+                    column height=44 justify-content="center" aria-hidden=true
+                      column width=1 height=28 background-color="rgba(250,247,245,0.2)"
+                  column gap=6 align-items="center"
+                    column min-width=24 min-height=24 align-items="center" justify-content="center" border-radius=12 border="1px solid rgba(250,247,245,0.4)" margin-bottom=4
+                      text `${i + 1}` font-size="0.706rem" font-weight=700
+                    text phase font-size="1.176rem" font-weight=600 text-align="center"
+                    text (i == 0 ? "Hear each letter and copy the sound" : i == 1 ? "Mix old and new letters by ear" : "Hear a letter, tap the matching sound") color="dit-ink-muted" font-size="0.824rem" line-height=1.43 text-align="center"
+            else if nuxStep == "beginner_intro"
+              column flex=1 align-items="center" justify-content="center" gap=12 padding-top=24
+                text "WE'LL START WITH" font-size="0.706rem" letter-spacing="0.8px" color="dit-ink-muted" font-weight=600
+                row gap=12 justify-content="center" testId="first-pack-letters"
+                  for letter in firstPackLetters.split(" ") key=letter
+                    column min-width=72 min-height=72 align-items="center" justify-content="center" background-color="dit-panel" border="1px solid var(--dit-border)" border-radius=16
+                      text letter font-size="1.529rem" font-weight=700
+            else
+              column flex=1 justify-content="center" gap=24 align-items="center" padding-top=24 testId="reminder-content"
+                column width="100%" max-width="22.5rem" align-items="center" gap=12 padding="16px 24px" box-sizing="border-box" border-radius=16 border="1px solid var(--dit-border)" background-color="dit-panel"
+                  text nuxReminderLabel aria-hidden=true font-size="0.765rem" letter-spacing="0.8px" font-weight=600 color="dit-ink-muted"
+                  dit-reminder-wheel clock-time=nuxReminderTime wheel-disabled=(reminderBusy or reminderExiting) message=reminderWheel width="100%" height=216 testId="nux-reminder-time"
+                button "Not now" aria-label="Skip reminder" press=nux("reminder-skip") testId="nux-reminder-skip" min-height=44 box-sizing="border-box" padding="8px 12px" appearance="none" background-color="transparent" border="none" font-size="0.882rem" color="dit-ink-muted"
+                if reminderError != ""
+                  text reminderError role="status"
+            if nativeReminder
+              button "Turn on reminder" press=nux("reminder-enable") disabled=reminderBusy testId="nux-reminder-enable" backgroundMaterial="glass" glassInteractive=true width="100%" box-sizing="border-box" min-height=48 padding="12px 24px" border-radius=30 font-size="0.941rem" font-weight=600 color="dit-ink"
+            else
+              button (nuxStep == "beginner_intro" ? "Start first lesson" : "Continue") press=nux("continue") testId="nux-continue" backgroundMaterial="glass" glassInteractive=true width="100%" box-sizing="border-box" min-height=48 padding="12px 24px" border-radius=30 font-size="0.941rem" font-weight=600 color="dit-ink"
+          else if nativeTutorial
+            column align-items="center" gap=12 padding-top=32
+              text "Meet the Morse key" role="heading" aria-level=1 testId="nux-step" font-size="1.647rem" font-weight=600 letter-spacing="-0.6px" text-align="center"
+              text "Try it on the key below — short taps are dits, long holds are dahs." font-size="0.882rem" line-height=1.47 text-align="center" color="dit-ink-secondary"
+            column flex=1 align-items="center" justify-content="center" gap=16 padding-top=24
+              text (nuxTaps == "3" ? "Now hold 3 times" : "Tap 3 times on the key") role="status" testId="tutorial-instruction" font-size="1.176rem" font-weight=600 text-align="center"
+              for kind in ["Tap","Hold"] key=kind
+                row min-width=120 align-items="center" justify-content="space-between" gap=12 role="img" aria-label=(kind == "Tap" ? "Taps " + nuxTaps + " of 3" : "Holds " + nuxHolds + " of 3") testId=(kind == "Tap" ? "nux-taps" : "nux-holds")
+                  text (kind == "Tap" ? "TAP (DIT)" : "HOLD (DAH)") aria-hidden=true font-size="0.765rem" letter-spacing="0.8px" color="dit-ink-muted"
+                  row gap=5 aria-hidden=true
+                    for pip in ["1","2","3"] key=pip
+                      column width=8 height=8 border-radius=4 border="1px solid rgba(250,247,245,0.32)" background-color=((kind == "Tap" ? nuxTaps : nuxHolds) >= pip ? "#71deb0" : "transparent")
+              row align-items="center" justify-content="space-between" min-width=180 min-height=44 padding="8px 12px" box-sizing="border-box" gap=16 border-radius=32 background-color="rgba(255,255,255,0.06)" border="1px solid var(--dit-border)"
+                text "HAPTICS" aria-hidden=true font-size="0.765rem" letter-spacing="0.8px" font-weight=600 color="dit-ink-muted"
+                input type="checkbox" switch checked=hapticsEnabled change=setHaptics aria-label="Haptics" testId="tutorial-haptics" accent-color="#ff954d"
+              if not hapticsSaved
+                text "Haptics changes apply to this session only." role="status"
+          else if nativeSoundCheck
+            column align-items="center" gap=12 padding-top=32
+              text "Check your sound" role="heading" aria-level=1 testId="nux-step" font-size="1.647rem" font-weight=600 letter-spacing="-0.6px" text-align="center"
+              text (outputVolumeLow ? "Your volume looks low. Raise it with the side buttons, then test the sound." : "Tap below to confirm you can hear the tones.") role="status" font-size="0.882rem" line-height=1.47 text-align="center" color="dit-ink-secondary"
+            column flex=1 align-items="center" justify-content="center" gap=24 padding-top=24
+              button press=nux("play") aria-label="Test sound" testId="nux-sound-play" appearance="none" display="flex" flex-direction="column" align-items="center" justify-content="center" gap=8 width=160 min-height=160 padding=12 box-sizing="border-box" border-radius=80 border=(nuxSound == "heard" ? "1px solid #71deb0" : "1px solid var(--dit-border)") background-color="rgba(255,255,255,0.06)" color=(nuxSound == "heard" ? "#71deb0" : "dit-ink")
+                if nuxSound == "heard"
+                  image "symbol:sf/checkmark.circle.fill" width=36 height=36 aria-hidden=true
+                else
+                  image "symbol:sf/speaker.wave.2.fill" width=36 height=36 aria-hidden=true
+                text (nuxSound == "heard" ? "Sound works" : "Test sound") font-size=(nuxSound == "heard" ? "0.941rem" : "1rem") font-weight=600 text-align="center"
+              if outputVolumeLow and nuxSound != "heard"
+                column align-items="center" gap=8
+                  text "Try this" font-size="0.824rem" font-weight=600
+                  text "Raise the volume with the side buttons." font-size="0.824rem" text-align="center" color="dit-ink-muted"
+                  text "Check Silent Mode in Control Center if you still hear nothing." font-size="0.824rem" text-align="center" color="dit-ink-muted"
+              if nuxSound == "failed"
+                text "Check your audio output and test the sound again." role="status" text-align="center"
+            button "Continue" press=nux("continue") disabled=(nuxSound != "heard") testId="nux-continue" backgroundMaterial="glass" glassInteractive=true width="100%" box-sizing="border-box" min-height=48 padding="12px 24px" border-radius=30 font-size="0.941rem" font-weight=600 color="dit-ink"
+          else
+            column flex=1 width="100%" align-items="center" justify-content="center" gap=24 padding-top=32 box-sizing="border-box"
+              dit-intro-artwork slide=nuxStep reduce-motion=media.prefersReducedMotion aria-hidden=true pointer-events="none" width="100%" height=(media.height < 700 ? 150 : 230) flex-shrink=0 testId="intro-artwork"
+              column gap=12 min-height=180 max-width=480 align-items="center"
+                text (nuxStep == "intro_fluency" ? "Real Morse fluency." : nuxStep == "intro_listen" ? "No chart. Just listen." : "Real speed from day one.") testId="nux-step" role="heading" aria-level=1 text-align="center" font-size="1.647rem" font-weight=600 letter-spacing="-0.6px"
+                text (nuxStep == "intro_fluency" ? "Science-backed training, instant feedback, and smart review that targets your weakest letters." : nuxStep == "intro_listen" ? "Experienced operators don't count dots and dashes. They hear each letter the way you hear your name. Dit trains that reflex from the start." : "Slow letters teach you to count. Dit uses the Koch method, which keeps every character at a usable speed. The gaps between letters start roomy and tighten as you improve, so you always have time to think.") font-size="0.882rem" line-height=1.47 color="dit-ink-secondary" text-align="center"
+            button "Continue" press=nux("continue") testId="nux-continue" backgroundMaterial="glass" glassInteractive=true width="100%" box-sizing="border-box" min-height=48 padding="12px 24px" border-radius=30 font-size="0.941rem" font-weight=600 color="dit-ink"
+      dialog id="entry-account" aria-label="Sign in to Dit" closedby="any" cancel=closeEntryAccount width="100%" box-sizing="border-box" color-scheme="dark"
+        if panel == "entry-account"
+          column gap=8 padding=16 width="100%" box-sizing="border-box" align-items="center" background-color="dit-panel" color="dit-ink" border-radius=20
+            text "Sign in to Dit" role="heading" aria-level=2 font-size="0.824rem" font-weight=500
+            if fixtureAccounts
+              text "Isolated Simulator accounts" role="status" font-size="0.824rem" color="dit-ink-secondary"
+              for learner in ["A","B"] key=learner
+                button ("Fixture learner " + learner) press=chooseFixtureAccount(learner) class=SheetControl min-height=44 width="100%" border-radius=14
+            else
+              text "Account sign-in is unavailable in this offline build." role="status" text-align="center" font-size="0.824rem" color="dit-ink-secondary"
+              for provider in ["Apple","Google","Email"] key=provider
+                button ("Continue with " + provider) disabled=true class=SheetControl width="100%" border-radius=14
+            button "Cancel" aria-label="Cancel sign-in" press=closeEntryAccount class=SheetControl min-height=44 width="100%" border-radius=14
+      dialog id="phase-gate" aria-label=gateTitle closedby="any" cancel=acceptPracticeGate width="calc(100% - 48px)" max-width=360 padding=24 background-color="dit-panel" border="1px solid var(--dit-border)" border-radius=18 box-sizing="border-box" color="dit-ink"
+        ::backdrop
+          background-color="dit-scrim"
+        if nativePhaseDialog
+          column width="100%" align-items="center" gap=12
+            text gateTitle role="heading" aria-level=2 font-size="1.059rem" font-weight=600 letter-spacing=0.4 text-align="center"
+            if gateSubtitle != ""
+              text gateSubtitle font-size="0.824rem" line-height=1.43 color="dit-ink-secondary" text-align="center"
+            if not guideCelebrate and guidePhase != "gate-retry"
+              row testId="gate-letters" justify-content="center" flex-wrap="wrap" gap=8 margin="4px 0"
+                for letter in guidePack.split(",") key=letter
+                  column width=72 min-height=72 justify-content="center" align-items="center" border-radius=18 background-color="dit-input" border="1px solid var(--dit-border)"
+                    text letter font-size="1.529rem" font-weight=700
+            if guideCelebrate and guideStorage != "saved"
+              text "Course completion may not be saved on this device." role="status" font-size="0.824rem" color="dit-ink-secondary" text-align="center"
+            button press=acceptPracticeGate aria-label="Continue" testId="guided-native-continue" appearance="none" border-width=0 background-color="transparent" min-height=44 padding=0 display="flex" align-items="center" justify-content="center"
+              column backgroundMaterial="glass" padding="10px 24px" border-radius=14 pointer-events="none"
+                text "CONTINUE" letter-spacing=1.1 font-size="0.706rem" color="dit-ink-secondary"
+      dialog id="course-complete" testId="guided-complete-dialog" aria-label="Course complete" closedby="any" cancel=dismissCourseComplete background-color="#14212b" color="#faf7f5" border-radius=28 padding=24 width="100%" max-width="24rem" box-sizing="border-box"
+        column gap=12
+          text "Course complete" role="heading" aria-level=2 font-size="1.25rem"
+          text "You unlocked all beginner letter packs."
+          if guideStorage != "saved"
+            text "Course completion may not be saved in this browser." font-size="0.875rem"
+          button "Done" press=dismissCourseComplete testId="guided-complete-dismiss" min-height=44
+      dialog id="about" aria-label="About Dit" closedby="any" cancel=closePanel background-color="dit-panel" color="dit-ink" border="1px solid var(--dit-border)" border-radius=16 width="calc(100% - 48px)" max-width=360 padding=20 box-sizing="border-box" max-height="85vh" overflow="auto"
+        if panel == "about"
+          column gap=12 align-items="flex-start"
+            text "DIT" role="heading" aria-level=2 font-size="1.294rem" letter-spacing=2
+            text "Tap that big button. Quick taps make dots, longer presses make dashes." font-size="0.824rem" line-height=1.43
+            text "Use settings to adjust difficulty, enable hints, and sign in to save your progress. Tap the logo for the reference chart." font-size="0.765rem" line-height=1.46 color="dit-ink-secondary"
+            text "Modes: Practice for guided learning, Freestyle to translate on your own, or Listen to test your copy skills." font-size="0.765rem" line-height=1.46 color="dit-ink-secondary"
+            row gap=6 align-items="center" flex-wrap="wrap"
+              text ("© " + aboutYear + " Tylr") font-size="0.706rem" color="dit-ink-muted"
+              for label in ["Privacy","Terms","Support"] key=label
+                text "|" aria-hidden=true color="dit-ink-muted"
+                button label role="link" press=openAboutLink(label) appearance="none" border-width=0 background-color="transparent" padding=0 min-height=44 font-size="0.706rem" text-transform="uppercase" letter-spacing=1 color="dit-ink-secondary"
+            button "Close" aria-label="Close about" press=closePanel align-self="flex-end" min-height=44 padding=12 backgroundMaterial="glass" border-radius=22
+      dialog id="native-learning" aria-label="Learning method" closedby="any" cancel=closePanel position="absolute" inset=0 width="100vw" height="100dvh" max-width="100vw" max-height="100dvh" margin=0 padding=0 box-sizing="border-box" border-width=0 background-color="transparent"
+        ::backdrop
+          background-color="dit-scrim"
+        if appleSession and panel == "scope"
+          button press=closePanel aria-label="Dismiss learning sheet" position="absolute" inset=0 width="100%" height="100%" appearance="none" border-width=0 padding=0 background-color="transparent"
+          column position="absolute" left=0 right=0 bottom=0 width="100%" max-height="85dvh" box-sizing="border-box" padding="12px 16px calc(max(env(safe-area-inset-bottom), 20px) + 12px)" overflow="hidden" background-color="#0d1116" border="1px solid var(--dit-border)" border-radius="30px 30px 0 0" color="dit-ink" align-items="center"
+            column width=36 height=4 border-radius=2 background-color="rgba(255,255,255,0.20)" margin-bottom=12 flex-shrink=0 aria-hidden=true
+            if not scopeEditing
+              text "Learning method" text-align="center" role="heading" aria-level=2 font-size="1.059rem" font-weight=600
+              text "How you want to practice." text-align="center" font-size="0.765rem" color="dit-ink-muted" margin-top=4 margin-bottom=14
+              row width="100%" padding=3 gap=0 border-radius=10 background-color="#0b0e12" box-sizing="border-box" margin-bottom=12
+                for method in ["course","open"] key=method
+                  button (method == "course" ? "Course" : "Open practice") press=switchLearningMethod(method) aria-label=(method == "course" ? "Course mode" : "Open practice mode") id=(method == "course" ? "native-course-tab" : "native-open-tab") testId=("learning-" + method) aria-pressed=(learningMethod == method) flex=1 min-width=0 min-height=36 box-sizing="border-box" appearance="none" border-width=0 border-radius=8 padding="4px 8px" font-size="0.765rem" background-color=(learningMethod == method ? "rgba(255,255,255,0.12)" : "transparent") color=(learningMethod == method ? "dit-ink" : "dit-ink-secondary")
+              column width="100%" min-height=0 max-height=(learningMethod == "course" ? "59dvh" : "55dvh") overflow="auto" border-radius=14 background-color="#0b0e12" testId="learning-body"
+                if learningMethod == "course"
+                  for letters, i in coursePacks.split(";") key=letters
+                    button press=openCoursePack(`${i + 1}`) class=NativeScopeRow testId=(`course-pack-${i + 1}`) background-color=(courseCurrent == `${i + 1}` ? "rgba(130,170,230,0.12)" : "transparent") aria-label=(`Pack ${i + 1}, letters ` + letters.replaceAll(",", " ") + (courseLearned.split(",").includes(`${i + 1}`) ? ", completed" : courseCurrent == `${i + 1}` ? ", current" : ""))
+                      row gap=8 align-items="center"
+                        text (courseLearned.split(",").includes(`${i + 1}`) ? "✓" : " ") width=16 aria-hidden=true
+                        text `Pack ${i + 1}` font-size="0.824rem" font-weight=500 color=(courseCurrent == `${i + 1}` ? "dit-ink" : "dit-ink-secondary")
+                      text letters.replaceAll(",", " ") letter-spacing=2 color="dit-ink-secondary" font-size="0.824rem"
+                else
+                  for name, i in ["Beginner letters","Common letters","Full alphabet","Full alphabet + digits"] key=name
+                    button press=applyScope(`scope-tier:${i + 1}`) class=NativeScopeRow testId=(`scope-tier-${i + 1}`) aria-pressed=(scopeSelection == `tier-${i + 1}`) background-color=(scopeSelection == `tier-${i + 1}` ? "rgba(130,170,230,0.12)" : "transparent")
+                      column gap=2 align-items="flex-start"
+                        text name font-size="0.824rem" font-weight=500
+                        text (i == 0 ? "A E I M N T" : i == 1 ? "adds D G K O R S U W" : i == 2 ? "adds B C F H J L P Q V X Y Z" : "adds 0 1 2 3 4 5 6 7 8 9") font-size="0.706rem" letter-spacing=1 color="dit-ink-muted"
+                      if scopeSelection == `tier-${i + 1}`
+                        text "✓" color="dit-ink-secondary" aria-hidden=true
+                  button press=openCustomScope class=NativeScopeRow id="native-custom-choice" testId="scope-custom" aria-label="Pick your own letters" background-color=(scopeSelection == "custom" ? "rgba(130,170,230,0.12)" : "transparent")
+                    column gap=2 align-items="flex-start"
+                      text "Pick your own" font-size="0.824rem" font-weight=500
+                      text (scopeSelection == "custom" ? `${scopeLetters.length} selected` : "Choose any combination of letters and digits") font-size="0.706rem" letter-spacing=1 color="dit-ink-muted"
+                    text "›" aria-hidden=true
+              button "Done" press=closePanel aria-label="Done" testId="scope-cancel" class=ScopeFooter margin-top=12 background-color="dit-input"
+            else
+              row width="100%" align-items="center" justify-content="space-between"
+                button "‹" press=backToTiers id="native-custom-back" testId="scope-back" aria-label="Back to modes" appearance="none" width=44 min-height=44 padding=0 border-width=0 background-color="transparent" color="dit-ink" font-size="1.294rem"
+                text "Pick your own" role="heading" aria-level=2 font-size="1.059rem" font-weight=600
+                column width=44 aria-hidden=true
+              text (`${scopeDraft.length} ` + (scopeDraft.length == 1 ? "character" : "characters") + " selected") color="dit-ink-muted" testId="scope-draft" font-size="0.765rem" margin-bottom=14
+              column width="100%" min-height=0 max-height="59dvh" overflow="auto" gap=10
+                for group in ["ABCDEFGHIJKLMNOPQRSTUVWXYZ","0123456789"] key=group
+                  text (group.length == 26 ? "Letters" : "Numbers") font-size="0.647rem" text-transform="uppercase" letter-spacing=1.4 color="dit-ink-muted"
+                  view display="grid" width="100%" gap=8 grid-template-columns="repeat(auto-fill, min(100%, max(48px, 2.5rem)))"
+                    for letter in group.split("") key=letter
+                      button letter press=toggleScopeLetter(letter) testId=("scope-letter-" + letter) aria-label=letter aria-pressed=scopeDraft.includes(letter) appearance="none" border-radius=12 min-height=48 width="100%" min-width=0 box-sizing="border-box" padding=0 font-size="0.941rem" font-weight=600 background-color=(scopeDraft.includes(letter) ? "rgba(130,170,230,0.2)" : "dit-input") border=(scopeDraft.includes(letter) ? "1px solid rgba(130,170,230,0.55)" : "1px solid transparent")
+              button "Apply" press=confirmCustomScope aria-label="Apply selection" testId="scope-apply" disabled=(scopeDraft == "") class=ScopeFooter margin-top=12 opacity=(scopeDraft == "" ? 0.4 : 1) background-color="rgba(130,170,230,0.5)"
+      dialog id="learning" aria-label="Learning method" closedby="any" cancel=closePanel color="dit-ink" background-color="dit-panel" border="1px solid var(--dit-border)" border-radius=20 padding=0 width="calc(100vw - 2 * clamp(16px, 4vw, 40px))" max-width="35rem" max-height="min(82dvh, 680px)" overflow="hidden" box-sizing="border-box" backdrop-filter="blur(24px) saturate(180%)"
+        ::backdrop
+          background-color="dit-scrim"
+        if not appleSession and panel == "scope"
+          column max-height="min(calc(82dvh - 2px), 678px)" overflow="auto"
+            row align-items="center" justify-content="space-between" gap=12 flex-wrap="wrap" padding="12px 20px 10px" border-bottom="1px solid var(--dit-border)" flex-shrink=0
+              text "Learning method" flex="1 1 9rem" font-weight=400 role="heading" aria-level=2 font-size="0.75rem" letter-spacing="0.28em" text-transform="uppercase" min-width=0
+              button "Close" press=closePanel testId="scope-cancel" flex-shrink=0 class=SheetControl border-radius=22 padding="8px 14px" font-size="0.68rem" letter-spacing="0.18em" text-transform="uppercase"
+            row role="tablist" appearance="none" background-color="transparent" border-width=0 aria-label="Learning method" gap=6 flex-wrap="wrap" padding="12px 20px 4px" flex-shrink=0
+              button "Course" press=switchLearningMethod("course") key=learningTabKey role="tab" id="course-tab" aria-controls="learning-panel" aria-selected=(learningMethod == "course") tabindex=(learningMethod == "course" ? 0 : -1) testId="learning-course" class=SheetSegment
+              button "Open practice" press=switchLearningMethod("open") key=learningTabKey role="tab" id="open-tab" aria-controls="learning-panel" aria-selected=(learningMethod == "open") tabindex=(learningMethod == "open" ? 0 : -1) testId="learning-open" class=SheetSegment
+            column role="tabpanel" id="learning-panel" aria-labelledby=(learningMethod == "course" ? "course-tab" : "open-tab") overflow="auto" min-height="min(7rem, 35vh)" box-sizing="border-box" padding="16px 20px 20px" gap=6 testId="learning-body"
+              if learningMethod == "course"
+                if coursePacks != ""
+                  column role="list" flex-shrink=0 aria-label="Course packs" gap=6
+                    for letters, i in coursePacks.split(";") key=letters
+                      column role="listitem" flex-shrink=0
+                        button press=openCoursePack(`${i + 1}`) testId=(`course-pack-${i + 1}`) class=LearningRow aria-label=(`Pack ${i + 1}, ${letters}` + (courseLearned.split(",").includes(`${i + 1}`) ? ", completed" : "")) aria-current=(courseCurrent == `${i + 1}` and not guideCompleted ? "step" : "false") border-color=(courseCurrent == `${i + 1}` and not guideCompleted ? "var(--dit-selected-border)" : "var(--dit-border)")
+                          column gap=2 min-width=0 flex="1 1 auto"
+                            text `Pack ${i + 1}` class=RowTitle opacity=(courseLearned.split(",").includes(`${i + 1}`) ? 0.7 : 1)
+                            text letters class=RowSubtitle
+                          if courseLearned.split(",").includes(`${i + 1}`)
+                            text "✓" aria-hidden=true color="dit-ink-secondary"
+              else if not scopeEditing
+                for title, i in ["Beginner letters", "Common letters", "Full alphabet", "Full alphabet + digits"] key=title
+                  button press=applyScope(`scope-tier:${i + 1}`) testId=(`scope-tier-${i + 1}`) class=LearningRow aria-pressed=(scopeSelection == `tier-${i + 1}`)
+                    column gap=2 min-width=0 flex="1 1 auto"
+                      text title class=RowTitle
+                      text (i == 0 ? "A E I M N T" : i == 1 ? "adds D G K O R S U W" : i == 2 ? "adds B C F H J L P Q V X Y Z" : "adds 0 1 2 3 4 5 6 7 8 9") class=RowSubtitle
+                    if scopeSelection == `tier-${i + 1}`
+                      text "✓" aria-hidden=true color="dit-ink-secondary"
+                button press=openCustomScope id="custom-choice" testId="scope-custom" class=LearningRow aria-pressed=(scopeSelection == "custom")
+                  column gap=2 min-width=0 flex="1 1 auto"
+                    text "Pick your own" class=RowTitle
+                    text (scopeLetters == "" ? "Choose individual letters and digits" : `${scopeLetters.length} character` + (scopeLetters.length == 1 ? "" : "s") + " selected") class=RowSubtitle
+                  text "›" aria-hidden=true color="dit-ink-secondary"
+              else
+                row align-items="center" justify-content="space-between" flex-wrap="wrap" gap=8
+                  button "‹ Back" press=backToTiers id="custom-back" aria-label="Back to tier list" testId="scope-back" class=SheetControl
+                  text `${scopeDraft.length} selected` testId="scope-draft" role="status" class=RowSubtitle
+                view flex-shrink=0 display="grid" grid-template-columns="repeat(auto-fit, minmax(min(100%, max(44px, 2.6rem)), 1fr))" gap=8
+                  for letter in "A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,0,1,2,3,4,5,6,7,8,9".split(",") key=letter
+                    button letter press=toggleScopeLetter(letter) testId=("scope-letter-" + letter) aria-pressed=scopeDraft.includes(letter) class=SheetControl border-radius=12
+                button "Apply" press=confirmCustomScope testId="scope-apply" disabled=(scopeDraft == "") class=SheetControl border-radius=14
+              if storage == "newer" or storage == "unavailable" or storage == "oversized"
+                text "Changes are temporary in this browser" role="status" font-size="0.875rem"
+      dialog id="local-contact-consent" role="alertdialog" aria-label="Start a local contact?" close=finishContactConsent
+        text "Practice with a simulated station on this device. Your keyed messages and typed copy stay here."
+        button commandfor="local-contact-consent" command="close"
+          text "Cancel"
+        button press=conversationCommand("consent-allow") commandfor="local-contact-consent" command="close"
+          text "Allow"
+      dialog id="reset-local-app" role="alertdialog" aria-label="Reset App?"
+        text "This clears progress, settings, onboarding state, and saved local data on this device."
+        button commandfor="reset-local-app" command="close"
+          text "Cancel"
+        button press=preference("reset-local-app") destructive=true commandfor="reset-local-app" command="close"
+          text "Reset App"
+      dialog id="local-reset-error" role="alertdialog" aria-label="Could Not Reset App"
+        text "Some local data could not be cleared. Relaunch Dit and try again."
+        button commandfor="local-reset-error" command="close"
+          text "OK"
+      dialog id="reset-scores" role="alertdialog" aria-label="Reset Progress"
+        text "This will reset all your scores back to zero. Are you sure?"
+        button commandfor="reset-scores" command="close"
+          text "Cancel"
+        button press=preference("reset-scores") destructive=true commandfor="reset-scores" command="close"
+          text "Reset"
+      dialog id="apple-progress" aria-label="Progress" closedby="any" cancel=closePanel width="calc(100% - 48px)" max-width=380 max-height="min(520px, 82dvh)" overflow="hidden" padding=0 border-radius=18 background-color="dit-panel" border="1px solid var(--dit-border)" color="dit-ink" box-sizing="border-box"
+        ::backdrop
+          background-color="dit-scrim"
+        if appleSession and panel == "progress"
+          column width="100%" height="min(520px, 82dvh)" min-height=0 box-sizing="border-box"
+            row width="100%" padding="6px 16px" justify-content="space-between" align-items="center" flex-shrink=0 flex-wrap="wrap" gap=6 box-sizing="border-box"
+              text "Progress" text-transform="uppercase" role="heading" aria-level=2 font-size="0.824rem" letter-spacing=2
+              row gap=6 align-items="center"
+                button "Reset" commandfor="reset-scores" command="show-modal" aria-label="Reset scores" min-height=44 padding="0 10px" border-radius=10 backgroundMaterial="glass-clear" color="#ff6b6b" text-transform="uppercase" font-size="0.647rem"
+                button "Close" press=closePanel testId="close-panel" aria-label="Close reference" min-height=44 padding="0 10px" border-radius=10 backgroundMaterial="glass-clear" text-transform="uppercase" font-size="0.647rem"
+            column flex=1 width="100%" min-height=0 overflow="auto" padding="0 16px 16px" box-sizing="border-box" gap=12
+              column align-items="center" gap=4 padding="8px 0"
+                if learnerProfile == "known"
+                  text (bestWpm == "" ? "—" : bestWpm) testId="profile-best-wpm" font-size="1.882rem" font-weight=600 letter-spacing=1
+                  text "Best WPM" class=HeroCaption
+                else
+                  row align-items="center" gap=4 testId="ref-mastered"
+                    text (refKnown == "" ? "0" : `${refKnown.split(",").length}`) font-size="1.882rem" font-weight=600
+                    text "/ 36" font-size="1.882rem" font-weight=600 color="dit-ink-muted"
+                  text "Letters mastered" class=HeroCaption
+              if refTtrAverage != ""
+                column align-items="center" gap=4
+                  text (refTtrAverage + " ms") font-size="1.412rem" font-weight=600 testId="ref-recognition-average"
+                  text "Avg recognition" class=HeroCaption
+              column width="100%" gap=4 padding="8px 0"
+                row justify-content="space-between" align-items="center" flex-wrap="wrap" gap=4
+                  text (refStreakCurrent == "" or refStreakCurrent == "0" ? "No active streak" : refStreakCurrent + "-day streak") font-size="0.765rem" font-weight=600 testId="ref-streak-current"
+                  text dayDetail font-size="0.706rem" color="dit-ink-secondary" testId="ref-streak-today"
+                column width="100%" height=4 border-radius=2 background-color="dit-input"
+                  column width=dayFill height=4 border-radius=2 background-color=(refStreakRisk ? "#ff6b6b" : "#ff954d")
+              if listenCourse or mode == "guided"
+                column gap=4 align-items="center" padding=12 background-color="dit-input" border-radius=12
+                  text ("Pack " + courseCurrent + "/14 · " + guidePhase) class=HeroCaption
+                  text ("\"" + guidePack.replaceAll(",", "\" \"") + "\"") font-size="0.882rem" letter-spacing=4
+              NativeReferenceGroup(title="Known by ear", records=masteredCards, reduced=media.prefersReducedMotion, play=reference)
+              NativeReferenceGroup(title="Now learning", records=learningCards, reduced=media.prefersReducedMotion, play=reference)
+              NativeReferenceGroup(title="Not started", records=unstudiedCards, reduced=media.prefersReducedMotion, play=reference)
+      dialog id="passage-editor" aria-label="Custom text" closedby="any" cancel=discardPassageEditor width="100%" box-sizing="border-box" color-scheme="dark"
+        if editingPassage
+          column width="100%" height="calc(100dvh - env(safe-area-inset-top) - 16px)" min-height=0 overflow="auto" box-sizing="border-box" background-color="#20252a" color="dit-ink" padding=24 gap=16 align-items="center"
+            text "Custom text" role="heading" aria-level=2 font-size="1.176rem" font-weight=600
+            textarea class=PassageField aria-label="Text to play as Morse" placeholder="Paste a passage" testId="custom-source" min-height=200 rows=6 value=customSource input=editCustomSource maxlength=8000
+            text customEstimate testId="custom-estimate" role="status" color="dit-ink-secondary" font-size="0.765rem" text-align="center"
+            row gap=12 align-items="center"
+              text "Type along" font-size="1.059rem"
+              input type="checkbox" switch checked=customType change=setTypeAlong aria-label="Type along" testId="custom-type-along"
+            row gap=12 justify-content="center" flex-wrap="wrap"
+              button "Discard" press=discardPassageEditor testId="custom-discard" class=ListenAction
+              button "Save" press=custom("save") testId="custom-save" class=ListenAction
+      dialog id="apple-settings" aria-label="Settings" closedby="any" cancel=closePanel width="100%" box-sizing="border-box" color-scheme="dark"
+        if nativeSettings
+          column width="100%" height="calc(100dvh - env(safe-area-inset-top) - 16px)" min-height=0 box-sizing="border-box" background-color="#181c24" color="dit-ink"
+            button press=closePanel aria-label="Close settings" appearance="none" border-width=0 padding=0 width="100%" min-height=44 flex-shrink=0 display="flex" align-items="center" justify-content="center" background-color="transparent"
+              column width=76 height=6 border-radius=4 background-color="rgba(255,255,255,0.32)" pointer-events="none"
+            column width="100%" flex=1 min-height=0 box-sizing="border-box" overflow="auto" padding="16px 30px 32px" gap=28
+              text "Settings" padding="0 12px" font-size="1.647rem" font-weight=600 role="heading" aria-level=2
+              column class=SettingsGroup testId="native-playback-group"
+                if mode == "freestyle"
+                  row class=SettingsRow
+                    text "Word mode" class=SettingsLabel
+                    input type="checkbox" switch checked=wordMode change=setFreestyleWords aria-label="Word mode" testId="word-mode-toggle"
+                  text "Build a running word from decoded letters in Freestyle." class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                for control in ["speed","pitch"] key=control
+                  row class=SettingsRow
+                    column flex="1 1 8rem" min-width=0 gap=2
+                      text (control == "speed" ? "Playback letter speed" : "Tone pitch") class=SettingsLabel
+                      text (control == "speed" ? `${speed} WPM` : `${pitch} Hz`) font-size="0.706rem" letter-spacing=1 color="dit-ink-secondary"
+                    row align-items="center" background-color="rgba(255,255,255,0.06)" border="1px solid var(--dit-border)" border-radius=22
+                      button "−" testId=(control + "-down") aria-label=(control == "speed" ? "Decrease playback character speed" : "Decrease tone pitch") disabled=(control == "speed" ? speed == "10" : pitch == "400") press=preference(control + "-down") class=SettingsStepper
+                      button "+" testId=(control + "-up") aria-label=(control == "speed" ? "Increase playback character speed" : "Increase tone pitch") disabled=(control == "speed" ? speed == "30" : pitch == "800") press=preference(control + "-up") class=SettingsStepper
+                  text (control == "speed" ? "Used whenever Dit plays Morse for you. Higher = faster dits and dahs." : "The frequency of the CW sidetone. Lower is deeper, higher is sharper.") class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                row class=SettingsRow
+                  text "Haptics" class=SettingsLabel
+                  input type="checkbox" switch checked=hapticsEnabled change=setHaptics aria-label="Haptics" testId="settings-haptics"
+                text "Vibrate alongside the tone when keying or playing back Morse." class=SettingsHelp
+                if not hapticsSaved
+                  text "Haptics changes apply to this session only." role="status" class=SettingsHelp
+                column class=SettingsSeparator aria-hidden=true
+                button "Test sound" press=preference("test-sound") testId="settings-test-sound" appearance="none" border-width=0 min-height=66 width="100%" text-align="left" padding="12px 24px" font-size="0.941rem" color="#80caff" background-color="transparent"
+              button aria-label="Learning method" press=openScope testId="scope-open" appearance="none" border-width=0 class=SettingsGroup padding=0
+                row class=SettingsRow
+                  text "Learning method" class=SettingsLabel
+                  text (listenCourse or mode == "guided" ? "Course  ›" : "Open practice  ›") font-size="0.824rem" color="dit-ink-secondary"
+              column class=SettingsGroup
+                if mode != "practice" and mode != "guided"
+                  button press=togglePracticeSettings aria-label="Toggle practice settings" aria-expanded=practiceSettingsExpanded appearance="none" border-width=0 padding=0 width="100%" background-color="transparent"
+                    row class=SettingsRow
+                      text "Practice settings" class=SettingsLabel
+                      text (practiceSettingsExpanded ? "▾" : "▸") color="dit-ink-secondary"
+                if practiceSettingsExpanded
+                  row class=SettingsRow opacity=(listenCourse or mode == "guided" ? 0.55 : 1)
+                    text "Practice Words" class=SettingsLabel
+                    input type="checkbox" switch checked=practiceWords change=setPracticeWords disabled=(listenCourse or mode == "guided") aria-label="Practice Words" testId="practice-words"
+                  text (listenCourse or mode == "guided" ? "Unavailable while the guided beginner course is active." : "Practice full words instead of single characters.") class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Auto-play sound" class=SettingsLabel
+                    input type="checkbox" switch checked=practiceAutoPlay change=setAutoPlay aria-label="Auto-play sound" testId="settings-auto-play"
+                  text "Automatically plays the current Practice target." class=SettingsHelp
+                  if not listenCourse and mode != "guided"
+                    column class=SettingsSeparator aria-hidden=true
+                    row class=SettingsRow
+                      text "Sequential order" class=SettingsLabel
+                      input type="checkbox" switch checked=(strategy == "sequential") change=setSequential disabled=practiceWords aria-label="Sequential order" testId="strategy-toggle"
+                    text (practiceWords ? "Unavailable while Practice Words is on." : "Cycles letters in order. It does not unlock new letters.") class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Immediate flow recovery" class=SettingsLabel
+                    input type="checkbox" switch checked=ifr change=setIfr disabled=(listenCourse or mode == "guided") aria-label="Immediate flow recovery" testId="ifr-toggle"
+                  text (listenCourse or mode == "guided" ? "Unavailable while the guided beginner course is active." : "On a miss, move on to the next target instead of repeating the same one.") class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Review misses later" class=SettingsLabel
+                    input type="checkbox" switch checked=reviewMisses change=setReview disabled=(listenCourse or mode == "guided" or not ifr) aria-label="Review misses later" testId="review-misses-toggle"
+                  text (listenCourse or mode == "guided" ? "Unavailable while the guided beginner course is active." : not ifr ? "Requires Immediate flow recovery." : "Brings missed targets back after a short delay.") class=SettingsHelp
+              column class=SettingsGroup
+                button press=toggleHelpers aria-label="Toggle helper options" aria-expanded=helpersExpanded appearance="none" border-width=0 padding=0 width="100%" background-color="transparent"
+                  row class=SettingsRow
+                    text "Helpers" class=SettingsLabel
+                    text (helpersExpanded ? "▾" : "▸") color="dit-ink-secondary"
+                if helpersExpanded
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Show hints" class=SettingsLabel
+                    input type="checkbox" switch checked=showHint change=setShowHint aria-label="Show hints"
+                  text "Not recommended. This can be tempting at first, but learning by ear improves recall." class=SettingsHelp
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Show mnemonics" class=SettingsLabel
+                    input type="checkbox" switch checked=showMnemonic change=setShowMnemonic aria-label="Show mnemonics"
+                  text "Memory aids for Morse patterns. Best used temporarily." class=SettingsHelp
+              column class=SettingsGroup
+                row class=SettingsRow
+                  text "Daily reminder" class=SettingsLabel
+                  input type="checkbox" switch checked=reminderEnabled disabled=reminderBusy change=settingsReminder aria-label="Daily reminder" testId="reminder-toggle"
+                if reminderEnabled
+                  column class=SettingsSeparator aria-hidden=true
+                  row class=SettingsRow
+                    text "Time" class=SettingsLabel
+                    input type="time" value=reminderTime change=settingsReminderTime aria-label="Reminder time" testId="reminder-setting-time" min-height=44
+                text "One nudge per day, skipped once you hit today's goal." class=SettingsHelp
+                if reminderError != ""
+                  text reminderError role="status" class=SettingsHelp
+              column class=SettingsGroup
+                button "Use recommended settings" press=preference("recommended") disabled=(listenCourse or mode == "guided") aria-label="Use recommended settings" testId="settings-recommended" class=SettingsAction
+                if listenCourse or mode == "guided"
+                  text "Unavailable while the guided beginner course is active." class=SettingsHelp
+                column class=SettingsSeparator aria-hidden=true
+                button "About Dit" aria-label="Open about" press=about testId="settings-about" class=SettingsAction
+                column class=SettingsSeparator aria-hidden=true
+                button "Reset App" press=askLocalReset aria-label="Reset app" testId="settings-reset-app" class=SettingsAction color="#ff6b6b"
+                column class=SettingsSeparator aria-hidden=true
+                if accountEmail != ""
+                  row class=SettingsRow
+                    text accountEmail class=SettingsLabel
+                    button "Sign Out" press=chooseFixtureAccount("sign-out") aria-label="Sign out" appearance="none" background-color="transparent" min-height=44 border-width=0 color="#ff6b6b"
+                else
+                  button "Sign In" press=openEntryAccount aria-label="Sign in" testId="settings-sign-in" class=SettingsAction
+              button "Replay onboarding" press=replayNux testId="nux-replay" min-height=44
+              if nuxStorage == "unsupported" or nuxStorage == "unavailable"
+                text (nuxStorage == "unsupported" ? "Saved setup is protected. Changes here are temporary." : (appleSession ? "Setup cannot be saved on this device." : "Setup cannot be saved in this browser. You may need to repeat it after reloading.")) testId="nux-storage" role="status" font-size="0.875rem" text-align="center"
+              if not guideCompleted
+                button "Start or resume guided lesson" press=guide testId="guided-start" min-height=44
+              row align-items="center" gap=8 flex-wrap="wrap"
+                button "Slower spacing" press=preference("effective-down") testId="effective-down" min-height=44
+                text `${effectiveSpeed} effective WPM` testId="effective-value"
+                button "Faster spacing" press=preference("effective-up") testId="effective-up" min-height=44
+              button (autoTighten ? "Auto-tighten spacing: on" : "Auto-tighten spacing: off") press=preference("toggle-auto-tighten") testId="auto-tighten-toggle" min-height=44
+              text (storage == "saved" ? "Saved on this device" : storage == "newer" or storage == "oversized" ? "Unsupported local data; changes are temporary" : storage == "unavailable" ? "Device storage unavailable; changes are temporary" : storage == "reset" ? "Local data damaged; recovered where possible" : "Nothing saved yet") testId="storage-status" font-size="0.75rem"
+              button "Close" press=closePanel testId="close-panel" min-height=44
+      dialog id="options" aria-label=(panel == "settings" ? "Practice settings" : "Progress") closedby="any" cancel=closePanel background-color="#14212b" color="dit-ink" border-radius=28 padding=24 width="100%" max-width="24rem" max-height="85vh" overflow="auto" box-sizing="border-box"
+        if not appleSession
+          column gap=16
+            text (panel == "settings" ? "Practice settings" : "Progress") font-size="1.25rem" role="heading" aria-level=2
+            if panel == "settings"
+              button "Learning method" press=openScope testId="scope-open" min-height=44
+              text ordinaryListenPool.replaceAll(",", ", ") testId="scope-current" font-size="0.875rem" white-space="normal"
+              button "Replay onboarding" press=replayNux testId="nux-replay" min-height=44
+              if nuxStorage == "unsupported" or nuxStorage == "unavailable"
+                text (nuxStorage == "unsupported" ? "Saved setup is protected. Changes here are temporary." : (appleSession ? "Setup cannot be saved on this device." : "Setup cannot be saved in this browser. You may need to repeat it after reloading.")) testId="nux-storage" role="status" font-size="0.875rem" text-align="center"
+              if not guideCompleted
+                button "Start or resume guided lesson" press=guide testId="guided-start" min-height=44
+              button (ifr ? "Advance after misses: on" : "Advance after misses: off") press=preference("toggle-ifr") testId="ifr-toggle" min-height=44
+              if mode == "practice"
+                row align-items="center" justify-content="space-between"
+                  text "Practice Words"
+                  input type="checkbox" switch checked=practiceWords change=setPracticeWords aria-label="Practice Words" testId="practice-words"
+              button (wordMode ? "Word mode: on" : "Word mode: off") press=preference("toggle-words") testId="word-mode-toggle" min-height=44
+              button (strategy == "weighted" ? "Order: weighted" : "Order: sequential") press=preference("toggle-strategy") testId="strategy-toggle" min-height=44
+              button (reviewMisses ? "Review missed letters: on" : "Review missed letters: off") press=preference("toggle-review") testId="review-misses-toggle" min-height=44
+              row align-items="center" gap=8 flex-wrap="wrap"
+                button "Slower" press=preference("speed-down") testId="speed-down" min-height=44
+                text `${speed} WPM`
+                button "Faster" press=preference("speed-up") testId="speed-up" min-height=44
+              row align-items="center" gap=8 flex-wrap="wrap"
+                button "Slower spacing" press=preference("effective-down") testId="effective-down" min-height=44
+                text `${effectiveSpeed} effective WPM` testId="effective-value"
+                button "Faster spacing" press=preference("effective-up") testId="effective-up" min-height=44
+              button (autoTighten ? "Auto-tighten spacing: on" : "Auto-tighten spacing: off") press=preference("toggle-auto-tighten") testId="auto-tighten-toggle" min-height=44
+              row align-items="center" gap=8 flex-wrap="wrap"
+                button "Lower" press=preference("pitch-down") testId="pitch-down" min-height=44
+                text `${pitch} Hz`
+                button "Higher" press=preference("pitch-up") testId="pitch-up" min-height=44
+            else if panel == "progress"
+              text `Score ${score}` testId="score" font-size="1rem"
+              text `Retained attempts ${historyCount}` testId="history-count" font-size="0.875rem"
+              column testId="reference-summary" gap=6
+                text `${refKnown == "" ? 0 : refKnown.split(",").length}/36` testId="ref-mastered" font-size="1.125rem" font-weight=600
+                text "Known by ear"
+                text `Recent sending attempts: ${refRecentSend}` testId="ref-recent-sends"
+                text `Recent listening attempts: ${refRecentListen}` testId="ref-recent-listens"
+                text "Known by ear: score 5+ and 8 of the last 10 correct. Older accuracy wasn’t imported." font-size="0.875rem"
+                text (refTtrAverage == "" ? "Known characters: no recognition timing yet" : "Known characters: " + refTtrAverage + " ms average recognition") testId="ref-recognition-average" font-size="0.875rem"
+                column testId="reference-metrics" gap=4
+                  text (refStreakToday == "" ? "No daily activity recorded yet" : "Today: " + refStreakToday) testId="ref-streak-today" font-size="0.875rem"
+                  if refStreakCurrent != ""
+                    row gap=10 flex-wrap="wrap"
+                      text ("Current streak: " + refStreakCurrent) testId="ref-streak-current" font-size="0.875rem"
+                      text ("Best: " + refStreakBest) testId="ref-streak-best" font-size="0.875rem"
+                      if refStreakRisk
+                        text "At risk today" testId="ref-streak-risk" font-size="0.875rem" color="#ffd180"
+              text (media.hover == "hover" ? "Click any letter to hear it. Hover to peek at the pattern." : "Tap any letter to hear it.") font-size="0.875rem"
+              if refTtrBars != ""
+                column gap=6
+                  text "Listen recognition" role="heading" aria-level=3
+                  for metric in refTtrBars.split(";") key=metric.slice(0, 1)
+                    row align-items="center" gap=8 testId=("ref-recognition-" + metric.slice(0, 1))
+                      text (metric.slice(0, 1) + ": " + (match metric.split(",").at(1) { case some(value) => value, case none => "" }) + " ms") min-width=84
+                      column width=100 height=6 border-radius=3 background-color="#344658"
+                        column width=((match metric.split(",").at(3) { case some(value) => value, case none => "" }) + "%") height=6 border-radius=3 background-color="#80caff"
+                      if metric.slice(0, 1) == refSelected
+                        text ((match metric.split(",").at(2) { case some(value) => value, case none => "" }) + " samples") testId="ref-selected-recognition"
+              column testId="reference-grid" gap=12
+                if refKnown != ""
+                  column gap=6
+                    text "Known by ear" role="heading" aria-level=3
+                    view display="grid" grid-template-columns="repeat(auto-fill, minmax(min(100%, max(44px, 3.4rem)), 1fr))" gap=6
+                      for letter in refKnown.split(",") key=letter
+                        button (refPeek.slice(0, 1) == letter ? refPeek.slice(1) : letter) press=reference(letter) testId=("ref-char-" + letter) aria-label=("Play Morse for " + letter) data-reference-letter=letter class=ReferenceTile data-peekable="yes" font-size=(refPeek.slice(0, 1) == letter ? "0.85rem" : "1.25rem")
+                          :active
+                            -exact-press-scale=(media.prefersReducedMotion ? 1 : 0.97)
+                if refLearning != ""
+                  column gap=6
+                    text "Still learning" role="heading" aria-level=3
+                    view display="grid" grid-template-columns="repeat(auto-fill, minmax(min(100%, max(44px, 3.4rem)), 1fr))" gap=6
+                      for letter in refLearning.split(",") key=letter
+                        button (refPeek.slice(0, 1) == letter ? refPeek.slice(1) : letter) press=reference(letter) testId=("ref-char-" + letter) aria-label=("Play Morse for " + letter) data-reference-letter=letter class=ReferenceTile data-peekable="yes" font-size=(refPeek.slice(0, 1) == letter ? "0.85rem" : "1.25rem")
+                          :active
+                            -exact-press-scale=(media.prefersReducedMotion ? 1 : 0.97)
+                if refUnknown != ""
+                  column gap=6
+                    text "No accuracy yet" role="heading" aria-level=3
+                    view display="grid" grid-template-columns="repeat(auto-fill, minmax(min(100%, max(44px, 3.4rem)), 1fr))" gap=6
+                      for letter in refUnknown.split(",") key=letter
+                        button letter press=reference(letter) testId=("ref-char-" + letter) aria-label=("Play Morse for " + letter) data-reference-letter=letter class=ReferenceTile color="dit-ink-secondary"
+                          :active
+                            -exact-press-scale=(media.prefersReducedMotion ? 1 : 0.97)
+              if refSelected != ""
+                row align-items="center" gap=8 flex-wrap="wrap"
+                  text `Selected: ${refSelected}` testId="ref-selected" role="status"
+                  if refEligible
+                    button (refVisible ? "Hide pattern" : "Show pattern") press=toggleReferencePattern testId="ref-show-pattern" disabled=(refPattern == "") aria-pressed=refVisible min-height=44 color="dit-ink" background-color="#26394c"
+                    if refVisible
+                      text refPattern testId="ref-pattern" role="img" aria-label=(refSelected + ", " + refPattern.replaceAll(".", "dit ").replaceAll("-", "dah ").trim()) font-size="1.125rem" letter-spacing=3
+            text (storage == "saved" ? "Saved on this browser" : storage == "unavailable" ? "Browser storage unavailable; changes are temporary" : storage == "newer" ? "Unsupported local data version; changes are temporary" : storage == "oversized" ? "Local data too large; changes are temporary" : storage == "reset" ? "Local data damaged; recovered where possible" : "Nothing saved yet") testId="storage-status" font-size="0.75rem"
+            button "Close" press=closePanel testId="close-panel" min-height=44
+
+component NativeProsigns
+  view
+    column width="100%" gap=8 padding=12 box-sizing="border-box" aria-label="Prosign reference" testId="qso-prosigns"
+      for item in ["K|Go ahead", "KN|Named station only", "BK|Quick handoff", "AR|End of message", "SK|End of contact", "BT|Separator", "AS|Wait", "HH|Correction"] key=item
+        row gap=16
+          text (match item.split("|").at(0) { case some(v) => v, case none => "" }) min-width=32 font-size="0.824rem"
+          text (match item.split("|").at(1) { case some(v) => v, case none => "" }) color="dit-ink-muted" font-size="0.824rem"
+      text "Prosigns are sent as a single continuous character." color="dit-ink-muted" font-size="0.824rem"
+
+component NativeContactTurns
+  props
+    transcript: string
+    reveal: action
+  view
+    if transcript != ""
+      column width="100%" gap=12 padding="16px 0" testId="qso-transcript"
+        for turn, i in transcript.split("\n") key=i
+          column align-self=(turn.startsWith("You: ") ? "flex-end" : "flex-start") max-width="90%" gap=4 padding=12 border-radius=14 background-color=(turn.startsWith("You: ") ? "dit-panel" : "dit-input")
+            text (turn.startsWith("You: ") ? "You" : "Them") font-size="0.824rem" color="dit-ink-muted"
+            if turn.startsWith("Hidden:")
+              button "Reveal" press=reveal("reveal-turn-" + turn.slice(7)) aria-label="Reveal received message" class=NativeContactChoice
+            else
+              text (turn.startsWith("You: ") ? turn.slice(5) : turn.slice(9)) font-family="monospace" font-size="0.941rem" line-height=1.5 white-space="pre-wrap"
+
+component NativeReferenceGroup
+  props
+    title: string
+    records: string
+    reduced: bool
+    play: action
+  view
+    if records != ""
+      column width="100%" gap=8
+        text (title + " · " + `${records.split(";").length}`) role="heading" aria-level=3 font-size="0.765rem" font-weight=600 letter-spacing=1 color="dit-ink-secondary"
+        if records.includes("%|")
+          text "Recognition speed: slow to fast" color="dit-ink-secondary" font-size="0.706rem"
+        view display="grid" grid-template-columns="repeat(auto-fill, minmax(min(100%, max(86px, 4.5rem)), 1fr))" gap=8
+          for record in records.split(";") key=record.slice(0,1)
+            NativeReferenceCard(record=record, reduced=reduced, play=play)
+
+component NativeReferenceCard
+  props
+    record: string
+    reduced: bool
+    play: action
+  derive letter = record.slice(0,1)
+  derive scoreLabel = match record.split("|").at(1) { case some(v) => v, case none => "" }
+  derive glyphs = match record.split("|").at(2) { case some(v) => v, case none => "" }
+  derive fill = match record.split("|").at(3) { case some(v) => v, case none => "" }
+  derive label = match record.split("|").at(4) { case some(v) => v, case none => "" }
+  derive stroke = match record.split("|").at(5) { case some(v) => v, case none => "transparent" }
+  view
+    button press=play(letter) testId=("ref-char-" + letter) aria-label=label appearance="none" min-height=44 width="100%" box-sizing="border-box" text-align="left" padding="10px 8px" border-radius=12 background-color="dit-input" border-style="solid" border-width=(glyphs == "" ? 1 : 2) border-color=stroke
+      :active
+        -exact-press-scale=(reduced ? 1 : 0.97)
+        background-color="dit-input-pressed"
+      column width="100%" gap=6 pointer-events="none"
+        row width="100%" justify-content="space-between" gap=4
+          text letter font-size="0.941rem" letter-spacing=2 color="dit-ink"
+          if scoreLabel != ""
+            text scoreLabel font-size="0.706rem" color="#36f2a0"
+        if glyphs != ""
+          text glyphs text-align="center" letter-spacing=4 font-size="0.824rem" color="dit-ink-secondary"
+        if fill != ""
+          column height=3 width="100%" background-color="dit-input-pressed" border-radius=2
+            column width=fill height=3 border-radius=2 background-color="#ff954d"

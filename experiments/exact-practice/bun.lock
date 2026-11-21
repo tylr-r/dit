@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "exact-practice",
+      "dependencies": {
+        "@exact/shader": "file:.exact/checkout/packages/shader",
+      },
+    },
+  },
+  "packages": {
+    "@exact/shader": ["@exact/shader@file:.exact/checkout/packages/shader", {}],
+  }
+}

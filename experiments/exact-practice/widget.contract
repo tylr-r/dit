@@ -1,0 +1,68 @@
+shape DitWidgetProps
+  known: bool
+  showArtwork: bool
+  mastered: number
+  bestWpm: number
+  streak: number
+  today: number
+  goal: number
+
+shape WidgetViewport
+  width: number
+  height: number
+
+component DitProgressWidget
+  inject
+    snapshot_viewport: WidgetViewport
+  props
+    known: bool
+    showArtwork: bool
+    mastered: number
+    bestWpm: number
+    streak: number
+    today: number
+    goal: number
+  derive large = snapshot_viewport.width > 250
+  derive heroLabel = known ? "Best WPM" : "Letters learned"
+  derive hero = known ? (bestWpm > 0 ? `${bestWpm}` : "—") : `${mastered}/36`
+  derive streakLine = streak > 0 ? `${streak}-day streak` : "Start a streak"
+  derive todayLine = `${today}/${goal} correct today`
+  view
+    view width="100%" height="100%" background-color=(snapshot_viewport.height < 100 ? "transparent" : "#0a0f14")
+      if snapshot_viewport.height < 100
+        column width="100%" height="100%" justify-content="center" gap=2
+          row align-items="center" gap=4
+            text (streak > 0 ? streakLine : hero) flex=1 font-size=14 font-weight=600 line-clamp=1
+            if showArtwork
+              image "assets/widget-brand-icon.png" width=14 height=14
+            text "Dit" font-size=11 font-weight=600
+          text (streak > 0 ? todayLine : heroLabel) font-size=11 line-clamp=1
+          progress height=4 value=(streak > 0 ? today : known ? 0 : mastered) max=(streak > 0 ? goal : 36)
+      else
+        column width="100%" height="100%" position="relative" justify-content="space-between" padding=4 box-sizing="border-box"
+          if showArtwork
+            if large
+              image "assets/widget-bg-medium.png" position="absolute" top=-16 left=-16 width="calc(100% + 32px)" height="calc(100% + 32px)" object-fit="cover"
+            else
+              image "assets/widget-bg-small.png" position="absolute" top=-16 left=-16 width="calc(100% + 32px)" height="calc(100% + 32px)" object-fit="cover"
+          row width="100%" position="relative" justify-content=(showArtwork ? "flex-start" : "flex-end") align-items="center" gap=6
+            if showArtwork
+              image "assets/widget-brand-icon.png" width=16 height=16
+            text "Dit" font-size=12 font-weight=600 color="#fbf7f5"
+          if large
+            row position="relative" width="100%" justify-content="space-between" align-items="flex-end" gap=16
+              column align-items="flex-start" gap=4
+                text hero font-size=42 font-weight=600 color="#fbf7f5" line-clamp=1
+                text heroLabel font-size=14 color="#fbf7f5b3" line-clamp=1
+              column align-items="flex-end" gap=6
+                text streakLine font-size=15 font-weight=600 color="#ff9a4d" line-clamp=1
+                text todayLine font-size=13 color="#fbf7f5b3" line-clamp=1
+                if not known and bestWpm > 0
+                  text `${round(bestWpm)} WPM` font-size=13 color="#fbf7f5b3" line-clamp=1
+          else
+            column position="relative" align-items="flex-start" gap=2
+              text hero font-size=30 font-weight=600 color="#fbf7f5" line-clamp=1
+              text heroLabel font-size=12 color="#fbf7f5b3" line-clamp=1
+            column position="relative" align-items="flex-start" gap=2
+              text streakLine font-size=13 font-weight=600 color="#ff9a4d" line-clamp=1
+              text todayLine font-size=11 color="#fbf7f5b3" line-clamp=1
