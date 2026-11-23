@@ -3,7 +3,7 @@ import { PRACTICE_POOL, pickWeighted, enqueueReview, pullReview } from './progre
 import { normalizeSelection, selectionPool, tierSelection } from './selection.mjs'
 import { HISTORY_LIMIT, normalizePractice } from './practice-store.mjs'
 import { characterUnitMs, normalizeTempo, tempoStep } from './tempo.mjs'
-import { applyListenTtrSample } from "./recognition.generated.mjs"
+import { applyListenTtrSample, WORD_GAP_EXTRA_MS } from './recognition.generated.mjs'
 import { countsAnswer, recordCorrectAnswer, todayStreakContribution } from './reference-retention.generated.mjs'
 import { buildReference, buildRecognition, recordLetterAttempt } from './reference.mjs'
 // Shipped data source: packages/core/src/data/morse.ts (A–Z, 0–9).
@@ -18,7 +18,6 @@ const byCode = new Map(codes.map((code, i) => [code, alphabet[i]]))
 export const decode = code => byCode.get(code) ?? null
 export const playbackUnitMs = characterUnitMs
 const feedbackMs = 1000
-const extraWordGapMs = 1200
 const next = (pool,target) => pool[(pool.indexOf(target) + 1) % pool.length]
 
 export function replayPlan(char, unitMs) {
@@ -238,8 +237,6 @@ export function stepSession(state, event) {
       return state.mode === 'freestyle'
         ? update({freestyleInput:''}, {type:'cancelWord'})
         : keep
-    case 'toneStart':
-      return state.mode === 'freestyle' ? { state, effects: [{ type: 'cancelWord' }] } : keep
     case 'symbol':
       if (state.mode === 'practice' && state.settings.practiceWords && (!state.outcome || state.settings.ifr)) {
         const start = state.practiceIndex === 0 && state.wordStartMs == null && Number.isFinite(event.monoMs)
@@ -249,7 +246,7 @@ export function stepSession(state, event) {
       if (state.mode === 'practice' && state.outcome === 'correct')
         return update(clearFeedback, { type: 'cancelFeedback' })
       if (state.mode === 'freestyle' && (event.symbol === '.' || event.symbol === '-'))
-        return update({feedback:'', freestyleInput:(state.freestyleInput + event.symbol).slice(-64)})
+        return update({feedback:'', freestyleInput:state.freestyleInput + event.symbol})
       if (state.mode === 'freestyle' && state.feedback) return update({feedback:''})
       return keep
     case 'resetScores':
@@ -263,10 +260,9 @@ export function stepSession(state, event) {
     case 'sequence': {
       const letter = decode(event.code)
       if (state.mode === 'freestyle') {
-        if (!letter || !state.settings.words) return update({ freestyleInput:'', feedback: letter ?? 'No match' }, { type: 'cancelWord' })
-        // Keep the local, non-persisted transcript bounded for the view protocol.
-        return update({ freestyleInput:'', feedback: letter, transcript: (state.transcript + letter).slice(-1000) },
-          { type: 'scheduleWord', ms: extraWordGapMs })
+        if (!letter || !state.settings.words) return update({ freestyleInput:'', feedback: letter ?? 'No match' })
+        return update({ freestyleInput:'', feedback: letter, transcript: state.transcript + letter },
+          { type: 'scheduleWord', ms: WORD_GAP_EXTRA_MS })
       }
       if (state.mode !== 'practice' || state.outcome === 'wrong') return keep
       const correct = letter === state.target
@@ -292,7 +288,7 @@ export function stepSession(state, event) {
         ? next(state.studyPool,state.target) : pickWeighted(state.studyPool, state.scores, state.target, event.roll))
       return update({ ...clearFeedback, target, reviewQueue: picked.queue })
     case 'wordElapsed':
-      if (state.mode !== 'freestyle' || !state.settings.words || !state.transcript || state.transcript.endsWith(' ')) return keep
+      if (state.mode !== 'freestyle' || !state.settings.words || state.freestyleInput || !state.transcript || state.transcript.endsWith(' ')) return keep
       return update({ transcript: state.transcript + ' ' })
     default:
       return keep

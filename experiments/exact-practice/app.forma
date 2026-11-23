@@ -2,6 +2,7 @@ forma dit
 
 theme
   dit-ink = #faf7f5  scheme=fixed
+  dit-error = #ff6b6b  scheme=fixed
   dit-ink-muted = rgba(250,247,245,0.6)  scheme=fixed
   dit-ink-secondary = rgba(250,247,245,0.7)  scheme=fixed
   dit-backdrop = #060b0e  scheme=fixed

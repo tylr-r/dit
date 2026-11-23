@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createQso, fixtureReply, qsoPlan } from '../modules/web/qso.mjs'
+import { createQso, createLocalStation, qsoPlan } from '../modules/web/qso.mjs'
 const last=(events,k)=>events.filter(e=>e.startsWith(k+':')).at(-1)?.slice(k.length+1)
 const flush=()=>new Promise(resolve=>setImmediate(resolve))
 const begin=(qso,direction)=>qso.start(direction)&&qso.confirm(true)
-function fake(reply=fixtureReply,host={}){
+function fake(reply=createLocalStation().send,host={}){
  const audio=[],events=[],requests=[],timers=new Map()
  let id=0
- const qso=createQso({project:s=>events.push(s),reply:payload=>{requests.push(payload);return reply(payload)},
+ const qso=createQso({project:s=>events.push(s),createStation:()=>({send(payload){requests.push(payload);return reply(payload)}}),
    play:host.play ?? ((text,done,fail,progress)=>audio.push({text,done,fail,progress})),stop:()=>{},pause:host.pause ?? (async()=>{}),resume:host.resume ?? (async()=>{}),
    setTimer: (fn,ms)=>{timers.set(++id,{fn,ms});return id},clearTimer:key=>timers.delete(key)})
  return {qso,audio,events,requests,timers}

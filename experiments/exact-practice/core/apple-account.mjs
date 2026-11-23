@@ -1,9 +1,24 @@
+import {createProgressPayload} from '../../../packages/core/src/firebase/progress.ts'
+import {beginGuide} from '../modules/web/guided.mjs'
+import {MORSE_DATA} from '../modules/web/reference-morse.generated.mjs'
 import {accountPayload,applyAccountPatch} from './apple-legacy.mjs'
 
 const waitToSave = 800
 const waitToRetry = 30_000
 const syncTimer = -1
 const validTime = value => Number.isSafeInteger(value) && value >= 0
+
+// Shipped sessions initialize every score to zero. The local Exact file may be sparse.
+function databasePayload(records, updatedAt) {
+  const snapshot = accountPayload(records)
+  const scores = Object.fromEntries(Object.keys(MORSE_DATA).map(letter => [letter,snapshot.scores[letter] ?? 0]))
+  const initialGuide = beginGuide()
+  return createProgressPayload({
+    guidedCourseActive:false, guidedPackIndex:initialGuide.pack, guidedPhase:initialGuide.phase,
+    guidedProgress:initialGuide.progress, dailyActivity:{},
+    ...snapshot, scores, guidedMaxPackReached:snapshot.guidedMaxPackReached || undefined,
+  },updatedAt)
+}
 
 /** Wrap the normal Apple reducer for the lifetime of one authenticated identity. */
 export function createAccountSession(host,createLocal,initial) {
@@ -63,7 +78,7 @@ export function createAccountSession(host,createLocal,initial) {
     const id = ++serial
     pending = {kind,id,stamp:state.updatedAt}
     project(kind === 'read' ? 'loading' : 'saving')
-    const payload = kind === 'save' ? JSON.stringify({...accountPayload(state.records),updatedAt:state.updatedAt}) : ''
+    const payload = kind === 'save' ? JSON.stringify(databasePayload(state.records,state.updatedAt)) : ''
     host.accountRequest(id,kind,revision ?? '',payload)
   }
   function response(id,status,token,raw) {
@@ -109,7 +124,7 @@ export function createAccountSession(host,createLocal,initial) {
     setProps(next) { props = next; local.setProps(next) },
     timer(id) { if (id === syncTimer) request(); else local.timer(id) },
     input(...args) { local.input(...args) },
-    interrupt(value) { interrupted = value; local.interrupt(value) },
+    interrupt(value, applicationInactive) { interrupted = value; local.interrupt(value, applicationInactive) },
     permissionResult(...args) { local.permissionResult(...args) },
     scheduleResult(...args) { local.scheduleResult(...args) },
     foreground() {

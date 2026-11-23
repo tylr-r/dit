@@ -1,10 +1,57 @@
+import CoreGraphics
+
+/// Display energy for either a rendered passage or the manual sidetone.
+struct DitWaveEnvelope {
+    private(set) var energy = 0.12
+
+    mutating func advance(level: Double, seconds: Double) {
+        let target = 0.12 + level * (1 - 0.12)
+        let timeConstant = target > energy ? 0.062 : 0.190
+        energy += (target - energy) * (1 - exp(-seconds / timeConstant))
+    }
+}
+
+/// The six feedback strokes share one opacity, as in the shipped ListenSineWave overlay.
+struct DitWaveTint {
+    private var startOpacity = 0.0
+    private var target = 0.0
+    private var began = 0.0
+
+    func opacity(at time: Double) -> Double {
+        let rising = target > startOpacity
+        let progress = min(1, max(0, (time - began) / (rising ? 0.420 : 0.280)))
+        let remaining = 1 - progress
+        let eased = rising ? 1 - remaining * remaining * remaining : progress * progress
+        return startOpacity + (target - startOpacity) * eased
+    }
+
+    mutating func set(graded: Bool, animated: Bool, at time: Double) {
+        let next = graded ? 0.7 : 0
+        guard next != target || !animated else { return }
+        startOpacity = animated ? opacity(at: time) : next
+        target = next
+        began = time
+    }
+
+    func draw(in context: CGContext, at time: Double, strokes: () -> Void) {
+        let alpha = opacity(at: time)
+        guard alpha > 0 else { return }
+        context.saveGState()
+        context.setAlpha(alpha)
+        context.beginTransparencyLayer(auxiliaryInfo: nil)
+        strokes()
+        context.endTransparencyLayer()
+        context.restoreGState()
+    }
+}
+
 #if os(iOS)
 @preconcurrency import UIKit
 
-/// A window samples only the sidetone associated with its own Dit session.
+/// A window samples the rendered audio level of its own Dit session.
 final class DitWaveMeter: NSObject {
     @MainActor static let windows = NSMapTable<UIWindow, DitWaveMeter>.weakToWeakObjects()
-    var sounding: () -> Bool = { false }
+    var level: () -> Double = { 0 }
     private weak var attached: UIWindow?
 
     @MainActor func attach(to window: UIWindow?) {
@@ -32,16 +79,21 @@ final class DitListenWave: ExactNativeInstance {
 private final class CharacterWaveView: UIView {
     private var display: CADisplayLink?
     private var elapsed = 0.0
-    private var energy = 0.12
-    private var tint = 0.0
+    private var envelope = DitWaveEnvelope()
+    private var tint = DitWaveTint()
     private var lastFrame = 0.0
     private var speed = 12.0
     private var feedback = ""
-    private var tintColorForAnswer = UIColor.systemGreen
+    // sRGB components of the shipped feedback, wave accent and primary40 HSL tokens.
+    private static let success = UIColor(red: 0.2104, green: 0.9496, blue: 0.62928, alpha: 1)
+    private static let error = UIColor(red: 1, green: 0.42, blue: 0.42, alpha: 1)
     private var paused = true
     private var stopped = false
-    private let colors = [UIColor(red:0.21,green:0.95,blue:0.63,alpha:0.35),
-                          UIColor(red:1,green:0.56,blue:0.25,alpha:1), UIColor.white.withAlphaComponent(0.4)]
+    private let colors = [
+        CharacterWaveView.success.withAlphaComponent(0.35),
+        UIColor(red: 1, green: 0.58, blue: 0.30, alpha: 1),
+        UIColor(red: 0.9787, green: 0.96826, blue: 0.9613, alpha: 0.4),
+    ]
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -59,9 +111,8 @@ private final class CharacterWaveView: UIView {
         guard self.speed != speed || self.feedback != feedback || self.paused != paused else { return }
         self.speed = max(10,min(30,speed))
         self.feedback = feedback
-        if !feedback.isEmpty { tintColorForAnswer = feedback == "Correct" ? .systemGreen : .systemRed }
         self.paused = paused
-        if paused { tint = feedback.isEmpty ? 0 : 1 }
+        tint.set(graded: !feedback.isEmpty, animated: !paused, at: CACurrentMediaTime())
         updateClock()
         setNeedsDisplay()
     }
@@ -89,17 +140,17 @@ private final class CharacterWaveView: UIView {
         let delta = lastFrame > 0 ? min(0.1, max(0,link.timestamp-lastFrame)) : 0
         lastFrame = link.timestamp
         elapsed += delta
-        let on = window.flatMap { DitWaveMeter.windows.object(forKey:$0) }?.sounding() == true
-        let target = on ? 1.0 : 0.12
-        energy += (target-energy)*(1-exp(-delta/(target > energy ? 0.062 : 0.190)))
-        tint = feedback.isEmpty ? max(0,tint-delta/0.28) : min(1,tint+delta/0.42)
+        let level = window.flatMap { DitWaveMeter.windows.object(forKey:$0) }?.level() ?? 0
+        envelope.advance(level: level, seconds: delta)
         setNeedsDisplay()
     }
     override func draw(_ rect: CGRect) {
-        guard bounds.width > 0, bounds.height > 0 else { return }
+        guard bounds.width > 0, bounds.height > 0, let context = UIGraphicsGetCurrentContext() else { return }
+        var paths: [UIBezierPath] = []
+        paths.reserveCapacity(6)
         let height = Double(bounds.height)
         let carrier = elapsed * 2 * Double.pi / max(1.4, (1.2/speed)*18)
-        let amplitude = height*(0.028 + 0.165*(0.24+energy*0.76))
+        let amplitude = height*(0.028 + 0.165*(0.24+envelope.energy*0.76))
         for inverse in [true,false] {
             for lane in 0..<3 {
                 let offset = Double(lane-1)
@@ -117,8 +168,12 @@ private final class CharacterWaveView: UIView {
                 }
                 colors[lane].setStroke()
                 path.stroke()
-                if tint > 0 { tintColorForAnswer.withAlphaComponent(tint).setStroke(); path.stroke() }
+                paths.append(path)
             }
+        }
+        tint.draw(in: context, at: CACurrentMediaTime()) {
+            (feedback.isEmpty || feedback == "Correct" ? Self.success : Self.error).setStroke()
+            for path in paths { path.stroke() }
         }
     }
 }

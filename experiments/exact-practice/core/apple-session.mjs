@@ -1,5 +1,6 @@
 // Entry point for the bundled Apple JavaScriptCore context. The host owns input,
 // the monotonic clock, audio and app-private files. No browser globals are used.
+export { createProviderStationFactory, createSwiftStationFactory } from './provider-station.mjs'
 export { convertLegacy, accountPayload } from './apple-legacy.mjs'
 import {createAccountSession} from './apple-account.mjs'
 export const createAccount = (host,initial) => createAccountSession(host,create,initial)
@@ -191,7 +192,7 @@ export function create(host) {
     },
   })
   const guide = createGuide({
-    ...clock, storage, project, decode, play, pick,
+    ...clock, storage, project, decode, play, pick, cancelInput,
     pickListenWeighted(pool, previous) {
       const {scores, listenTtr} = session.current()
       return pickLatencyAware(pool, scores, listenTtr, previous, Math.random())
@@ -263,16 +264,16 @@ export function create(host) {
       if (previousHelpers?.[i] !== fields[i]) project(key + ':' + fields[i])
     previousHelpers = fields
   }
-  function cancelInput() {
+  function cancelInput(reason = 'cancel') {
     inputSymbols = ''
     host.cancelInput()
     host.stop()
-    session.dispatch({type:'cancel'})
+    session.dispatch({type:reason})
   }
   // Shipped practice plays the current character on entry and when the prompt or tempo changes.
   function playPrompt() {
     if (!canKey() || !['practice','guided'].includes(props.mode)) return
-    if (props.mode === 'practice' && !(session.current().settings.autoPlay ?? inheritedAutoPlay)) return
+    if (!(session.current().settings.autoPlay ?? inheritedAutoPlay)) return
     const letter = props.mode === 'guided' ? guideTarget : session.current().target
     const {speed,effectiveSpeed,pitch} = session.current().settings
     const prompt = [props.mode,letter,speed,effectiveSpeed,pitch].join(':')
@@ -423,7 +424,8 @@ export function create(host) {
       }
       if (next.mode === 'conversation' && status !== 'pending') {
         if (scope) contact.enter()
-        else if ((!wasBlocked && blocked) || changed('cancel-token')) contact.interrupt()
+        else if (!wasBlocked && blocked) contact.end()
+        else if (changed('cancel-token')) contact.interrupt()
         else if (!blocked && !interrupted) contact.update(next,changed)
       }
       if (content === 'custom') {
@@ -444,8 +446,7 @@ export function create(host) {
         if (changed('answer-token')) listen.answer(next['answer-value'], next['answer-prompt'] ?? '')
       }
       if (replay && next.mode === 'practice') {
-        cancelInput()
-        session.dispatch({type:'replay'})
+        cancelInput('replay')
         play(session.current().target)
       } else playPrompt()
       publishHelpers()
@@ -465,12 +466,12 @@ export function create(host) {
           if (props.mode === 'practice' && session.current().settings.practiceWords) playPrompt()
         }
       } else if (kind === 'symbol') {
+        if (props.mode === 'guided') guide.symbol()
         if ((props.mode === 'practice' || props.mode === 'guided') && session.current().settings.showHint)
           inputSymbols = (inputSymbols + value).slice(0,6)
         session.dispatch({type:'symbol',symbol:value})
-      } else if (kind === 'down') {
-        if (hint === 'morse') advanceHint('settings')
-        session.dispatch({type:'toneStart'})
+      } else if (kind === 'down' && hint === 'morse') {
+        advanceHint('settings')
       }
       publishHelpers()
     },
@@ -484,7 +485,11 @@ export function create(host) {
     permissionResult(id,result) { reminder.permission(id,result) },
     scheduleResult(id,result) { reminder.scheduled(id,result) },
     foreground() { if (ready && !closed) { reminder.sync(); publishWidget(true) } },
-    interrupt(value) {
+    interrupt(value, applicationInactive=false) {
+      if (applicationInactive && props.mode === 'conversation') {
+        contact.confirm(false)
+        contact.end()
+      }
       if (value === interrupted) return
       interrupted = value
       if (value) {
@@ -499,7 +504,8 @@ export function create(host) {
     },
     configuration() {
       const {speed, pitch} = session.current().settings
-      return {enabled:canKey(), unit:playbackUnitMs(speed), pitch, hapticsEnabled}
+      const enabled = canKey()
+      return {enabled, hardwareEnabled:enabled && props.mode !== 'nux', unit:playbackUnitMs(speed), pitch, hapticsEnabled}
     },
     dispose() {
       closed = true

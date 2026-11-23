@@ -21,6 +21,9 @@ style SheetControl
   :active
     background-color="dit-input-pressed"
 
+style EmailField
+  width="100%" box-sizing="border-box" min-height=44 padding="12px 14px" border-width=0 border-radius=12 color="dit-ink" background-color="rgba(255,255,255,0.06)" font-size="0.882rem"
+
 style SheetSegment
   appearance="none" box-sizing="border-box" font-weight=400 color="dit-ink" background-color="dit-input" border="1px solid var(--dit-border)" border-radius=12 padding="10px 12px" min-height=44 flex="1 1 7rem" min-width=0 font-size="1rem" line-height=1.5 cursor="pointer"
   :checked
@@ -136,6 +139,8 @@ component ExactPractice
       refVisible = not refVisible
   state panelRouteId = 0
   action settings
+    resetPhase = ""
+    resetOwner = ""
     if desk
       cancel()
       practiceSettingsExpanded = mode == "practice" or mode == "guided"
@@ -165,6 +170,7 @@ component ExactPractice
     if panel == "about"
       close("about")
     else if panel == "entry-account"
+      clearEmailForm()
       close("entry-account")
     else if appleSession and panel == "progress"
       close("apple-progress")
@@ -253,25 +259,39 @@ component ExactPractice
   derive nativePhaseDialog = nativeGate or (appleSession and guideCelebrate)
   derive gateTitle = guideCelebrate ? "Course complete" : guidePhase == "gate-practice" ? "Next up" : guidePhase == "gate-listen" ? "Ready to listen" : guidePhase == "gate-retry" ? "Keep going" : "New letters unlocked"
   derive gateSubtitle = guideCelebrate ? "You unlocked all beginner letter packs." : guidePhase == "gate-practice" ? "Practice in mixed order." : guidePhase == "gate-listen" ? "Hear and identify these letters." : guidePhase == "gate-retry" ? "One more practice round before new letters." : ""
-  state gatePresented = false
-  task revealPracticeGate when nativePhaseDialog and not gatePresented
-    after(1, presentPracticeGate)
-  action presentPracticeGate
-    if nativePhaseDialog and not gatePresented
-      gatePresented = true
-      showModal("phase-gate")
-  task removePracticeGate when gatePresented and not nativePhaseDialog
-    after(1, closePracticeGate)
-  action closePracticeGate
-    close("phase-gate")
-    gatePresented = false
+  derive phaseGateId = nativePhaseDialog and route.name == "app" ? `${route.id}|${courseCurrent}|${guideCelebrate ? "complete" : guidePhase}` : ""
+  state gateOwner = ""
+  state gateExiting = false
+  state gateAccepted = false
+  task observePracticeGate key=phaseGateId
+    change(syncPracticeGate)
+  action syncPracticeGate
+    if phaseGateId != gateOwner
+      if phaseGateId == ""
+        if not gateAccepted
+          close("phase-gate")
+      else if gateOwner == "" or gateAccepted
+        showModal("phase-gate")
+      gateOwner = phaseGateId
+      gateExiting = false
+      gateAccepted = false
+  task finishGateExit when gateExiting and gateOwner != "" and gateOwner == phaseGateId
+    after(140, finishPracticeGate)
   action acceptPracticeGate
-    if nativePhaseDialog and gatePresented
+    if gateOwner != "" and gateOwner == phaseGateId and not gateExiting and not gateAccepted
+      if media.prefersReducedMotion
+        finishPracticeGate()
+      else
+        gateExiting = true
+  action finishPracticeGate
+    if gateOwner != "" and gateOwner == phaseGateId and not gateAccepted
+      gateExiting = false
+      gateAccepted = true
+      close("phase-gate")
       if guideCelebrate
         guideCelebrate = false
       else
         advanceGuide()
-      closePracticeGate()
   derive nativePractice = appleSession and (mode == "practice" or nativeGuidedKey or gateFromKey)
   derive nativeWelcome = appleSession and mode == "nux" and nuxStep == "welcome"
   derive nativeProfile = appleSession and mode == "nux" and nuxStep == "profile"
@@ -286,6 +306,8 @@ component ExactPractice
   derive entryWarning = nuxStorage == "unsupported" ? "Saved setup is protected. Changes here are temporary." : "Setup cannot be saved on this device."
   derive nativeEntry = nativeWelcome or nativeProfile or nativeIntro or nativeSoundCheck or nativeTutorial or nativeLessonPreview or nativeReminder
   derive nativeCharacters = appleSession and (listening or (nativeGate and not gateFromKey))
+  derive nativeListenPool = mode == "guided" ? guidePool : ordinaryListenPool
+  derive nativeListenLocked = nativePhaseDialog or listenPhase != "answering"
   derive nativeCustom = appleSession and mode == "listen" and listenContent == "custom"
   derive nativeWords = appleSession and mode == "listen" and listenContent == "words"
   derive nativeFreestyle = appleSession and mode == "freestyle"
@@ -313,7 +335,24 @@ component ExactPractice
       welcomeChoices = true
   state fixtureAccounts = false
   state accountEmail = ""
+  state fixtureLearners = "AB"
+  state deletionOwner = ""
+  state deletingAccount = false
+  state deletionError = ""
+  derive deletionMessage = deletionError == "recent-login" ? "For security, sign in again and retry account deletion." : deletionError == "apple-mismatch" ? "Sign in with the same Apple account tied to this Dit account, then try again." : deletionError == "user-mismatch" ? "Sign in with the same account you used for Dit, then try again." : deletionError == "network" ? "A network error interrupted account deletion. Try again on a stable connection." : "We could not delete your account. Please try again."
+  action askDeleteAccount
+    if panel == "settings" and fixtureAccounts and accountEmail != "" and not deletingAccount
+      deletionOwner = accountEmail
+      showModal("delete-account")
+  action confirmDeleteAccount
+    if deletionOwner != "" and deletionOwner == accountEmail and not deletingAccount
+      deletingAccount = true
+      accountAction = "delete:" + deletionOwner
+      accountToken = accountToken + 1
+      closePanel()
+    deletionOwner = ""
   state accountFromSettings = false
+  state awaitSettingsIdentity = false
   state returnToAccountSettings = false
   task restoredAccountSettings when returnToAccountSettings and accountEmail != "" and panel == "" and desk and (nuxStatus == "skipped" or nuxStatus == "completed")
     after(1, showRestoredAccountSettings)
@@ -323,10 +362,56 @@ component ExactPractice
   state accountAction = ""
   state accountToken = 0
   action chooseFixtureAccount(account: string)
-    returnToAccountSettings = accountFromSettings and account != "sign-out"
+    awaitSettingsIdentity = accountFromSettings and account != "sign-out"
     accountAction = account
     accountToken = accountToken + 1
+  state appleFixtureAvailable = false
+  state googleFixtureAvailable = false
+  state pendingProvider = ""
+  state providerSignInError = ""
+  derive providerSignInMessage = providerSignInError == "network" ? "A network error interrupted sign-in. Try again on a stable connection." : providerSignInError == "different-credential" ? "An account already exists with a different sign-in method for this email address." : "We could not sign you in. Please try again."
+  action startProviderSignIn(provider: string)
+    let available = (provider == "apple" and appleFixtureAvailable) or (provider == "google" and googleFixtureAvailable)
+    if panel == "entry-account" and fixtureAccounts and available and pendingProvider == "" and accountEmail == ""
+      if not accountFromSettings
+        closeEntryAccount()
+      pendingProvider = provider
+      awaitSettingsIdentity = accountFromSettings
+      accountAction = provider + "-signin"
+      accountToken = accountToken + 1
+  state emailForm = false
+  state emailAddress = ""
+  state emailPassword = ""
+  state emailError = ""
+  state emailBusy = ""
+  derive canSubmitEmail = emailAddress.trim() != "" and emailPassword != "" and emailBusy == ""
+  action clearEmailForm
+    emailForm = false
+    emailAddress = ""
+    emailPassword = ""
+    emailError = ""
+    emailBusy = ""
+  action showEmailForm
+    emailError = ""
+    emailForm = true
+  action emailBack
+    emailError = ""
+    emailForm = false
+  action editEmailAddress(value: string)
+    emailAddress = value
+  action editEmailPassword(value: string)
+    emailPassword = value
+  action submitEmail(kind: string)
+    if panel == "entry-account" and emailForm and canSubmitEmail
+      if fixtureAccounts
+        emailError = ""
+        emailBusy = kind
+        accountAction = kind
+        accountToken = accountToken + 1
+      else
+        emailError = kind == "email-signin" ? "Email sign-in is not available on this platform." : "Account creation is not available on this platform."
   action openEntryAccount
+    clearEmailForm()
     accountFromSettings = panel == "settings"
     if panel == "settings"
       close(nativeSettings ? "apple-settings" : "options")
@@ -334,6 +419,10 @@ component ExactPractice
     panelRouteId = top(nav).id
     showModal("entry-account")
   action closeEntryAccount
+    if pendingProvider != ""
+      pendingProvider = ""
+      awaitSettingsIdentity = false
+    clearEmailForm()
     close("entry-account")
     panel = ""
   action backFromNativeStep(e: PointerEvent)
@@ -369,9 +458,28 @@ component ExactPractice
   action nux(command: string)
     nuxCommand = command
     nuxToken = nuxToken + 1
+  state resetOwner = ""
+  state resetPhase = ""
   action askLocalReset
-    if nativeSettings
-      showModal("reset-local-app")
+    if nativeSettings and panel == "settings" and not deletingAccount and resetPhase != "checking"
+      if fixtureAccounts and accountEmail != ""
+        resetOwner = accountEmail
+        resetPhase = "confirm"
+        showModal("reset-signed-in")
+      else if accountEmail == ""
+        showModal("reset-local-app")
+  action checkResetConnection
+    if resetPhase == "confirm" and resetOwner == accountEmail and accountEmail != "" and panel == "settings"
+      resetPhase = "checking"
+      accountAction = "reset-check:" + resetOwner
+      accountToken = accountToken + 1
+  action performSignedInReset(scope: string)
+    if resetOwner != "" and resetOwner == accountEmail and panel == "settings" and ((scope == "online" and resetPhase == "checking") or (scope == "device" and resetPhase == "offline"))
+      accountAction = "reset-" + scope + ":" + resetOwner
+      accountToken = accountToken + 1
+      resetOwner = ""
+      resetPhase = ""
+      closePanel()
   action replayNux
     closePanel()
     cancel()
@@ -448,6 +556,7 @@ component ExactPractice
   state customChars = "0"
   state customWords = "0"
   state customStorage = "empty"
+  state customControlError = ""
   state customTime = ""
   state customEstimate = ""
   state customFill = "0%"
@@ -665,14 +774,65 @@ component ExactPractice
     prefCommand = command
     prefToken = prefToken + 1
   action nativeKey(message: string)
+    if message == "fixture-apple:available"
+      appleFixtureAvailable = true
+    if message == "fixture-google:available"
+      googleFixtureAvailable = true
+    let providerReply = `${pendingProvider}-result:${accountToken}:`
+    if pendingProvider != "" and message.startsWith(providerReply)
+      let result = message.slice(providerReply.length)
+      pendingProvider = ""
+      if result != "ok"
+        awaitSettingsIdentity = false
+        if result != "cancelled"
+          providerSignInError = result
+          showModal("provider-signin-error")
+    let emailReply = `email-result:${accountToken}:`
+    if panel == "entry-account" and emailBusy != "" and message.startsWith(emailReply)
+      let result = message.slice(emailReply.length)
+      if result == "ok"
+        awaitSettingsIdentity = accountFromSettings
+        closeEntryAccount()
+      else
+        emailBusy = ""
+        emailError = result
+    if message.startsWith("fixture-learners:")
+      fixtureLearners = message.slice(17)
+    if message.startsWith("account-deletion:")
+      let result = message.slice(17)
+      deletingAccount = false
+      if result == "cleanup"
+        showModal("delete-account-cleanup")
+      else if result != "deleted" and result != "cancelled"
+        deletionError = result
+        showModal("delete-account-error")
     if message.startsWith("fixture-account:")
       fixtureAccounts = true
       accountEmail = message.slice(16)
     if message.startsWith("widget-summary:")
       send widgetPublished = saveDitWidget(message.slice(15))
+    if resetPhase == "checking" and resetOwner != "" and resetOwner == accountEmail and panel == "settings"
+      if message == "account-reset:online:" + resetOwner
+        performSignedInReset("online")
+      if message == "account-reset:offline:" + resetOwner
+        resetPhase = "offline"
+        showModal("reset-offline")
     if message == "local-reset:error"
       showModal("local-reset-error")
     if message == "account-session:changed"
+      pendingProvider = ""
+      returnToAccountSettings = awaitSettingsIdentity
+      awaitSettingsIdentity = false
+      if resetPhase == "confirm"
+        close("reset-signed-in")
+      if resetPhase == "offline"
+        close("reset-offline")
+      resetPhase = ""
+      resetOwner = ""
+      if deletionOwner != ""
+        close("delete-account")
+      deletionOwner = ""
+      deletingAccount = false
       send widgetPublished = saveDitWidget("null")
       nuxStatus = "checking"
       appleSessionFailed = false
@@ -956,6 +1116,8 @@ component ExactPractice
       customChars = message.slice(13)
     if message.startsWith("custom-words:")
       customWords = message.slice(13)
+    if message.startsWith("custom-control-error:")
+      customControlError = message.slice(21)
     if message.startsWith("custom-storage:")
       customStorage = message.slice(15)
     if message.startsWith("custom-typealong:")
@@ -1298,6 +1460,8 @@ component ExactPractice
               textarea testId="custom-copy" class=PassageField aria-label="Type what you hear" placeholder="Type what you hear" value=customCopy input=editCustomCopy disabled=(customPhase != "playing") rows=3 min-height=80 maxlength=2000
             if customPhase == "audio-error"
               text "Could not play the text. Try Play again." role="status"
+            else if customControlError != ""
+              text customControlError testId="custom-control-error" role="status" text-align="center" color="dit-error"
             if customStorage == "unsupported" or customStorage == "unavailable"
               text "This text could not be saved on this device. You can still listen to it now." testId="custom-storage" role="status"
             row justify-content="center" align-items="center" width="100%" gap=12 flex-wrap="wrap"
@@ -1346,18 +1510,18 @@ component ExactPractice
             text (wordPhase == "playing" ? "Listening…" : wordPhase == "choosing" ? "Choose what you heard" : wordPhase == "answered" ? (wordFeedback == "Correct" ? "Correct" : "The word was") : wordEligible ? "Ready when you are" : "More characters needed") role="status" testId=(wordPhase == "answered" ? "word-feedback" : "word-prompt") font-size="1.176rem" font-weight=600 text-align="center"
             if wordPhase == "ready" or wordPhase == "audio-error"
               text (wordEligible ? (wordVocabulary == "common" ? "Listen to one English word, then choose what you heard." : "Listen to one Q code, then choose what you heard.") : "This set needs at least four choices from your active characters. Try the other set or add more characters.") text-align="center" font-size="0.824rem" line-height=1.43 color="dit-ink-secondary"
-              button "Start listening" press=words("start") testId="word-start" disabled=(not wordEligible) min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+              button "Start listening" press=words("start") testId="word-start" disabled=(not wordEligible) opacity=(wordEligible ? 1 : 0.55) min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass" glassInteractive=true border-radius=10 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
             else
               text (wordCount.replaceAll("/", " / ") + " correct") testId="word-count" font-size="0.824rem" color="dit-ink-secondary"
               if wordPhase == "playing"
                 view display="grid" grid-template-columns="minmax(0,1fr) minmax(0,1fr)" width="100%" gap=12 aria-hidden=true testId="word-concealed"
                   for slot in ["1", "2", "3", "4"] key=slot
-                    column box-sizing="border-box" width="100%" min-width=0 min-height=56 border-radius=12 backgroundMaterial="glass-clear" align-items="center" justify-content="center"
+                    column opacity=0.55 box-sizing="border-box" width="100%" min-width=0 min-height=56 border-radius=10 backgroundMaterial="glass" glassInteractive=true align-items="center" justify-content="center"
                       text "…" font-size="1.176rem"
               else
                 view display="grid" grid-template-columns="minmax(0,1fr) minmax(0,1fr)" width="100%" gap=12
                   for option, i in wordOptions.split(",") key=option
-                    button option press=words(`option-${i + 1}`) testId=(`word-option-${i + 1}`) disabled=(wordPhase == "answered") box-sizing="border-box" width="100%" min-width=0 min-height=56 padding=0 backgroundMaterial="glass-clear" border-radius=12 font-size="1.176rem" color=(wordPhase == "answered" and `${i + 1}` == wordCorrect ? "#36f2a0" : wordPhase == "answered" and `${i + 1}` == wordPicked ? "#ff6b6b" : "dit-ink") aria-label=("Answer " + option + (wordPhase == "answered" and `${i + 1}` == wordCorrect ? ", correct" : wordPhase == "answered" and `${i + 1}` == wordPicked ? ", incorrect" : ""))
+                    button option press=words(`option-${i + 1}`) testId=(`word-option-${i + 1}`) disabled=(wordPhase == "answered") opacity=(wordPhase == "answered" ? 0.55 : 1) box-sizing="border-box" width="100%" min-width=0 min-height=56 padding=0 backgroundMaterial="glass" glassInteractive=true border-radius=10 font-size="1.176rem" color=(wordPhase == "answered" and `${i + 1}` == wordCorrect ? "#36f2a0" : wordPhase == "answered" and `${i + 1}` == wordPicked ? "#ff6b6b" : "dit-ink") aria-label=("Answer " + option + (wordPhase == "answered" and `${i + 1}` == wordCorrect ? ", correct" : wordPhase == "answered" and `${i + 1}` == wordPicked ? ", incorrect" : ""))
               column min-height=96 justify-content="center" align-items="center" gap=8
                 if wordPhase == "answered"
                   text wordTarget testId="word-target" font-size="1.176rem" font-weight=600
@@ -1366,10 +1530,10 @@ component ExactPractice
               row width="100%" align-items="center"
                 column flex=1
                 column flex=1 align-items="center"
-                  button "Replay" press=words("replay") testId="word-replay" disabled=(wordPhase == "playing") min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+                  button "Replay" press=words("replay") testId="word-replay" disabled=(wordPhase == "playing") opacity=(wordPhase == "playing" ? 0.55 : 1) min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass" glassInteractive=true border-radius=10 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
                 column flex=1 align-items="flex-end"
                   if wordPhase == "answered"
-                    button "Next" press=words("next") testId="word-next" min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass-clear" border-radius=12 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
+                    button "Next" press=words("next") testId="word-next" min-height=44 box-sizing="border-box" padding="0 16px" backgroundMaterial="glass" glassInteractive=true border-radius=10 font-size="0.824rem" letter-spacing=1.2 text-transform="uppercase"
             if wordPhase == "audio-error"
               text "Could not play the word. Try Start listening again." role="status"
           else if mode == "listen" and listenContent == "words"
@@ -1407,14 +1571,13 @@ component ExactPractice
             button "Play" press=play testId="play" aria-label="Play target sound" backgroundMaterial="glass-clear" glassInteractive=true min-height=40 padding="8px 18px" border-radius=24 font-size="0.8125rem" letter-spacing=1.2 text-transform="uppercase" color="dit-ink" background-color="rgba(255,255,255,0.06)" border="1px solid rgba(255,255,255,0.12)"
           if nativeCharacters
             column align-items="center" width="calc(100% + 48px)" gap=28 flex-shrink=0
-              button press=play aria-label="Play morse letter sound" testId="listen-play" disabled=(nativePhaseDialog or listenPhase == "reveal" or listenPhase == "gap") appearance="none" background-color="transparent" border-width=0 padding=0 min-height=46 display="flex" align-items="center" justify-content="center"
-                column padding="12px 18px" border-radius=24 backgroundMaterial="glass-clear" pointer-events="none"
-                  text "PLAY" font-size="1.059rem" letter-spacing=1.2 color="dit-ink"
+              button press=play aria-label="Play morse letter sound" aria-description="Replays the current Morse letter" testId="listen-play" disabled=(nativePhaseDialog or listenPhase == "reveal" or listenPhase == "gap") appearance="none" backgroundMaterial="glass-clear" border-radius=24 border-width=0 padding="12px 18px" min-height=46 display="flex" align-items="center" justify-content="center"
+                text "PLAY" font-size="1.059rem" letter-spacing=1.2 color="dit-ink"
               column width="100%" gap=8 align-items="center" testId="listen-keyboard"
                 for keys in ["1234567890","QWERTYUIOP","ASDFGHJKL","ZXCVBNM"] key=keys
-                  row width="100%" gap=4 justify-content="center" flex-wrap="wrap"
+                  row width="100%" gap=4 glassGroup=6 justify-content="center" flex-wrap="wrap"
                     for letter in keys.split("") key=letter
-                      button letter press=answer(letter) testId=("listen-answer-" + letter) aria-label=("Type " + letter) disabled=(nativePhaseDialog or listenPhase != "answering" or not (mode == "guided" ? guidePool : ordinaryListenPool).includes(letter)) opacity=((mode == "guided" ? guidePool : ordinaryListenPool).includes(letter) ? 1 : 0.28) appearance="none" border-width=0 backgroundMaterial="glass" border-radius=8 padding=0 min-height=36 min-width="min(100%, max(28px, 1.6rem))" width="min(36px, calc((100vw - 36px) / 10))" font-size="1.059rem" color="dit-ink"
+                      button letter press=answer(letter) testId=("listen-answer-" + letter) aria-label=("Type " + letter) aria-description=(not nativeListenPool.includes(letter) ? letter + " is not available in this pack" : nativeListenLocked ? "Wait for the next letter" : "Submits the letter " + letter) disabled=(nativeListenLocked or not nativeListenPool.includes(letter)) opacity=(nativeListenLocked or not nativeListenPool.includes(letter) ? 0.55 : 1) appearance="none" border-width=0 backgroundMaterial="glass" border-radius=10 padding=0 min-height=36 min-width="min(100%, max(28px, 1.6rem))" width="min(36px, calc((100vw - 36px) / 10))" font-size="1.059rem" color=(nativeListenPool.includes(letter) ? "dit-ink" : "dit-ink-muted")
               if mode != "guided" and not listenCourse
                 button "Use custom" press=chooseListenContent("custom") testId="listen-custom" min-height=44 backgroundMaterial="glass-clear"
           else if listening
@@ -1503,7 +1666,7 @@ component ExactPractice
               column position="absolute" width=12 height=12 bottom=-6 background-color="#1a2632" border-right="1px solid rgba(255,255,255,0.12)" border-bottom="1px solid rgba(255,255,255,0.12)" rotate="45deg" aria-hidden=true pointer-events="none"
               text "Tap the big Morse key to make a dit (short press) or dah (long press)." text-align="center" font-size="0.765rem" line-height=1.385 color="rgba(244,247,249,0.9)"
           column box-sizing="border-box" width=(nativeReply ? "calc(100% + 16px)" : "100%") max-width=480 height=(showKey ? 96 : 0) opacity=(showKey ? 1 : 0) border-radius=48 backgroundMaterial="glass-clear" glassInteractive=true position="relative" background-color=(nativePractice or nativeFreestyle or nativeTutorial or nativeReply ? "transparent" : "rgba(255,255,255,0.08)") border=(nativePractice or nativeFreestyle or nativeTutorial or nativeReply ? "none" : "1px solid rgba(255,255,255,0.12)") scale=(pressing ? 0.98 : 1) transition=(media.prefersReducedMotion ? "none" : "scale 120ms cubic-bezier(0.16,1,0.3,1)") box-shadow="inset 0 1px 0 rgba(255,255,255,0.08)"
-            dit-key role=(webKey ? "button" : "presentation") tabindex=(webKey and showKey ? 0 : -1) aria-hidden=(not showKey) message=nativeKey blocked=(panel != "" or guideCelebrate or not page.hasFocus) tone-volume=0.75 watch-volume=nativeSoundCheck mode=mode reduce-motion=media.prefersReducedMotion settings-open=(panel == "settings") reference-open=(panel == "progress" and page.hasFocus) reference-token=refToken reference-char=refSelected nux-token=nuxToken nux-command=nuxCommand route-boundary=route.id qso-token=qsoToken qso-command=qsoCommand qso-copy-value=qsoCopy listen-content=listenContent listen-choice-token=listenChoiceToken custom-token=customToken custom-command=customCommand custom-source-value=customSource custom-copy-value=customCopy custom-type-value=customType word-token=wordToken word-command=wordCommand guide-token=guideToken answer-token=answerToken answer-value=answerValue answer-prompt=answerPrompt account-token=accountToken account-action=accountAction pref-token=prefToken pref-command=prefCommand clear-token=clearToken cancel-token=cancelToken warm-token=warmToken testId="morse-key" aria-label=(webKey ? "Morse key" : "") width="100%" height="100%" touch-action="none"
+            dit-key role=(webKey ? "button" : "presentation") tabindex=(webKey and showKey ? 0 : -1) aria-hidden=(not showKey) message=nativeKey blocked=(panel != "" or guideCelebrate or not page.hasFocus) tone-volume=0.75 watch-volume=nativeSoundCheck mode=mode reduce-motion=media.prefersReducedMotion settings-open=(panel == "settings") reference-open=(panel == "progress" and page.hasFocus) reference-token=refToken reference-char=refSelected nux-token=nuxToken nux-command=nuxCommand route-boundary=route.id qso-token=qsoToken qso-command=qsoCommand qso-copy-value=qsoCopy listen-content=listenContent listen-choice-token=listenChoiceToken custom-token=customToken custom-command=customCommand custom-source-value=customSource custom-copy-value=customCopy custom-type-value=customType word-token=wordToken word-command=wordCommand guide-token=guideToken answer-token=answerToken answer-value=answerValue answer-prompt=answerPrompt account-token=accountToken account-action=accountAction email-sheet-open=(panel == "entry-account") submitted-address=(emailBusy != "" ? emailAddress.trim() : "") pref-token=prefToken pref-command=prefCommand clear-token=clearToken cancel-token=cancelToken warm-token=warmToken testId="morse-key" aria-label=(webKey ? "Morse key" : "") width="100%" height="100%" touch-action="none"
             if nativeTutorial and not pressing
               column position="absolute" inset=0 justify-content="center" align-items="center" pointer-events="none" aria-hidden=true
                 image "symbol:sf/touchid" width=34 height=34 opacity=0.4
@@ -1619,34 +1782,66 @@ component ExactPractice
       dialog id="entry-account" aria-label="Sign in to Dit" closedby="any" cancel=closeEntryAccount width="100%" box-sizing="border-box" color-scheme="dark"
         if panel == "entry-account"
           column gap=8 padding=16 width="100%" box-sizing="border-box" align-items="center" background-color="dit-panel" color="dit-ink" border-radius=20
-            text "Sign in to Dit" role="heading" aria-level=2 font-size="0.824rem" font-weight=500
-            if fixtureAccounts
-              text "Isolated Simulator accounts" role="status" font-size="0.824rem" color="dit-ink-secondary"
-              for learner in ["A","B"] key=learner
-                button ("Fixture learner " + learner) press=chooseFixtureAccount(learner) class=SheetControl min-height=44 width="100%" border-radius=14
+            if emailForm
+              row width="100%" align-items="center" justify-content="space-between"
+                button "‹" aria-label="Back to sign-in options" press=emailBack appearance="none" width=44 min-height=44 padding=0 color="dit-ink" font-size="1.45rem" background-color="transparent" border-width=0
+                text "Email sign-in" role="heading" aria-level=2 font-size="0.824rem" font-weight=500
+                column aria-hidden=true width=44
+              input id="dit-email-address" type="email" aria-label="Email" placeholder="Email" value=emailAddress input=editEmailAddress disabled=(emailBusy != "") autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck=false enterkeyhint="next" class=EmailField
+              input id="dit-email-password" hatch="dit-email-password" type="password" aria-label="Password" placeholder="Password" value=emailPassword input=editEmailPassword submit=submitEmail("email-signin") disabled=(emailBusy != "") autocomplete="current-password" autocorrect="off" spellcheck=false enterkeyhint="go" class=EmailField
+              if emailError != ""
+                text emailError role="alert" color="#ff9696" width="100%" font-size="0.765rem"
+              button press=submitEmail("email-signin") disabled=(not canSubmitEmail) aria-label="Sign in with email" aria-busy=(emailBusy == "email-signin") appearance="none" width="100%" min-height=46 background-color="rgba(255,255,255,0.12)" border-width=0 border-radius=14 color="dit-ink" opacity=(canSubmitEmail ? 1 : 0.45)
+                if emailBusy == "email-signin"
+                  progress aria-label="Signing in" width=22 height=18
+                else
+                  text "Sign in"
+              button press=submitEmail("email-signup") disabled=(not canSubmitEmail) aria-label="Create account with email" aria-busy=(emailBusy == "email-signup") appearance="none" width="100%" min-height=44 background-color="transparent" border-width=0 color="dit-ink-secondary"
+                if emailBusy == "email-signup"
+                  progress aria-label="Creating account" width=22 height=18
+                else
+                  text "Create account"
             else
-              text "Account sign-in is unavailable in this offline build." role="status" text-align="center" font-size="0.824rem" color="dit-ink-secondary"
-              for provider in ["Apple","Google","Email"] key=provider
-                button ("Continue with " + provider) disabled=true class=SheetControl width="100%" border-radius=14
-            button "Cancel" aria-label="Cancel sign-in" press=closeEntryAccount class=SheetControl min-height=44 width="100%" border-radius=14
-      dialog id="phase-gate" aria-label=gateTitle closedby="any" cancel=acceptPracticeGate width="calc(100% - 48px)" max-width=360 padding=24 background-color="dit-panel" border="1px solid var(--dit-border)" border-radius=18 box-sizing="border-box" color="dit-ink"
+              text "Sign in to Dit" role="heading" aria-level=2 font-size="0.824rem" font-weight=500
+              if fixtureAccounts
+                text "Isolated Simulator accounts" role="status" font-size="0.824rem" color="dit-ink-secondary"
+                for learner in ["A","B"] key=learner
+                  if fixtureLearners.includes(learner)
+                    button ("Fixture learner " + learner) press=chooseFixtureAccount(learner) disabled=(pendingProvider != "") class=SheetControl min-height=44 width="100%" border-radius=14
+              else
+                text "Account sign-in is unavailable in this offline build." role="status" text-align="center" font-size="0.824rem" color="dit-ink-secondary"
+              button press=startProviderSignIn("apple") disabled=(not fixtureAccounts or not appleFixtureAvailable or pendingProvider != "") aria-label="Continue with Apple" class=SheetControl width="100%" border-radius=14
+                row justify-content="center" align-items="center" gap=8
+                  if appleSession
+                    image "symbol:sf/applelogo" width=18 height=18 aria-hidden=true
+                  text "Continue with Apple"
+              button press=startProviderSignIn("google") disabled=(not fixtureAccounts or not googleFixtureAvailable or pendingProvider != "") aria-label="Continue with Google" class=SheetControl width="100%" border-radius=14
+                row justify-content="center" align-items="center" gap=8
+                  if appleSession
+                    image "assets/google-provider.png" width=18 height=18 aria-hidden=true
+                  text "Continue with Google"
+              button "Continue with Email" press=showEmailForm disabled=(pendingProvider != "") class=SheetControl width="100%" border-radius=14
+              button "Cancel" aria-label="Cancel sign-in" press=closeEntryAccount class=SheetControl min-height=44 width="100%" border-radius=14
+      dialog id="phase-gate" aria-label=gateTitle closedby="closerequest" cancel=acceptPracticeGate width="100%" height="100%" max-width="none" max-height="none" margin=0 padding=0 background-color="transparent" border-width=0 box-sizing="border-box" color="dit-ink"
         ::backdrop
           background-color="dit-scrim"
         if nativePhaseDialog
-          column width="100%" align-items="center" gap=12
-            text gateTitle role="heading" aria-level=2 font-size="1.059rem" font-weight=600 letter-spacing=0.4 text-align="center"
-            if gateSubtitle != ""
-              text gateSubtitle font-size="0.824rem" line-height=1.43 color="dit-ink-secondary" text-align="center"
-            if not guideCelebrate and guidePhase != "gate-retry"
-              row testId="gate-letters" justify-content="center" flex-wrap="wrap" gap=8 margin="4px 0"
-                for letter in guidePack.split(",") key=letter
-                  column width=72 min-height=72 justify-content="center" align-items="center" border-radius=18 background-color="dit-input" border="1px solid var(--dit-border)"
-                    text letter font-size="1.529rem" font-weight=700
-            if guideCelebrate and guideStorage != "saved"
-              text "Course completion may not be saved on this device." role="status" font-size="0.824rem" color="dit-ink-secondary" text-align="center"
-            button press=acceptPracticeGate aria-label="Continue" testId="guided-native-continue" appearance="none" border-width=0 background-color="transparent" min-height=44 padding=0 display="flex" align-items="center" justify-content="center"
-              column backgroundMaterial="glass" padding="10px 24px" border-radius=14 pointer-events="none"
-                text "CONTINUE" letter-spacing=1.1 font-size="0.706rem" color="dit-ink-secondary"
+          column width="100%" min-height="100%" position="relative" align-items="center" justify-content="center" padding="0 24px" box-sizing="border-box"
+            button press=acceptPracticeGate aria-label="Close dialog" aria-description="Dismisses this dialog" testId="guided-native-backdrop" appearance="none" position="absolute" inset=0 width="100%" height="100%" border-width=0 padding=0 background-color="transparent"
+            column position="relative" z-index=1 width="100%" max-width=360 align-items="center" gap=12 padding=24 box-sizing="border-box" background-color="dit-panel" border="1px solid var(--dit-border)" border-radius=18 opacity=(gateExiting ? 0 : 1) scale=(gateExiting ? 0.96 : 1) transition=(media.prefersReducedMotion ? "none" : "opacity 140ms cubic-bezier(0.23,1,0.32,1), scale 140ms cubic-bezier(0.23,1,0.32,1)")
+              text gateTitle role="heading" aria-level=2 font-size="1.059rem" font-weight=600 letter-spacing=0.4 text-align="center"
+              if gateSubtitle != ""
+                text gateSubtitle font-size="0.824rem" line-height=1.43 color="dit-ink-secondary" text-align="center"
+              if not guideCelebrate and guidePhase != "gate-retry"
+                row testId="gate-letters" justify-content="center" flex-wrap="wrap" gap=8 margin="4px 0"
+                  for letter in guidePack.split(",") key=letter
+                    column width=72 min-height=72 justify-content="center" align-items="center" border-radius=18 background-color="dit-input" border="1px solid var(--dit-border)"
+                      text letter font-size="1.529rem" font-weight=700
+              if guideCelebrate and guideStorage != "saved"
+                text "Course completion may not be saved on this device." role="status" font-size="0.824rem" color="dit-ink-secondary" text-align="center"
+              button press=acceptPracticeGate aria-label="Continue" testId="guided-native-continue" appearance="none" border-width=0 background-color="transparent" min-height=44 padding=0 display="flex" align-items="center" justify-content="center"
+                column backgroundMaterial="glass" padding="10px 24px" border-radius=14 pointer-events="none"
+                  text "CONTINUE" letter-spacing=1.1 font-size="0.706rem" color="dit-ink-secondary"
       dialog id="course-complete" testId="guided-complete-dialog" aria-label="Course complete" closedby="any" cancel=dismissCourseComplete background-color="#14212b" color="#faf7f5" border-radius=28 padding=24 width="100%" max-width="24rem" box-sizing="border-box"
         column gap=12
           text "Course complete" role="heading" aria-level=2 font-size="1.25rem"
@@ -1767,12 +1962,42 @@ component ExactPractice
           text "Cancel"
         button press=conversationCommand("consent-allow") commandfor="local-contact-consent" command="close"
           text "Allow"
+      dialog id="provider-signin-error" role="alertdialog" aria-label="Could Not Sign In"
+        text providerSignInMessage
+        button commandfor="provider-signin-error" command="close"
+          text "OK"
+      dialog id="delete-account" role="alertdialog" aria-label="Delete account?"
+        text "This permanently deletes your Dit account, synced progress, and local progress on this device."
+        button commandfor="delete-account" command="close"
+          text "Cancel"
+        button press=confirmDeleteAccount destructive=true commandfor="delete-account" command="close"
+          text "Delete Account"
+      dialog id="delete-account-error" role="alertdialog" aria-label="Could Not Delete Account"
+        text deletionMessage
+        button commandfor="delete-account-error" command="close"
+          text "OK"
+      dialog id="delete-account-cleanup" role="alertdialog" aria-label="Account Deleted"
+        text "Your account was deleted, but local cleanup did not finish cleanly. Relaunch the app if any old progress remains."
+        button commandfor="delete-account-cleanup" command="close"
+          text "OK"
       dialog id="reset-local-app" role="alertdialog" aria-label="Reset App?"
         text "This clears progress, settings, onboarding state, and saved local data on this device."
         button commandfor="reset-local-app" command="close"
           text "Cancel"
         button press=preference("reset-local-app") destructive=true commandfor="reset-local-app" command="close"
           text "Reset App"
+      dialog id="reset-signed-in" role="alertdialog" aria-label="Reset App?"
+        text "This clears progress, settings, onboarding state, and saved local data on this device. If Dit can reach the server, your synced progress is cleared too, and you will be signed out. Your account is not deleted."
+        button commandfor="reset-signed-in" command="close"
+          text "Cancel"
+        button press=checkResetConnection destructive=true commandfor="reset-signed-in" command="close"
+          text "Reset App"
+      dialog id="reset-offline" role="alertdialog" aria-label="No internet connection"
+        text "Dit can reset this device now, but your synced progress on the server will not be cleared while you are offline. To clear server data too, tap Cancel, connect to the internet, and run Reset App again. Tap Reset Device to continue with a local reset only. You will be signed out. Your account is not deleted."
+        button commandfor="reset-offline" command="close"
+          text "Cancel"
+        button press=performSignedInReset("device") destructive=true commandfor="reset-offline" command="close"
+          text "Reset Device"
       dialog id="local-reset-error" role="alertdialog" aria-label="Could Not Reset App"
         text "Some local data could not be cleared. Relaunch Dit and try again."
         button commandfor="local-reset-error" command="close"
@@ -1935,12 +2160,14 @@ component ExactPractice
                 column class=SettingsSeparator aria-hidden=true
                 button "About Dit" aria-label="Open about" press=about testId="settings-about" class=SettingsAction
                 column class=SettingsSeparator aria-hidden=true
-                button "Reset App" press=askLocalReset aria-label="Reset app" testId="settings-reset-app" class=SettingsAction color="#ff6b6b"
+                button "Reset App" disabled=deletingAccount press=askLocalReset aria-label="Reset app" testId="settings-reset-app" class=SettingsAction color="#ff6b6b"
                 column class=SettingsSeparator aria-hidden=true
                 if accountEmail != ""
                   row class=SettingsRow
                     text accountEmail class=SettingsLabel
-                    button "Sign Out" press=chooseFixtureAccount("sign-out") aria-label="Sign out" appearance="none" background-color="transparent" min-height=44 border-width=0 color="#ff6b6b"
+                    button "Sign Out" disabled=deletingAccount press=chooseFixtureAccount("sign-out") aria-label="Sign out" appearance="none" background-color="transparent" min-height=44 border-width=0 color="#ff6b6b"
+                  column class=SettingsSeparator aria-hidden=true
+                  button (deletingAccount ? "Deleting account..." : "Delete Account") press=askDeleteAccount disabled=deletingAccount aria-label="Delete account" aria-description="Deletes your account, synced progress, and local progress on this device" testId="settings-delete-account" class=SettingsAction color="#ff6b6b"
                 else
                   button "Sign In" press=openEntryAccount aria-label="Sign in" testId="settings-sign-in" class=SettingsAction
               button "Replay onboarding" press=replayNux testId="nux-replay" min-height=44

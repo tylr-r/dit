@@ -135,14 +135,22 @@ export function createCustom({storage, project, play, stop, pause, resume}) {
     async pause() {
       if(!active||phase!=='playing') return
       const token=++clockOperation
-      setPhase('paused')
-      try { await pause() } catch { if(token===clockOperation&&phase==='paused') setPhase('playing') }
+      try {
+        const pending = pause()
+        if (pending === false) return
+        setPhase('paused')
+        await pending
+      } catch { if(token===clockOperation&&phase==='paused') setPhase('playing') }
     },
     async resume() {
       if(!active||phase!=='paused') return
       const token=++clockOperation
-      setPhase('playing')
-      try { await resume() } catch { if(token===clockOperation&&phase==='playing') setPhase('paused') }
+      try {
+        const pending = resume()
+        if (pending === false) return
+        setPhase('playing')
+        await pending
+      } catch { if(token===clockOperation&&phase==='playing') setPhase('paused') }
     },
     reveal() {
       if(!active||!['playing','paused','ended'].includes(phase)) return

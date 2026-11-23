@@ -28,6 +28,7 @@
     "name": "Dit"
   },
   "data": ["reference-letter", "peekable"],
+  "hatches": {"dit-email-password": ["ios"]},
   "modules": [
     "dit-key",
     "dit-reminder-wheel",

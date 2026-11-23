@@ -35,6 +35,7 @@ export function createAppleCustom({storage,project,host,clock,current}) {
       project(message)
     },
     play(text, done, fail) {
+      project('custom-control-error:')
       const {speed,effectiveSpeed,pitch} = current().settings
       const plan = customPlan(text,speed,effectiveSpeed)
       const {characterGapMs} = tempoTiming(speed,effectiveSpeed)
@@ -51,18 +52,24 @@ export function createAppleCustom({storage,project,host,clock,current}) {
       timer = clock.setTimer(poll,60)
     },
     pause() {
-      if (!host.passageControl('pause')) throw Error('pause failed')
+      if (!host.passageControl('pause')) {
+        project('custom-control-error:Could not pause playback. Try End and Play again.')
+        return false
+      }
       clock.clearTimer(timer)
       const ms = host.passagePosition()
       if (ms >= 0) showTime(Math.min(ms,duration))
     },
     resume() {
-      if (!host.passageControl('resume')) throw Error('resume failed')
+      if (!host.passageControl('resume')) {
+        project('custom-control-error:Could not resume playback. Try Restart.')
+        return false
+      }
       timer = clock.setTimer(poll,60)
     },
   })
   return {
-    enter() { custom.enter(); project('custom-active:1') },
+    enter() { custom.enter(); project('custom-control-error:'); project('custom-active:1') },
     leave() { project('custom-active:0'); custom.leave() },
     suspend:custom.suspend,
     update(props,changed) {
@@ -71,8 +78,10 @@ export function createAppleCustom({storage,project,host,clock,current}) {
       if (changed('custom-copy-value')) custom.copy(props['custom-copy-value'] || '')
       if (!changed('custom-token')) return
       const action = props['custom-command']
-      if (action === 'save') custom.save(raw, String(props['custom-type-value']) === 'true')
-      else if (['edit','discard','clear','play','pause','resume','reveal'].includes(action)) custom[action]()
+      if (action === 'save') {
+        project('custom-control-error:')
+        custom.save(raw, String(props['custom-type-value']) === 'true')
+      } else if (['edit','discard','clear','play','pause','resume','reveal'].includes(action)) custom[action]()
       if (!chars && ['discard','clear','save'].includes(action)) project('custom-done')
     },
   }

@@ -248,8 +248,15 @@ private func checkPassageMotor() {
     precondition(f.key.playPassage(plan) { f.record("pcm+"); return true })
     precondition(f.patterns.last == .playback(DitToneInterval.decode(plan)!))
     precondition(f.times("pcm+") == f.times("sequence+"))
+    precondition(!f.key.controlPassage("pause") { false })
+    guard f.times("sequence-").isEmpty && f.times("sequence pause").isEmpty else {
+        print("FAIL rejected Pause discarded or paused the playing passage haptic")
+        exit(1)
+    }
     precondition(f.key.controlPassage("pause") { true })
     precondition(f.times("sequence pause").count == 1)
+    precondition(!f.key.controlPassage("resume") { false })
+    precondition(f.times("sequence-").isEmpty && f.times("sequence resume").isEmpty)
     precondition(f.key.controlPassage("resume") { true })
     precondition(f.times("sequence resume").count == 1)
     f.key.setHaptics(false)

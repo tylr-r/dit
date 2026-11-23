@@ -1,6 +1,6 @@
 // Synthetic station; the Apple transport and Morse input are real. Typed copy
 // stays in the shared session and is never an argument to the station.
-import { createQso, fixtureReply, qsoPlan } from '../modules/web/qso.mjs'
+import { createQso, createLocalStation, qsoPlan } from '../modules/web/qso.mjs'
 import { characterUnitMs } from '../modules/web/tempo.mjs'
 
 export function createAppleConversation({project, host, clock, current}) {
@@ -12,7 +12,8 @@ export function createAppleConversation({project, host, clock, current}) {
     host.passageControl?.('stop')
   }
   const contact = createQso({
-    ...clock, project, reply:fixtureReply, stop, platform:'ios',
+    callsignRandom:host.callsignRandom,
+    ...clock, project, createStation:host.createStation ?? createLocalStation, stop, platform:'ios',
     play(text, complete, fail, progress) {
       const {speed, pitch} = current().settings
       const plan = qsoPlan(text,speed)

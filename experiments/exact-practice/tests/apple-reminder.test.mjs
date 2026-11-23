@@ -139,3 +139,23 @@ test('storage and permission failures leave Skip usable; unknown reminder data i
   retry.act('reminder-skip')
   assert.equal(retry.values.get('nux-enter'),'guided')
 })
+
+test('the known tutorial accepts direct input while external capture waits until unblocked practice', () => {
+  const f = atStep('known','reminder')
+  f.act('back')
+  const eligibility = () => {
+    const config=f.app.configuration()
+    return [config.enabled,config.hardwareEnabled ?? config.enabled]
+  }
+  assert.deepEqual(eligibility(),[true,false])
+  for (const symbol of '...---') f.app.input('symbol',symbol)
+  f.app.timer([...f.timers].find(([,ms]) => ms===600)[0])
+  f.act('reminder-skip')
+  assert.equal(f.values.get('nux-step'),'known_tour')
+  assert.deepEqual(eligibility(),[false,false])
+  for (let i=0;i<3;i++) f.act('tour-next')
+  f.set({mode:'practice'}); assert.deepEqual(eligibility(),[true,true])
+  f.set({blocked:'true'}); assert.deepEqual(eligibility(),[false,false])
+  f.set({blocked:'false'}); assert.deepEqual(eligibility(),[true,true])
+  f.app.dispose()
+})

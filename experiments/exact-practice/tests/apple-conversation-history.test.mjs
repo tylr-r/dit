@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {createQso,fixtureReply} from '../modules/web/qso.mjs'
+import {createQso,createLocalStation} from '../modules/web/qso.mjs'
 
 test('Apple reply handoff conceals unchecked reception until manual reveal or keying',async () => {
   let transcript,complete
   const qso=createQso({
-    platform:'ios',reply:fixtureReply,
+    platform:'ios',createStation:createLocalStation,
     project:message=>{if(message.startsWith('qso-transcript:')) transcript=message.slice(15)},
     play:(_text,done)=>{complete=done},stop(){},pause(){},resume(){},setTimer(){},clearTimer(){},
   })
@@ -39,7 +39,7 @@ test('Apple reply handoff conceals unchecked reception until manual reveal or ke
 test('a long Apple contact keeps the first received turn available to reveal', async () => {
   let history = '', finish
   const contact = createQso({
-    platform:'ios',reply:fixtureReply,
+    platform:'ios',createStation:createLocalStation,
     project(message) { if (message.startsWith('qso-transcript:')) history=message.slice(15) },
     play(_text,done) { finish=done },stop(){},pause(){},resume(){},setTimer(){},clearTimer(){},
   })

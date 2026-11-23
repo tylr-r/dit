@@ -2,155 +2,104 @@ import Foundation
 #if os(iOS)
 @preconcurrency import AVFoundation
 @preconcurrency import UIKit
-import os
-
-private final class Sidetone: DitToneOutput, @unchecked Sendable {
-    private(set) var passage: DitPassagePlayer?
-    private let engine = AVAudioEngine()
-    private var source: AVAudioSourceNode?
-    private var lock = os_unfair_lock_s()
-    private var presentation = DitPromptPresentation()
-    private var renderRate = 0.0
-    private var renderedToneOn = false
-    func waveToneOn() -> Bool {
-        os_unfair_lock_lock(&lock)
-        defer { os_unfair_lock_unlock(&lock) }
-        return renderedToneOn
-    }
-    private var target: Float = 0
-    private var hz: Float = 600
-    // Render-thread owned.
-    private var phase: Float = 0
-    private var amplitude: Float = 0
-    private var rampTarget: Float = 0
-    private var rampStep: Float = 0
-    private var framesLeft = 0
-
-    @discardableResult func warm() -> Bool {
-        if engine.isRunning { return true }
-        let route = AVAudioSession.sharedInstance()
-        do {
-            try route.setCategory(.playback)
-            try route.setPreferredIOBufferDuration(0.0029)
-            try route.setActive(true)
-            if source == nil {
-                let rate = engine.outputNode.outputFormat(forBus: 0).sampleRate
-                guard rate.isFinite, rate > 0,
-                      let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1) else { return false }
-                renderRate = rate
-                let node = AVAudioSourceNode { [weak self] _, time, frames, io in
-                    let buffers = UnsafeMutableAudioBufferListPointer(io)
-                    guard let self else {
-                        for buffer in buffers { if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) } }
-                        return noErr
-                    }
-                    os_unfair_lock_lock(&self.lock)
-                    let (target, hz) = (self.target, self.hz)
-                    self.renderedToneOn = target > 0
-                    let stamp = time.pointee
-                    let valid = stamp.mFlags.contains([.hostTimeValid, .sampleTimeValid])
-                    self.presentation.observe(host: valid ? stamp.mHostTime : 0, frame: stamp.mSampleTime, frames: Int(frames))
-                    os_unfair_lock_unlock(&self.lock)
-                    if target != self.rampTarget {
-                        self.rampTarget = target
-                        self.framesLeft = max(1, Int(rate * (target > self.amplitude ? 0.004 : 0.002)))
-                        self.rampStep = (target - self.amplitude) / Float(self.framesLeft)
-                    }
-                    let step = 2 * Float.pi * hz / Float(rate)
-                    for frame in 0..<Int(frames) {
-                        if self.framesLeft > 0 {
-                            self.amplitude += self.rampStep
-                            self.framesLeft -= 1
-                            if self.framesLeft == 0 { self.amplitude = target }
-                        }
-                        let sample = sin(self.phase) * self.amplitude
-                        self.phase += step
-                        if self.phase >= 2 * Float.pi { self.phase -= 2 * Float.pi }
-                        for buffer in buffers { buffer.mData?.assumingMemoryBound(to: Float.self)[frame] = sample }
-                    }
-                    return noErr
-                }
-                engine.attach(node)
-                engine.connect(node, to: engine.mainMixerNode, format: format)
-                engine.prepare()
-                source = node
-            }
-            try engine.start()
-            return true
-        } catch { return false }
-    }
-
-    func level(_ volume: Float, frequency: Float) {
-        os_unfair_lock_lock(&lock)
-        presentation = DitPromptPresentation()
-        target = volume
-        if volume == 0 { renderedToneOn = false }
-        hz = frequency
-        os_unfair_lock_unlock(&lock)
-    }
-
-    func replayLevel(_ volume: Float, frequency: Float, prompt: Int, edge: Int, count: Int) {
-        os_unfair_lock_lock(&lock)
-        presentation.edge(prompt: prompt, index: edge, count: count)
-        target = volume
-        hz = frequency
-        os_unfair_lock_unlock(&lock)
-    }
-
-    func invalidatePresentation() {
-        os_unfair_lock_lock(&lock)
-        presentation = DitPromptPresentation()
-        os_unfair_lock_unlock(&lock)
-    }
-
-    func promptTailMs(_ id: Int) -> Double? {
-        guard engine.isRunning, let source else { return nil }
-        let latencyMs = source.outputPresentationLatency * 1000
-        os_unfair_lock_lock(&lock)
-        let snapshot = presentation
-        let now = mach_absolute_time()
-        os_unfair_lock_unlock(&lock)
-        func ms(_ ticks: UInt64) -> Double { AVAudioTime.seconds(forHostTime: ticks) * 1000 }
-        return snapshot.tailMs(prompt: id, nowMs: ms(now), rate: renderRate,
-                               latencyMs: latencyMs, milliseconds: ms)
-    }
-
-    func startPassage(_ plan: [[Double]], pitch: Float, gap: Double, volume: Float) -> Bool {
-        guard warm() else { return false }
-        if passage == nil {
-            let player = DitPassagePlayer()
-            engine.attach(player.node)
-            engine.connect(player.node, to: engine.mainMixerNode, format: player.format)
-            passage = player
-        }
-        return passage?.start(plan, pitch: pitch, gap: gap, volume: volume) == true
-    }
-
-    func shutdown() {
-        passage?.stop()
-        level(0, frequency: 600)
-        engine.stop()
-        // Do not deactivate the shared session: Exact may be playing replay audio.
-    }
-}
 
 private final class DitInputView: UIView {
     var key: ((String, Bool) -> Bool)?
     var interrupt: (() -> Void)?
     let waveMeter = DitWaveMeter()
-    var enabled = false
+    private(set) var enabled = false
+    private var hardwareEligible = false
+    private weak var editor: UIView?
+    private let pressed = NSHashTable<UIPress>.weakObjects()
+    private let suppressed = NSHashTable<UIPress>.weakObjects()
+    private var agentHeld = Set<String>()
+    private var lastInputWasHardware = false
+    var cancelHardware: (() -> Void)?
     private var touchID: ObjectIdentifier?
-    override var canBecomeFirstResponder: Bool { enabled }
+    override var canBecomeFirstResponder: Bool { enabled && hardwareEligible && editor == nil }
+
+    func setEligibility(_ enabled: Bool, hardware: Bool) {
+        guard self.enabled != enabled || hardwareEligible != hardware else { return }
+        self.enabled = enabled
+        hardwareEligible = hardware
+        restoreFocus()
+    }
+
+    private func focusedEditor(in view: UIView) -> UIView? {
+        if view.isFirstResponder && view is UITextInput { return view }
+        for child in view.subviews {
+            if let field = focusedEditor(in:child) { return field }
+        }
+        return nil
+    }
+
+    private func cancelHardwareInput() {
+        for press in pressed.allObjects { suppressed.add(press) }
+        pressed.removeAllObjects()
+        agentHeld.removeAll()
+        if lastInputWasHardware {
+            lastInputWasHardware = false
+            cancelHardware?()
+        }
+    }
+
+    private func updateFocus() {
+        if canBecomeFirstResponder {
+            if window != nil && !isFirstResponder { _ = becomeFirstResponder() }
+        } else {
+            cancelHardwareInput()
+            if isFirstResponder { _ = resignFirstResponder() }
+        }
+    }
+
+    private func restoreFocus() {
+        editor = window.flatMap { focusedEditor(in:$0) }
+        updateFocus()
+    }
+
+    @objc private func editingBegan(_ note: Notification) {
+        guard let window, let field = note.object as? UIView, field.window === window else { return }
+        editor = field
+        updateFocus()
+    }
+
+    @objc private func editingEnded(_ note: Notification) {
+        guard let field = note.object as? UIView, field === editor else { return }
+        // Let UIKit finish moving focus, including a direct transfer between fields.
+        DispatchQueue.main.async { [weak self] in self?.restoreFocus() }
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { cancelHardwareInput() }
+        return resigned
+    }
     override func didMoveToWindow() {
         super.didMoveToWindow()
         waveMeter.attach(to:window)
-        if window == nil { touchID = nil; interrupt?() }
-        else if enabled { _ = becomeFirstResponder() }
+        let center = NotificationCenter.default
+        for name in [UITextField.textDidBeginEditingNotification, UITextView.textDidBeginEditingNotification] {
+            center.removeObserver(self, name:name, object:nil)
+            if window != nil { center.addObserver(self, selector:#selector(editingBegan(_:)), name:name, object:nil) }
+        }
+        for name in [UITextField.textDidEndEditingNotification, UITextView.textDidEndEditingNotification] {
+            center.removeObserver(self, name:name, object:nil)
+            if window != nil { center.addObserver(self, selector:#selector(editingEnded(_:)), name:name, object:nil) }
+        }
+        guard window != nil else {
+            editor = nil
+            touchID = nil
+            cancelHardwareInput()
+            interrupt?()
+            return
+        }
+        restoreFocus()
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard enabled, touchID == nil, let touch = touches.first, key?("straight", true) == true else { return }
+        lastInputWasHardware = false
         touchID = ObjectIdentifier(touch)
-        _ = becomeFirstResponder()
+        if canBecomeFirstResponder { _ = becomeFirstResponder() }
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touchID, touches.contains(where: { ObjectIdentifier($0) == touchID }) else { return }
@@ -163,19 +112,47 @@ private final class DitInputView: UIView {
     }
     func resetTouch() { touchID = nil }
     private func mapped(_ press: UIPress) -> String? {
-        switch press.key?.keyCode {
+        guard let key = press.key else { return nil }
+        switch key.keyCode {
         case .keyboardSpacebar: return "straight"
-        case .keyboardLeftControl, .keyboardOpenBracket: return "."
-        case .keyboardRightControl, .keyboardCloseBracket: return "-"
-        default: return nil
+        case .keyboardLeftControl: return "."
+        case .keyboardRightControl: return "-"
+        default:
+            switch key.charactersIgnoringModifiers {
+            case "[": return "."
+            case "]": return "-"
+            default: return nil
+            }
         }
     }
-    private func route(_ presses: Set<UIPress>, down: Bool) -> Set<UIPress> {
-        guard enabled else { return presses }
+    private func route(_ presses: Set<UIPress>, down: Bool, cancelStraight: Bool = false) -> Set<UIPress> {
         return Set(presses.filter { p in
             guard let symbol = mapped(p) else { return true }
-            return key?(symbol, down) != true
+            if !canBecomeFirstResponder || suppressed.contains(p) {
+                if down { suppressed.add(p) } else { suppressed.remove(p) }
+                return true
+            }
+            if down {
+                if pressed.contains(p) { return false }
+                guard key?(symbol, true) == true else { return true }
+                pressed.add(p)
+                lastInputWasHardware = true
+                return false
+            }
+            guard pressed.contains(p) else { return true }
+            pressed.remove(p)
+            if cancelStraight && symbol == "straight" {
+                interrupt?()
+                return false
+            }
+            return key?(symbol, false) != true
         })
+    }
+    func agentKey(_ symbol: String, down: Bool) {
+        guard canBecomeFirstResponder else { return }
+        if down {
+            if key?(symbol,true) == true { agentHeld.insert(symbol); lastInputWasHardware = true }
+        } else if agentHeld.remove(symbol) != nil { _ = key?(symbol,false) }
     }
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         let other = route(presses, down: true)
@@ -186,13 +163,14 @@ private final class DitInputView: UIView {
         if !other.isEmpty { super.pressesEnded(other, with: event) }
     }
     override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        if presses.contains(where: { mapped($0) != nil }) { interrupt?() }
-        let other = Set(presses.filter { mapped($0) == nil })
+        // A cancelled paddle is a key-up. Let its timed element and the other paddle finish.
+        let other = route(presses, down: false, cancelStraight: true)
         if !other.isEmpty { super.pressesCancelled(other, with: event) }
     }
     override func accessibilityActivate() -> Bool {
         // VoiceOver activation supplies a dit without synthesizing a held gesture.
         guard enabled, key?(".", true) == true else { return false }
+        lastInputWasHardware = false
         _ = key?(".", false)
         return true
     }
@@ -201,7 +179,8 @@ private final class DitInputView: UIView {
 private final class DitKey: ExactNativeInstance, @unchecked Sendable {
     private let input = DitInputView()
     private let clock: ExactModuleContext
-    private lazy var audio = Sidetone()
+    private let submittedPassword: () -> String?
+    private lazy var audio = DitSidetone()
     private var volumeObserver: NSKeyValueObservation?
     private var observers: [NSObjectProtocol] = []
     private var destroyed = false
@@ -222,10 +201,11 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
        }, onSymbol: { [weak self] in self?.session?.input("symbol", $0) },
        onSequence: { [weak self] output in self?.session?.input("sequence", output) })
 
-    init(clock: ExactModuleContext, events: ExactNativeEvents) {
+    init(clock: ExactModuleContext, events: ExactNativeEvents, submittedPassword: @escaping () -> String?) {
+        self.submittedPassword = submittedPassword
         self.clock = clock
         super.init(events: events)
-        input.waveMeter.sounding = { [weak self] in self?.audio.waveToneOn() == true }
+        input.waveMeter.level = { [weak self] in self?.audio.waveLevel() ?? 0 }
         input.backgroundColor = .clear
         input.isAccessibilityElement = true
         input.accessibilityIdentifier = "dit-native-morse-key"
@@ -233,6 +213,7 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
         input.accessibilityUserInputLabels = ["Morse key", "Tap for dot, hold for dah"]
         input.accessibilityTraits = .button
         input.key = { [weak self] symbol, down in self?.signal.key(symbol, down: down) == true }
+        input.cancelHardware = { [weak self] in self?.signal.cancel() }
         input.interrupt = { [weak self] in self?.cancel(); self?.signal.stopReplay() }
         let support = clock.agent ? nil : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         let bundleID = Bundle.main.bundleIdentifier
@@ -255,7 +236,18 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
                         sessionData = fixture.directory
                         sessionLegacy = nil
                         accounts = fixture
-                        fixture.presentation = { [weak self] email in
+                        fixture.resetMessage = { [weak self] message in self?.events.message(message) }
+                        fixture.deletionResult = { [weak self] result in
+                            self?.events.message("account-deletion:" + result)
+                        }
+                        fixture.presentation = { [weak self, weak fixture] email in
+                            if fixture?.appleSignInAvailable == true {
+                                self?.events.message("fixture-apple:available")
+                            }
+                            if fixture?.googleSignInAvailable == true {
+                                self?.events.message("fixture-google:available")
+                            }
+                            self?.events.message("fixture-learners:" + (fixture?.availableLearners ?? ""))
                             self?.events.message("fixture-account:" + email)
                         }
                     }
@@ -275,7 +267,7 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
                     passageStart: { [weak self] plan, pitch, gap in
                         guard let self, self.interruptions.isEmpty else { return false }
                         return self.signal.playPassage(plan) {
-                            self.audio.startPassage(plan, pitch: pitch, gap: gap, volume: self.signal.volume)
+                            self.audio.startPassage(plan, pitch: pitch, gap: gap, volume: self.signal.volume, unitMs: self.signal.unit)
                         }
                     }, passageControl: { [weak self] action in
                         guard let self else { return false }
@@ -285,7 +277,7 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
                     promptTailMs: { [weak self] in self?.audio.promptTailMs($0) },
                     stop: { [weak self] in self?.signal.stopReplay() }, warm: { [weak self] in _ = self?.audio.warm() },
                     cancelInput: { [weak self] in self?.cancel() },
-                    configure: { [weak self] enabled, unit, pitch, haptics in self?.configure(enabled, unit: unit, pitch: pitch, haptics: haptics) },
+                    configure: { [weak self] enabled, hardware, unit, pitch, haptics in self?.configure(enabled, hardware: hardware, unit: unit, pitch: pitch, haptics: haptics) },
                     publish: { [weak self] message in self?.events.message(message) })
             }
         }
@@ -320,7 +312,7 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
     }
 
     override var view: ExactNativeView { input }
-    override var focusTarget: ExactNativeView? { signal.blocked ? nil : input }
+    override var focusTarget: ExactNativeView? { input.canBecomeFirstResponder ? input : nil }
 
     override func setProps(_ props: [String: String]) throws {
         if let text = props["tone-volume"], let value = Float(text), value.isFinite {
@@ -339,10 +331,30 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
         }
         #if targetEnvironment(simulator)
         if let fixtureAccounts, let token = props["account-token"] {
+            if props["email-sheet-open"] != "true" { fixtureAccounts.cancelEmail() }
             let previous = fixtureCommandToken
             fixtureCommandToken = token
             if let previous, previous != token, let action = props["account-action"] {
-                fixtureAccounts.choose(action)
+                if action == "apple-signin" {
+                    let result = fixtureAccounts.submitApple()
+                    events.message("apple-result:" + token + ":" + result)
+                } else if action == "google-signin" {
+                    let result = fixtureAccounts.submitGoogle()
+                    events.message("google-result:" + token + ":" + result)
+                } else if action == "email-signin" || action == "email-signup" {
+                    if props["email-sheet-open"] == "true" {
+                        let create = action == "email-signup"
+                        let reply: (String) -> Void = { [weak self] message in
+                            self?.events.message("email-result:" + token + ":" + message)
+                        }
+                        if let password = submittedPassword(), !password.isEmpty {
+                            fixtureAccounts.submitEmail(create:create,address:props["submitted-address"] ?? "",
+                                                        password:password,done:reply)
+                        } else {
+                            reply(create ? "We could not create your account. Please try again." : "We could not sign you in. Please try again.")
+                        }
+                    }
+                } else { fixtureAccounts.choose(action) }
             }
         }
         #endif
@@ -353,28 +365,23 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
         events.message(ProcessInfo.processInfo.isLowPowerModeEnabled ? "low-power:on" : "low-power:off")
     }
 
-    private func configure(_ enabled: Bool, unit: Double, pitch: Float, haptics: Bool) {
+    private func configure(_ enabled: Bool, hardware: Bool, unit: Double, pitch: Float, haptics: Bool) {
         signal.unit = unit
         signal.frequency = pitch
         signal.setHaptics(haptics)
         let changed = enabled == signal.blocked
         signal.blocked = !enabled
-        input.enabled = enabled
+        input.setEligibility(enabled, hardware:hardware)
         input.isAccessibilityElement = enabled
         input.accessibilityTraits = enabled ? .button : [.button, .notEnabled]
-        if changed && !enabled {
-            cancel()
-            _ = input.resignFirstResponder()
-        } else if changed && input.window != nil {
-            _ = input.becomeFirstResponder()
-        }
+        if changed && !enabled { cancel() }
     }
 
     private func interrupt(_ source: String, _ began: Bool) {
         if began { interruptions.insert(source) } else { interruptions.remove(source) }
         if began { input.resetTouch() }
         signal.setSuspended(!interruptions.isEmpty)
-        session?.interrupt(!interruptions.isEmpty)
+        session?.interrupt(!interruptions.isEmpty, applicationInactive: interruptions.contains("application"))
     }
 
     private func play(_ plan: [[Double]], pitch: Float, prompt: Int) -> Bool {
@@ -393,8 +400,8 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
         case "ControlRight", "BracketRight", "]": symbol = "-"
         default: throw ExactNativeRefusal("unsupported dit-key chord")
         }
-        if phase != "up" { _ = signal.key(symbol, down: true) }
-        if phase != "down" { _ = signal.key(symbol, down: false) }
+        if phase != "up" { input.agentKey(symbol, down:true) }
+        if phase != "down" { input.agentKey(symbol, down:false) }
     }
 
     private func cancel() {
@@ -404,6 +411,9 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
 
     override func destroy() {
         destroyed = true
+        #if targetEnvironment(simulator)
+        fixtureAccounts?.cancelEmail()
+        #endif
         volumeObserver = nil
         boot?.stop()
         session?.close()
@@ -411,8 +421,7 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
         signal.destroy()
         input.resetTouch()
         audio.shutdown()
-        input.enabled = false
-        _ = input.resignFirstResponder()
+        input.setEligibility(false, hardware:false)
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers.removeAll()
     }
@@ -421,9 +430,19 @@ private final class DitKey: ExactNativeInstance, @unchecked Sendable {
 
 private final class DitPracticeModule: ExactModule {
     #if os(iOS)
+    private weak var passwordElement: ExactElement?
+    override func element(_ element: ExactElement) {
+        if element.hatch == .ditEmailPassword { passwordElement = element }
+    }
+    override func elementEnded(_ element: ExactElement) {
+        if element === passwordElement { passwordElement = nil }
+    }
+
     override class var views: [String: ExactNativeFactory] {
         ["dit-key": ExactNativeFactory(for: DitPracticeModule.self) { module, props, events in
-            let key = DitKey(clock: module.context, events: events)
+            let key = DitKey(clock: module.context, events: events) { [weak module] in
+                (module?.passwordElement?.platform as? UITextField)?.text
+            }
             try? key.setProps(props)
             return key
         }, "dit-reminder-wheel": ExactNativeFactory(for: DitPracticeModule.self) { _, props, events in

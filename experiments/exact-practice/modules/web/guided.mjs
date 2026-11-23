@@ -31,7 +31,7 @@ export function guideAttempt(state, letter, correct) {
   if (!(state.phase === 'teach' ? pack : guideUnlocked(state)).includes(letter)) return state
   const p = state.progress
   if (state.phase === 'teach') {
-    if (!correct || (p.teachCounts[letter] ?? 0) >= 2) return state
+    if (!correct) return state
     const teachCounts = add(p.teachCounts, letter)
     return { ...state, phase:every(pack,teachCounts,2) ? 'gate-practice' : 'teach', progress:{ ...p, teachCounts } }
   }
@@ -79,7 +79,6 @@ function decodeGuide(data) {
     if (Object.keys(value).some(letter => !allowed.includes(letter) || !count(value[letter]))) return null
     counts[key] = Object.fromEntries(Object.entries(value))
   }
-  if (Object.values(counts.teachCounts).some(value => value > 2)) return null
   if (Object.values(counts.practiceLetterCorrect).reduce((a,b)=>a+b,0) !== p.practiceCorrect ||
       Object.values(counts.listenLetterCorrect).reduce((a,b)=>a+b,0) !== p.listenCorrect) return null
   const reached=data.maxPackReached
@@ -145,12 +144,14 @@ const TITLES = {
 }
 
 /** Orchestrate real keying and Listen confirmations around the pure pack model. */
-export function createGuide({ storage, setTimer, clearTimer, project, decode, play, score, pick, pickListenWeighted = pick, random = Math.random, startListen, stopListen, lock, completed = () => {} }) {
+export function createGuide({ storage, setTimer, clearTimer, project, decode, play, score, pick, pickListenWeighted = pick, random = Math.random, startListen, stopListen, lock, cancelInput, completed = () => {} }) {
   const initial = readGuide(storage)
   let state = initial.data
   let active = false
   let allowed = false
   let status = initial.migrated ? saveGuide(storage,state) : initial.status
+  // Earned gates are saved immediately. The current keying phase stays on screen during feedback.
+  let presentedPhase = state.phase
   let target = teachTarget(state)
   let waiting = false
   let listenOn = false
@@ -174,9 +175,12 @@ export function createGuide({ storage, setTimer, clearTimer, project, decode, pl
     projectCatalog()
   }
   const practiceTarget = previous => pick(guidePracticePool(state,state.pack > 0 ? random() : 0),previous)
+  const canKey = () => active && allowed && (presentedPhase === 'teach' || presentedPhase === 'practice')
   function render() {
     if (!active) return
     const phase = state.phase
+    presentedPhase = phase
+    lock(phase.startsWith('gate-'))
     if (phase === 'teach') project('teach-remaining:' + Math.max(0,2-(state.progress.teachCounts[target] ?? 0)))
     project('guide-phase:' + phase)
     project('guide-title:' + TITLES[phase])
@@ -185,10 +189,15 @@ export function createGuide({ storage, setTimer, clearTimer, project, decode, pl
     project('guide-pool:' + guideUnlocked(state).join(','))
     project('guide-target:' + (phase === 'teach' || phase === 'practice' ? target : ''))
   }
-  function stop() {
+  function clearFeedback() {
+    if (!waiting) return
     generation++
     clearTimer(timer)
     waiting = false
+    project('guide-feedback:')
+  }
+  function stop() {
+    clearFeedback()
     lock(false)
     if (listenOn) stopListen()
     listenOn = false
@@ -242,44 +251,48 @@ export function createGuide({ storage, setTimer, clearTimer, project, decode, pl
       allowed = !blocked
       if (blocked) {
         stop()
-        project('guide-feedback:')
       } else {
         if (state.phase === 'teach') target = teachTarget(state)
         activate()
       }
     },
+    symbol() {
+      if (canKey()) clearFeedback()
+    },
     replay() {
-      if (!active || !allowed || waiting || !['teach','practice'].includes(state.phase)) return false
+      if (!canKey()) return false
+      clearFeedback()
+      cancelInput()
       play(target)
       return true
     },
     accept(code) {
-      if (!active || !allowed || waiting || !['teach','practice'].includes(state.phase)) return
-      const phase = state.phase
+      if (!canKey() || waiting) return
+      const phase = presentedPhase
       const correct = decode(code) === target
-      persist(guideAttempt(state,target,correct))
+      const lesson = state.phase === phase ? state : { ...state, phase }
+      persist(guideAttempt(lesson,target,correct))
       if (phase === 'teach' && correct) {
         const total = Object.values(state.progress.teachCounts).reduce((sum,count)=>sum+count,0)
+        project('teach-remaining:' + Math.max(0,2-state.progress.teachCounts[target]))
         project('teach-praise:' + teachPraise[(total-1) % teachPraise.length])
       }
       if (phase === 'practice') score(target,correct,'practice')
       project('guide-feedback:' + (correct ? 'Correct' : 'Try again'))
       waiting = true
-      lock(true)
       if (!correct) play(target)
       const ticket = ++generation
       timer = setTimer(() => {
-        if (ticket !== generation) return
+        if (!waiting || ticket !== generation) return
         waiting = false
-        lock(false)
         project('guide-feedback:')
-        if (state.phase === 'teach') target = teachTarget(state)
+        if (state.phase === 'teach' && correct) target = teachTarget(state)
         if (state.phase === 'practice' && correct) target = practiceTarget(target)
         render()
       },1000)
     },
     continue() {
-      if (!active || !allowed || waiting || listenOn) return false
+      if (!active || !allowed || waiting || listenOn || presentedPhase !== state.phase) return false
       if(state.phase==='gate-next' && state.pack===LAST_PACK)return finishCourse()
       const next = continueGuide(state)
       if (next === state) return false
@@ -306,7 +319,7 @@ export function createGuide({ storage, setTimer, clearTimer, project, decode, pl
       }else render()
       return false
     },
-    canKey: () => active && allowed && !waiting && ['teach','practice'].includes(state.phase),
+    canKey,
     isListening: () => listenOn,
     pool: () => guideUnlocked(state),
     pickListen(previous) {

@@ -11,18 +11,20 @@ final class DitPassagePlayer: @unchecked Sendable {
     private var frames = 0
     private var pitch = 600.0
     private var amplitude: Float = 0
+    private var unitMs = 0.0
     private var generation = 0
     private var finished = false
     private var pausedAt: Double?
 
-    func start(_ plan: [[Double]], pitch: Float, gap: Double, volume: Float) -> Bool {
+    func start(_ plan: [[Double]], pitch: Float, gap: Double, volume: Float, unitMs: Double) -> Bool {
         stop()
         guard let decoded = DitToneInterval.decode(plan), let last = decoded.last,
-              decoded.count <= 12000, gap.isFinite, gap > 0,
+              decoded.count <= 12000, gap.isFinite, gap > 0, unitMs.isFinite, unitMs > 0,
               last.endMs + gap < 24 * 60 * 60 * 1000, pitch.isFinite, pitch > 0 else { return false }
         intervals = decoded
         self.pitch = Double(pitch)
         amplitude = volume
+        self.unitMs = unitMs
         frames = Int(((last.endMs + gap) * format.sampleRate / 1000).rounded())
         guard enqueue() else { stop(); return false }
         if frame < frames && !enqueue() { stop(); return false }
@@ -67,8 +69,29 @@ final class DitPassagePlayer: @unchecked Sendable {
         if finished { return -2 }
         if let pausedAt { return pausedAt }
         guard node.isPlaying, node.engine?.isRunning == true else { return -1 }
-        guard let rendered = node.lastRenderTime, let time = node.playerTime(forNodeTime: rendered) else { return 0 }
-        return max(0, Double(time.sampleTime) * 1000 / time.sampleRate)
+        return renderedMilliseconds() ?? 0
+    }
+
+    private func renderedMilliseconds() -> Double? {
+        guard let rendered = node.lastRenderTime, let time = node.playerTime(forNodeTime: rendered),
+              time.sampleTime >= 0, time.sampleRate.isFinite, time.sampleRate > 0 else { return nil }
+        return Double(time.sampleTime) * 1000 / time.sampleRate
+    }
+
+    /// Sample the playback clock. The PCM fill cursor can be two buffers ahead of it.
+    func waveLevel() -> Double {
+        guard frames > 0, !finished, pausedAt == nil, amplitude > 0, node.isPlaying,
+              node.engine?.isRunning == true, let ms = renderedMilliseconds(), ms > 0 else { return 0 }
+        var low = 0
+        var high = intervals.count
+        while low < high {
+            let mid = (low + high) / 2
+            if intervals[mid].endMs <= ms { low = mid + 1 } else { high = mid }
+        }
+        guard low < intervals.count, intervals[low].startMs <= ms else { return 0 }
+        let duration = intervals[low].endMs - intervals[low].startMs
+        // Dit uses one unit for a dit and three for a dah. The waveform receives only energy.
+        return duration < 2 * unitMs ? 0.72 : 1
     }
 
     func control(_ action: String) -> Bool {

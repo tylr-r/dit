@@ -48,9 +48,24 @@ export async function installAppleContractFixture(page,dist) {
       window.addEventListener('fixture-symbol',keySymbol)
       window.addEventListener('fixture-volume',notifyVolume)
       app.setProps(nativeProps(json));queueMicrotask(()=>{if(live)app.bootstrap()})
-      return {app,close(){live=false;window.removeEventListener('fixture-project',projected);window.removeEventListener('fixture-sequence',keySequence);window.removeEventListener('fixture-symbol',keySymbol);window.removeEventListener('fixture-volume',notifyVolume);app.dispose();for(const t of timers.values())clearTimeout(t)}}
+      return {app,accountToken:nativeProps(json)['account-token'],close(){live=false;window.removeEventListener('fixture-project',projected);window.removeEventListener('fixture-sequence',keySequence);window.removeEventListener('fixture-symbol',keySymbol);window.removeEventListener('fixture-volume',notifyVolume);app.dispose();for(const t of timers.values())clearTimeout(t)}}
     }
-    function update(h,json){if(h.app)h.app.setProps(nativeProps(json));else setProps(h,json)}
+    function update(h,json){
+      if(!h.app)return setProps(h,json)
+      const props=nativeProps(json)
+      if(props['account-token']!==undefined){
+        if(h.accountToken!==undefined && props['account-token']!==h.accountToken){
+          window.dispatchEvent(new CustomEvent('fixture-account-command',{detail:props['account-action']}))
+          if(props['account-action']?.startsWith('email-')){
+            window.dispatchEvent(new CustomEvent('fixture-email-command',{detail:{
+              mode:props['account-action'], address:props['submitted-address'], token:props['account-token']
+            }}))
+          }
+        }
+        h.accountToken=props['account-token']
+      }
+      h.app.setProps(props)
+    }
     export {update as setProps}
     export function destroy(h){if(h.app)h.close();else webDestroy(h)}
   `

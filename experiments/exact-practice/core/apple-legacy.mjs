@@ -194,11 +194,26 @@ export function accountPayload(records) {
   return result
 }
 
+// Realtime Database omits empty children and may return digit-keyed children as arrays.
+function databaseGuideCounters(progress) {
+  requireValue(record(progress))
+  const counters = {...progress}
+  for (const key of ['teachCounts','practiceLetterCorrect','listenLetterCorrect']) {
+    if (!has(progress,key)) counters[key] = {}
+    else if (Array.isArray(progress[key])) {
+      requireValue(progress[key].length <= 10)
+      counters[key] = Object.fromEntries(Object.entries(progress[key]).filter(([,value]) => value !== null))
+    }
+  }
+  return counters
+}
+
 export function applyAccountPatch(records,patch) {
   requireValue(record(patch) && Object.keys(patch).some(k => k !== 'updatedAt') &&
     Object.keys(patch).every(k => known.has(k)))
   const local = accountPayload(records)
   const merged = {...local,...patch}
+  if (has(patch,'guidedProgress')) merged.guidedProgress = databaseGuideCounters(patch.guidedProgress)
   if (has(patch,'guidedMaxPackReached')) {
     requireValue(Number.isSafeInteger(patch.guidedMaxPackReached) && patch.guidedMaxPackReached >= 0 &&
       patch.guidedMaxPackReached <= GUIDED_PACKS.length)

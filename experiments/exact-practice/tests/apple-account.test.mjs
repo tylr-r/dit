@@ -53,3 +53,21 @@ test('a remote character speed change retains manual Farnsworth speed within its
     assert.equal(updated.listenEffectiveWpm,effective)
   }
 })
+
+test('the outbound account snapshot has the shipped score shape, timestamp and falsy settings',async () => {
+  const {shippedProgressCalls}=await import('./progress-database-oracle.mjs')
+  const {createAccountSession}=await import('../core/apple-account.mjs')
+  const records=convertLegacy({'dit-progress':JSON.stringify({updatedAt:1000,scores:{E:4},hapticsEnabled:false,bestWpm:0})})
+  records['dit.exact-spike.custom.v1']='PRIVATE FIXTURE'
+  const requests=[]
+  const app=createAccountSession({
+    project(){},schedule(){},cancelTimer(){},accountCommit:()=>true,
+    accountRequest(...args){requests.push(args)},
+  },()=>({bootstrap(){},dispose(){}}),JSON.stringify({version:1,records,dirty:true,updatedAt:1000}))
+  app.bootstrap()
+  app.accountResult(requests[0][0],'ok','r1','{"updatedAt":500,"toneFrequency":720}')
+  app.timer(-1)
+  const expected=(await shippedProgressCalls())[1].value
+  assert.deepEqual(JSON.parse(requests[1][3]),expected)
+  app.dispose()
+})

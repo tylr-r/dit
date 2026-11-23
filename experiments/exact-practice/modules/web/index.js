@@ -11,7 +11,7 @@ import { createNux } from './nux.mjs'
 import { bindReferencePeek } from './reference-peek.mjs'
 import { referencePattern } from './reference.mjs'
 import { tempoTiming } from './tempo.mjs'
-import { createQso, fixtureReply, qsoPlan } from './qso.mjs'
+import { createQso, createLocalStation, qsoPlan } from './qso.mjs'
 
 export const abi = 1
 export const roster = { 'dit-key': { snapshot: false }, 'dit-reminder-wheel': { snapshot: false }, 'dit-mode-selector': { snapshot: false }, 'dit-intro-artwork': { snapshot: false }, 'dit-listen-wave': { snapshot:false } }
@@ -105,11 +105,11 @@ export function create(tag, element, json, event) {
         if (detail.startsWith('active:')) event(8,detail)
         return
       }
-      if (detail === 'active:on') {
-        if (h.mode === 'conversation') h.qso.activity()
-        else session.dispatch({ type: 'toneStart' })
+      if (detail === 'active:on' && h.mode === 'conversation') h.qso.activity()
+      if (h.mode !== 'conversation' && detail.startsWith('symbol:')) {
+        if (h.mode === 'guided') h.guide.symbol()
+        session.dispatch({ type: 'symbol', symbol:detail.slice(7) })
       }
-      if (h.mode !== 'conversation' && detail.startsWith('symbol:')) session.dispatch({ type: 'symbol', symbol:detail.slice(7) })
       if (detail.startsWith('sequence:')) {
         const code = detail.slice(9)
         if (h.mode === 'conversation') h.qso.key(code)
@@ -145,6 +145,7 @@ export function create(tag, element, json, event) {
   })
   const guide = createGuide({
     ...timer, storage, project, decode, play: playLetter, pick,
+    cancelInput() { h.clearInput?.(); attempt.cancel() },
     pickListenWeighted: (pool,previous) => {
       const {scores,listenTtr}=session.current()
       return pickLatencyAware(pool,scores,listenTtr,previous,Math.random())
@@ -190,7 +191,7 @@ export function create(tag, element, json, event) {
   let qsoFrame
   const stopQsoFrames = () => { win.cancelAnimationFrame(qsoFrame); qsoFrame=undefined }
   const qso = createQso({
-    ...timer, reply: fixtureReply,
+    ...timer, createStation: createLocalStation,
     project: detail => {
       event(8,detail)
       if (detail.startsWith('qso-phase:')) {
@@ -389,7 +390,8 @@ export function setProps(h, json) {
   const openPractice=command==='course-open'
   h.routeBoundary = routeBoundary
   const cancel = (h.cancelToken !== undefined && h.cancelToken !== cancelToken)
-    || changedScope || selection!==null || pack!==null || openPractice || clear || (replay && mode === 'practice')
+    || changedScope || selection!==null || pack!==null || openPractice || clear
+  const practiceReplay = replay && mode === 'practice' && !blocked
   const wordsOn = mode === 'listen' && props['listen-content'] === 'words'
   const customOn = mode === 'listen' && props['listen-content'] === 'custom'
   const changedContent = mode === 'listen' && (Boolean(h.wordsOn) !== wordsOn || Boolean(h.customOn) !== customOn)
@@ -416,11 +418,12 @@ export function setProps(h, json) {
     else if (wordsOn) h.words.suspend()
     else h.listen.suspend()
   }
-  if ((blocked && (!referenceOpen || !previouslyBlocked)) || cancel || referenceClosing) {
+  const cancelSession = (blocked && (!referenceOpen || !previouslyBlocked)) || cancel || referenceClosing
+  if (cancelSession || practiceReplay) {
     h.clearInput?.()
     h.attempt.cancel()
     h.audio.stop()
-    h.session.dispatch({ type: changedRoute ? 'routeBoundary' : 'cancel' })
+    if (cancelSession) h.session.dispatch({ type: changedRoute ? 'routeBoundary' : 'cancel' })
   }
   h.session.dispatch({ type: 'mode', mode })
   if(selection){
@@ -547,7 +550,7 @@ export function setProps(h, json) {
   }
   if (mode === 'listen' && (changedScope || selection!==null) && blocked) h.listenNeverEntered = true
   h.answerToken = props['answer-token'] ?? ''
-  if (replay && mode === 'practice' && !blocked) {
+  if (practiceReplay) {
     h.session.dispatch({ type: 'replay' })
     h.audio.replay(replayPlan(h.session.current().target, unitMs), frequency, volume)
   }

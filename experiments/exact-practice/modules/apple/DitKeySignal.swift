@@ -97,7 +97,8 @@ final class DitKeySignal {
 
     func controlPassage(_ action: String, controlAudio: () -> Bool) -> Bool {
         let changed = controlAudio()
-        if action == "stop" || !changed {
+        guard changed || action == "stop" else { return false }
+        if action == "stop" {
             replayPlayer?.stop()
             replayPlayer = nil
         } else if action == "pause" {

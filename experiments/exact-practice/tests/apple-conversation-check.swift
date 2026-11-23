@@ -12,7 +12,7 @@ private func checkAppleContact() throws {
     f.startPassage = { plan, pitch, gap in
         starts += 1
         precondition(pitch == 600 && gap == 300)
-        return player.start(plan, pitch: pitch, gap: gap, volume: 0.75)
+        return player.start(plan, pitch: pitch, gap: gap, volume: 0.75, unitMs: 100)
     }
     f.controlPassage = player.control
     f.passagePosition = player.position
@@ -66,8 +66,113 @@ private func checkAppleContact() throws {
     f.command("qso","retry")
     f.expect("qso-phase","receiving")
     precondition(starts == 3)
+    f.session.interrupt(true)
+    f.session.interrupt(true, applicationInactive: true)
+    f.expect("qso-phase","ended")
+    f.session.interrupt(false)
+    f.command("qso","retry")
+    f.expect("qso-phase","ended")
+    precondition(starts == 3 && !f.enabled)
     f.set("mode","practice")
     precondition(player.position() == -1)
-    print("PASS Apple local Conversation: JavaScriptCore, Swift key input and AVAudioEngine offline PCM; canceled consent is silent, receive/pause/resume, presented end, copy, deliberate reply, sent E, interruption and retry.")
+    print("PASS Apple local Conversation: JavaScriptCore, Swift key input and AVAudioEngine offline PCM; canceled consent is silent, receive/pause/resume, presented end, copy, deliberate reply, sent E, audio retry and background termination.")
 }
 try checkAppleContact()
+
+private func checkDelayedStation() throws {
+    var texts: [String] = []
+    var histories: [String] = []
+    var prompts: [String] = []
+    var replies: [(String?, String?) -> Void] = []
+    var cancelled: [Int] = []
+    let record: DitStationExchange = { request, reply in
+        let id = texts.count
+        precondition(request.model == "gemini-3.5-flash-lite" && Thread.isMainThread)
+        texts.append(request.text)
+        histories.append(request.historyJSON)
+        prompts.append(request.systemInstruction)
+        replies.append { text, history in
+            if let text, let history { reply(DitStationReply(text:text, historyJSON:history)) }
+            else { reply(nil) }
+        }
+        return { cancelled.append(id) }
+    }
+    var openings: [(Bool) -> Void] = []
+    var cancelledOpens = [Int]()
+    let transport = DitStationTransport(open: { model, _, ready in
+        precondition(model == "gemini-3.5-flash-lite" && Thread.isMainThread)
+        let id = openings.count
+        openings.append(ready)
+        return { cancelledOpens.append(id) }
+    },send:record)
+    let f = Fixture(root.appendingPathComponent("swift-station"), asset, station:transport)
+    var audio = 0
+    f.startPassage = { plan, _, _ in precondition(!plan.isEmpty); audio += 1; return true }
+    f.controlPassage = { _ in true }
+    f.passagePosition = { -2 }
+    f.set("mode","nux"); f.command("nux","skip"); f.set("mode","conversation")
+    func command(_ action: String) { f.command("qso",action) }
+    func drainMainQueue() {
+        var drained = false
+        DispatchQueue.main.async { drained = true }
+        until { drained }
+    }
+    command("receive-first"); command("consent-cancel")
+    precondition(openings.isEmpty && texts.isEmpty && audio == 0)
+    command("send-first"); command("consent-allow")
+    f.expect("qso-phase","sending")
+    openings[0](false); drainMainQueue()
+    f.expect("qso-phase","error"); f.expect("qso-error","Could not start the QSO. Try again.")
+    precondition(!f.enabled && texts.isEmpty && audio == 0)
+    command("retry"); command("end"); command("new")
+    command("receive-first"); command("consent-allow")
+    openings[1](true); drainMainQueue()
+    f.expect("qso-phase","sending")
+    precondition(cancelledOpens == [1] && texts.isEmpty)
+    openings[2](true); drainMainQueue()
+    precondition(texts.count == 1 && audio == 0, "consented opener must wait for Swift")
+    let opener = "Begin the QSO now. Call CQ or send your opening call as you see fit."
+    precondition(texts == [opener] && histories == ["[]"])
+    command("end"); command("new"); command("send-first"); command("consent-allow")
+    openings[3](true); drainMainQueue()
+    f.expect("qso-phase","tx")
+    replies[0]("STALE","[]"); drainMainQueue()
+    precondition(audio == 0 && cancelled == [0] && f.enabled)
+
+    f.session.input("sequence","."); command("send")
+    precondition(texts == [opener,"E"])
+    replies[1](nil,nil); drainMainQueue()
+    f.expect("qso-phase","error")
+    f.expect("qso-error","Could not reach the other station. Try again.")
+    command("retry")
+    let accepted = #"[{"role":"user","parts":[{"text":"E"}]},{"role":"model","parts":[{"text":"RST 599 K"}]}]"#
+    let reply = replies[2]
+    let delivered = DispatchSemaphore(value: 0)
+    DispatchQueue.global().async { reply("RST 599 K",accepted); delivered.signal() }
+    precondition(delivered.wait(timeout:.now()+1) == .success)
+    drainMainQueue()
+    f.expect("qso-phase","receiving")
+    precondition(audio == 1 && texts == [opener,"E","E"] && histories == ["[]","[]","[]"])
+    reply("DUPLICATE","[]"); drainMainQueue()
+    precondition(audio == 1)
+    f.set("qso-copy-value","PRIVATE COPY"); f.advance(50); command("reveal"); f.expect("qso-rx-text","RST 5NN K")
+    command("start-turn"); f.session.input("sequence","-"); command("send")
+    precondition(texts.last == "T" && histories.last == accepted && prompts[0] != prompts[1])
+    f.session.interrupt(true); f.session.interrupt(false); command("retry")
+    precondition(texts.suffix(2) == ["T","T"] && cancelled == [0,3])
+    replies[3]("STALE BEFORE RETRY","[]"); drainMainQueue()
+    f.expect("qso-phase","sending")
+    precondition(audio == 1)
+    f.session.interrupt(true, applicationInactive:true)
+    f.expect("qso-phase","ended")
+    replies[4]("STALE BACKGROUND","[]"); drainMainQueue()
+    f.session.interrupt(false); command("retry"); f.expect("qso-phase","ended")
+    precondition(audio == 1 && cancelled == [0,3,4])
+    command("new"); command("receive-first"); command("consent-allow")
+    openings[4](true); drainMainQueue()
+    precondition(histories.last == "[]")
+    f.close(); replies[5]("AFTER DISPOSE","[]"); drainMainQueue()
+    precondition(audio == 1 && cancelled == [0,3,4,5])
+    print("PASS Swift station bridge: Send first startup error before keying, stale open cancelled, delayed opener after End/New, failed keyed E and retry, background-thread completion, single passage and 5NN reveal, accepted history, background and dispose.")
+}
+try checkDelayedStation()

@@ -28,11 +28,15 @@ final class DitAccountFile {
     private(set) var bytes: Data
     var json: String { String(decoding: bytes, as: UTF8.self) }
 
+    static func identifier(_ identity: String) -> String {
+        SHA256.hash(data: Data(identity.utf8)).map { String(format:"%02x",$0) }.joined()
+    }
+
     init(directory: URL, identity: String, keys: Set<String>, anonymous: URL, originalTime: ([String:String]) throws -> Int64?) throws {
         guard !identity.isEmpty && identity.utf8.count <= 512 else { throw DitLegacyStore.Failure.invalid }
         self.identity = identity
         self.keys = keys
-        let id = SHA256.hash(data: Data(identity.utf8)).map { String(format:"%02x",$0) }.joined()
+        let id = Self.identifier(identity)
         let accounts = directory.appendingPathComponent("dit-accounts", isDirectory:true)
         let owner = accounts.appendingPathComponent("anonymous-owner")
         file = accounts.appendingPathComponent(id + ".json")

@@ -352,4 +352,125 @@ private func installedFixtureTransport() throws {
     print("PASS installed Simulator fixture service preserves earned preferences across cold restore, rejects an inactive writer, enforces revisions and delivers a late read after the account switch.")
 }
 try installedFixtureTransport()
+private func accountDeletion(_ outcome: String) throws {
+    let run = UUID().uuidString
+    func open(_ outcome: String) throws -> DitFixtureAccounts {
+        try DitFixtureAccounts(environment:["DIT_ACCOUNT_FIXTURE":run,"DIT_ACCOUNT_FIXTURE_DELETE":outcome],
+                               bundle:"com.tylerobinson.dit.exactspike",directory:root)!
+    }
+    let service = try open(outcome)
+    let app = Fixture(service.directory,asset,accounts:service)
+    func privateFile(_ id: String) -> URL {
+        service.directory.appendingPathComponent("dit-accounts/" + DitAccountFile.identifier(id) + ".json")
+    }
+    let db = service.directory.appendingPathComponent("synthetic-service.json")
+    func records() throws -> NSDictionary {
+        let database = try JSONSerialization.jsonObject(with:Data(contentsOf:db)) as! NSDictionary
+        return database["records"] as! NSDictionary
+    }
+    let command = "delete:learner-a@example.invalid"
+    var results: [String] = []
+    service.deletionResult = { results.append($0) }
+    eventTurn()
+    service.choose("A")
+    eventTurn()
+    service.choose(command)
+    service.choose("B")
+    eventTurn()
+    app.expect("pitch","720")
+    precondition(results.isEmpty && service.availableLearners == "AB")
+    service.choose(command)
+    eventTurn()
+    precondition(results.isEmpty)
+    service.choose("A")
+    eventTurn()
+    app.expect("pitch","640")
+    let before = try Data(contentsOf:db)
+    let a = try Data(contentsOf:privateFile("A"))
+    let b = try Data(contentsOf:privateFile("B"))
+    let remoteB = try records()["B"] as! NSDictionary
+    let anonymous = service.directory.appendingPathComponent("dit-practice")
+    try FileManager.default.createDirectory(at:anonymous,withIntermediateDirectories:true)
+    let other = anonymous.appendingPathComponent("unrelated-fixture")
+    try Data("keep".utf8).write(to:other)
+    let owned = anonymous.appendingPathComponent("dit.exact-spike.custom.v1")
+    try Data(#"{"version":1,"source":"TEST"}"#.utf8).write(to:owned)
+    service.choose(command)
+    service.choose(command)
+    eventTurn()
+    eventTurn()
+    let partialRemote = outcome == "delete-user-recent-login"
+    precondition(results == [partialRemote ? "recent-login" : outcome],String(describing:results))
+    if outcome != "deleted" && outcome != "cleanup" {
+        app.expect("pitch","640")
+        if partialRemote {
+            var emptyRemote = false
+            service.read(account:"A") { reply in
+                if case .loaded(_,nil) = reply { emptyRemote = true }
+            }
+            precondition(emptyRemote)
+        } else {
+            precondition(try! Data(contentsOf:db) == before)
+        }
+        precondition(try! Data(contentsOf:privateFile("A")) == a)
+        precondition(FileManager.default.fileExists(atPath:owned.path))
+        precondition(service.availableLearners == "AB")
+    } else {
+        app.expect("nux-status","pending")
+        precondition(service.availableLearners == "B")
+        precondition(try! records()["A"] == nil)
+        precondition(!FileManager.default.fileExists(atPath:owned.path))
+        precondition(FileManager.default.fileExists(atPath:privateFile("A").path) == (outcome == "cleanup"))
+        service.choose("A")
+        var refused = false
+        service.save(account:"A",replacing:"1",json:"{}") { if case .unavailable = $0 { refused = true } }
+        precondition(refused)
+    }
+    precondition(try! Data(contentsOf:other) == Data("keep".utf8))
+    precondition(try! Data(contentsOf:privateFile("B")) == b)
+    precondition(try! records()["B"] as! NSDictionary == remoteB)
+    app.close()
+    if outcome == "deleted" || outcome == "cleanup" {
+        // A retry after local cleanup must preserve newly earned anonymous work.
+        try Data("false".utf8).write(to:anonymous.appendingPathComponent("dit.exact-spike.haptics.v1"))
+        let restarted = try open("")
+        let fresh = Fixture(restarted.directory,asset,accounts:restarted)
+        eventTurn()
+        fresh.expect("nux-status","pending")
+        precondition(!fresh.hapticsEnabled)
+        precondition(!FileManager.default.fileExists(atPath:privateFile("A").path))
+        precondition(restarted.availableLearners == "B")
+        restarted.choose("B")
+        eventTurn()
+        fresh.expect("pitch","720")
+        fresh.close()
+    }
+    print("PASS synthetic account deletion " + outcome + ": identity binding, single submission, private files, service records and other learner isolation.")
+}
+for outcome in ["cancelled","apple-mismatch","user-mismatch","recent-login","network","failed","delete-user-recent-login","deleted","cleanup"] {
+    try accountDeletion(outcome)
+}
+do {
+    let service = try DitFixtureAccounts(environment:["DIT_ACCOUNT_FIXTURE":UUID().uuidString],
+        bundle:"com.tylerobinson.dit.exactspike",directory:root)!
+    let app = Fixture(service.directory,asset,accounts:service)
+    eventTurn()
+    service.choose("B")
+    eventTurn()
+    service.choose("A")
+    eventTurn()
+    let shared = service.directory.appendingPathComponent("dit-practice")
+    try FileManager.default.createDirectory(at:shared,withIntermediateDirectories:true)
+    let preference = shared.appendingPathComponent("dit.exact-spike.haptics.v1")
+    try Data("false".utf8).write(to:preference)
+    service.choose("delete:learner-a@example.invalid")
+    eventTurn()
+    eventTurn()
+    precondition(service.availableLearners == "B")
+    precondition(try! Data(contentsOf:preference) == Data("false".utf8))
+    let owner = service.directory.appendingPathComponent("dit-accounts/anonymous-owner")
+    precondition(try! Data(contentsOf:owner) == Data(DitAccountFile.identifier("B").utf8))
+    app.close()
+    print("PASS deleting the second learner preserves the first learner's anonymous progress and ownership.")
+}
 #endif

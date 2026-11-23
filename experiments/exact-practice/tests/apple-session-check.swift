@@ -52,11 +52,12 @@ final class Fixture {
     var outputVolume = 0.75
     var migrationHeld = false
     var hapticsEnabled = false
+    var hardwareEnabled = false
     var enabled = false
     var nextID = 0
-    init(_ directory: URL, _ asset: URL, legacyDirectory: URL? = nil, expectFailure: Bool = false, accounts: DitAccountTransport? = nil, accountClock: @escaping () -> Double = { 2000 }) {
+    init(_ directory: URL, _ asset: URL, legacyDirectory: URL? = nil, expectFailure: Bool = false, station: DitStationTransport? = nil, accounts: DitAccountTransport? = nil, accountClock: @escaping () -> Double = { 2000 }) {
         self.directory = directory
-        session = DitAppleSession(directory: directory, legacyDirectory: legacyDirectory, onLegacyHold: { [unowned self] in migrationHeld = true }, program: asset, accountService:accounts, accountClock:accountClock, notifications: DitReminderNotifications(center: center), outputVolume: { [unowned self] in outputVolume },
+        session = DitAppleSession(directory: directory, legacyDirectory: legacyDirectory, onLegacyHold: { [unowned self] in migrationHeld = true }, program: asset, stationTransport:station, accountService:accounts, accountClock:accountClock, notifications: DitReminderNotifications(center: center), outputVolume: { [unowned self] in outputVolume },
             schedule: { [unowned self] ms, run in
                 nextID += 1
                 let id = nextID
@@ -68,7 +69,7 @@ final class Fixture {
             passagePosition: { [unowned self] in passagePosition?() ?? -1 },
             promptTailMs: { [unowned self] in readTail?($0) },
             stop: { [unowned self] in stopOutput?() }, warm: {}, cancelInput: {},
-            configure: { [unowned self] on, _, _, haptics in enabled = on; hapticsEnabled = haptics },
+            configure: { [unowned self] on, hardware, _, _, haptics in enabled = on; hardwareEnabled = hardware; hapticsEnabled = haptics },
             publish: { [unowned self] event in
                 events.append(event)
                 if let split = event.firstIndex(of: ":") {
@@ -102,7 +103,19 @@ final class Fixture {
 }
 
 let asset = URL(fileURLWithPath: CommandLine.arguments[1])
-let root = FileManager.default.temporaryDirectory.appendingPathComponent("dit-session-" + UUID().uuidString)
+if CommandLine.arguments.count == 4 {
+    let phase = CommandLine.arguments[2]
+    if phase == "--identity-events" {
+        try progressIdentityAcceptance(directory:URL(fileURLWithPath:CommandLine.arguments[3]),asset:asset)
+        exit(0)
+    }
+    precondition(["--http-switch","--http-cold"].contains(phase))
+    try authenticatedSessionAcceptance(directory:URL(fileURLWithPath:CommandLine.arguments[3]),asset:asset,cold:phase == "--http-cold")
+    exit(0)
+}
+let fixtureDirectory = ProcessInfo.processInfo.environment["TMPDIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+    ?? FileManager.default.temporaryDirectory
+let root = fixtureDirectory.appendingPathComponent("dit-session-" + UUID().uuidString)
 try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
 defer { try? FileManager.default.removeItem(at: root) }
 func make(_ name: String) -> Fixture { Fixture(root.appendingPathComponent(name), asset) }
@@ -113,6 +126,12 @@ func seed(_ name: String, _ key: String, _ value: String) throws {
     let url = file(name, key)
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     try value.write(to: url, atomically: true, encoding: .utf8)
+}
+
+if CommandLine.arguments.dropFirst(2).elementsEqual(["--custom-controls"]) {
+    checkPassageMotor()
+    try checkCustomPassage(verifyRelaunch: false)
+    exit(0)
 }
 
 let fresh = make("beginner")
@@ -142,7 +161,7 @@ fresh.command("nux","play")
 fresh.expect("nux-sound","heard")
 fresh.command("nux","continue")
 fresh.expect("nux-step","button_tutorial")
-precondition(fresh.tones.count == 2 && fresh.tones[0].0 == [[0,100]] && fresh.tones[0].1 == 600 && fresh.enabled)
+precondition(fresh.tones.count == 2 && fresh.tones[0].0 == [[0,100]] && fresh.tones[0].1 == 600 && fresh.enabled && !fresh.hardwareEnabled)
 fresh.command("pref","haptics-off")
 precondition(!fresh.hapticsEnabled)
 for ch in "..-" { fresh.session.input("symbol",String(ch)) }

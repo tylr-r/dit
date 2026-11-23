@@ -1,8 +1,32 @@
 import Foundation
 import JavaScriptCore
 
+/// A single send, with history serialized by the packaged provider adapter.
+struct DitStationRequest {
+    let model: String
+    let systemInstruction: String
+    let historyJSON: String
+    let text: String
+}
+
+struct DitStationReply {
+    let text: String
+    let historyJSON: String
+}
+
+/// Completion may arrive on any queue. The returned closure cancels outstanding work.
+typealias DitStationExchange = (DitStationRequest, @escaping (DitStationReply?) -> Void) -> () -> Void
+
+/// Opening a consented station never sends a turn. Either operation can be cancelled.
+struct DitStationTransport {
+    let open: (String, String, @escaping (Bool) -> Void) -> () -> Void
+    let send: DitStationExchange
+}
+
 /// Drives the same local Dit reducers as the web app in Apple's JavaScriptCore.
 final class DitAppleSession {
+    static let writableKeys: Set<String> = ["practice", "guided", "onboarding", "method", "reminder", "haptics", "listen", "custom", "intro-hint"]
+            .reduce(into: []) { $0.insert("dit.exact-spike." + $1 + ".v1") }
     typealias Schedule = (Double, @escaping () -> Void) -> () -> Void
     private let context: JSContext
     private var adapter: JSValue?
@@ -15,6 +39,9 @@ final class DitAppleSession {
     private var interrupted = false
     private var reminderRequest: Int?
     private var generation = 0
+    private var stationSerial = 0
+    private var stationCallback: JSValue?
+    private var cancelStationWork: (() -> Void)?
     private var resetRequested = false
     private var resetLocal: (() -> Void)?
     private var jobs: [Int: () -> Void] = [:]
@@ -23,15 +50,15 @@ final class DitAppleSession {
     private var failed = false
     private var closed = false
     private let publish: (String) -> Void
-    private let configure: (Bool, Double, Float, Bool) -> Void
+    private let configure: (Bool, Bool, Double, Float, Bool) -> Void
 
-    init?(directory: URL, legacyDirectory: URL? = nil, onLegacyHold: () -> Void = {}, program: URL?, accountService: DitAccountTransport? = nil, accountClock: @escaping () -> Double = { floor(Date().timeIntervalSince1970 * 1000) }, notifications: DitReminderNotifications?, outputVolume: @escaping () -> Double, schedule: @escaping Schedule,
+    init?(directory: URL, legacyDirectory: URL? = nil, onLegacyHold: () -> Void = {}, program: URL?, stationTransport: DitStationTransport? = nil, accountService: DitAccountTransport? = nil, accountClock: @escaping () -> Double = { floor(Date().timeIntervalSince1970 * 1000) }, notifications: DitReminderNotifications?, outputVolume: @escaping () -> Double, schedule: @escaping Schedule,
           play: @escaping ([[Double]], Float, Int) -> Bool,
           passageStart: @escaping ([[Double]], Float, Double) -> Bool = { _,_,_ in false },
           passageControl: @escaping (String) -> Bool = { _ in false }, passagePosition: @escaping () -> Double = { -1 },
           promptTailMs: @escaping (Int) -> Double?, stop: @escaping () -> Void,
           warm: @escaping () -> Void, cancelInput: @escaping () -> Void,
-          configure: @escaping (Bool, Double, Float, Bool) -> Void, publish: @escaping (String) -> Void) {
+          configure: @escaping (Bool, Bool, Double, Float, Bool) -> Void, publish: @escaping (String) -> Void) {
         guard let program, let source = try? String(contentsOf: program, encoding: .utf8),
               let context = JSContext() else { return nil }
         self.identityOwner = accountService as? DitAccountIdentityObserver
@@ -39,8 +66,7 @@ final class DitAppleSession {
         self.publish = publish
         self.configure = configure
         // No production containers, platform preferences or dynamic paths.
-        let keys: Set<String> = ["practice", "guided", "onboarding", "method", "reminder", "haptics", "listen", "custom", "intro-hint"]
-            .reduce(into: []) { $0.insert("dit.exact-spike." + $1 + ".v1") }
+        let keys = Self.writableKeys
         let store = directory.appendingPathComponent("dit-practice", isDirectory: true)
         var holdWrites = false
         do { try DitLegacyStore.resetLocal(in: store, keys: keys, starting: false) }
@@ -146,6 +172,30 @@ final class DitAppleSession {
         context.evaluateScript(source, withSourceURL: program)
         guard context.exception == nil else { return nil }
         let library = context.objectForKeyedSubscript("DitSession")
+        if let stationTransport {
+            let open: @convention(block) (String, String, JSValue) -> Int = { [weak self] model, instruction, callback in
+                self?.beginStation(callback) { finish in
+                    stationTransport.open(model,instruction) { ready in finish([ready]) }
+                } ?? 0
+            }
+            let begin: @convention(block) (String, String, String, String, JSValue) -> Int = {
+                [weak self] model, instruction, history, text, callback in
+                let request = DitStationRequest(model:model, systemInstruction:instruction, historyJSON:history, text:text)
+                return self?.beginStation(callback) { finish in
+                    stationTransport.send(request) { reply in
+                        if let reply { finish([reply.text,reply.historyJSON]) }
+                        else { finish([NSNull(),NSNull()]) }
+                    }
+                } ?? 0
+            }
+            let cancel: @convention(block) (Int) -> Void = { [weak self] id in
+                guard let self, self.stationSerial == id else { return }
+                self.stopStationRequest()
+            }
+            guard let factory = library?.invokeMethod("createSwiftStationFactory", withArguments:[begin,cancel,open]),
+                  context.exception == nil, factory.isObject else { return nil }
+            host.setObject(factory, forKeyedSubscript:"createStation" as NSString)
+        }
         func converted(_ values: [String:String]) throws -> [String:String] {
             let result = library?.invokeMethod("convertLegacy", withArguments:[values])
             guard context.exception == nil, let output = result?.toDictionary() as? [String:String] else {
@@ -226,7 +276,7 @@ final class DitAppleSession {
                 self.failed = true
                 self.accountFile = nil
                 self.messages.removeAll()
-                self.configure(false,100,600,false)
+                self.configure(false,false,100,600,false)
                 self.publish("account-session:changed")
                 self.publish("account-sync:storage-unavailable")
                 self.publish("apple-session:failed")
@@ -243,9 +293,39 @@ final class DitAppleSession {
         }
     }
 
+    private func stopStationRequest() {
+        stationSerial += 1
+        stationCallback = nil
+        let cancel = cancelStationWork
+        cancelStationWork = nil
+        cancel?()
+    }
+
+    private func beginStation(_ callback: JSValue, work: (@escaping ([Any]) -> Void) -> () -> Void) -> Int {
+        stopStationRequest()
+        let id = stationSerial
+        let sessionGeneration = generation
+        stationCallback = callback
+        cancelStationWork = work { [weak self] values in
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.closed, !self.failed, self.generation == sessionGeneration,
+                      self.stationSerial == id, let callback = self.stationCallback else { return }
+                self.stationCallback = nil
+                self.cancelStationWork = nil
+                callback.call(withArguments:values)
+                self.finishCall()
+            }
+        }
+        return id
+    }
+
     private func call(_ name: String, _ arguments: [Any] = []) {
         guard !closed, !failed, let adapter else { return }
         adapter.invokeMethod(name, withArguments: arguments)
+        finishCall()
+    }
+
+    private func finishCall() {
         if resetRequested {
             resetRequested = false
             resetLocal?()
@@ -253,10 +333,10 @@ final class DitAppleSession {
         let state = context.exception == nil ? self.adapter?.invokeMethod("configuration", withArguments: []) : nil
         if context.exception != nil || state?.isObject != true {
             failed = true
-            configure(false, 100, 600, false)
+            configure(false, false, 100, 600, false)
             messages = ["apple-session:failed"]
         } else if let state {
-            configure(state.forProperty("enabled").toBool(), state.forProperty("unit").toDouble(),
+            configure(state.forProperty("enabled").toBool(), state.forProperty("hardwareEnabled").toBool(), state.forProperty("unit").toDouble(),
                       Float(state.forProperty("pitch").toDouble()), state.forProperty("hapticsEnabled").toBool())
         }
         // Contract prop updates can arrive as a consequence of a publication.
@@ -286,10 +366,14 @@ final class DitAppleSession {
     @discardableResult func selectAccount(_ identity: String?) -> Bool { select?(identity) ?? false }
     func setProps(_ props: [String: String]) { latestProps = props; call("setProps", [props]) }
     func input(_ kind: String, _ value: String) { call("input", [kind, value]) }
-    func interrupt(_ value: Bool) { interrupted = value; call("interrupt", [value]) }
+    func interrupt(_ value: Bool, applicationInactive: Bool = false) {
+        interrupted = value
+        call("interrupt", [value, applicationInactive])
+    }
     func close() {
         guard !closed else { return }
         closed = true
+        stopStationRequest()
         cancelIdentityObservation?()
         cancelIdentityObservation = nil
         reminderRequest = nil
